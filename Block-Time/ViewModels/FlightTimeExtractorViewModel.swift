@@ -192,16 +192,18 @@ class FlightTimeExtractorViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            Task { @MainActor in
-                // Check if notification includes changed keys for targeted update
-                if let changedKeys = notification.userInfo?["changedKeys"] as? [String] {
-                    LogManager.shared.debug("Received CloudKit sync notification with \(changedKeys.count) changed key(s): \(changedKeys)")
-                    self?.updateChangedSettings(changedKeys)
-                } else {
-                    // Fallback to full reload for backwards compatibility
-                    LogManager.shared.debug("Received CloudKit sync notification without changedKeys - performing full reload")
-                    self?.loadAllSettings()
-                }
+            // Extract Sendable data immediately
+            let changedKeys = notification.userInfo?["changedKeys"] as? [String]
+
+            // Already on main queue, no Task wrapper needed
+            // Check if notification includes changed keys for targeted update
+            if let keys = changedKeys {
+                LogManager.shared.debug("Received CloudKit sync notification with \(keys.count) changed key(s): \(keys)")
+                self?.updateChangedSettings(keys)
+            } else {
+                // Fallback to full reload for backwards compatibility
+                LogManager.shared.debug("Received CloudKit sync notification without changedKeys - performing full reload")
+                self?.loadAllSettings()
             }
         }
 
@@ -211,9 +213,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
-                self?.saveDraftFlightData()
-            }
+            // Already on main queue, no Task wrapper needed
+            self?.saveDraftFlightData()
         }
 
         NotificationCenter.default.addObserver(
@@ -221,11 +222,10 @@ class FlightTimeExtractorViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
-                // Only restore if we have draft data and are not in editing mode
-                if self?.hasDraftFlightData == true && self?.isEditingMode == false {
-                    self?.restoreDraftFlightData()
-                }
+            // Already on main queue, no Task wrapper needed
+            // Only restore if we have draft data and are not in editing mode
+            if self?.hasDraftFlightData == true && self?.isEditingMode == false {
+                self?.restoreDraftFlightData()
             }
         }
 
@@ -235,9 +235,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
-                self?.reloadSavedCrewNames()
-            }
+            // Already on main queue, no Task wrapper needed
+            self?.reloadSavedCrewNames()
         }
     }
 

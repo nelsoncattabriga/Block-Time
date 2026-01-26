@@ -24,7 +24,7 @@ struct ImportData: Identifiable, Equatable {
     }
 }
 
-enum ImportMode {
+enum ImportMode: Sendable, Equatable {
     case merge
     case replace
 }

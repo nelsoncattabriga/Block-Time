@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - FRMS Fleet Type
 
-enum FRMSFleet: String, Codable, CaseIterable {
+enum FRMSFleet: String, Codable, CaseIterable, Sendable {
     case a320B737 = "A320/B737"
     case a380A330B787 = "A380/A330/B787"
 
@@ -73,7 +73,7 @@ enum FRMSFleet: String, Codable, CaseIterable {
 
 // MARK: - Crew Complement
 
-enum CrewComplement: Int, Codable {
+enum CrewComplement: Int, Codable, Sendable {
     case twoPilot = 2
     case threePilot = 3
     case fourPilot = 4
@@ -85,7 +85,7 @@ enum CrewComplement: Int, Codable {
 
 // MARK: - Rest Facility Class (for augmented operations)
 
-enum RestFacilityClass: String, Codable {
+enum RestFacilityClass: String, Codable, Sendable {
     case none           // 2-pilot operations
     case class2         // Seat in cabin with full screen
     case class1         // Bunk or berth
@@ -103,7 +103,7 @@ enum RestFacilityClass: String, Codable {
 
 // MARK: - Duty Type
 
-enum DutyType: String, Codable {
+enum DutyType: String, Codable, Sendable {
     case operating      // Flying as operating crew
     case deadheading    // Positioning flight
     case standby        // On standby duty
@@ -123,7 +123,7 @@ enum DutyType: String, Codable {
 
 // MARK: - Operation Time of Day Classification
 
-enum OperationTimeClass: String, Codable {
+enum OperationTimeClass: String, Codable, Sendable {
     case day            // Not a late night operation
     case lateNight      // Contains >30 min between 2300-0530
     case backOfClock    // Contains 2+ hours between 0100-0459
@@ -219,7 +219,7 @@ enum FRMSLimitType: String, Codable {
 
 // MARK: - FRMS Compliance Status
 
-enum FRMSComplianceStatus: Codable {
+enum FRMSComplianceStatus: Codable, Sendable {
     case compliant              // Within limits
     case warning(message: String)  // Approaching limits
     case violation(message: String) // Exceeds limits
@@ -244,7 +244,7 @@ enum FRMSComplianceStatus: Codable {
 // MARK: - FRMS Duty Summary
 
 /// Represents a complete duty period for FRMS calculations
-struct FRMSDuty: Codable, Identifiable {
+struct FRMSDuty: Codable, Identifiable, Sendable {
     let id: UUID
     let date: Date
     let dutyType: DutyType
@@ -295,7 +295,7 @@ struct FRMSDuty: Codable, Identifiable {
 // MARK: - FRMS Cumulative Totals
 
 /// Rolling totals for various time periods
-struct FRMSCumulativeTotals: Codable {
+struct FRMSCumulativeTotals: Codable, Sendable {
     // Flight Time Totals
     let flightTime7Days: Double
     let flightTime28Or30Days: Double  // 28 days for 737, 30 days for A380/A330/B787
@@ -482,7 +482,7 @@ struct FRMSCumulativeTotals: Codable {
 // MARK: - Maximum Next Duty
 
 /// Represents what the pilot can do in their next duty
-struct FRMSMaximumNextDuty: Codable {
+struct FRMSMaximumNextDuty: Codable, Sendable {
     let maxDutyPeriod: Double           // Hours
     let maxFlightTime: Double           // Hours
     let maxSectors: Int
@@ -564,7 +564,7 @@ struct FRMSMinimumBaseTurnaroundTime: Codable {
 // MARK: - Daily Duty Summary
 
 /// Represents a day's worth of duties grouped together
-struct DailyDutySummary: Identifiable, Codable {
+struct DailyDutySummary: Identifiable, Codable, Sendable {
     let id: UUID
     let date: Date                  // Local date at home base
     let duties: [FRMSDuty]
@@ -758,7 +758,7 @@ struct WhatIfResult: Codable {
 }
 
 /// Complete A320/B737 next duty limitations
-struct A320B737NextDutyLimits: Codable {
+struct A320B737NextDutyLimits: Codable, Sendable {
     // Sign-on time windows
     let earlyWindow: DutyTimeWindow        // 0500-1459
     let afternoonWindow: DutyTimeWindow    // 1500-1959
@@ -787,7 +787,7 @@ struct A320B737NextDutyLimits: Codable {
 // MARK: - FRMS Configuration
 
 /// Settings for FRMS calculations
-struct FRMSConfiguration: Codable {
+struct FRMSConfiguration: Codable, Sendable {
     var isEnabled: Bool = true           // FRMS Compliance is always enabled
     var showFRMS: Bool = true            // Show FRMS tab (always visible)
     var fleet: FRMSFleet

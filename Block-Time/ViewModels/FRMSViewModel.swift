@@ -9,6 +9,7 @@
 import Foundation
 import Combine
 
+@MainActor
 class FRMSViewModel: ObservableObject {
 
     // MARK: - Properties
@@ -107,21 +108,23 @@ class FRMSViewModel: ObservableObject {
 
         LogManager.shared.debug("FRMSViewModel: loadFlightData started for \(crewPosition)")
 
-        // Set loading state on main thread
-        Task { @MainActor in
-            self.isLoading = true
-        }
+        // Set loading state (we're already on MainActor)
+        isLoading = true
 
-        // Perform heavy calculations on background thread
-        Task.detached(priority: .userInitiated) { [weak self] in
-            guard let self = self else { return }
+        // Capture values for background use
+        let service = self.calculationService
+        let config = self.configuration
 
+        // Fetch data and process on MainActor
+        Task {
             // Fetch all flight sectors from Core Data
-            let flights = FlightDatabaseService.shared.fetchAllFlights()
+            let flights = await MainActor.run {
+                FlightDatabaseService.shared.fetchAllFlights()
+            }
 
-            // Convert FlightSectors to FRMSDuties
+            // Convert FlightSectors to FRMSDuties (on MainActor)
             // Group flights into consolidated duty periods (multiple sectors per duty)
-            let duties = self.groupFlightsIntoDuties(flights: flights, crewPosition: crewPosition)
+            let duties = self.groupFlightsIntoDuties(flights: flights, crewPosition: crewPosition, calculationService: service)
 
             // Filter to only completed flights (past dates only, not future)
             // Use sign-off time to determine if a duty is complete
@@ -142,16 +145,12 @@ class FRMSViewModel: ObservableObject {
                 return flightDate >= cutoffDate
             }
 
-            // Reuse calculation service to avoid recreating
-            let service = self.calculationService
-
             // Calculate cumulative totals using last 365 days of duties and individual flights
             // Pass individual flights so flight times are calculated by flight date, not duty date
             let cumulativeTotals = service.calculateCumulativeTotals(duties: dutiesLast365, flights: flightsLast365)
 
             // Calculate maximum next duty - get the most recent duty by sign-off time
             let lastDuty = completedDuties.max(by: { $0.signOff < $1.signOff })
-            let config = self.configuration
 
             let maximumNextDuty = service.calculateMaximumNextDuty(
                 previousDuty: lastDuty,
@@ -177,20 +176,18 @@ class FRMSViewModel: ObservableObject {
             // Group duties by local date (only completed)
             let recentDutiesByDay = self.groupDutiesByLocalDate(duties: Array(completedDuties.prefix(30)))
 
-            // Update UI on main thread
-            await MainActor.run {
-                self.dutiesLast365Days = dutiesLast365
-                self.flightsLast365Days = flightsLast365
-                self.recentDuties = Array(completedDuties.prefix(30))
-                self.lastDuty = lastDuty
-                self.recentDutiesByDay = recentDutiesByDay
-                self.cumulativeTotals = cumulativeTotals
-                self.maximumNextDuty = maximumNextDuty
-                self.a320B737NextDutyLimits = a320Limits
-                self.hasLoadedData = true
-                self.isLoading = false
-                LogManager.shared.debug("FRMSViewModel: loadFlightData completed")
-            }
+            // Update UI (already on MainActor)
+            self.dutiesLast365Days = dutiesLast365
+            self.flightsLast365Days = flightsLast365
+            self.recentDuties = Array(completedDuties.prefix(30))
+            self.lastDuty = lastDuty
+            self.recentDutiesByDay = recentDutiesByDay
+            self.cumulativeTotals = cumulativeTotals
+            self.maximumNextDuty = maximumNextDuty
+            self.a320B737NextDutyLimits = a320Limits
+            self.hasLoadedData = true
+            self.isLoading = false
+            LogManager.shared.debug("FRMSViewModel: loadFlightData completed")
         }
     }
 
@@ -198,91 +195,82 @@ class FRMSViewModel: ObservableObject {
     func refreshFlightData(crewPosition: FlightTimePosition) async {
         LogManager.shared.debug("FRMSViewModel: refreshFlightData started for \(crewPosition)")
 
-        // Set loading state
-        await MainActor.run {
-            self.isLoading = true
+        // Set loading state (we're already on MainActor)
+        isLoading = true
+
+        // Capture values for background use
+        let service = self.calculationService
+        let config = self.configuration
+
+        // Fetch all flight sectors from Core Data
+        let flights = FlightDatabaseService.shared.fetchAllFlights()
+
+        // Convert FlightSectors to FRMSDuties (on MainActor)
+        // Group flights into consolidated duty periods (multiple sectors per duty)
+        let duties = self.groupFlightsIntoDuties(flights: flights, crewPosition: crewPosition, calculationService: service)
+
+        // Filter to only completed flights (past dates only, not future)
+        // Use sign-off time to determine if a duty is complete
+        let now = Date()
+        let completedDuties = duties.filter { $0.signOff <= now }
+
+        // Filter to last 365 days for FRMS calculations (longest lookback period)
+        let calendar = Calendar.current
+        let cutoffDate = calendar.date(byAdding: .day, value: -365, to: Date()) ?? Date()
+        let dutiesLast365 = completedDuties.filter { $0.date >= cutoffDate }
+
+        // Also filter flights to last 365 days for flight time calculations
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        let flightsLast365 = flights.filter {
+            guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
+            return flightDate >= cutoffDate
         }
 
-        // Perform heavy calculations on background thread
-        await Task.detached(priority: .userInitiated) { [weak self] in
-            guard let self = self else { return }
+        // Calculate cumulative totals using last 365 days of duties and individual flights
+        // Pass individual flights so flight times are calculated by flight date, not duty date
+        let cumulativeTotals = service.calculateCumulativeTotals(duties: dutiesLast365, flights: flightsLast365)
 
-            // Fetch all flight sectors from Core Data
-            let flights = FlightDatabaseService.shared.fetchAllFlights()
+        // Calculate maximum next duty - get the most recent duty by sign-off time
+        let lastDuty = completedDuties.max(by: { $0.signOff < $1.signOff })
 
-            // Convert FlightSectors to FRMSDuties
-            // Group flights into consolidated duty periods (multiple sectors per duty)
-            let duties = self.groupFlightsIntoDuties(flights: flights, crewPosition: crewPosition)
+        let maximumNextDuty = service.calculateMaximumNextDuty(
+            previousDuty: lastDuty,
+            cumulativeTotals: cumulativeTotals,
+            limitType: config.defaultLimitType,
+            proposedCrewComplement: .twoPilot,
+            proposedRestFacility: .none
+        )
 
-            // Filter to only completed flights (past dates only, not future)
-            // Use sign-off time to determine if a duty is complete
-            let now = Date()
-            let completedDuties = duties.filter { $0.signOff <= now }
-
-            // Filter to last 365 days for FRMS calculations (longest lookback period)
-            let calendar = Calendar.current
-            let cutoffDate = calendar.date(byAdding: .day, value: -365, to: Date()) ?? Date()
-            let dutiesLast365 = completedDuties.filter { $0.date >= cutoffDate }
-
-            // Also filter flights to last 365 days for flight time calculations
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "dd/MM/yyyy"
-            dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-            let flightsLast365 = flights.filter {
-                guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
-                return flightDate >= cutoffDate
-            }
-
-            // Reuse calculation service to avoid recreating
-            let service = self.calculationService
-
-            // Calculate cumulative totals using last 365 days of duties and individual flights
-            // Pass individual flights so flight times are calculated by flight date, not duty date
-            let cumulativeTotals = service.calculateCumulativeTotals(duties: dutiesLast365, flights: flightsLast365)
-
-            // Calculate maximum next duty - get the most recent duty by sign-off time
-            let lastDuty = completedDuties.max(by: { $0.signOff < $1.signOff })
-            let config = self.configuration
-
-            let maximumNextDuty = service.calculateMaximumNextDuty(
+        // Calculate A320/B737 specific limits if applicable
+        let a320Limits: A320B737NextDutyLimits?
+        if config.fleet == .a320B737 {
+            a320Limits = service.calculateA320B737NextDutyLimits(
                 previousDuty: lastDuty,
                 cumulativeTotals: cumulativeTotals,
                 limitType: config.defaultLimitType,
-                proposedCrewComplement: .twoPilot,
-                proposedRestFacility: .none
+                duties: duties
             )
+        } else {
+            a320Limits = nil
+        }
 
-            // Calculate A320/B737 specific limits if applicable
-            let a320Limits: A320B737NextDutyLimits?
-            if config.fleet == .a320B737 {
-                a320Limits = service.calculateA320B737NextDutyLimits(
-                    previousDuty: lastDuty,
-                    cumulativeTotals: cumulativeTotals,
-                    limitType: config.defaultLimitType,
-                    duties: duties
-                )
-            } else {
-                a320Limits = nil
-            }
+        // Group duties by local date (only completed)
+        let recentDutiesByDay = self.groupDutiesByLocalDate(duties: Array(completedDuties.prefix(30)))
 
-            // Group duties by local date (only completed)
-            let recentDutiesByDay = self.groupDutiesByLocalDate(duties: Array(completedDuties.prefix(30)))
-
-            // Update UI on main thread
-            await MainActor.run {
-                self.dutiesLast365Days = dutiesLast365
-                self.flightsLast365Days = flightsLast365
-                self.recentDuties = Array(completedDuties.prefix(30))
-                self.lastDuty = lastDuty
-                self.recentDutiesByDay = recentDutiesByDay
-                self.cumulativeTotals = cumulativeTotals
-                self.maximumNextDuty = maximumNextDuty
-                self.a320B737NextDutyLimits = a320Limits
-                self.hasLoadedData = true
-                self.isLoading = false
-                LogManager.shared.debug("FRMSViewModel: refreshFlightData completed")
-            }
-        }.value
+        // Update UI (already on MainActor)
+        self.dutiesLast365Days = dutiesLast365
+        self.flightsLast365Days = flightsLast365
+        self.recentDuties = Array(completedDuties.prefix(30))
+        self.lastDuty = lastDuty
+        self.recentDutiesByDay = recentDutiesByDay
+        self.cumulativeTotals = cumulativeTotals
+        self.maximumNextDuty = maximumNextDuty
+        self.a320B737NextDutyLimits = a320Limits
+        self.hasLoadedData = true
+        self.isLoading = false
+        LogManager.shared.debug("FRMSViewModel: refreshFlightData completed")
     }
 
     /// Refresh all calculations with current data
@@ -433,7 +421,7 @@ class FRMSViewModel: ObservableObject {
 
     /// Group individual FlightSectors into consolidated duty periods
     /// Multiple sectors that occur within the same duty period are combined into a single FRMSDuty
-    private func groupFlightsIntoDuties(flights: [FlightSector], crewPosition: FlightTimePosition) -> [FRMSDuty] {
+    private func groupFlightsIntoDuties(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
         // Sort flights by date and time first to establish chronological order
         let sortedFlights = flights.sorted { f1, f2 in
             // Compare by date first
@@ -507,7 +495,7 @@ class FRMSViewModel: ObservableObject {
                     currentDutyFlights.append(flightDuty)
                 } else {
                     // Create consolidated duty from current flights and start new duty
-                    if let consolidatedDuty = createConsolidatedDuty(from: currentDutyFlights) {
+                    if let consolidatedDuty = createConsolidatedDuty(from: currentDutyFlights, calculationService: calculationService) {
                         consolidatedDuties.append(consolidatedDuty)
                     }
                     currentDutyFlights = [flightDuty]
@@ -517,7 +505,7 @@ class FRMSViewModel: ObservableObject {
 
         // Don't forget the last duty period
         if !currentDutyFlights.isEmpty {
-            if let consolidatedDuty = createConsolidatedDuty(from: currentDutyFlights) {
+            if let consolidatedDuty = createConsolidatedDuty(from: currentDutyFlights, calculationService: calculationService) {
                 consolidatedDuties.append(consolidatedDuty)
             }
         }
@@ -527,7 +515,7 @@ class FRMSViewModel: ObservableObject {
     }
 
     /// Create a single consolidated FRMSDuty from multiple flight sectors
-    private func createConsolidatedDuty(from flightDuties: [(flight: FlightSector, duty: FRMSDuty)]) -> FRMSDuty? {
+    private func createConsolidatedDuty(from flightDuties: [(flight: FlightSector, duty: FRMSDuty)], calculationService: FRMSCalculationService) -> FRMSDuty? {
         guard !flightDuties.isEmpty else { return nil }
 
         // For single flight, return the duty but ensure date is based on sign-on time in home base timezone

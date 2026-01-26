@@ -206,7 +206,7 @@ class FileImportService {
             }
 
             // Delete all if replace mode - with proper cleanup
-            if mode == .replace {
+            if case .replace = mode {
                 DispatchQueue.main.sync {
                     _ = databaseService.clearAllFlights()
                 }

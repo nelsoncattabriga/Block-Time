@@ -704,7 +704,7 @@ class LHRosterParserService {
             }
 
             let calculatedDate = calendar.date(byAdding: .day, value: daysToAdd, to: patternStartDate)
-            print("      First flight: pattern start \(formatDate(patternStartDate)) (weekday \(startWeekday)) + \(daysToAdd) days → \(calculatedDate.map(formatDate) ?? "nil") for day \(dayOfWeek) (weekday \(targetWeekday))")
+            print("      First flight: pattern start \(formatDate(patternStartDate)) (weekday \(startWeekday)) + \(daysToAdd) days → \(calculatedDate.map { formatDate($0) } ?? "nil") for day \(dayOfWeek) (weekday \(targetWeekday))")
             return calculatedDate
         }
 
@@ -731,12 +731,12 @@ class LHRosterParserService {
             // Later in the same week (e.g., FR→MO = 3 days)
             daysToAdd = targetWeekday - previousWeekday
             let calculatedDate = calendar.date(byAdding: .day, value: daysToAdd, to: previousDate)
-            print("      Flight \(flightIndex): \(previousFlight.dayOfWeek) (weekday \(previousWeekday)) → \(dayOfWeek) (weekday \(targetWeekday)) = +\(daysToAdd) days → \(calculatedDate.map(formatDate) ?? "nil")")
+            print("      Flight \(flightIndex): \(previousFlight.dayOfWeek) (weekday \(previousWeekday)) → \(dayOfWeek) (weekday \(targetWeekday)) = +\(daysToAdd) days → \(calculatedDate.map { formatDate($0) } ?? "nil")")
         } else {
             // Earlier in the week = next week (e.g., TU→FR wraps to next week)
             daysToAdd = 7 - previousWeekday + targetWeekday
             let calculatedDate = calendar.date(byAdding: .day, value: daysToAdd, to: previousDate)
-            print("      Flight \(flightIndex): \(previousFlight.dayOfWeek) (weekday \(previousWeekday)) → \(dayOfWeek) (weekday \(targetWeekday)) = +\(daysToAdd) days (next week) → \(calculatedDate.map(formatDate) ?? "nil")")
+            print("      Flight \(flightIndex): \(previousFlight.dayOfWeek) (weekday \(previousWeekday)) → \(dayOfWeek) (weekday \(targetWeekday)) = +\(daysToAdd) days (next week) → \(calculatedDate.map { formatDate($0) } ?? "nil")")
         }
 
         return calendar.date(byAdding: .day, value: daysToAdd, to: previousDate)

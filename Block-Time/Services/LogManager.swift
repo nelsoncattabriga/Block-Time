@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-enum LogLevel: String, CaseIterable, Comparable {
+enum LogLevel: String, CaseIterable, Comparable, Sendable {
     case debug = "DEBUG  "
     case info = "INFO   "
     case warning = "WARNING"
@@ -122,6 +122,9 @@ class LogManager {
     // MARK: - Core Logging
 
     private func log(_ message: String, level: LogLevel, file: String, function: String, line: Int) {
+        // Capture Sendable value early (LogLevel is now Sendable)
+        let consoleLogLevel = minimumConsoleLogLevel
+
         queue.async { [weak self] in
             guard let self = self else { return }
 
@@ -134,7 +137,7 @@ class LogManager {
             let threadInfo = Thread.isMainThread ? "Main" : "Background"
 
             // \(level.emoji) removed emoji from log file
-            
+
 //            let logEntry = """
 //            [\(timestamp)] \(level.rawValue) - [\(threadInfo) Thread] [\(fileName):\(line)] \(function) → \(message)
 //            """
@@ -150,7 +153,7 @@ class LogManager {
 
             // Print to console only if level meets minimum threshold
             #if DEBUG
-            if level >= self.minimumConsoleLogLevel {
+            if level.priority >= consoleLogLevel.priority {  // Use priority comparison to avoid actor isolation
                 print(logEntry)
             }
             #endif
