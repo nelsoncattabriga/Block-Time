@@ -93,8 +93,8 @@ struct ImportMappingView: View {
     @State private var registrationMappings: [RegistrationTypeMapping] = []
 
     enum PreviewSelection: String, CaseIterable, Identifiable {
-        case first100 = "First 100 Rows"
-        case last100 = "Last 100 Rows"
+        case first100 = "First Rows"
+        case last100 = "Last Rows"
 
         var id: String { self.rawValue }
     }
@@ -193,6 +193,7 @@ struct ImportMappingView: View {
                     }
 
                     if showingPreview {
+                        let mappedFields = fieldMappings.filter { !$0.sourceColumns.isEmpty }
                         VStack(alignment: .leading, spacing: 8) {
                             Picker("Preview Selection", selection: $previewSelection) {
                                 ForEach(PreviewSelection.allCases) { selection in
@@ -201,59 +202,19 @@ struct ImportMappingView: View {
                             }
                             .pickerStyle(.segmented)
 
-                            ForEach(Array(previewRows.enumerated()), id: \.offset) { index, row in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    let actualRowNumber = previewSelection == .first100 ? index + 1 : importData.rows.count - previewRows.count + index + 1
-                                    Text("Row \(actualRowNumber)")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-
-                                    ForEach(fieldMappings.filter { !$0.sourceColumns.isEmpty }, id: \.id) { mapping in
-                                        HStack(alignment: .top, spacing: 12) {
-                                            Text(mapping.logbookField + ":")
-                                                .font(.subheadline)
-                                                .foregroundColor(.secondary)
-                                                .frame(minWidth: 80, alignment: .leading)
-                                                .fixedSize(horizontal: false, vertical: true)
-
-                                            if mapping.sourceColumns.count == 1 {
-                                                // Single column - show value
-                                                if let columnIndex = importData.headers.firstIndex(of: mapping.sourceColumns[0]),
-                                                   columnIndex < row.count {
-                                                    Text(row[columnIndex])
-                                                        .font(.subheadline)
-                                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                                }
-                                            } else {
-                                                // Multiple columns - show combined result
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    let values = mapping.sourceColumns.compactMap { column -> Double? in
-                                                        guard let columnIndex = importData.headers.firstIndex(of: column),
-                                                              columnIndex < row.count,
-                                                              let value = Double(row[columnIndex]) else {
-                                                            return nil
-                                                        }
-                                                        return value
-                                                    }
-
-                                                    let combined = values.reduce(0, +)
-                                                    Text(String(format: "%.1f", combined))
-                                                        .font(.subheadline)
-                                                        .fontWeight(.semibold)
-
-                                                    Text("(Sum: \(mapping.sourceColumns.joined(separator: " + ")))")
-                                                        .font(.caption2)
-                                                        .foregroundColor(.secondary)
-                                                }
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                            }
-                                        }
+                            ScrollView {
+                                LazyVStack(alignment: .leading, spacing: 8) {
+                                    ForEach(previewRows.indices, id: \.self) { index in
+                                        PreviewRowView(
+                                            row: previewRows[index],
+                                            rowNumber: previewSelection == .first100 ? index + 1 : importData.rows.count - previewRows.count + index + 1,
+                                            fieldMappings: mappedFields,
+                                            headers: importData.headers
+                                        )
                                     }
                                 }
-                                .padding(8)
-                                .background(Color(.systemGray6).opacity(0.75))
-                                .cornerRadius(6)
                             }
+                            .frame(maxHeight: 400)
                         }
                     }
                 }
@@ -327,7 +288,8 @@ struct ImportMappingView: View {
 
     private var previewRows: [[String]] {
         let totalRows = importData.rows.count
-        let maxRows = min(100, totalRows)
+        // Limit preview to 20 rows for better performance with large files
+        let maxRows = min(20, totalRows)
 
         switch previewSelection {
         case .first100:
@@ -575,8 +537,8 @@ struct FieldMappingRow: View {
                     }
                 )) {
                     Text("Not Mapped").tag(nil as String?)
-                    ForEach(availableHeaders, id: \.self) { header in
-                        Text(header).tag(header as String?)
+                    ForEach(availableHeaders.indices, id: \.self) { index in
+                        Text(availableHeaders[index]).tag(availableHeaders[index] as String?)
                     }
                 }
                 .pickerStyle(.menu)
@@ -610,7 +572,8 @@ struct ColumnPickerView: View {
                 }
 
                 Section(header: Text("Available Columns")) {
-                    ForEach(availableHeaders, id: \.self) { header in
+                    ForEach(availableHeaders.indices, id: \.self) { index in
+                        let header = availableHeaders[index]
                         Button {
                             toggleSelection(header)
                         } label: {
@@ -629,7 +592,8 @@ struct ColumnPickerView: View {
 
                 if !selectedColumns.isEmpty {
                     Section(header: Text("Selected Columns")) {
-                        ForEach(selectedColumns, id: \.self) { column in
+                        ForEach(selectedColumns.indices, id: \.self) { index in
+                            let column = selectedColumns[index]
                             HStack {
                                 Text(column)
                                 Spacer()
@@ -724,8 +688,8 @@ struct RegistrationTypeMappingView: View {
 
                             Picker("Aircraft Type", selection: $mapping.aircraftType) {
                                 Text("Not Mapped").tag("")
-                                ForEach(availableTypes, id: \.self) { type in
-                                    Text(type).tag(type)
+                                ForEach(availableTypes.indices, id: \.self) { index in
+                                    Text(availableTypes[index]).tag(availableTypes[index])
                                 }
                             }
                             .pickerStyle(.menu)
@@ -793,6 +757,72 @@ struct RegistrationTypeMappingView: View {
         }
 
         availableTypes = Array(types).sorted()
+    }
+}
+
+// MARK: - Preview Row View
+private struct PreviewRowView: View {
+    let row: [String]
+    let rowNumber: Int
+    let fieldMappings: [FieldMapping]
+    let headers: [String]
+
+    // Cache column indices to avoid repeated searches
+    private var columnIndices: [String: Int] {
+        Dictionary(uniqueKeysWithValues: headers.enumerated().map { ($1, $0) })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Row \(rowNumber)")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            ForEach(fieldMappings, id: \.id) { mapping in
+                HStack(alignment: .top, spacing: 12) {
+                    Text(mapping.logbookField + ":")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .frame(minWidth: 80, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if mapping.sourceColumns.count == 1 {
+                        // Single column - show value
+                        if let columnIndex = columnIndices[mapping.sourceColumns[0]],
+                           columnIndex < row.count {
+                            Text(row[columnIndex])
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    } else {
+                        // Multiple columns - show combined result
+                        VStack(alignment: .leading, spacing: 2) {
+                            let values = mapping.sourceColumns.compactMap { column -> Double? in
+                                guard let columnIndex = columnIndices[column],
+                                      columnIndex < row.count,
+                                      let value = Double(row[columnIndex]) else {
+                                    return nil
+                                }
+                                return value
+                            }
+
+                            let combined = values.reduce(0, +)
+                            Text(String(format: "%.1f", combined))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+
+                            Text("(Sum: \(mapping.sourceColumns.joined(separator: " + ")))")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(Color(.systemGray6).opacity(0.75))
+        .cornerRadius(6)
     }
 }
 
