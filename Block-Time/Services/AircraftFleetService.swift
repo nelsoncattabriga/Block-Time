@@ -136,6 +136,9 @@ class AircraftFleetService: ObservableObject {
         Aircraft(registration: "XZO", type: "B738"),
         Aircraft(registration: "XZP", type: "B738"),
         Aircraft(registration: "XZQ", type: "B738"),
+        Aircraft(registration: "XZR", type: "B738"),
+        Aircraft(registration: "XZS", type: "B738"),
+        Aircraft(registration: "XZT", type: "B738"),
         
         // A321
         Aircraft(registration: "OGA", type: "A321"),
