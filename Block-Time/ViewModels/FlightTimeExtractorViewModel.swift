@@ -195,15 +195,17 @@ class FlightTimeExtractorViewModel: ObservableObject {
             // Extract Sendable data immediately
             let changedKeys = notification.userInfo?["changedKeys"] as? [String]
 
-            // Already on main queue, no Task wrapper needed
-            // Check if notification includes changed keys for targeted update
-            if let keys = changedKeys {
-                LogManager.shared.debug("Received CloudKit sync notification with \(keys.count) changed key(s): \(keys)")
-                self?.updateChangedSettings(keys)
-            } else {
-                // Fallback to full reload for backwards compatibility
-                LogManager.shared.debug("Received CloudKit sync notification without changedKeys - performing full reload")
-                self?.loadAllSettings()
+            // Isolate to main actor for calling main actor-isolated methods
+            Task { @MainActor [weak self] in
+                // Check if notification includes changed keys for targeted update
+                if let keys = changedKeys {
+                    LogManager.shared.debug("Received CloudKit sync notification with \(keys.count) changed key(s): \(keys)")
+                    self?.updateChangedSettings(keys)
+                } else {
+                    // Fallback to full reload for backwards compatibility
+                    LogManager.shared.debug("Received CloudKit sync notification without changedKeys - performing full reload")
+                    self?.loadAllSettings()
+                }
             }
         }
 
@@ -213,8 +215,10 @@ class FlightTimeExtractorViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            // Already on main queue, no Task wrapper needed
-            self?.saveDraftFlightData()
+            // Isolate to main actor for calling main actor-isolated methods
+            Task { @MainActor [weak self] in
+                self?.saveDraftFlightData()
+            }
         }
 
         NotificationCenter.default.addObserver(
@@ -222,10 +226,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            // Already on main queue, no Task wrapper needed
-            // Only restore if we have draft data and are not in editing mode
-            if self?.hasDraftFlightData == true && self?.isEditingMode == false {
-                self?.restoreDraftFlightData()
+            // Isolate to main actor for calling main actor-isolated methods
+            Task { @MainActor [weak self] in
+                // Only restore if we have draft data and are not in editing mode
+                if self?.hasDraftFlightData == true && self?.isEditingMode == false {
+                    self?.restoreDraftFlightData()
+                }
             }
         }
 
@@ -235,8 +241,10 @@ class FlightTimeExtractorViewModel: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            // Already on main queue, no Task wrapper needed
-            self?.reloadSavedCrewNames()
+            // Isolate to main actor for calling main actor-isolated methods
+            Task { @MainActor [weak self] in
+                self?.reloadSavedCrewNames()
+            }
         }
     }
 
@@ -755,7 +763,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         guard let item = selectedPhotoItem else { return }
 
         item.loadTransferable(type: Data.self) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 switch result {
                 case .success(let data):
                     if let data = data, let image = UIImage(data: data) {
