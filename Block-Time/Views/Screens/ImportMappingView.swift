@@ -100,15 +100,21 @@ struct ImportMappingView: View {
     }
 
     init(importData: ImportData, onImport: @escaping ([FieldMapping], ImportMode, [RegistrationTypeMapping]) -> Void) {
+        print("🔍 ImportMappingView init started")
+        print("🔍 Row count: \(importData.rows.count)")
+        print("🔍 Header count: \(importData.headers.count)")
         self.importData = importData
         self.onImport = onImport
 
+        print("🔍 Starting createInitialMappings...")
         // Initialize field mappings with smart auto-detection
         _fieldMappings = State(initialValue: Self.createInitialMappings(headers: importData.headers))
+        print("🔍 ImportMappingView init completed")
     }
 
     var body: some View {
-        NavigationStack {
+        print("🔍 ImportMappingView body called")
+        return NavigationStack {
             Form {
 //                Section {
 //                    Text("Map columns from your import file to logbook fields")
@@ -343,6 +349,7 @@ struct ImportMappingView: View {
 
     // MARK: - Smart Field Detection
     private static func createInitialMappings(headers: [String]) -> [FieldMapping] {
+        print("🔍 createInitialMappings started with \(headers.count) headers")
         let logbookFields: [(String, String, Bool, Bool)] = [  // Added supportsMultiple
             ("Date", "Flight date", true, false),
             ("Flight Number", "Flight number", false, false),
@@ -379,8 +386,10 @@ struct ImportMappingView: View {
             ("Remarks", "Remarks/notes", false, false)
         ]
 
-        return logbookFields.map { (field, description, required, supportsMultiple) in
+        let mappings = logbookFields.map { (field, description, required, supportsMultiple) in
+            print("🔍 Detecting columns for: \(field)")
             let detectedColumns = detectColumns(for: field, in: headers, allowMultiple: supportsMultiple)
+            print("🔍 Found \(detectedColumns.count) columns for \(field)")
             return FieldMapping(
                 logbookField: field,
                 logbookFieldDescription: description,
@@ -389,16 +398,21 @@ struct ImportMappingView: View {
                 supportsMultipleColumns: supportsMultiple
             )
         }
+        print("🔍 createInitialMappings completed")
+        return mappings
     }
 
     private static func detectColumns(for logbookField: String, in headers: [String], allowMultiple: Bool) -> [String] {
         let normalized = logbookField.lowercased().replacingOccurrences(of: " ", with: "")
 
+        // Cache normalized headers to avoid repeated string operations
+        let normalizedHeaders = headers.map { ($0, $0.lowercased().replacingOccurrences(of: " ", with: "")) }
+
         var matches: [String] = []
 
         // Try exact match first
-        if let match = headers.first(where: { $0.lowercased().replacingOccurrences(of: " ", with: "") == normalized }) {
-            return [match]
+        if let match = normalizedHeaders.first(where: { $0.1 == normalized }) {
+            return [match.0]
         }
 
         // Try common variations
@@ -441,17 +455,20 @@ struct ImportMappingView: View {
         if let possibleMatches = variations[normalized] {
             if allowMultiple {
                 // For fields that support multiple columns, find all matches
+                var seen = Set<String>()
                 for variation in possibleMatches {
-                    let found = headers.filter { $0.lowercased().replacingOccurrences(of: " ", with: "").contains(variation) }
-                    matches.append(contentsOf: found)
+                    for (original, norm) in normalizedHeaders {
+                        if norm.contains(variation) && !seen.contains(original) {
+                            matches.append(original)
+                            seen.insert(original)
+                        }
+                    }
                 }
-                // Remove duplicates while preserving order
-                matches = Array(NSOrderedSet(array: matches)) as! [String]
             } else {
                 // For single column fields, find first match
                 for variation in possibleMatches {
-                    if let match = headers.first(where: { $0.lowercased().replacingOccurrences(of: " ", with: "").contains(variation) }) {
-                        return [match]
+                    if let match = normalizedHeaders.first(where: { $0.1.contains(variation) }) {
+                        return [match.0]
                     }
                 }
             }

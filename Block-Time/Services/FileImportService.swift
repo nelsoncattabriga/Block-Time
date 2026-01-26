@@ -125,67 +125,76 @@ class FileImportService {
     /// Parse CSV content that may contain newlines within quoted fields
     /// This is more robust than splitting by newlines first
     private func parseCSVRows(content: String, delimiter: String) -> [[String]] {
+        LogManager.shared.info("🔍 parseCSVRows started, content length: \(content.count)")
+
+        // Strip BOM if present
+        var cleanedContent = content
+        if cleanedContent.hasPrefix("\u{FEFF}") {
+            LogManager.shared.info("🔍 Stripping UTF-8 BOM")
+            cleanedContent.removeFirst()
+        }
+
+        // Split into lines first - handles all line ending types
+        var lines = cleanedContent.components(separatedBy: .newlines)
+
+        // Remove empty trailing lines
+        while !lines.isEmpty && lines.last?.isEmpty == true {
+            lines.removeLast()
+        }
+
+        LogManager.shared.info("🔍 Found \(lines.count) lines")
+
         var rows: [[String]] = []
-        var currentRow: [String] = []
+
+        for (lineIndex, line) in lines.enumerated() {
+            guard !line.isEmpty else { continue }
+
+            let fields = parseCVSLine(line, delimiter: delimiter)
+            rows.append(fields)
+
+            if lineIndex < 3 {
+                LogManager.shared.info("🔍 Row \(lineIndex + 1): \(fields.count) fields")
+            }
+        }
+
+        LogManager.shared.info("🔍 parseCSVRows completed: \(rows.count) rows total")
+        if !rows.isEmpty {
+            LogManager.shared.info("🔍 First row has \(rows[0].count) fields")
+        }
+
+        return rows
+    }
+
+    private func parseCVSLine(_ line: String, delimiter: String) -> [String] {
+        var fields: [String] = []
         var currentField = ""
         var insideQuotes = false
         var previousChar: Character? = nil
 
-        for char in content {
+        for char in line {
             if char == "\"" {
                 // Handle escaped quotes ("")
                 if insideQuotes && previousChar == "\"" {
-                    // This is an escaped quote, add it to the field
                     currentField.append(char)
-                    previousChar = nil // Reset to avoid double-processing
+                    previousChar = nil
                     continue
                 }
                 insideQuotes.toggle()
+                previousChar = char
             } else if String(char) == delimiter && !insideQuotes {
-                // Field delimiter - save current field
-                currentRow.append(currentField.trimmingCharacters(in: .whitespaces))
+                fields.append(currentField.trimmingCharacters(in: .whitespaces))
                 currentField = ""
-            } else if (char == "\n" || char == "\r") && !insideQuotes {
-                // Row delimiter (only when not inside quotes)
-                // Skip \r in \r\n sequences
-                if char == "\r" {
-                    previousChar = char
-                    continue
-                }
-
-                // Save current field and row if not empty
-                if !currentField.isEmpty || !currentRow.isEmpty {
-                    currentRow.append(currentField.trimmingCharacters(in: .whitespaces))
-                    currentField = ""
-
-                    // Only add non-empty rows
-                    if currentRow.contains(where: { !$0.isEmpty }) {
-                        rows.append(currentRow)
-                    }
-                    currentRow = []
-                }
+                previousChar = char
             } else {
-                // Regular character - add to current field
-                // Replace newlines inside quoted fields with spaces
-                if (char == "\n" || char == "\r") && insideQuotes {
-                    currentField.append(" ")
-                } else {
-                    currentField.append(char)
-                }
-            }
-
-            previousChar = char
-        }
-
-        // Add the last field and row
-        if !currentField.isEmpty || !currentRow.isEmpty {
-            currentRow.append(currentField.trimmingCharacters(in: .whitespaces))
-            if currentRow.contains(where: { !$0.isEmpty }) {
-                rows.append(currentRow)
+                currentField.append(char)
+                previousChar = char
             }
         }
 
-        return rows
+        // Add the last field
+        fields.append(currentField.trimmingCharacters(in: .whitespaces))
+
+        return fields
     }
 
     // MARK: - Import with Mapping
