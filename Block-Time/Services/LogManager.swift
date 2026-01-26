@@ -59,7 +59,7 @@ class LogManager {
     // .info   - Show info, warning, error (hide debug messages)
     // .warning - Show warning and error only
     // .error  - Show only errors (least verbose)
-    var minimumConsoleLogLevel: LogLevel = .debug
+    var minimumConsoleLogLevel: LogLevel = .info
 
     // File management
     private let fileManager = FileManager.default
