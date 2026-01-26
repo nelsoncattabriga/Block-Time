@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24299" systemVersion="25A362" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="AircraftEntity" representedClassName="AircraftEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="fullRegistration" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="registration" optional="YES" attributeType="String"/>
+        <attribute name="type" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="FlightEntity" representedClassName="FlightEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="aircraftReg" optional="YES" attributeType="String"/>
+        <attribute name="aircraftType" optional="YES" attributeType="String"/>
+        <attribute name="blockTime" optional="YES" attributeType="String"/>
+        <attribute name="captainName" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dayLandings" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="dayTakeoffs" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="flightNumber" optional="YES" attributeType="String"/>
+        <attribute name="foName" optional="YES" attributeType="String"/>
+        <attribute name="fromAirport" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="instrumentTime" optional="YES" attributeType="String"/>
+        <attribute name="inTime" optional="YES" attributeType="String"/>
+        <attribute name="isAIII" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isGLS" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isILS" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isNPA" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isPilotFlying" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isPositioning" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isRNP" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="modifiedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="nightLandings" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="nightTakeoffs" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="nightTime" optional="YES" attributeType="String"/>
+        <attribute name="outTime" optional="YES" attributeType="String"/>
+        <attribute name="p1Time" optional="YES" attributeType="String"/>
+        <attribute name="p1usTime" optional="YES" attributeType="String"/>
+        <attribute name="p2Time" optional="YES" attributeType="String"/>
+        <attribute name="remarks" optional="YES" attributeType="String"/>
+        <attribute name="scheduledArrival" optional="YES" attributeType="String"/>
+        <attribute name="scheduledDeparture" optional="YES" attributeType="String"/>
+        <attribute name="simTime" optional="YES" attributeType="String"/>
+        <attribute name="so1Name" optional="YES" attributeType="String"/>
+        <attribute name="so2Name" optional="YES" attributeType="String"/>
+        <attribute name="toAirport" optional="YES" attributeType="String"/>
+    </entity>
+</model>

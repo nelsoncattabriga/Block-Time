@@ -1,0 +1,1693 @@
+//
+//  FRMSCalculationService.swift
+//  Block-Time
+//
+//  FRMS Calculation Engine
+//  Implements Qantas FRMS Ruleset calculations for flight and duty time limitations
+//
+
+import Foundation
+
+class FRMSCalculationService {
+
+    // MARK: - Properties
+
+    private let configuration: FRMSConfiguration
+
+    // Cached date formatters to avoid expensive recreation
+    private static let cachedDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.locale = Locale(identifier: "en_AU")
+        return formatter
+    }()
+
+    private static let cachedTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy HHmm"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.locale = Locale(identifier: "en_AU")
+        return formatter
+    }()
+
+    // MARK: - Initialization
+
+    init(configuration: FRMSConfiguration) {
+        self.configuration = configuration
+    }
+
+    // MARK: - Local Time Zone Helper
+
+    /// Get the timezone for the crew's home base
+    /// Uses AirportService to look up timezone from airports.dat.txt database
+    func getHomeBaseTimeZone() -> TimeZone {
+        // Convert to ICAO code (handles both IATA and ICAO inputs)
+        let icaoCode = AirportService.shared.convertToICAO(configuration.homeBase)
+
+        // Get timezone offset from AirportService
+        if let offsetHours = AirportService.shared.getTimezoneOffset(for: icaoCode) {
+            let offsetSeconds = Int(offsetHours * 3600)
+            return TimeZone(secondsFromGMT: offsetSeconds) ?? TimeZone(secondsFromGMT: 10 * 3600)!
+        }
+
+        // Fallback to Sydney time if airport not found
+        return TimeZone(identifier: "Australia/Sydney") ?? TimeZone(secondsFromGMT: 10 * 3600)!
+    }
+
+    /// Convert a UTC date to local time at home base
+    /// Uses AirportService to get timezone offset including DST handling
+    private func convertToLocalTime(_ utcDate: Date) -> Date {
+        // Convert to ICAO code (handles both IATA and ICAO inputs)
+        let icaoCode = AirportService.shared.convertToICAO(configuration.homeBase)
+
+        // Get timezone offset from AirportService
+        guard let offsetHours = AirportService.shared.getTimezoneOffset(for: icaoCode) else {
+            // Fallback: use Sydney timezone
+            let sydneyTimeZone = TimeZone(identifier: "Australia/Sydney") ?? TimeZone(secondsFromGMT: 10 * 3600)!
+            let utcOffset = TimeZone(secondsFromGMT: 0)!.secondsFromGMT(for: utcDate)
+            let localOffset = sydneyTimeZone.secondsFromGMT(for: utcDate)
+            let offsetDifference = localOffset - utcOffset
+            return utcDate.addingTimeInterval(TimeInterval(offsetDifference))
+        }
+
+        // Apply the offset to get local time
+        let offsetSeconds = offsetHours * 3600
+        return utcDate.addingTimeInterval(offsetSeconds)
+    }
+
+    // MARK: - Crew Complement Detection
+
+    /// Infer crew complement from filled crew names
+    func inferCrewComplement(captainName: String?,
+                            foName: String?,
+                            so1Name: String?,
+                            so2Name: String?) -> CrewComplement {
+
+        var count = 0
+        if captainName?.isEmpty == false { count += 1 }
+        if foName?.isEmpty == false { count += 1 }
+        if so1Name?.isEmpty == false { count += 1 }
+        if so2Name?.isEmpty == false { count += 1 }
+
+        // Default to 2 if no names filled or only 1
+        if count <= 2 { return .twoPilot }
+        if count == 3 { return .threePilot }
+        return .fourPilot
+    }
+
+    // MARK: - Sign-On/Sign-Off Calculation
+
+    /// Calculate sign-on time using configured minutes before STD (or OUT if STD not available)
+    /// - Parameters:
+    ///   - stdTime: Scheduled Time of Departure (if available)
+    ///   - outTime: Actual departure time (fallback if STD not available)
+    ///   - isFirstFlightOfDay: Whether this is the first flight of the duty day
+    ///   - isPositioning: Whether this is a positioning (PAX) flight
+    ///   - fromAirport: Departure airport code (ICAO or IATA)
+    ///   - toAirport: Arrival airport code (ICAO or IATA)
+    /// - Returns: Sign-on time
+    func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil) -> Date {
+        // Use STD (Scheduled Time of Departure) for sign-on calculation when available
+        // Only fall back to OUT (actual departure) if STD is not available
+        let departureTime: Date
+        if let std = stdTime {
+            departureTime = std  // Always use STD when available
+        } else {
+            departureTime = outTime  // No STD available, use OUT
+        }
+        var minutesBefore = configuration.signOnMinutesBeforeSTD
+
+        // Special case: First flight of the day that is a positioning flight between two Australian ports
+        // uses 30 minutes instead of 60 minutes (e.g., YSSY-YBBN = 30 min, but YSSY-NZAA = 60 min)
+        if isFirstFlightOfDay && isPositioning, let from = fromAirport, let to = toAirport {
+            if AirportService.shared.isAustralianAirport(from) && AirportService.shared.isAustralianAirport(to) {
+                minutesBefore = 30
+            }
+        }
+
+        return Calendar.current.date(byAdding: .minute, value: -minutesBefore, to: departureTime) ?? departureTime
+    }
+
+    /// Calculate sign-off time using configured minutes after actual IN
+    /// - Parameters:
+    ///   - inTime: Actual arrival time
+    /// - Returns: Sign-off time
+    func calculateSignOff(inTime: Date) -> Date {
+        let minutesAfter = configuration.signOffMinutesAfterIN
+        let signOffTime = Calendar.current.date(byAdding: .minute, value: minutesAfter, to: inTime) ?? inTime
+        return signOffTime
+    }
+
+    // MARK: - Cumulative Totals Calculation
+
+    /// Calculate cumulative totals from a list of duties and flights
+    /// - Parameters:
+    ///   - duties: Consolidated duties (used for duty time calculations based on sign-on date)
+    ///   - flights: Individual flight sectors (used for flight time calculations based on flight date)
+    ///   - date: The reference date for calculating periods (defaults to now)
+    /// - Returns: Cumulative totals including flight times and duty times
+    func calculateCumulativeTotals(duties: [FRMSDuty], flights: [FlightSector]? = nil, asOf date: Date = Date()) -> FRMSCumulativeTotals {
+
+        // Use home base timezone for user-facing date ranges (consistent with Dashboard and FlightsView)
+        let homeTimeZone = getHomeBaseTimeZone()
+        var calendar = Calendar.current
+        calendar.timeZone = homeTimeZone
+
+        // Calculate range: all of today back to N days ago (inclusive)
+        // e.g., Last 28 Days = today back to 27 days ago (28 days total including today)
+        let endOfToday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: date) ?? date
+        let startOfToday = calendar.startOfDay(for: date)
+
+        // Calculate start dates (all inclusive of the full day range)
+        let sevenDaysAgo = calendar.date(byAdding: .day, value: -6, to: startOfToday) ?? startOfToday
+        let fourteenDaysAgo = calendar.date(byAdding: .day, value: -13, to: startOfToday) ?? startOfToday
+
+        // Use fleet-specific period (28 days for 737, 30 days for A380/A330/B787)
+        let flightTimePeriodDays = configuration.fleet.flightTimePeriodDays
+        let flightTimePeriodAgo = calendar.date(byAdding: .day, value: -(flightTimePeriodDays - 1), to: startOfToday) ?? startOfToday
+
+        let threeSixtyFiveDaysAgo = calendar.date(byAdding: .day, value: -364, to: startOfToday) ?? startOfToday
+
+        // Filter duties in each period for DUTY TIME calculations
+        // Duties are filtered by their date (which is based on sign-on time)
+        let duties7Days = duties.filter {
+            $0.date >= sevenDaysAgo && $0.date <= endOfToday
+        }
+        let duties14Days = duties.filter {
+            $0.date >= fourteenDaysAgo && $0.date <= endOfToday
+        }
+        let dutiesFlightTimePeriod = duties.filter {
+            $0.date >= flightTimePeriodAgo && $0.date <= endOfToday
+        }
+        let duties365Days = duties.filter {
+            $0.date >= threeSixtyFiveDaysAgo && $0.date <= endOfToday
+        }
+
+        // Calculate FLIGHT TIME totals from individual flights (if provided)
+        // This ensures flight times are counted by flight date, not duty date
+        let flightTime7Days: Double
+        let flightTime28Or30Days: Double
+        let flightTime365Days: Double
+
+        if let flights = flights {
+            // Filter flights by their actual flight date (dd/MM/yyyy string from database)
+            // Database stores dates as UTC, so we need to parse and compare in home base timezone
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "dd/MM/yyyy"
+            dateFormatter.timeZone = homeTimeZone  // Use home base timezone for consistency
+
+            // Convert date range to string format for comparison
+            let flights7Days = flights.filter {
+                guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
+                return flightDate >= sevenDaysAgo && flightDate <= endOfToday
+            }
+            let flightsFlightTimePeriod = flights.filter {
+                guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
+                return flightDate >= flightTimePeriodAgo && flightDate <= endOfToday
+            }
+            let flights365Days = flights.filter {
+                guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
+                return flightDate >= threeSixtyFiveDaysAgo && flightDate <= endOfToday
+            }
+
+            // Sum flight times from individual flights
+            flightTime7Days = flights7Days.reduce(0.0) { $0 + ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue) }
+            flightTime28Or30Days = flightsFlightTimePeriod.reduce(0.0) { $0 + ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue) }
+            flightTime365Days = flights365Days.reduce(0.0) { $0 + ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue) }
+
+        } else {
+            // Fallback to duty-based calculation if flights not provided (for backward compatibility)
+            flightTime7Days = duties7Days.reduce(0.0) { $0 + $1.flightTime }
+            flightTime28Or30Days = dutiesFlightTimePeriod.reduce(0.0) { $0 + $1.flightTime }
+            flightTime365Days = duties365Days.reduce(0.0) { $0 + $1.flightTime }
+        }
+
+        // Calculate duty time totals
+        let dutyTime7Days = duties7Days.reduce(0.0) { $0 + $1.dutyTime }
+        let dutyTime14Days = duties14Days.reduce(0.0) { $0 + $1.dutyTime }
+
+        // Count days off in the flight time period using home base timezone dates
+        // (counts unique local calendar days with duty)
+        let daysWithDuty = Set(dutiesFlightTimePeriod.map { calendar.startOfDay(for: $0.signOn) })
+        let daysOff28Or30Days = flightTimePeriodDays - daysWithDuty.count
+
+        // Count consecutive duties, early starts, late nights
+        let sortedDuties = duties.sorted { $0.date < $1.date }
+        let (consecutiveDuties, consecutiveEarlyStarts, consecutiveLateNights) = calculateConsecutiveInfo(duties: sortedDuties, asOf: date)
+
+        // Calculate duty days in rolling 11-day period (FD12.2a) using home base timezone
+        // Include all of today back to 10 days ago (11 days total including today)
+        let elevenDaysAgo = calendar.date(byAdding: .day, value: -10, to: startOfToday) ?? startOfToday
+        let duties11Days = duties.filter {
+            let dutyLocalDate = calendar.startOfDay(for: $0.signOn)
+            return dutyLocalDate >= elevenDaysAgo && dutyLocalDate <= endOfToday
+        }
+        let dutyDaysIn11Days = Set(duties11Days.map { calendar.startOfDay(for: $0.signOn) }).count
+
+        return FRMSCumulativeTotals(
+            flightTime7Days: flightTime7Days,
+            flightTime28Or30Days: flightTime28Or30Days,
+            flightTime365Days: flightTime365Days,
+            dutyTime7Days: dutyTime7Days,
+            dutyTime14Days: dutyTime14Days,
+            daysOff28Days: daysOff28Or30Days,
+            consecutiveDuties: consecutiveDuties,
+            consecutiveEarlyStarts: consecutiveEarlyStarts,
+            consecutiveLateNights: consecutiveLateNights,
+            dutyDaysIn11Days: dutyDaysIn11Days,
+            fleet: configuration.fleet
+        )
+    }
+
+    // MARK: - Consecutive Info Helper
+
+    private func calculateConsecutiveInfo(duties: [FRMSDuty], asOf date: Date) -> (consecutive: Int, earlyStarts: Int, lateNights: Int) {
+        guard !duties.isEmpty else { return (0, 0, 0) }
+
+        // Get home base timezone - use LOCAL dates for consecutive duty counting
+        let homeTimeZone = getHomeBaseTimeZone()
+        var localCalendar = Calendar.current
+        localCalendar.timeZone = homeTimeZone
+
+        // Get the reference date (today) in local timezone
+        let todayLocal = localCalendar.startOfDay(for: date)
+
+        // Get the most recent duty date
+        guard let mostRecentDuty = duties.last else { return (0, 0, 0) }
+        let mostRecentDutyDate = localCalendar.startOfDay(for: mostRecentDuty.signOn)
+
+        // Check if there's a gap between today and the most recent duty
+        // If the most recent duty was more than 1 day ago, consecutive count should be 0
+        let daysSinceLastDuty = localCalendar.dateComponents([.day], from: mostRecentDutyDate, to: todayLocal).day ?? 0
+        if daysSinceLastDuty > 1 {
+            return (0, 0, 0)
+        }
+
+        // Start from the most recent duty date
+        var currentDate = mostRecentDutyDate
+
+        // Track unique consecutive days (not individual duties)
+        var consecutiveDays = Set<Date>()
+
+        // Track day characteristics for early starts and late nights
+        var dayHasEarlyStart: [Date: Bool] = [:]
+        var dayHasLateNight: [Date: Bool] = [:]
+
+        // First pass: collect all duties and their day characteristics
+        for duty in duties.reversed() {
+            let dutyLocalDate = localCalendar.startOfDay(for: duty.signOn)
+
+            // Check if this duty is consecutive (same day or previous day in LOCAL TIME)
+            if dutyLocalDate == currentDate || dutyLocalDate == localCalendar.date(byAdding: .day, value: -1, to: currentDate) {
+                // Add this day to the set of consecutive days
+                consecutiveDays.insert(dutyLocalDate)
+
+                // Check for early start (sign-on before 0700 LOCAL TIME)
+                let signOnHour = localCalendar.component(.hour, from: duty.signOn)
+                if signOnHour < 7 {
+                    dayHasEarlyStart[dutyLocalDate] = true
+                }
+
+                // Check for late night operation
+                if duty.timeClass == .lateNight || duty.timeClass == .backOfClock {
+                    dayHasLateNight[dutyLocalDate] = true
+                }
+
+                currentDate = dutyLocalDate
+            } else {
+                // Gap in duties, stop counting
+                break
+            }
+        }
+
+        // Second pass: count consecutive early starts and late nights from the collected days
+        var consecutiveEarlyStarts = 0
+        var consecutiveLateNights = 0
+
+        // Sort days in descending order (most recent first)
+        let sortedDays = consecutiveDays.sorted(by: >)
+
+        for day in sortedDays {
+            // Check consecutive early starts
+            if dayHasEarlyStart[day] == true {
+                consecutiveEarlyStarts += 1
+            } else {
+                break  // Stop counting if this day doesn't have early start
+            }
+        }
+
+        for day in sortedDays {
+            // Check consecutive late nights
+            if dayHasLateNight[day] == true {
+                consecutiveLateNights += 1
+            } else {
+                break  // Stop counting if this day doesn't have late night
+            }
+        }
+
+        return (consecutiveDays.count, consecutiveEarlyStarts, consecutiveLateNights)
+    }
+
+    // MARK: - Maximum Next Duty Calculation
+
+    /// Calculate maximum allowable next duty based on current state and previous duty
+    func calculateMaximumNextDuty(previousDuty: FRMSDuty?,
+                                  cumulativeTotals: FRMSCumulativeTotals,
+                                  limitType: FRMSLimitType,
+                                  proposedCrewComplement: CrewComplement,
+                                  proposedRestFacility: RestFacilityClass = .none) -> FRMSMaximumNextDuty {
+
+        var restrictions: [String] = []
+        var maxDutyPeriod: Double = 12.0
+        var maxFlightTime: Double = 10.5
+        var maxSectors: Int = 4
+        var minimumRest: Double = 12.0
+        var earliestSignOn: Date? = nil
+
+        // Get base limits for crew complement
+        let baseLimits = getBaseLimits(crewComplement: proposedCrewComplement,
+                                      restFacility: proposedRestFacility,
+                                      limitType: limitType)
+
+        maxDutyPeriod = baseLimits.maxDuty
+        maxFlightTime = baseLimits.maxFlight
+        maxSectors = baseLimits.maxSectors
+
+        // Calculate minimum rest based on previous duty
+        if let prevDuty = previousDuty {
+            minimumRest = calculateMinimumRest(afterDuty: prevDuty, limitType: limitType)
+
+            // Calculate earliest sign-on using standard rounding for minutes
+            let restMinutes = Int(round(minimumRest * 60))
+            earliestSignOn = Calendar.current.date(byAdding: .minute, value: restMinutes, to: prevDuty.signOff)
+
+            // Apply restrictions based on previous duty characteristics
+            if prevDuty.dutyTime > 12 {
+                restrictions.append("Previous duty exceeded 12 hours")
+            }
+
+            // Back-of-clock early sign-on restriction (applies to both fleets)
+            if prevDuty.timeClass == .backOfClock {
+                // For back-of-clock, next duty in Australia can't start before 1000
+                if let proposedSignOn = earliestSignOn {
+                    let calendar = Calendar.current
+                    var components = calendar.dateComponents([.year, .month, .day], from: proposedSignOn)
+                    components.hour = 10
+                    components.minute = 0
+                    if let tenAM = calendar.date(from: components), proposedSignOn < tenAM {
+                        earliestSignOn = tenAM
+                    }
+                }
+            }
+
+            // Fleet-specific consecutive duty restrictions (A320/B737 only)
+            if configuration.fleet == .a320B737 {
+                // Consecutive duty days restriction (max 6) - FD12.2b
+                if cumulativeTotals.consecutiveDuties >= 6 {
+                    restrictions.append("Maximum 6 consecutive duty days reached")
+                }
+
+                // Duty days in 11-day period restriction (max 9) - FD12.2a
+                if cumulativeTotals.dutyDaysIn11Days >= 9 {
+                    restrictions.append("Maximum 9 duty days in 11-day period reached")
+                }
+
+                // Consecutive early starts restriction (max 4)
+                if cumulativeTotals.consecutiveEarlyStarts >= 4 {
+                    restrictions.append("Maximum 4 consecutive early starts reached")
+                }
+
+                // Consecutive late nights restriction (max 4 in 7 days, or 5 once per 28 days)
+                if cumulativeTotals.consecutiveLateNights >= 4 {
+                    restrictions.append("Late night operations limit approaching")
+                }
+            }
+
+            // A380/A330/B787 specific restrictions
+            if configuration.fleet == .a380A330B787 {
+                // Back of clock restriction for widebody
+                if prevDuty.timeClass == .backOfClock {
+                    restrictions.append("Back-of-clock operation: next duty in Australia limited to after 1000LT")
+                }
+            }
+        }
+
+        // Apply cumulative limit restrictions (fleet-specific)
+        let remainingFlightTime28Or30Days = configuration.fleet.maxFlightTime28Days - cumulativeTotals.flightTime28Or30Days
+        let remainingDutyTime7Days = configuration.fleet.maxDutyTime7Days - cumulativeTotals.dutyTime7Days
+        let remainingDutyTime14Days = configuration.fleet.maxDutyTime14Days - cumulativeTotals.dutyTime14Days
+
+        // For widebody, also check 7-day flight time limit
+        var constraintsForFlight: [Double] = [remainingFlightTime28Or30Days]
+        if let flightLimit7Days = configuration.fleet.maxFlightTime7Days {
+            let remainingFlightTime7Days = flightLimit7Days - cumulativeTotals.flightTime7Days
+            constraintsForFlight.append(remainingFlightTime7Days)
+
+            if remainingFlightTime7Days < 10 {
+                restrictions.append("Limited by 7-day flight time limit")
+            }
+        }
+
+        // Constrain by remaining limits
+        maxFlightTime = min(maxFlightTime, constraintsForFlight.min() ?? maxFlightTime)
+        maxDutyPeriod = min(maxDutyPeriod, remainingDutyTime7Days, remainingDutyTime14Days)
+
+        let periodDays = configuration.fleet.flightTimePeriodDays
+        if remainingFlightTime28Or30Days < 20 {
+            restrictions.append("Limited by \(periodDays)-day flight time limit")
+        }
+
+        if remainingDutyTime7Days < 20 {
+            restrictions.append("Limited by 7-day duty time limit")
+        }
+
+        // Ensure no negative values
+        maxDutyPeriod = max(0, maxDutyPeriod)
+        maxFlightTime = max(0, maxFlightTime)
+
+        // Get sign-on based limits for A380/A330/B787 fleet
+        var signOnBasedLimits: [SignOnTimeRange]? = nil
+        if configuration.fleet == .a380A330B787 {
+            switch proposedCrewComplement {
+            case .twoPilot:
+                signOnBasedLimits = getSignOnBasedLimits2PilotA380A330B787(limitType: limitType)
+            case .threePilot:
+                signOnBasedLimits = getSignOnBasedLimits3PilotA380A330B787(restFacility: proposedRestFacility, limitType: limitType)
+            case .fourPilot:
+                signOnBasedLimits = getSignOnBasedLimits4PilotA380A330B787(restFacility: proposedRestFacility, limitType: limitType)
+            }
+        }
+
+        return FRMSMaximumNextDuty(
+            maxDutyPeriod: maxDutyPeriod,
+            maxFlightTime: maxFlightTime,
+            maxSectors: maxSectors,
+            minimumRest: minimumRest,
+            earliestSignOn: earliestSignOn,
+            restrictions: restrictions,
+            limitType: limitType,
+            signOnBasedLimits: signOnBasedLimits,
+            mbtt: nil  // MBTT will be calculated separately based on trip parameters
+        )
+    }
+
+    // MARK: - MBTT Calculation (A380/A330/B787)
+
+    /// Calculate Minimum Base Turnaround Time based on trip pattern
+    /// - Parameters:
+    ///   - daysAway: Number of days away from base on the trip
+    ///   - creditedFlightHours: Total credited flight hours for the trip pattern
+    ///   - hadPlannedDutyOver18Hours: Whether the trip pattern contained a planned duty >18 hours
+    /// - Returns: MBTT requirements or nil if not applicable
+    func calculateMBTT(daysAway: Int, creditedFlightHours: Double, hadPlannedDutyOver18Hours: Bool = false) -> FRMSMinimumBaseTurnaroundTime? {
+        // Only applicable to widebody fleet
+        guard configuration.fleet == .a380A330B787 else { return nil }
+
+        var localNights = 1
+        var minHours: Double? = nil
+        var reason = ""
+        var reasons: [String] = []
+
+        // Base MBTT rules by days away
+        if daysAway == 1 {
+            minHours = 12.0
+            localNights = 0
+            reasons.append("1 day away: 12 hours")
+        } else if daysAway >= 2 && daysAway <= 4 {
+            localNights = 1
+            reasons.append("\(daysAway) days away: 1 local night")
+        } else if daysAway >= 5 && daysAway <= 8 {
+            localNights = 2
+            reasons.append("\(daysAway) days away: 2 local nights")
+        } else if daysAway >= 9 && daysAway <= 12 {
+            localNights = 3
+            reasons.append("\(daysAway) days away: 3 local nights")
+        } else if daysAway > 12 {
+            localNights = 4
+            reasons.append(">\(daysAway) days away: 4 local nights")
+        }
+
+        // Additional nights based on credited flight hours
+        if creditedFlightHours > 60 {
+            localNights = max(localNights, 4)
+            reasons.append(">60 credited flight hours: 4 local nights")
+            minHours = nil  // Override hours with nights
+        } else if creditedFlightHours > 40 {
+            localNights = max(localNights, 3)
+            reasons.append(">40 credited flight hours: 3 local nights")
+            minHours = nil
+        } else if creditedFlightHours > 20 {
+            localNights = max(localNights, 2)
+            reasons.append(">20 credited flight hours: 2 local nights")
+            minHours = nil
+        }
+
+        // Additional night if pattern contained planned duty >18 hours
+        if hadPlannedDutyOver18Hours {
+            localNights += 1
+            reasons.append("Planned duty >18 hours: +1 local night")
+            minHours = nil
+        }
+
+        // Use the most restrictive requirement
+        reason = reasons.joined(separator: " • ")
+
+        return FRMSMinimumBaseTurnaroundTime(
+            daysAway: daysAway,
+            creditedFlightHours: creditedFlightHours,
+            localNightsRequired: localNights,
+            minHours: minHours,
+            reason: reason
+        )
+    }
+
+    // MARK: - Base Limits Lookup
+
+    private func getBaseLimits(crewComplement: CrewComplement,
+                              restFacility: RestFacilityClass,
+                              limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
+
+        // Return fleet-specific limits
+        switch configuration.fleet {
+        case .a320B737:
+            return getBaseLimitsA320B737(crewComplement: crewComplement, restFacility: restFacility, limitType: limitType)
+        case .a380A330B787:
+            return getBaseLimitsA380A330B787(crewComplement: crewComplement, restFacility: restFacility, limitType: limitType)
+        }
+    }
+
+    // MARK: - A380/A330/B787 Sign-On Time Based Limits (2-Pilot)
+
+    /// Get all sign-on time based limits for 2-pilot A380/A330/B787 operations
+    private func getSignOnBasedLimits2PilotA380A330B787(limitType: FRMSLimitType) -> [SignOnTimeRange] {
+        var ranges: [SignOnTimeRange] = []
+
+        // 0500-0759 LT
+        ranges.append(SignOnTimeRange(
+            timeRange: "0500-0759 LT",
+            maxDutyPeriod: 11.0,
+            maxDutyPeriodOperational: nil,  // Can be extended with pilot discretion
+            maxFlightTime: 8.0,
+            maxFlightTimeOperational: limitType == .operational ? 10.5 : nil,
+            preRestRequired: 11.0,
+            postRestRequired: 11.0,
+            notes: nil
+        ))
+
+        // 0800-1359 LT
+        ranges.append(SignOnTimeRange(
+            timeRange: "0800-1359 LT",
+            maxDutyPeriod: 11.0,           // Standard
+            maxDutyPeriodOperational: 12.0, // Day pattern only
+            maxFlightTime: 8.5,            // Standard
+            maxFlightTimeOperational: limitType == .operational ? 10.5 : 9.5, // 9.5 day pattern only
+            preRestRequired: 11.0,
+            postRestRequired: 11.0,
+            notes: "Day pattern: 12 hrs duty / 9.5 hrs flight"
+        ))
+
+        // 1400-1559 LT
+        ranges.append(SignOnTimeRange(
+            timeRange: "1400-1559 LT",
+            maxDutyPeriod: 11.0,
+            maxDutyPeriodOperational: nil,
+            maxFlightTime: 8.5,
+            maxFlightTimeOperational: limitType == .operational ? 10.5 : nil,
+            preRestRequired: 11.0,
+            postRestRequired: 11.0,
+            notes: nil
+        ))
+
+        // 1600-0459 LT
+        ranges.append(SignOnTimeRange(
+            timeRange: "1600-0459 LT",
+            maxDutyPeriod: 10.0,
+            maxDutyPeriodOperational: nil,
+            maxFlightTime: 8.0,
+            maxFlightTimeOperational: limitType == .operational ? 10.5 : nil,
+            preRestRequired: 22.0,  // Late night operation requires more rest
+            postRestRequired: 22.0,
+            notes: "Night operation"
+        ))
+
+        return ranges
+    }
+
+    /// Get all sign-on time based limits for 3-pilot A380/A330/B787 operations
+    private func getSignOnBasedLimits3PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
+        var ranges: [SignOnTimeRange] = []
+
+        switch restFacility {
+        case .class2:
+            // CLASS 2 REST (Seat in cabin with full screen)
+            ranges.append(SignOnTimeRange(
+                timeRange: "All sign-on times",
+                maxDutyPeriod: 12.0,
+                maxDutyPeriodOperational: 16.0,
+                maxFlightTime: 8.5,
+                maxFlightTimeOperational: 14.0, // Max 8 consecutive hours active, 14 total
+                preRestRequired: 10.0,
+                postRestRequired: 12.0,
+                notes: "Max 8 consecutive hrs active duty in flight deck, 14 hrs total"
+            ))
+
+        case .class1:
+            // CLASS 1 REST (Bunk or berth)
+            ranges.append(SignOnTimeRange(
+                timeRange: "All sign-on times",
+                maxDutyPeriod: 14.0,
+                maxDutyPeriodOperational: 18.0,
+                maxFlightTime: 12.5,
+                maxFlightTimeOperational: 14.0,
+                preRestRequired: 12.0,
+                postRestRequired: limitType == .operational ? 12.0 : 22.0, // 22-32 hrs depending on duty length
+                notes: "Max 8 consecutive hrs active, 14 hrs total. Post-duty rest varies by duty length and acclimation"
+            ))
+
+        default:
+            // No rest facility or mixed - shouldn't happen for 3-pilot but include for completeness
+            ranges.append(SignOnTimeRange(
+                timeRange: "All sign-on times",
+                maxDutyPeriod: 12.0,
+                maxDutyPeriodOperational: 14.0,
+                maxFlightTime: 8.5,
+                maxFlightTimeOperational: 8.0,
+                preRestRequired: 10.0,
+                postRestRequired: 12.0,
+                notes: "No rest facility"
+            ))
+        }
+
+        return ranges
+    }
+
+    /// Get all sign-on time based limits for 4-pilot A380/A330/B787 operations
+    private func getSignOnBasedLimits4PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
+        var ranges: [SignOnTimeRange] = []
+
+        switch restFacility {
+        case .class2:
+            // 2x CLASS 2 REST
+            ranges.append(SignOnTimeRange(
+                timeRange: "All sign-on times",
+                maxDutyPeriod: 16.0,
+                maxDutyPeriodOperational: 16.0,
+                maxFlightTime: 14.0,
+                maxFlightTimeOperational: 14.0,
+                preRestRequired: 12.0,
+                postRestRequired: 22.0,
+                notes: "2x Class 2 Rest. Max 8 consecutive hrs active, 14 hrs total. <2 sectors if >14hrs"
+            ))
+
+        case .mixed:
+            // 1x CLASS 1 & 1x CLASS 2 REST
+            ranges.append(SignOnTimeRange(
+                timeRange: "All sign-on times",
+                maxDutyPeriod: 17.5,
+                maxDutyPeriodOperational: 20.0,
+                maxFlightTime: 14.0,
+                maxFlightTimeOperational: 14.0,
+                preRestRequired: 12.0,
+                postRestRequired: limitType == .operational ? 24.0 : 32.0,
+                notes: "1x Class 1 + 1x Class 2 Rest. Max 8 consecutive hrs active, 14 hrs total"
+            ))
+
+        case .class1:
+            // 2x CLASS 1 REST
+            ranges.append(SignOnTimeRange(
+                timeRange: "All sign-on times",
+                maxDutyPeriod: 20.0,
+                maxDutyPeriodOperational: 21.0, // For >18 hour duties (relevant sectors)
+                maxFlightTime: 14.0,
+                maxFlightTimeOperational: 14.0,
+                preRestRequired: limitType == .operational ? 12.0 : 48.0, // Varies by duty length
+                postRestRequired: limitType == .operational ? 32.0 : 48.0, // Varies by duty length and crew
+                notes: "2x Class 1 Rest. Max 8 consecutive hrs active, 14 hrs total. Special rules for >18hr duties"
+            ))
+
+        default:
+            // No rest facility - shouldn't happen for 4-pilot but include for completeness
+            ranges.append(SignOnTimeRange(
+                timeRange: "All sign-on times",
+                maxDutyPeriod: 14.0,
+                maxDutyPeriodOperational: 14.0,
+                maxFlightTime: 8.0,
+                maxFlightTimeOperational: 8.0,
+                preRestRequired: 12.0,
+                postRestRequired: 22.0,
+                notes: "No rest facility"
+            ))
+        }
+
+        return ranges
+    }
+
+    // MARK: - A380/A330/B787 Specific Limits
+
+    private func getBaseLimitsA380A330B787(crewComplement: CrewComplement,
+                                          restFacility: RestFacilityClass,
+                                          limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
+
+        switch crewComplement {
+        case .twoPilot:
+            // FD3.1 & FD10.1: 2-pilot limits vary by sign-on time
+            // Return the most restrictive as baseline (night operations)
+            if limitType == .planning {
+                // Planning: 10-11 hours depending on sign-on, 8-9.5 hours flight time
+                return (maxDuty: 10.0, maxFlight: 8.0, maxSectors: 4)
+            } else {
+                // Operational: Can extend with pilot discretion, 9.5-10.5 hours flight time
+                return (maxDuty: 11.0, maxFlight: 9.5, maxSectors: 4)
+            }
+
+        case .threePilot:
+            // FD3.1 & FD10.1: 3-pilot limits depend on rest facility
+            switch restFacility {
+            case .class1:
+                if limitType == .planning {
+                    // Planning: 14 hours duty, 12.5 hours flight
+                    return (maxDuty: 14.0, maxFlight: 12.5, maxSectors: 4)
+                } else {
+                    // Operational: 18 hours duty
+                    return (maxDuty: 18.0, maxFlight: 14.0, maxSectors: 4)
+                }
+            case .class2:
+                if limitType == .planning {
+                    // Planning: 12 hours duty, 8.5 hours flight
+                    return (maxDuty: 12.0, maxFlight: 8.5, maxSectors: 4)
+                } else {
+                    // Operational: 16 hours duty
+                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 4)
+                }
+            default:
+                // No rest facility (seats in passenger compartment)
+                if limitType == .operational {
+                    return (maxDuty: 14.0, maxFlight: 8.0, maxSectors: 4)
+                } else {
+                    return (maxDuty: 12.0, maxFlight: 8.5, maxSectors: 4)
+                }
+            }
+
+        case .fourPilot:
+            // FD3.1 & FD10.1: 4-pilot limits depend on rest facilities
+            switch restFacility {
+            case .class1:
+                // 2x CLASS 1 REST
+                if limitType == .planning {
+                    // Planning: 20 hours duty, no more than 14 hours in flight deck
+                    return (maxDuty: 20.0, maxFlight: 14.0, maxSectors: 2)
+                } else {
+                    // Operational: 21 hours for relevant sectors (>18 hour duties)
+                    return (maxDuty: 21.0, maxFlight: 14.0, maxSectors: 2)
+                }
+            case .class2:
+                // 2x CLASS 2 REST
+                if limitType == .planning {
+                    // Planning: 16 hours duty
+                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 2)
+                } else {
+                    // Operational: 16 hours duty
+                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 2)
+                }
+            case .mixed:
+                // 1x CLASS 1 & 1x CLASS 2 REST
+                if limitType == .planning {
+                    // Planning: 17.5 hours duty
+                    return (maxDuty: 17.5, maxFlight: 14.0, maxSectors: 2)
+                } else {
+                    // Operational: 20 hours duty
+                    return (maxDuty: 20.0, maxFlight: 14.0, maxSectors: 2)
+                }
+            default:
+                // Seats in passenger compartment
+                if limitType == .operational {
+                    return (maxDuty: 14.0, maxFlight: 8.0, maxSectors: 2)
+                } else {
+                    return (maxDuty: 14.0, maxFlight: 8.0, maxSectors: 2)
+                }
+            }
+        }
+    }
+
+    // MARK: - A320/B737 Specific Limits
+
+    private func getBaseLimitsA320B737(crewComplement: CrewComplement,
+                                      restFacility: RestFacilityClass,
+                                      limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
+
+        switch crewComplement {
+        case .twoPilot:
+            // A320/B737 2-pilot limits (simplified - doesn't account for time of day yet)
+            if limitType == .planning {
+                return (maxDuty: 11.0, maxFlight: 8.5, maxSectors: 4)
+            } else {
+                return (maxDuty: 12.0, maxFlight: 10.0, maxSectors: 4)
+            }
+
+        case .threePilot:
+            // A320/B737 3-pilot limits depend on rest facility
+            switch restFacility {
+            case .class1:
+                if limitType == .planning {
+                    return (maxDuty: 14.0, maxFlight: 12.5, maxSectors: 4)
+                } else {
+                    return (maxDuty: 18.0, maxFlight: 12.5, maxSectors: 4)
+                }
+            case .class2:
+                if limitType == .planning {
+                    return (maxDuty: 12.0, maxFlight: 8.5, maxSectors: 4)
+                } else {
+                    return (maxDuty: 16.0, maxFlight: 8.5, maxSectors: 4)
+                }
+            default:
+                return (maxDuty: 12.0, maxFlight: 8.5, maxSectors: 4)
+            }
+
+        case .fourPilot:
+            // A320/B737 4-pilot limits depend on rest facilities
+            switch restFacility {
+            case .class1:
+                if limitType == .planning {
+                    return (maxDuty: 20.0, maxFlight: 14.0, maxSectors: 2)
+                } else {
+                    return (maxDuty: 21.0, maxFlight: 14.0, maxSectors: 2)
+                }
+            case .class2:
+                if limitType == .planning {
+                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 2)
+                } else {
+                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 2)
+                }
+            case .mixed:
+                if limitType == .planning {
+                    return (maxDuty: 17.5, maxFlight: 14.0, maxSectors: 2)
+                } else {
+                    return (maxDuty: 20.0, maxFlight: 14.0, maxSectors: 2)
+                }
+            default:
+                return (maxDuty: 14.0, maxFlight: 8.0, maxSectors: 4)
+            }
+        }
+    }
+
+    // MARK: - Minimum Rest Calculation
+
+    private func calculateMinimumRest(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
+
+        // Fleet-specific rest requirements
+        switch configuration.fleet {
+        case .a320B737:
+            return calculateMinimumRestA320B737(afterDuty: duty, limitType: limitType)
+        case .a380A330B787:
+            return calculateMinimumRestA380A330B787(afterDuty: duty, limitType: limitType)
+        }
+    }
+
+    // MARK: - A380/A330/B787 Minimum Rest
+
+    private func calculateMinimumRestA380A330B787(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
+
+        var minimumRest: Double
+
+        switch duty.crewComplement {
+        case .twoPilot:
+            // FD3.1 & FD10.1: 2-pilot rest requirements
+            if duty.dutyTime <= 11 {
+                if limitType == .planning {
+                    // Planning: 11 hours if flight time ≤ 8, otherwise 22 hours
+                    minimumRest = duty.flightTime <= 8.0 ? 11.0 : 22.0
+                } else {
+                    // Operational: 10 hours
+                    minimumRest = 10.0
+                }
+            } else if duty.dutyTime <= 12 {
+                if limitType == .planning {
+                    minimumRest = 22.0
+                } else {
+                    minimumRest = 12.0
+                }
+            } else {
+                // Over 12 hours operational: 10 + 1 hour for each 15 minutes over 11 hours
+                if limitType == .operational {
+                    let excessMinutes = (duty.dutyTime - 11.0) * 60.0
+                    let additionalHours = ceil(excessMinutes / 15.0)
+                    minimumRest = 10.0 + additionalHours
+                } else {
+                    minimumRest = 24.0
+                }
+            }
+
+        case .threePilot:
+            // FD3.1 & FD10.1: 3-pilot rest requirements
+            if duty.dutyTime <= 12 {
+                if limitType == .planning {
+                    minimumRest = 12.0
+                } else {
+                    minimumRest = 12.0
+                }
+            } else if duty.dutyTime <= 16 {
+                if limitType == .planning {
+                    minimumRest = 22.0  // Acclimated crew
+                } else {
+                    minimumRest = 12.0
+                }
+            } else {
+                // Over 16 hours
+                if limitType == .planning {
+                    minimumRest = 32.0  // Not acclimated
+                } else {
+                    minimumRest = 24.0
+                }
+            }
+
+        case .fourPilot:
+            // FD3.1 & FD10.1: 4-pilot rest requirements
+            if duty.dutyTime <= 12 {
+                if limitType == .planning {
+                    // Planning: 12 hours if flight time < 9.5, otherwise 18 hours
+                    minimumRest = duty.flightTime < 9.5 ? 12.0 : 18.0
+                } else {
+                    // Operational: 12 hours if flight time ≤ 9.5
+                    minimumRest = duty.flightTime <= 9.5 ? 12.0 : 18.0
+                }
+            } else if duty.dutyTime <= 14 {
+                if limitType == .planning {
+                    minimumRest = 22.0  // Or 32 hours depending on conditions
+                } else {
+                    minimumRest = 22.0
+                }
+            } else if duty.dutyTime <= 16 {
+                if limitType == .planning {
+                    minimumRest = 32.0  // Or 48 hours within West Coast North America
+                } else {
+                    minimumRest = 24.0
+                }
+            } else {
+                // Over 16 hours (>18 hour duties - special rules apply)
+                if limitType == .planning {
+                    minimumRest = 48.0  // Or 22 hours if prior duty was deadheading
+                } else {
+                    minimumRest = 32.0  // Or 48 hours within West Coast North America
+                }
+            }
+        }
+
+        return minimumRest
+    }
+
+    // MARK: - A320/B737 Next Duty Limits Calculation
+
+    /// Calculate complete A320/B737 next duty limits with all restrictions
+    func calculateA320B737NextDutyLimits(previousDuty: FRMSDuty?,
+                                         cumulativeTotals: FRMSCumulativeTotals,
+                                         limitType: FRMSLimitType,
+                                         duties: [FRMSDuty] = []) -> A320B737NextDutyLimits? {
+
+        // Only applicable to A320/B737 fleet
+        guard configuration.fleet == .a320B737 else { return nil }
+
+        // Calculate earliest sign-on and rest requirements
+        var earliestSignOn = Date()
+        var restCalculation: RestCalculationBreakdown
+
+        if let prevDuty = previousDuty {
+            let minimumRest = calculateMinimumRestA320B737(afterDuty: prevDuty, limitType: limitType)
+            // Calculate earliest sign-on using standard rounding for minutes
+            let restMinutes = Int(round(minimumRest * 60))
+            earliestSignOn = Calendar.current.date(byAdding: .minute, value: restMinutes, to: prevDuty.signOff) ?? Date()
+
+            // Build rest calculation breakdown
+            let formula: String
+            let reducedRestAvailable: Bool
+            let reducedRestConditions: String?
+
+            if prevDuty.dutyTime <= 12 {
+                formula = "MAX(\(String(format: "%.1f", prevDuty.dutyTime)), 10.0) hours"
+
+                // Check if reduced rest is available (FD28.2)
+                if limitType == .operational && prevDuty.dutyTime <= 10 {
+                    reducedRestAvailable = true
+                    reducedRestConditions = "9 hours if rest includes 2200-0600 local time"
+                } else {
+                    reducedRestAvailable = false
+                    reducedRestConditions = nil
+                }
+            } else {
+                let excess = prevDuty.dutyTime - 12.0
+                formula = "12 + (1.5 × \(String(format: "%.1f", excess))) = \(String(format: "%.1f", minimumRest)) hours"
+                reducedRestAvailable = false
+                reducedRestConditions = nil
+            }
+
+            restCalculation = RestCalculationBreakdown(
+                previousDutyHours: prevDuty.dutyTime,
+                formula: formula,
+                minimumRestHours: minimumRest,
+                reducedRestAvailable: reducedRestAvailable,
+                reducedRestConditions: reducedRestConditions
+            )
+
+            // Apply back-of-clock restriction if applicable (FD14.4)
+            if prevDuty.timeClass == .backOfClock {
+                let homeTimeZone = getHomeBaseTimeZone()
+                var localCalendar = Calendar.current
+                localCalendar.timeZone = homeTimeZone
+
+                var components = localCalendar.dateComponents([.year, .month, .day], from: earliestSignOn)
+                components.hour = 10
+                components.minute = 0
+
+                if let tenAM = localCalendar.date(from: components), earliestSignOn < tenAM {
+                    earliestSignOn = tenAM
+                }
+            }
+        } else {
+            // No previous duty
+            restCalculation = RestCalculationBreakdown(
+                previousDutyHours: 0,
+                formula: "No previous duty",
+                minimumRestHours: 0,
+                reducedRestAvailable: false,
+                reducedRestConditions: nil
+            )
+        }
+
+        // Build sign-on time windows
+        let earlyWindow = buildA320B737DutyWindow(
+            timeRange: "0500-1459",
+            displayName: "Early",
+            startHour: 5,
+            endHour: 14,
+            planningDuty1to4: 12.0,
+            planningDuty5: 11.0,
+            planningDuty6: nil,
+            operationalDuty1to4: 14.0,
+            operationalDuty5: 13.0,
+            operationalDuty6: 12.0,
+            flightTime: 10.5,
+            earliestSignOn: earliestSignOn
+        )
+
+        let afternoonWindow = buildA320B737DutyWindow(
+            timeRange: "1500-1959",
+            displayName: "Afternoon",
+            startHour: 15,
+            endHour: 19,
+            planningDuty1to4: 11.0,
+            planningDuty5: 10.0,
+            planningDuty6: nil,
+            operationalDuty1to4: 13.0,
+            operationalDuty5: 12.0,
+            operationalDuty6: 11.0,
+            flightTime: 10.0,
+            earliestSignOn: earliestSignOn
+        )
+
+        let nightWindow = buildA320B737DutyWindow(
+            timeRange: "2000-0459",
+            displayName: "Night",
+            startHour: 20,
+            endHour: 4,
+            planningDuty1to4: 10.0,
+            planningDuty5: 10.0,
+            planningDuty6: nil,
+            operationalDuty1to4: 12.0,
+            operationalDuty5: 12.0,
+            operationalDuty6: 11.0,
+            flightTime: 10.0,
+            earliestSignOn: earliestSignOn
+        )
+
+        // Check for back-of-clock restriction
+        var backOfClockRestriction: BackOfClockRestriction? = nil
+        if let prevDuty = previousDuty, prevDuty.timeClass == .backOfClock {
+            backOfClockRestriction = BackOfClockRestriction(
+                earliestSignOn: earliestSignOn,
+                reason: "Previous duty included ≥2 hours between 0100-0459",
+                appliesTo: "Australia only"
+            )
+        }
+
+        // Build late night status
+        var lateNightStatus: LateNightStatus? = nil
+        if cumulativeTotals.consecutiveLateNights > 0 {
+            // Calculate duty hours in 7-night period from duties involving late night operations
+            // Per FD14.3(a) & FD24.3(a): Only count duties that are classified as late night or back of clock
+            let homeTimeZone = getHomeBaseTimeZone()
+            var calendar = Calendar.current
+            calendar.timeZone = homeTimeZone
+
+            let now = Date()
+            let startOfToday = calendar.startOfDay(for: now)
+            let sevenDaysAgo = calendar.date(byAdding: .day, value: -6, to: startOfToday) ?? startOfToday
+            let endOfToday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
+
+            // Filter duties in last 7 days that involve late night operations
+            let lateNightDutiesIn7Days = duties.filter { duty in
+                // Check if duty is in the 7-day window
+                let dutyDate = duty.date
+                guard dutyDate >= sevenDaysAgo && dutyDate <= endOfToday else { return false }
+
+                // Check if duty is classified as late night or back of clock
+                return duty.timeClass == .lateNight || duty.timeClass == .backOfClock
+            }
+
+            // Sum duty hours from late night duties only
+            let dutyHours7Nights = lateNightDutiesIn7Days.reduce(0.0) { $0 + $1.dutyTime }
+
+            let recoveryOption: LateNightRecoveryOption
+            if cumulativeTotals.consecutiveLateNights >= 4 {
+                recoveryOption = .require24HoursOff
+            } else if cumulativeTotals.consecutiveLateNights >= 2 {
+                recoveryOption = .continueOnLateNights
+            } else {
+                recoveryOption = .noRestriction
+            }
+
+            lateNightStatus = LateNightStatus(
+                consecutiveLateNights: cumulativeTotals.consecutiveLateNights,
+                maxConsecutiveLateNights: 4,
+                dutyHoursIn7Nights: dutyHours7Nights,
+                maxDutyHoursIn7Nights: 40.0,
+                canUse5NightException: true, // Would need to track 28-day usage
+                recoveryOption: recoveryOption
+            )
+        }
+
+        // Build consecutive duty status
+        let consecutiveDutyStatus = ConsecutiveDutyStatus(
+            consecutiveDuties: cumulativeTotals.consecutiveDuties,
+            maxConsecutiveDuties: 6,
+            dutyDaysIn11Days: cumulativeTotals.dutyDaysIn11Days,
+            maxDutyDaysIn11Days: 9,
+            consecutiveEarlyStarts: cumulativeTotals.consecutiveEarlyStarts,
+            maxConsecutiveEarlyStarts: 4
+        )
+
+        // Pattern end requirement (simplified - would need pattern tracking)
+        var patternEndRequirement: PatternEndRequirement? = nil
+        if cumulativeTotals.consecutiveDuties >= 3 {
+            patternEndRequirement = PatternEndRequirement(
+                patternDays: cumulativeTotals.consecutiveDuties,
+                minimumRestHours: cumulativeTotals.consecutiveDuties >= 3 ? 15.0 : 12.0,
+                reason: cumulativeTotals.consecutiveDuties >= 3 ? "3-4 day pattern" : "1-2 day pattern"
+            )
+        }
+
+        // Weekly rest status (FD12.3)
+        // This is simplified - would need detailed tracking of rest periods
+        let weeklyRestStatus = WeeklyRestStatus(
+            hasRequired36Hours: true, // Placeholder
+            hasRequired2Nights: true, // Placeholder
+            nextRequiredBy: nil,
+            isCompliant: true
+        )
+
+        // Determine overall status
+        var overallStatus: FRMSComplianceStatus = .compliant
+        if consecutiveDutyStatus.hasActiveRestrictions {
+            overallStatus = .warning(message: "Consecutive duty limits approaching")
+        }
+        if backOfClockRestriction != nil {
+            overallStatus = .warning(message: "Back-of-clock restrictions apply")
+        }
+
+        // Build special scenarios
+        let specialScenarios = buildA320B737SpecialScenarios()
+
+        return A320B737NextDutyLimits(
+            earlyWindow: earlyWindow,
+            afternoonWindow: afternoonWindow,
+            nightWindow: nightWindow,
+            backOfClockRestriction: backOfClockRestriction,
+            lateNightStatus: lateNightStatus,
+            consecutiveDutyStatus: consecutiveDutyStatus,
+            restCalculation: restCalculation,
+            earliestSignOn: earliestSignOn,
+            patternEndRequirement: patternEndRequirement,
+            weeklyRestStatus: weeklyRestStatus,
+            specialScenarios: specialScenarios,
+            overallStatus: overallStatus
+        )
+    }
+
+    /// Build special scenarios for A320/B737
+    private func buildA320B737SpecialScenarios() -> SpecialScenarios {
+        // Simulator restrictions (FD7)
+        let simulatorRestrictions = SimulatorRestrictions(
+            dayBeforeRestriction: "Sign-off ≤2000 day before simulator (Australia)",
+            restBeforeSimulator: 12.0,
+            sameDayProhibition: "Cannot have 2 duty periods in same 24-hour period (Australia)",
+            applicableRegion: "Australia/New Zealand"
+        )
+
+        // Days off requirements (FD5)
+        let daysOffRequirements = DaysOffRequirements(
+            dutyBeforeXDay: "Complete ≤2230 local (previous day)",
+            dutyAfterXDay: "Earliest sign-on 0500 local",
+            minimumDuration: 36.0,
+            operationalException: "May extend to 2300 local for operational disruptions"
+        )
+
+        // Annual leave adjacency (FD9)
+        let annualLeaveRestrictions = AnnualLeaveRestrictions(
+            beforeLeaveRestriction: "Latest duty end: 2000 (day before) - Australia, 1800 (≥7 days) - NZ",
+            afterLeaveRestriction: "Earliest duty start: 0800 (day after) - Australia only",
+            minimumLeaveDays: 7,
+            canWaive: true,
+            applicableRegion: "Australia/New Zealand"
+        )
+
+        // Reserve duty rules (FD13.5, FD23.5, FD28.3, FD51.3, FD64.3)
+        let reserveDutyRules = ReserveDutyRules(
+            afterCalloutRest: "MAX(12 hours, actual duty length)",
+            withoutCalloutRest: "10 hours free of all duty (operational)",
+            betweenReservePeriods: "MAX(12 hours, previous duty length)"
+        )
+
+        // Deadheading limitations (FD15, FD25)
+        let deadheadingLimitations = DeadheadingLimitations(
+            absoluteMaximum: 16.0,
+            restCalculationNote: "Deadheading included in total duty for rest calculation",
+            sectorCountingRule: "Last sector deadheading doesn't count; before flight duty does count"
+        )
+
+        return SpecialScenarios(
+            simulatorRestrictions: simulatorRestrictions,
+            daysOffRequirements: daysOffRequirements,
+            annualLeaveRestrictions: annualLeaveRestrictions,
+            reserveDutyRules: reserveDutyRules,
+            deadheadingLimitations: deadheadingLimitations
+        )
+    }
+
+    /// Check What-If scenario compliance
+    func checkWhatIfScenario(scenario: WhatIfScenario,
+                             previousDuty: FRMSDuty?,
+                             cumulativeTotals: FRMSCumulativeTotals,
+                             a320B737Limits: A320B737NextDutyLimits) -> WhatIfResult {
+
+        var violations: [String] = []
+        var warnings: [String] = []
+
+        // Determine which time window applies
+        // Use device's current timezone (where you currently are)
+        let calendar = Calendar.current
+        let signOnHour = calendar.component(.hour, from: scenario.proposedSignOn)
+
+        let applicableWindow: DutyTimeWindow
+        if signOnHour >= 5 && signOnHour <= 14 {
+            applicableWindow = a320B737Limits.earlyWindow
+        } else if signOnHour >= 15 && signOnHour <= 19 {
+            applicableWindow = a320B737Limits.afternoonWindow
+        } else {
+            applicableWindow = a320B737Limits.nightWindow
+        }
+
+        // Check if sign-on is before earliest allowed
+        if scenario.proposedSignOn < a320B737Limits.earliestSignOn {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "dd MMM HHmm"
+            violations.append("Sign-on before earliest allowed: \(formatter.string(from: a320B737Limits.earliestSignOn))")
+        }
+
+        // Get limits based on sector count
+        let limits = configuration.defaultLimitType == .planning ? applicableWindow.planningLimits : applicableWindow.operationalLimits
+        let maxDuty = limits.maxDuty(forSectors: scenario.estimatedSectors)
+
+        // Check duty time
+        if scenario.estimatedDutyHours > maxDuty {
+            violations.append("Duty time \(String(format: "%.1f", scenario.estimatedDutyHours))h exceeds max \(String(format: "%.1f", maxDuty))h for \(scenario.estimatedSectors) sectors")
+        } else if scenario.estimatedDutyHours > (maxDuty * 0.9) {
+            warnings.append("Duty time approaching limit (\(String(format: "%.1f", scenario.estimatedDutyHours))h of \(String(format: "%.1f", maxDuty))h)")
+        }
+
+        // Check flight time
+        if scenario.estimatedFlightHours > limits.maxFlightTime {
+            violations.append("Flight time \(String(format: "%.1f", scenario.estimatedFlightHours))h exceeds max \(String(format: "%.1f", limits.maxFlightTime))h")
+        }
+
+        // Check cumulative limits
+        if scenario.estimatedFlightHours + cumulativeTotals.flightTime28Or30Days > configuration.fleet.maxFlightTime28Days {
+            violations.append("Would exceed 28-day flight time limit")
+        }
+
+        if scenario.estimatedDutyHours + cumulativeTotals.dutyTime7Days > configuration.fleet.maxDutyTime7Days {
+            violations.append("Would exceed 7-day duty time limit")
+        }
+
+        if scenario.estimatedDutyHours + cumulativeTotals.dutyTime14Days > configuration.fleet.maxDutyTime14Days {
+            violations.append("Would exceed 14-day duty time limit")
+        }
+
+        // Check consecutive duty restrictions
+        if a320B737Limits.consecutiveDutyStatus.consecutiveDuties >= 6 {
+            violations.append("Maximum 6 consecutive duty days already reached")
+        }
+
+        if a320B737Limits.consecutiveDutyStatus.dutyDaysIn11Days >= 9 {
+            violations.append("Maximum 9 duty days in 11-day period already reached")
+        }
+
+        // Determine compliance
+        let isCompliant = violations.isEmpty
+        let complianceStatus: FRMSComplianceStatus
+        if !violations.isEmpty {
+            complianceStatus = .violation(message: violations.joined(separator: "; "))
+        } else if !warnings.isEmpty {
+            complianceStatus = .warning(message: warnings.joined(separator: "; "))
+        } else {
+            complianceStatus = .compliant
+        }
+
+        return WhatIfResult(
+            scenario: scenario,
+            isCompliant: isCompliant,
+            complianceStatus: complianceStatus,
+            violations: violations,
+            warnings: warnings,
+            applicableWindow: applicableWindow
+        )
+    }
+
+    /// Helper to build a duty time window
+    private func buildA320B737DutyWindow(timeRange: String,
+                                         displayName: String,
+                                         startHour: Int,
+                                         endHour: Int,
+                                         planningDuty1to4: Double,
+                                         planningDuty5: Double?,
+                                         planningDuty6: Double?,
+                                         operationalDuty1to4: Double,
+                                         operationalDuty5: Double?,
+                                         operationalDuty6: Double?,
+                                         flightTime: Double,
+                                         earliestSignOn: Date) -> DutyTimeWindow {
+
+        // Check if this window is currently available based on earliest sign-on
+        // Use device's current timezone (where you currently are)
+        let calendar = Calendar.current
+
+        let signOnHour = calendar.component(.hour, from: earliestSignOn)
+
+        // Check if sign-on hour falls within this window
+        let isAvailable: Bool
+        if endHour < startHour {
+            // Wraps around midnight (e.g., 2000-0459)
+            isAvailable = signOnHour >= startHour || signOnHour <= endHour
+        } else {
+            isAvailable = signOnHour >= startHour && signOnHour <= endHour
+        }
+
+        let planningLimits = DutyLimits(
+            maxDutySectors1to4: planningDuty1to4,
+            maxDutySectors5: planningDuty5,
+            maxDutySectors6: planningDuty6,
+            maxFlightTime: flightTime
+        )
+
+        let operationalLimits = DutyLimits(
+            maxDutySectors1to4: operationalDuty1to4,
+            maxDutySectors5: operationalDuty5,
+            maxDutySectors6: operationalDuty6,
+            maxFlightTime: flightTime
+        )
+
+        return DutyTimeWindow(
+            timeRange: timeRange,
+            displayName: displayName,
+            startHour: startHour,
+            endHour: endHour,
+            planningLimits: planningLimits,
+            operationalLimits: operationalLimits,
+            isCurrentlyAvailable: isAvailable
+        )
+    }
+
+    // MARK: - A320/B737 Minimum Rest
+
+    private func calculateMinimumRestA320B737(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
+
+        // Base rest
+        var minimumRest: Double
+
+        if duty.dutyTime <= 12 {
+            // FD18.1 & FD28.1: Planning = 22 hours, Operational = 10 hours
+            if limitType == .planning {
+                minimumRest = 22.0
+            } else {
+                minimumRest = 10.0
+            }
+        } else {
+            // Over 12 hours: 12 + 1.5 * (duty - 12)
+            let excess = duty.dutyTime - 12.0
+            minimumRest = 12.0 + (1.5 * excess)
+        }
+
+        // Special rules for augmented crews
+        if duty.crewComplement == .threePilot || duty.crewComplement == .fourPilot {
+            if duty.dutyTime > 16 {
+                minimumRest = max(minimumRest, 24.0)
+            }
+        }
+
+        return minimumRest
+    }
+
+    // MARK: - Compliance Check
+
+    /// Check if a proposed duty would be compliant
+    func checkCompliance(proposedDuty: FRMSDuty,
+                        previousDuty: FRMSDuty?,
+                        cumulativeTotals: FRMSCumulativeTotals) -> FRMSComplianceStatus {
+
+        var violations: [String] = []
+
+        // Check flight time limits (fleet-specific)
+        if let flightLimit7Days = configuration.fleet.maxFlightTime7Days {
+            if proposedDuty.flightTime + cumulativeTotals.flightTime7Days > flightLimit7Days {
+                violations.append("Would exceed \(Int(flightLimit7Days)) hours in 7 days")
+            }
+        }
+
+        let periodDays = configuration.fleet.flightTimePeriodDays
+        if proposedDuty.flightTime + cumulativeTotals.flightTime28Or30Days > configuration.fleet.maxFlightTime28Days {
+            violations.append("Would exceed \(Int(configuration.fleet.maxFlightTime28Days)) hours in \(periodDays) days")
+        }
+
+        // Check duty time limits (fleet-specific)
+        if proposedDuty.dutyTime + cumulativeTotals.dutyTime7Days > configuration.fleet.maxDutyTime7Days {
+            violations.append("Would exceed \(Int(configuration.fleet.maxDutyTime7Days)) duty hours in 7 days")
+        }
+
+        if proposedDuty.dutyTime + cumulativeTotals.dutyTime14Days > configuration.fleet.maxDutyTime14Days {
+            violations.append("Would exceed \(Int(configuration.fleet.maxDutyTime14Days)) duty hours in 14 days")
+        }
+
+        // Check rest requirements
+        if let prevDuty = previousDuty {
+            let requiredRest = calculateMinimumRest(afterDuty: prevDuty, limitType: .planning)
+            // Use standardized conversion with proper rounding
+            let actualRest = proposedDuty.signOn.timeIntervalSince(prevDuty.signOff).toDecimalHours
+
+            if actualRest < requiredRest {
+                violations.append("Insufficient rest: \(String(format: "%.1f", actualRest))h (need \(String(format: "%.1f", requiredRest))h)")
+            }
+        }
+
+        // Return status
+        if !violations.isEmpty {
+            return .violation(message: violations.joined(separator: "; "))
+        }
+
+        return .compliant
+    }
+
+    // MARK: - Convert FlightSector to FRMSDuty
+
+    /// Helper to convert existing FlightSector to FRMSDuty for calculations
+    /// - Parameters:
+    ///   - flightSector: The flight sector to convert
+    ///   - crewPosition: The crew position (captain/FO)
+    ///   - isFirstFlightOfDay: Whether this is the first flight of the duty day (affects sign-on time for positioning flights)
+    /// - Returns: FRMSDuty object or nil if conversion fails
+    func createDuty(from flightSector: FlightSector,
+                   crewPosition: FlightTimePosition,
+                   isFirstFlightOfDay: Bool = false) -> FRMSDuty? {
+
+        // Validate date format - ensure it can be parsed
+        guard Self.cachedDateFormatter.date(from: flightSector.date) != nil else {
+            // Only log if in recent years (2023-2025)
+            if flightSector.date.contains("2023") || flightSector.date.contains("2024") || flightSector.date.contains("2025") {
+                LogManager.shared.warning("FRMS: Skipping flight on \(flightSector.date) - invalid date format")
+            }
+            return nil
+        }
+
+        // Get flight time from sector
+        // For simulator flights, use simTime; otherwise use blockTime
+        let flightTime = flightSector.blockTimeValue > 0 ? flightSector.blockTimeValue : flightSector.simTimeValue
+
+        // If no flight time at all, check if it's a positioning flight
+        // Positioning flights may have zero blockTime but still contribute to duty time
+        if flightTime == 0 && !flightSector.isPositioning {
+            return nil
+        }
+
+        var signOn: Date
+        var signOff: Date
+
+        // Check if we have OUT and IN times
+        if !flightSector.outTime.isEmpty && !flightSector.inTime.isEmpty {
+            // Parse OUT and IN times (format: "HHMM" or "HH:MM")
+            // We need to combine date + time to get proper Date objects
+            let outTimeStr = flightSector.outTime.replacingOccurrences(of: ":", with: "")
+            let inTimeStr = flightSector.inTime.replacingOccurrences(of: ":", with: "")
+
+            // Use cached formatter
+            guard let outDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(outTimeStr)"),
+                  var inDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(inTimeStr)") else {
+                // Only log if in recent years (2023-2025)
+                if flightSector.date.contains("2023") || flightSector.date.contains("2024") || flightSector.date.contains("2025") {
+                    LogManager.shared.warning("FRMS: Skipping flight on \(flightSector.date) - can't parse OUT(\(flightSector.outTime))/IN(\(flightSector.inTime)) times")
+                }
+                return nil
+            }
+
+            // If IN time is before OUT time, it crossed midnight - add a day
+            if inDate < outDate {
+                inDate = Calendar.current.date(byAdding: .day, value: 1, to: inDate) ?? inDate
+            }
+
+            // Parse scheduled times if available
+            var stdDate: Date? = nil
+
+            if !flightSector.scheduledDeparture.isEmpty {
+                let stdTimeStr = flightSector.scheduledDeparture.replacingOccurrences(of: ":", with: "")
+                stdDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(stdTimeStr)")
+            }
+
+            // Calculate sign-on and sign-off using configured margins
+            // For completed flights, STD (if available) or OUT will be used for sign-on
+            // Special case: First positioning flight between two Australian ports uses 30 min instead of 60 min
+            signOn = calculateSignOn(
+                stdTime: stdDate,
+                outTime: outDate,
+                isFirstFlightOfDay: isFirstFlightOfDay,
+                isPositioning: flightSector.isPositioning,
+                fromAirport: flightSector.fromAirport,
+                toAirport: flightSector.toAirport
+            )
+            signOff = calculateSignOff(inTime: inDate)
+        } else {
+            // For flights without OUT/IN times:
+            // - Try to use scheduled departure/arrival times
+            // - For simulator flights without times, estimate duty from sim time
+
+            // For future scheduled flights or simulators, use scheduled times
+            var stdDate: Date? = nil
+            var staDate: Date? = nil
+
+            // Parse scheduled times if available using cached formatter
+            if !flightSector.scheduledDeparture.isEmpty {
+                let stdTimeStr = flightSector.scheduledDeparture.replacingOccurrences(of: ":", with: "")
+                stdDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(stdTimeStr)")
+            }
+
+            if !flightSector.scheduledArrival.isEmpty {
+                let staTimeStr = flightSector.scheduledArrival.replacingOccurrences(of: ":", with: "")
+                staDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(staTimeStr)")
+            }
+
+            // If we have scheduled times, use them
+            if let std = stdDate, let sta = staDate {
+                // Handle overnight flights (STA before STD means next day)
+                var adjustedSta = sta
+                if sta < std {
+                    adjustedSta = Calendar.current.date(byAdding: .day, value: 1, to: sta) ?? sta
+                }
+
+                signOn = calculateSignOn(
+                    stdTime: std,
+                    outTime: std,
+                    isFirstFlightOfDay: isFirstFlightOfDay,
+                    isPositioning: flightSector.isPositioning,
+                    fromAirport: flightSector.fromAirport,
+                    toAirport: flightSector.toAirport
+                )
+                signOff = calculateSignOff(inTime: adjustedSta)
+            } else if let std = stdDate {
+                // Only have STD, estimate from flight time
+                signOn = calculateSignOn(
+                    stdTime: std,
+                    outTime: std,
+                    isFirstFlightOfDay: isFirstFlightOfDay,
+                    isPositioning: flightSector.isPositioning,
+                    fromAirport: flightSector.fromAirport,
+                    toAirport: flightSector.toAirport
+                )
+                let estimatedDutyMinutes = Int(flightTime * 60) + configuration.signOffMinutesAfterIN
+                signOff = Calendar.current.date(byAdding: .minute, value: estimatedDutyMinutes, to: signOn) ?? signOn
+            } else {
+                // No scheduled times available - estimate duty times from the date
+                // This handles simulator flights and rostered flights without times
+                guard let baseDate = Self.cachedDateFormatter.date(from: flightSector.date) else {
+                    return nil
+                }
+
+                // Use midnight UTC as sign-on for simplicity
+                signOn = baseDate
+
+                // For simulator flights, use simTime + 1.5 hours as duty time
+                // For other flights, use flight time + 1.5 hours
+                let dutyHours = flightTime + 1.5
+                let dutyMinutes = Int(dutyHours * 60)
+                signOff = Calendar.current.date(byAdding: .minute, value: dutyMinutes, to: signOn) ?? signOn
+            }
+        }
+
+        // Infer crew complement from crew names
+        let crewComplement = inferCrewComplement(
+            captainName: flightSector.captainName,
+            foName: flightSector.foName,
+            so1Name: flightSector.so1Name,
+            so2Name: flightSector.so2Name
+        )
+
+        // Determine if international (simplified - could be enhanced)
+        let isInternational = flightSector.aircraftType.contains("A380") ||
+                             flightSector.aircraftType.contains("A330") ||
+                             flightSector.aircraftType.contains("B787")
+
+        // Get night time
+        let nightTime = flightSector.nightTimeValue
+
+        // Duty type
+        let dutyType: DutyType = flightSector.isPositioning ? .deadheading : .operating
+
+        // Get home base timezone for time classification
+        let homeTimeZone = getHomeBaseTimeZone()
+
+        // Use the original database date (UTC midnight) for duty date
+        // This ensures consistency with Dashboard calculations
+        // The database stores dates as dd/MM/yyyy strings converted to UTC midnight
+        guard let dbDate = Self.cachedDateFormatter.date(from: flightSector.date) else {
+            return nil
+        }
+
+        return FRMSDuty(
+            date: dbDate,
+            dutyType: dutyType,
+            crewComplement: crewComplement,
+            restFacility: .none,  // Would need to determine this
+            signOn: signOn,
+            signOff: signOff,
+            flightTime: flightTime,
+            nightTime: nightTime,
+            sectors: 1,  // Each FlightSector is 1 sector
+            isInternational: isInternational,
+            homeBaseTimeZone: homeTimeZone
+        )
+    }
+}
