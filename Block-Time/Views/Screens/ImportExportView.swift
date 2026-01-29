@@ -210,6 +210,18 @@ struct ImportExportView: View {
                 }
 
                 Divider()
+                // Add Aircraft Summary
+                ActionButton(
+                    title: "Add Aircraft Summary",
+                    subtitle: "Add previous hours by type",
+                    icon: "clock.badge.checkmark.fill",
+                    color: .green.opacity(0.7),
+                    isLoading: false
+                ) {
+                    showingAircraftSummary = true
+                }
+
+                Divider()
 
                 // webCIS Import Button
                 if isImportingWebCIS {
@@ -230,7 +242,7 @@ struct ImportExportView: View {
                     title: "Import webCIS Data",
                     subtitle: "RCIS Flying Experience Report",
                     icon: "doc.text.fill",
-                    color: .orange.opacity(0.6),
+                    color: .orange.opacity(0.8),
                     isLoading: false
                 ) {
                     print("🔘 Import webCIS button tapped")
@@ -253,18 +265,7 @@ struct ImportExportView: View {
                 }
                 .disabled(isImporting)
 
-                // Add Aircraft Summary
-                ActionButton(
-                    title: "Add Aircraft Summary",
-                    subtitle: "Add previous hours by type",
-                    icon: "clock.badge.checkmark.fill",
-                    color: .green.opacity(0.7),
-                    isLoading: false
-                ) {
-                    showingAircraftSummary = true
-                }
-
-                Divider()
+                //Divider()
 
                 // Export Data
                 ActionButton(
