@@ -127,7 +127,7 @@ struct FlightsView: View {
                     .ignoresSafeArea()
             )
             .overlay(alignment: .bottomTrailing) {
-                if isSelectMode && !selectedFlights.isEmpty {
+                if isSelectMode {
                     HStack(spacing: 12) {
                         // Edit button
                         Button(action: {
@@ -143,10 +143,11 @@ struct FlightsView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 14)
-                            .background(Color.blue)
+                            .background(selectedFlights.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
                             .cornerRadius(25)
                             .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
+                        .disabled(selectedFlights.isEmpty)
 
                         // Delete button
                         Button(action: {
@@ -162,10 +163,11 @@ struct FlightsView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 14)
-                            .background(Color.red)
+                            .background(selectedFlights.isEmpty ? Color.red.opacity(0.5) : Color.red)
                             .cornerRadius(25)
                             .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
+                        .disabled(selectedFlights.isEmpty)
                     }
                     .padding(.trailing, 20)
                     .padding(.bottom, 20)
@@ -191,66 +193,65 @@ struct FlightsView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !filteredFlightSectors.isEmpty {
-                        HStack(spacing: 12) {
-                            Button(action: {
-                                HapticManager.shared.impact(.light)
-                                isSelectMode.toggle()
-                                if !isSelectMode {
-                                    selectedFlights.removeAll()
-                                }
-                            }) {
-                                Text(isSelectMode ? "Done" : "Select")
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            isSelectMode.toggle()
+                            if !isSelectMode {
+                                selectedFlights.removeAll()
                             }
-
-                            // Select All / Deselect All button (only in select mode)
-                            if isSelectMode {
-                                Button(action: {
-                                    HapticManager.shared.impact(.light)
-                                    let allFilteredIds = Set(filteredFlightSectors.map { $0.id })
-                                    if selectedFlights == allFilteredIds {
-                                        // All selected, so deselect all
-                                        selectedFlights.removeAll()
-                                    } else {
-                                        // Select all filtered flights
-                                        selectedFlights = allFilteredIds
-                                    }
-                                }) {
-                                    let allSelected = selectedFlights == Set(filteredFlightSectors.map { $0.id })
-                                    Text(allSelected ? "Deselect All" : "Select All")
-                                        .foregroundColor(.blue)
-                                }
-                            }
+                        }) {
+                            Text(isSelectMode ? "Done" : "Select")
                         }
                     }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
+                    if isSelectMode {
+                        // Show Select All / Deselect All button in select mode
                         Button(action: {
                             HapticManager.shared.impact(.light)
-                            filterViewModel.sortOrderReversed.toggle()
-                            applyFilters()
-                            shouldScrollToTop = true
+                            let allFilteredIds = Set(filteredFlightSectors.map { $0.id })
+                            if selectedFlights == allFilteredIds {
+                                // All selected, so deselect all
+                                selectedFlights.removeAll()
+                            } else {
+                                // Select all filtered flights
+                                selectedFlights = allFilteredIds
+                            }
                         }) {
-//                            Text("Sort")
-//                                .font(.subheadline)
-//                            Image(systemName: filterViewModel.sortOrderReversed ? "arrow.up" : "arrow.down")
-                            Image(systemName: "arrow.up.arrow.down.circle")
-                            .font(.title3)
+                            let allSelected = selectedFlights == Set(filteredFlightSectors.map { $0.id })
+                            Text(allSelected ? "Deselect All" : "Select All")
+                                .foregroundColor(.blue)
                         }
+                    } else {
+                        // Show sort and filter buttons in normal mode
+                        HStack(spacing: 16) {
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                filterViewModel.sortOrderReversed.toggle()
+                                applyFilters()
+                                shouldScrollToTop = true
+                            }) {
+    //                            Text("Sort")
+    //                                .font(.subheadline)
+    //                            Image(systemName: filterViewModel.sortOrderReversed ? "arrow.up" : "arrow.down")
+                                Image(systemName: "arrow.up.arrow.down.circle")
+                                .font(.title3)
+                            }
 
-                        Button(action: {
-                            HapticManager.shared.impact(.light)
-                            showingFilterSheet = true
-                        }) {
-                            ZStack {
-                                Image(systemName: "line.3.horizontal.decrease.circle")
-                                    .font(.title3)
-                                if isFilterActive {
-                                    Circle()
-                                        .fill(Color.red)
-                                        .frame(width: 8, height: 8)
-                                        .offset(x: 10, y: -10)
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                showingFilterSheet = true
+                            }) {
+                                ZStack {
+                                    Image(systemName: "line.3.horizontal.decrease.circle")
+                                        .font(.title3)
+                                    if isFilterActive {
+                                        Circle()
+                                            .fill(Color.red)
+                                            .frame(width: 8, height: 8)
+                                            .offset(x: 10, y: -10)
+                                    }
                                 }
                             }
                         }

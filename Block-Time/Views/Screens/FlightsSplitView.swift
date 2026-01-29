@@ -14,6 +14,7 @@ struct FlightsSplitView: View {
     @State private var selectedFlight: FlightSector?
     @State private var isAddingNewFlight: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
+    @State private var isSelectMode: Bool = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @State private var refreshTrigger = UUID()
@@ -32,6 +33,7 @@ struct FlightsSplitView: View {
                     filterViewModel: filterViewModel,
                     selectedFlight: $selectedFlight,
                     isAddingNewFlight: $isAddingNewFlight,
+                    isSelectMode: $isSelectMode,
                     refreshTrigger: refreshTrigger,
                     onFlightSelected: { flight in
                                 LogManager.shared.debug("onFlightSelected callback: \(flight.flightNumberFormatted)")
@@ -82,12 +84,15 @@ struct FlightsSplitView: View {
                             }
                     } else {
                         // Show empty state with + button
-                        EmptyDetailView(onAddFlight: {
-                            isAddingNewFlight = true
-                        })
-                            .onAppear {
-                                        LogManager.shared.debug("Empty detail view showing - selectedFlight is nil")
+                        EmptyDetailView(
+                            isSelectMode: isSelectMode,
+                            onAddFlight: {
+                                isAddingNewFlight = true
                             }
+                        )
+                        .onAppear {
+                                    LogManager.shared.debug("Empty detail view showing - selectedFlight is nil")
+                        }
                     }
                 }
             }
@@ -118,6 +123,7 @@ private struct FlightsListContent: View {
     @ObservedObject var filterViewModel: FlightsFilterViewModel
     @Binding var selectedFlight: FlightSector?
     @Binding var isAddingNewFlight: Bool
+    @Binding var isSelectMode: Bool
     let refreshTrigger: UUID
     let onFlightSelected: (FlightSector) -> Void
 
@@ -128,7 +134,6 @@ private struct FlightsListContent: View {
     @State private var isFilterActive: Bool = false
     @State private var flightToDelete: FlightSector?
     @State private var showingDeleteAlert = false
-    @State private var isSelectMode: Bool = false
     @State private var selectedFlightsForDeletion: Set<UUID> = []
     @State private var showingBulkDeleteAlert = false
     @State private var showingBulkEditSheet = false
@@ -209,7 +214,7 @@ private struct FlightsListContent: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if isSelectMode && !selectedFlightsForDeletion.isEmpty {
+            if isSelectMode {
                 HStack(spacing: 12) {
                     // Edit button
                     Button(action: {
@@ -225,10 +230,11 @@ private struct FlightsListContent: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 14)
-                        .background(Color.blue)
+                        .background(selectedFlightsForDeletion.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
                         .cornerRadius(25)
                         .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
+                    .disabled(selectedFlightsForDeletion.isEmpty)
 
                     // Delete button
                     Button(action: {
@@ -244,10 +250,11 @@ private struct FlightsListContent: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 14)
-                        .background(Color.red)
+                        .background(selectedFlightsForDeletion.isEmpty ? Color.red.opacity(0.5) : Color.red)
                         .cornerRadius(25)
                         .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
+                    .disabled(selectedFlightsForDeletion.isEmpty)
                 }
                 .padding(.trailing, 20)
                 .padding(.bottom, 20)
@@ -261,14 +268,16 @@ private struct FlightsListContent: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 HStack(spacing: 16) {
-                    // Add new flight button
-                    Button(action: {
-                        HapticManager.shared.impact(.light)
-                        selectedFlight = nil
-                        isAddingNewFlight = true
-                    }) {
-                        Image(systemName: "plus.circle")
-                            .font(.title3)
+                    // Add new flight button - hide in select mode
+                    if !isSelectMode {
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            selectedFlight = nil
+                            isAddingNewFlight = true
+                        }) {
+                            Image(systemName: "plus.circle")
+                                .font(.title3)
+                        }
                     }
 
                     if !filteredFlightSectors.isEmpty {
@@ -325,30 +334,33 @@ private struct FlightsListContent: View {
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 16) {
-                    Button(action: {
-                        HapticManager.shared.impact(.light)
-                        filterViewModel.sortOrderReversed.toggle()
-                        applyFilters()
-                        shouldScrollToTop = true
-                    }) {
-                        Image(systemName: "arrow.up.arrow.down.circle")
-                            .font(.title3)
-                    }
-
-                    Button(action: {
-                        HapticManager.shared.impact(.light)
-                        showingFilterSheet = true
-                    }) {
-                        ZStack {
-                            Image(systemName: "line.3.horizontal.decrease.circle")
+                // Hide sort and filter buttons in select mode to prevent toolbar overflow
+                if !isSelectMode {
+                    HStack(spacing: 16) {
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            filterViewModel.sortOrderReversed.toggle()
+                            applyFilters()
+                            shouldScrollToTop = true
+                        }) {
+                            Image(systemName: "arrow.up.arrow.down.circle")
                                 .font(.title3)
+                        }
 
-                            if isFilterActive {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: 10, y: -10)
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            showingFilterSheet = true
+                        }) {
+                            ZStack {
+                                Image(systemName: "line.3.horizontal.decrease.circle")
+                                    .font(.title3)
+
+                                if isFilterActive {
+                                    Circle()
+                                        .fill(Color.red)
+                                        .frame(width: 8, height: 8)
+                                        .offset(x: 10, y: -10)
+                                }
                             }
                         }
                     }
@@ -1023,6 +1035,7 @@ private struct FlightsListContent: View {
 // MARK: - Empty Detail View
 private struct EmptyDetailView: View {
     @ObservedObject private var themeService = ThemeService.shared
+    let isSelectMode: Bool
     let onAddFlight: () -> Void
 
     var body: some View {
@@ -1042,26 +1055,29 @@ private struct EmptyDetailView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
-            Text("or")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            // Only show "or" and Add button when not in select mode
+            if !isSelectMode {
+                Text("or")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
 
-            // Add new flight button
-            Button(action: {
-                HapticManager.shared.impact(.medium)
-                onAddFlight()
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                    Text("Add New Flight")
-                        .font(.headline)
+                // Add new flight button
+                Button(action: {
+                    HapticManager.shared.impact(.medium)
+                    onAddFlight()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                        Text("Add New Flight")
+                            .font(.headline)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.blue)
+                    .cornerRadius(10)
                 }
-                .foregroundColor(.white)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
-                .background(Color.blue)
-                .cornerRadius(10)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
