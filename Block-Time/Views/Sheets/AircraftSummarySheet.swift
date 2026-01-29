@@ -108,22 +108,20 @@ struct AircraftSummarySheet: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 16) {
+            ZStack {
+                themeService.getGradient()
+                    .ignoresSafeArea()
 
-//                    // Info Card (only in add mode)
-//                    if !isEditMode {
-//                        infoCard
-//                    }
+                ScrollView {
+                    VStack(spacing: 16) {
 
-                    // Main content in a single card with 2x4 grid
-                    EditableCard(title: "Type Details") {
-                        VStack(spacing: 16) {
-                            // Row 1: Date | Aircraft Type
-                            HStack(spacing: 12) {
-                                VStack(alignment: .leading, spacing: 4) {
+                        // Basic Info Card
+                        SectionCard(title: "Basic Information", icon: "info.circle.fill", color: .blue) {
+                            VStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 6) {
                                     Text("Date")
-                                        .font(.caption)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
                                         .foregroundColor(.secondary)
 
                                     DatePicker(
@@ -133,92 +131,68 @@ struct AircraftSummarySheet: View {
                                     )
                                     .datePickerStyle(.compact)
                                     .labelsHidden()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: 6) {
                                     Text("Aircraft Type")
-                                        .font(.caption)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
                                         .foregroundColor(.secondary)
 
                                     TextField("e.g. B738", text: $aircraftType)
-                                        .textFieldStyle(.roundedBorder)
                                         .textCase(.uppercase)
                                         .textInputAutocapitalization(.characters)
                                         .autocorrectionDisabled()
+                                        .font(.body)
+                                        .padding(10)
+                                        .background(Color(.secondarySystemBackground))
+                                        .cornerRadius(8)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                        }
 
-                            Divider()
-
-                            // Row 2: Block Time | Night Time
-                            HStack(spacing: 12) {
+                        // Flight Times Card
+                        SectionCard(title: "Flight Times", icon: "clock.fill", color: .purple) {
+                            VStack(spacing: 12) {
                                 SummaryTimeField(label: "Total Time", value: $blockTime)
                                 SummaryTimeField(label: "Night Time", value: $nightTime)
-                            }
-
-                            // Row 3: P1 Time | P1US Time
-                            HStack(spacing: 12) {
                                 SummaryTimeField(label: "P1 Time", value: $p1Time)
                                 SummaryTimeField(label: "P1US Time", value: $p1usTime)
                                 SummaryTimeField(label: "P2 Time", value: $p2Time)
-                            }
-
-                            // Row 4: P2 Time | Instrument Time
-                            HStack(spacing: 12) {
-//                                SummaryTimeField(label: "P2 Time", value: $p2Time)
                                 SummaryTimeField(label: "Instrument Time", value: $instrumentTime)
                                 SummaryTimeField(label: "SIM Time", value: $simTime)
                             }
+                        }
 
-//                            // Row 5: SIM Time
-//                            HStack(spacing: 12) {
-//                                SummaryTimeField(label: "SIM Time", value: $simTime)
-//                                Spacer()
-//                                    .frame(maxWidth: .infinity)
-//                            }
-
-                            Divider()
-
-                            // Remarks (full width)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Remarks")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-
+                        // Remarks Card
+                        SectionCard(title: "REMARKS", icon: "note.text", color: .gray) {
+                            ZStack(alignment: .topLeading) {
                                 TextEditor(text: $remarks)
-                                    .frame(minHeight: 60)
+                                    .frame(minHeight: 100)
                                     .padding(8)
-                                    .background(Color(.systemGray6))
+                                    .scrollContentBackground(.hidden)
+                                    .background(Color(.secondarySystemBackground))
                                     .cornerRadius(8)
-                                    .overlay(alignment: .topLeading) {
-                                        if remarks.isEmpty {
-                                            Text("Remarks...")
-                                                .foregroundColor(.secondary)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 16)
-                                                .allowsHitTesting(false)
-                                        }
-                                    }
+
+                                if remarks.isEmpty {
+                                    Text("Enter remarks...")
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 16)
+                                        .allowsHitTesting(false)
+                                }
                             }
                         }
-                    }
 
-                    // Delete Button (only in edit mode)
-                    if isEditMode {
-                        deleteButton
+                        // Delete Button (only in edit mode)
+                        if isEditMode {
+                            deleteButton
+                        }
                     }
+                    .padding()
                 }
-                .padding()
             }
-            .scrollContentBackground(.hidden)
-            .background(
-                ZStack {
-                    themeService.getGradient()
-                        .ignoresSafeArea()
-                }
-            )
             .navigationTitle(isEditMode ? "Edit Summary" : "Add Summary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -260,27 +234,6 @@ struct AircraftSummarySheet: View {
             }
         }
     }
-
-//    // MARK: - Info Card
-//
-//    private var infoCard: some View {
-//        HStack(spacing: 12) {
-//            Image(systemName: "clock.badge.checkmark.fill")
-//                .foregroundColor(.teal)
-//                .font(.title3)
-//
-//            Text("Add an aircraft type summary.")
-//                .font(.caption)
-//                .foregroundColor(.secondary)
-//        }
-//        .padding()
-//        .background(Color.teal.opacity(0.1))
-//        .cornerRadius(10)
-//        .overlay(
-//            RoundedRectangle(cornerRadius: 10)
-//                .stroke(Color.teal.opacity(0.3), lineWidth: 1)
-//        )
-//    }
 
     // MARK: - Delete Button
 
@@ -371,17 +324,27 @@ private struct SummaryTimeField: View {
     let label: String
     @Binding var value: String
 
+    @FocusState private var isFocused: Bool
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.caption)
+                .font(.subheadline)
+                .fontWeight(.medium)
                 .foregroundColor(.secondary)
 
             TextField("0.0", text: $value)
-                .textFieldStyle(.roundedBorder)
                 .keyboardType(.decimalPad)
+                .focused($isFocused)
+                .font(.body)
+                .padding(10)
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+                )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

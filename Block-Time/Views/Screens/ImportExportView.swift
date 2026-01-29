@@ -185,19 +185,6 @@ struct ImportExportView: View {
 
             VStack(spacing: 12) {
 
-                // Migration Import from Logger
-                ActionButton(
-                    title: "Import from Logger",
-                    subtitle: "Complete app migration import",
-                    icon: "square.and.arrow.down.fill",
-                    color: .orange,
-                    isLoading: false
-                ) {
-                    showingMigrationImport = true
-                }
-
-                Divider()
-
                 if isImporting {
                     HStack(spacing: 12) {
                         ProgressView()
@@ -210,7 +197,6 @@ struct ImportExportView: View {
                     .background(Color(.systemGray6).opacity(0.75))
                     .cornerRadius(8)
                 }
-
 
                 // Import roster (unified for both SH and LH)
                 ActionButton(
@@ -277,9 +263,9 @@ struct ImportExportView: View {
                 ) {
                     showingAircraftSummary = true
                 }
-                
+
                 Divider()
-                
+
                 // Export Data
                 ActionButton(
                     title: "Export This Logbook",
@@ -289,6 +275,19 @@ struct ImportExportView: View {
                     isLoading: false
                 ) {
                     showingExportView = true
+                }
+
+                Divider()
+
+                // Migration Import from Logger
+                ActionButton(
+                    title: "Import from Logger",
+                    subtitle: "Complete app migration import",
+                    icon: "square.and.arrow.down.fill",
+                    color: .orange,
+                    isLoading: false
+                ) {
+                    showingMigrationImport = true
                 }
             }
         }
