@@ -13,6 +13,7 @@ struct BulkEditSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
+    @ObservedObject private var themeService = ThemeService.shared
 
     // MARK: - Properties
 
@@ -34,20 +35,24 @@ struct BulkEditSheet: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
+            ZStack {
+                themeService.getGradient()
+                    .ignoresSafeArea()
 
-                    // Aircraft Info Card
-                    EditableCard(title: "Aircraft Information") {
+                ScrollView {
+                    VStack(spacing: 16) {
+
+                        // Aircraft Info Card
+                        SectionCard(title: "Aircraft Information", icon: "airplane", color: .blue) {
                         VStack(spacing: 12) {
                             BulkEditTextField(
-                                label: "Aircraft Registration",
+                                label: "A/C Registration",
                                 fieldState: $bulkEditViewModel.aircraftReg,
                                 textCase: .uppercase
                             )
 
                             BulkEditTextField(
-                                label: "Aircraft Type",
+                                label: "A/C Type",
                                 fieldState: $bulkEditViewModel.aircraftType,
                                 textCase: .uppercase
                             )
@@ -55,28 +60,28 @@ struct BulkEditSheet: View {
                     }
 
                     // Crew Card
-                    EditableCard(title: "Crew") {
+                    SectionCard(title: "Crew", icon: "person.2.fill", color: .green) {
                         VStack(spacing: 12) {
                             BulkEditTextField(
-                                label: "Captain Name",
+                                label: "Captain",
                                 fieldState: $bulkEditViewModel.captainName,
                                 autocapitalization: .words
                             )
 
                             BulkEditTextField(
-                                label: "F/O Name",
+                                label: "F/O",
                                 fieldState: $bulkEditViewModel.foName,
                                 autocapitalization: .words
                             )
 
                             BulkEditOptionalTextField(
-                                label: "S/O1 Name",
+                                label: "S/O1",
                                 fieldState: $bulkEditViewModel.so1Name,
                                 autocapitalization: .words
                             )
 
                             BulkEditOptionalTextField(
-                                label: "S/O2 Name",
+                                label: "S/O2",
                                 fieldState: $bulkEditViewModel.so2Name,
                                 autocapitalization: .words
                             )
@@ -84,16 +89,16 @@ struct BulkEditSheet: View {
                     }
 
                     // Times Card
-                    EditableCard(title: "Flight Times") {
+                    SectionCard(title: "Flight Times", icon: "clock.fill", color: .purple) {
                         VStack(spacing: 12) {
                             BulkEditTextField(
-                                label: "Block Time",
+                                label: "BLOCK Time",
                                 fieldState: $bulkEditViewModel.blockTime,
                                 keyboardType: .decimalPad
                             )
 
                             BulkEditTextField(
-                                label: "Night Time",
+                                label: "NIGHT Time",
                                 fieldState: $bulkEditViewModel.nightTime,
                                 keyboardType: .decimalPad
                             )
@@ -131,16 +136,16 @@ struct BulkEditSheet: View {
                     }
 
                     // Schedule Card
-                    EditableCard(title: "Schedule Times") {
+                    SectionCard(title: "Schedule Times", icon: "calendar.badge.clock", color: .indigo) {
                         VStack(spacing: 12) {
                             BulkEditTextField(
-                                label: "OUT Time",
+                                label: "OUT",
                                 fieldState: $bulkEditViewModel.outTime,
                                 placeholder: "HH:MM"
                             )
 
                             BulkEditTextField(
-                                label: "IN Time",
+                                label: "IN",
                                 fieldState: $bulkEditViewModel.inTime,
                                 placeholder: "HH:MM"
                             )
@@ -160,10 +165,10 @@ struct BulkEditSheet: View {
                     }
 
                     // Operations Card
-                    EditableCard(title: "Operations") {
-                        VStack(spacing: 12) {
+                    SectionCard(title: "Operations", icon: "slider.horizontal.3", color: .orange) {
+                        VStack(spacing: 16) {
                             BulkEditToggle(
-                                label: "Pilot Flying",
+                                label: "PF",
                                 fieldState: $bulkEditViewModel.isPilotFlying
                             )
 
@@ -185,38 +190,39 @@ struct BulkEditSheet: View {
                     }
 
                     // Takeoffs & Landings Card
-                    EditableCard(title: "Takeoffs & Landings") {
+                    SectionCard(title: "Takeoffs & Landings", icon: "airplane.departure", color: .teal) {
                         VStack(spacing: 12) {
                             BulkEditIntField(
-                                label: "Day Takeoffs",
+                                label: "Day T/O",
                                 fieldState: $bulkEditViewModel.dayTakeoffs
                             )
 
                             BulkEditIntField(
-                                label: "Day Landings",
+                                label: "Day Ldg",
                                 fieldState: $bulkEditViewModel.dayLandings
                             )
 
                             BulkEditIntField(
-                                label: "Night Takeoffs",
+                                label: "Night T/O",
                                 fieldState: $bulkEditViewModel.nightTakeoffs
                             )
 
                             BulkEditIntField(
-                                label: "Night Landings",
+                                label: "Night Ldg",
                                 fieldState: $bulkEditViewModel.nightLandings
                             )
                         }
                     }
 
                     // Remarks Card
-                    EditableCard(title: "Remarks") {
+                    SectionCard(title: "REMARKS", icon: "note.text", color: .gray) {
                         BulkEditTextEditor(
                             fieldState: $bulkEditViewModel.remarks
                         )
                     }
+                    }
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("Edit \(selectedFlights.count) Flight\(selectedFlights.count == 1 ? "" : "s")")
             .navigationBarTitleDisplayMode(.inline)
@@ -236,13 +242,15 @@ struct BulkEditSheet: View {
                         saveChanges()
                     }
                     .disabled(!bulkEditViewModel.hasModifications)
+                    .fontWeight(bulkEditViewModel.hasModifications ? .bold : .regular)
+                    .foregroundColor(bulkEditViewModel.hasModifications ? .blue : .gray)
                 }
             }
             .alert("Discard Changes?", isPresented: $showingDiscardAlert) {
                 Button("Discard", role: .destructive) {
                     dismiss()
                 }
-                Button("Cancel", role: .cancel) { }
+                Button("Keep", role: .cancel) { }
             } message: {
                 Text("You have unsaved changes. Are you sure you want to discard them?")
             }
@@ -256,6 +264,50 @@ struct BulkEditSheet: View {
         onSave(updates)
         HapticManager.shared.notification(.success)
         dismiss()
+    }
+}
+
+// MARK: - SectionCard
+
+struct SectionCard<Content: View>: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let content: Content
+
+    init(title: String, icon: String, color: Color, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.color = color
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.headline)
+                    .foregroundColor(color)
+
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
+                Spacer()
+            }
+
+            content
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(color.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 
@@ -273,21 +325,29 @@ struct BulkEditTextField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.caption)
+                .font(.subheadline)
+                .fontWeight(.medium)
                 .foregroundColor(.secondary)
 
             TextField(
                 fieldState.isMixed ? "(Mixed)" : (placeholder ?? label),
                 text: $textValue
             )
-            .textFieldStyle(.roundedBorder)
             .keyboardType(keyboardType)
             .textCase(textCase)
             .textInputAutocapitalization(autocapitalization)
             .autocorrectionDisabled()
             .focused($isFocused)
+            .font(.body)
+            .padding(10)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+            )
             .onChange(of: textValue) { _, newValue in
                 fieldState = .value(newValue)
             }
@@ -317,20 +377,28 @@ struct BulkEditOptionalTextField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.caption)
+                .font(.subheadline)
+                .fontWeight(.medium)
                 .foregroundColor(.secondary)
 
             TextField(
                 fieldState.isMixed ? "(Mixed)" : label,
                 text: $textValue
             )
-            .textFieldStyle(.roundedBorder)
             .textCase(textCase)
             .textInputAutocapitalization(autocapitalization)
             .autocorrectionDisabled()
             .focused($isFocused)
+            .font(.body)
+            .padding(10)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+            )
             .onChange(of: textValue) { _, newValue in
                 fieldState = .value(newValue.isEmpty ? nil : newValue)
             }
@@ -358,18 +426,26 @@ struct BulkEditIntField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.caption)
+                .font(.subheadline)
+                .fontWeight(.medium)
                 .foregroundColor(.secondary)
 
             TextField(
                 fieldState.isMixed ? "(Mixed)" : label,
                 text: $textValue
             )
-            .textFieldStyle(.roundedBorder)
             .keyboardType(.numberPad)
             .focused($isFocused)
+            .font(.body)
+            .padding(10)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+            )
             .onChange(of: textValue) { _, newValue in
                 if let intValue = Int(newValue) {
                     fieldState = .value(intValue)
@@ -402,6 +478,7 @@ struct BulkEditToggle: View {
         HStack {
             Text(label)
                 .font(.body)
+                .fontWeight(.medium)
 
             Spacer()
 
@@ -414,22 +491,27 @@ struct BulkEditToggle: View {
                     HapticManager.shared.impact(.light)
                 } label: {
                     Text("(Mixed)")
-                        .font(.caption)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundColor(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.secondary.opacity(0.2))
-                        .cornerRadius(8)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(.secondarySystemBackground))
+                        )
                 }
             } else {
                 Toggle("", isOn: $toggleValue)
                     .labelsHidden()
+                    .tint(.blue)
                     .onChange(of: toggleValue) { _, newValue in
                         fieldState = .value(newValue)
                         HapticManager.shared.impact(.light)
                     }
             }
         }
+        .padding(.vertical, 4)
         .onAppear {
             if case .value(let val) = fieldState {
                 toggleValue = val
@@ -450,36 +532,42 @@ struct BulkEditTextEditor: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        TextEditor(text: $textValue)
-            .frame(minHeight: 100)
-            .padding(8)
-            .background(Color(.systemGray6))
-            .cornerRadius(8)
-            .focused($isFocused)
-            .onChange(of: textValue) { _, newValue in
-                fieldState = .value(newValue)
-            }
-            .onChange(of: isFocused) { _, focused in
-                if focused && fieldState.isMixed {
-                    textValue = ""
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $textValue)
+                .frame(minHeight: 100)
+                .padding(8)
+                .scrollContentBackground(.hidden)
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+                )
+                .focused($isFocused)
+                .onChange(of: textValue) { _, newValue in
+                    fieldState = .value(newValue)
                 }
-            }
-            .onAppear {
-                if case .value(let val) = fieldState {
-                    textValue = val
-                } else if fieldState.isMixed {
-                    textValue = "(Mixed)"
+                .onChange(of: isFocused) { _, focused in
+                    if focused && fieldState.isMixed {
+                        textValue = ""
+                    }
                 }
-            }
-            .overlay(alignment: .topLeading) {
-                if textValue.isEmpty || textValue == "(Mixed)" {
-                    Text(fieldState.isMixed ? "(Mixed)" : "Enter remarks...")
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 16)
-                        .allowsHitTesting(false)
+                .onAppear {
+                    if case .value(let val) = fieldState {
+                        textValue = val
+                    } else if fieldState.isMixed {
+                        textValue = "(Mixed)"
+                    }
                 }
+
+            if textValue.isEmpty || textValue == "(Mixed)" {
+                Text(fieldState.isMixed ? "(Mixed)" : "Enter remarks...")
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 16)
+                    .allowsHitTesting(false)
             }
+        }
     }
 }
 
@@ -520,6 +608,7 @@ struct BulkEditFlightTypeToggle: View {
         HStack {
             Text("Flight Type")
                 .font(.body)
+                .fontWeight(.medium)
 
             Spacer()
 
@@ -531,12 +620,15 @@ struct BulkEditFlightTypeToggle: View {
                     HapticManager.shared.impact(.light)
                 } label: {
                     Text("(Mixed)")
-                        .font(.caption)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundColor(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.secondary.opacity(0.2))
-                        .cornerRadius(8)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(.secondarySystemBackground))
+                        )
                 }
             } else {
                 HStack(spacing: 0) {
@@ -549,11 +641,14 @@ struct BulkEditFlightTypeToggle: View {
                         Text("FLT")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .flight ? .white : .secondary)
-                            .frame(width: 50, height: 30)
-                            .background(currentType == .flight ? Color.blue : Color.clear)
+                            .frame(width: 55, height: 32)
+                            .background(currentType == .flight ? Color.blue : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
+
+                    Divider()
+                        .frame(height: 20)
 
                     // PAX Button
                     Button(action: {
@@ -564,11 +659,14 @@ struct BulkEditFlightTypeToggle: View {
                         Text("PAX")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .positioning ? .white : .secondary)
-                            .frame(width: 50, height: 30)
-                            .background(currentType == .positioning ? Color.orange : Color.clear)
+                            .frame(width: 55, height: 32)
+                            .background(currentType == .positioning ? Color.orange : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
+
+                    Divider()
+                        .frame(height: 20)
 
                     // SIM Button
                     Button(action: {
@@ -579,19 +677,21 @@ struct BulkEditFlightTypeToggle: View {
                         Text("SIM")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .simulator ? .white : .secondary)
-                            .frame(width: 50, height: 30)
-                            .background(currentType == .simulator ? Color.blue : Color.clear)
+                            .frame(width: 55, height: 32)
+                            .background(currentType == .simulator ? Color.purple : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(8)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
                 )
-                .cornerRadius(6)
             }
         }
+        .padding(.vertical, 4)
     }
 }
 
@@ -632,6 +732,7 @@ struct BulkEditApproachPicker: View {
         HStack {
             Text("Approach")
                 .font(.body)
+                .fontWeight(.medium)
 
             Spacer()
 
@@ -641,16 +742,25 @@ struct BulkEditApproachPicker: View {
                     HapticManager.shared.impact(.light)
                 }
             }) {
-                Text(displayText)
-                    .font(.caption.bold())
-                    .foregroundColor(isOn ? .white : .orange)
-                    .frame(width: 60, height: 28)
-                    .background(isOn ? Color.orange : Color.clear)
-                    .cornerRadius(14)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.orange, lineWidth: 2)
-                    )
+                HStack(spacing: 6) {
+                    Text(displayText)
+                        .font(.subheadline.bold())
+                        .foregroundColor(isOn ? .white : .orange)
+
+                    Image(systemName: "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(isOn ? .white : .orange)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isOn ? Color.orange : Color(.secondarySystemBackground))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.orange.opacity(isOn ? 0 : 0.5), lineWidth: 1.5)
+                )
             }
             .disabled(isDisabled)
             .opacity(isDisabled ? 0.5 : 1.0)
@@ -676,5 +786,60 @@ struct BulkEditApproachPicker: View {
                 Button("Cancel", role: .cancel) {}
             }
         }
+        .padding(.vertical, 4)
     }
 }
+
+// MARK: - Preview
+
+#Preview {
+    let sampleFlights = [
+        FlightSector(
+            date: "29/01/2026",
+            flightNumber: "VA123",
+            aircraftReg: "VH-XYZ",
+            aircraftType: "B738",
+            fromAirport: "YSSY",
+            toAirport: "YMML",
+            captainName: "John Smith",
+            foName: "Jane Doe",
+            blockTime: "1.5",
+            nightTime: "0.0",
+            p1Time: "1.5",
+            p1usTime: "0.0",
+            instrumentTime: "0.5",
+            simTime: "0.0",
+            isPilotFlying: true,
+            isILS: true,
+            dayTakeoffs: 1,
+            dayLandings: 1
+        ),
+        FlightSector(
+            date: "29/01/2026",
+            flightNumber: "VA456",
+            aircraftReg: "VH-XYZ",
+            aircraftType: "B738",
+            fromAirport: "YMML",
+            toAirport: "YBBN",
+            captainName: "John Smith",
+            foName: "Jane Doe",
+            blockTime: "2.0",
+            nightTime: "0.5",
+            p1Time: "2.0",
+            p1usTime: "0.0",
+            instrumentTime: "0.3",
+            simTime: "0.0",
+            isPilotFlying: false,
+            isRNP: true,
+            dayTakeoffs: 1,
+            dayLandings: 1
+        )
+    ]
+
+    BulkEditSheet(
+        selectedFlights: sampleFlights,
+        onSave: { _ in }
+    )
+    .environmentObject(FlightTimeExtractorViewModel())
+}
+

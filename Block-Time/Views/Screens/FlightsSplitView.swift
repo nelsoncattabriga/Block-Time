@@ -296,7 +296,7 @@ private struct FlightsListContent: View {
                                 selectedFlight = nil
                             }
                         }) {
-                            Text(isSelectMode ? "Done" : "Select")
+                            Text(isSelectMode ? "Cancel" : "Select")
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
                                 .background(

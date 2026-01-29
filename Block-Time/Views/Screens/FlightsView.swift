@@ -200,7 +200,7 @@ struct FlightsView: View {
                                 selectedFlights.removeAll()
                             }
                         }) {
-                            Text(isSelectMode ? "Done" : "Select")
+                            Text(isSelectMode ? "Cancel" : "Select")
                         }
                     }
                 }
