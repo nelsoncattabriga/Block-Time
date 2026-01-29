@@ -1,0 +1,160 @@
+Based on the FRMS PDF for A380/A330/B787, here are all the flight and duty limits that need to be tracked:
+
+  2 PILOT OPERATIONS
+
+  Duty Period Limits (by sign-on time):
+
+  - 0500-0759: 11 hours
+  - 0800-1359: 11 hours (12 hours day pattern only)
+  - 1400-1559: 11 hours
+  - 1600-0459: 10 hours
+
+  Flight Time Limits:
+
+  - 0500-0759: 8 hours
+  - 0800-1359: 8.5 hours (9.5 hours day pattern only)
+  - 1400-1559: 8.5 hours
+  - 1600-0459: 8 hours
+  - Operational: 9.5-10.5 hours depending on conditions
+
+  Sector Limits:
+
+  - 1 sector if any sector flight time > 6 hours
+  - 2-4 sectors depending on time and conditions
+
+  Rest Requirements:
+
+  - Pre-duty rest: 11-22 hours depending on duty period
+  - Post-duty rest: 11-22 hours depending on duty period
+  - Within 7 days: 1 continuous period embracing 2200-0600 on 2 consecutive nights
+
+  ---
+  3 PILOT OPERATIONS
+
+  Duty Period Limits:
+
+  - CLASS 2 REST: 12 hours (planning), 16 hours (operational)
+  - CLASS 1 REST: 14 hours (planning), 18 hours (operational)
+
+  Flight Time Limits:
+
+  - CLASS 2 REST: 8.5 hours
+  - CLASS 1 REST: 12.5 hours
+  - Operational: 8 consecutive hours active duty, max 14 hours total duty in flight deck
+
+  Sector Limits:
+
+  - 3 sectors if duty period > 11 hours, otherwise max 4 sectors
+  - < 2 sectors if duty period scheduled to exceed 14 hours (operational)
+
+  Rest Requirements:
+
+  - Pre-duty: 10-12 hours
+  - Post-duty: 12-32 hours depending on duty period and acclimation
+
+  ---
+  4 PILOT OPERATIONS
+
+  Duty Period Limits:
+
+  - 2 x CLASS 2 REST: 16 hours
+  - 1 x CLASS 1 & 1 x CLASS 2 REST: 17.5 hours (planning), 20 hours (operational)
+  - 2 x CLASS 1 REST: 20 hours (planning), 21 hours (operational for >18 hour duties)
+
+  Flight Time Limits:
+
+  - A pilot cannot spend more than 8 continuous hours on duty in flight deck
+  - No more than 14 hours total duty in flight deck
+
+  Sector Limits:
+
+  - < 2 rostered sectors if duty period scheduled to exceed 14 hours
+  - 1 rostered sector if duty period scheduled to exceed 16 hours
+
+  Rest Requirements:
+
+  - Pre-duty: 12-48 hours depending on duty period length
+  - Post-duty: 12-48 hours depending on duty period length and conditions
+  - Special rules for >18 hour duties: 22-36 hours depending on crew composition
+
+  ---
+  CUMULATIVE LIMITS (ALL OPERATIONS)
+
+  Flight Time:
+
+  - 7 consecutive days (2 pilot): 30 hours
+  - 7 consecutive days (mixed 2/3+ pilot): 30-40 hours depending on next flight
+  - 30 consecutive days: 100 hours
+  - 365 consecutive days: 900 hours
+
+  Duty Time:
+
+  - 7 consecutive days: 60 hours
+  - 14 consecutive days: 100 hours
+  - Following 50 hours of duty: 24 hours rest before next duty
+
+  Fortnight Limits (2 pilot operational):
+
+  - 90 hours total duty per fortnight (includes standby, deadhead, admin, training)
+
+  ---
+  DEADHEADING
+
+  Duty Period Limits:
+
+  - Solely deadhead: 26 hours (max 2 sectors with first class)
+  - Operate then deadhead (not to base): 14.5 hours
+  - Operate then deadhead (to base/posting): 18 hours
+
+  Rest Requirements:
+
+  - Pre-duty: 11-18 hours depending on duty period
+  - Post-duty: 11-18 hours depending on duty period
+
+  ---
+  STANDBY DUTY
+
+  - Duration: Maximum 12 consecutive hours
+  - Location: Must have access to suitable sleeping accommodation
+
+  ---
+  SPECIAL OPERATIONS (>18 HOURS)
+
+  Routes (A380 & B787 only):
+
+  - Sydney-Dallas, Melbourne-Dallas, Perth-London, Auckland-New York
+
+  Crew Requirements:
+
+  - Minimum 4 pilots
+
+  Duty Period Limit:
+
+  - 21 hours operational
+
+  Rest Requirements (Disruptions):
+
+  - Prior to Relevant Sector: 22 hours
+  - After Relevant Sector (Captain OR First Officer): 27 hours
+  - After Relevant Sector (Captain OR F/O, duty >20 hrs): 36 hours
+  - After Relevant Sector (Captain AND First Officer): 36 hours
+  - After inbound to Australia/NZ (same timezone return): 36 hours
+  - After inbound to Australia/NZ (domestic/trans-Tasman): 22 hours
+
+  Additional MBTT:
+
+  - Increased by 1 local night after patterns containing planned duty >18 hours
+
+  ---
+  MINIMUM BASE TURNAROUND TIME (MBTT)
+
+  - 1 day away: 12 hours
+  - 2-4 days away: 1 local night
+  - 5-8 days away: 2 local nights
+  - 9-12 days away: 3 local nights
+  - >20 credited flight hours: 2 local nights
+  - >40 credited flight hours: 3 local nights
+  - >60 credited flight hours or >12 days away: 4 local nights
+  - Excess over 100 hours in 30 days: 1-2 additional local nights
+
+  This is a comprehensive list of all limits that need to be tracked for A380/A330/B787 FRMS compliance.

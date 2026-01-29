@@ -1,0 +1,386 @@
+Fix Simulator Flight Data Inconsistency
+
+ Problem Summary
+
+ Simulator flights have inconsistent data formats causing double-counting in statistics:
+
+ Current Bug (AddFlightView):
+ - blockTime = "2.5"
+ - simTime = "2.5"
+ - Both fields populated → double-counted in totalFlightTime = totalBlockTime + totalSIMTime
+
+ Correct Format (All Import Methods):
+ - blockTime = "0.0"
+ - simTime = "2.5"
+ - Exclusive fields → correct counting
+
+ Root Cause
+
+ FlightTimeExtractorViewModel.swift:1249 - saveToLogbook() method incorrectly sets both fields:
+ blockTime: blockTimeCalculated,  // Should be "0.0" when isSimulator = true
+
+ All three import methods (CSV, webCIS, Logger backup) correctly enforce exclusive fields via FileImportService.swift:601-623.
+
+ Solution Overview
+
+ 1. Fix AddFlightView to set blockTime = "0.0" for simulator flights
+ 2. Migrate existing dual-field simulator flights to exclusive format
+ 3. Run migration automatically on app launch (one-time)
+ 4. Add optional validation to prevent regression
+
+ ---
+ Implementation Steps
+
+ Phase 1: Fix Root Cause
+
+ File: ViewModels/FlightTimeExtractorViewModel.swift
+
+ Change line 1249 in saveToLogbook():
+ // BEFORE:
+ blockTime: blockTimeCalculated,
+
+ // AFTER:
+ blockTime: isSimulator ? "0.0" : blockTimeCalculated,
+
+ Update debug log (line 1233) to reflect the change:
+ LogManager.shared.debug("DEBUG: saveToLogbook PF=\(isPilotFlying), isSimulator=\(isSimulator), simTime=\(simTimeValue), block=\(isSimulator 
+ ? "0.0" : blockTimeCalculated), p1=\(p1TimeValue)")
+
+ ---
+ Phase 2: Create Migration Function
+
+ File: Services/FlightDatabaseService.swift
+
+ Add new function after line 1150 (after regenerateAllFlightUUIDs):
+
+ /// Migrate simulator flights to use exclusive blockTime/simTime fields
+ /// Fixes bug where AddFlightView created sim flights with BOTH fields populated
+ /// - Returns: Tuple of (migrated count, migration summary)
+ func migrateSimulatorFlights() -> (migratedCount: Int, summary: String) {
+     LogManager.shared.info("Database: Starting simulator flight migration")
+
+     var migratedCount = 0
+     var migratedFlights: [String] = []
+
+     viewContext.performAndWait {
+         // Find flights with BOTH simTime > 0 AND blockTime > 0 (bug signature)
+         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+         request.predicate = NSPredicate(
+             format: "(simTime != %@ AND simTime != %@ AND simTime != %@) AND (blockTime != %@ AND blockTime != %@ AND blockTime != %@)",
+             "0", "0.0", "0.00", "0", "0.0", "0.00"
+         )
+         request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
+
+         do {
+             let flights = try viewContext.fetch(request)
+             LogManager.shared.info("Found \(flights.count) simulator flights needing migration")
+
+             for flight in flights {
+                 guard let simTime = flight.simTime,
+                       let blockTime = flight.blockTime,
+                       let simValue = Double(simTime), simValue > 0,
+                       let blockValue = Double(blockTime), blockValue > 0 else {
+                     continue
+                 }
+
+                 // Build flight description for logging
+                 let dateStr = flight.date.map { dateFormatter.string(from: $0) } ?? "unknown"
+                 let flightNum = flight.flightNumber ?? "unknown"
+                 let aircraftReg = flight.aircraftReg ?? "unknown"
+                 let description = "\(dateStr) \(flightNum) \(aircraftReg) - block:\(blockTime) sim:\(simTime)"
+
+                 // Verify both values are identical (expected for this bug)
+                 // If different, might be a different issue - log warning and skip
+                 if abs(simValue - blockValue) > 0.01 {
+                     LogManager.shared.warning("⚠️ Skipping flight with different block/sim times: \(description)")
+                     continue
+                 }
+
+                 // Fix: Set blockTime to 0.0, keep simTime
+                 LogManager.shared.info("Migrating: \(description) → block:0.0 sim:\(simTime)")
+                 flight.blockTime = "0.0"
+                 flight.modifiedAt = Date()
+
+                 migratedFlights.append(description)
+                 migratedCount += 1
+             }
+
+             // Save all changes in one transaction
+             if viewContext.hasChanges {
+                 try viewContext.save()
+                 LogManager.shared.info("✓ Successfully migrated \(migratedCount) simulator flights")
+             }
+
+         } catch {
+             LogManager.shared.error("Error during simulator flight migration: \(error.localizedDescription)")
+             viewContext.rollback()
+         }
+     }
+
+     // Build summary
+     let summary = """
+     Simulator Flight Migration Complete
+     Migrated: \(migratedCount) flights
+
+     Details:
+     \(migratedFlights.isEmpty ? "No flights needed migration" : migratedFlights.prefix(10).joined(separator: "\n"))
+     \(migratedCount > 10 ? "... and \(migratedCount - 10) more" : "")
+     """
+
+     return (migratedCount, summary)
+ }
+
+ ---
+ Phase 3: Add Migration to App Launch
+
+ File: LoggerApp.swift
+
+ Modify init() method (around lines 15-18):
+
+ init() {
+     // Reset debug mode to off on every app launch
+     UserDefaults.standard.set(false, forKey: "debugModeEnabled")
+
+     // Run one-time simulator flight migration
+     performSimulatorFlightMigration()
+ }
+
+ private func performSimulatorFlightMigration() {
+     let migrationKey = "simulatorFlightMigrationCompleted"
+
+     // Check if migration already completed
+     guard !UserDefaults.standard.bool(forKey: migrationKey) else {
+         LogManager.shared.debug("Simulator flight migration already completed")
+         return
+     }
+
+     LogManager.shared.info("Running simulator flight migration...")
+     let result = FlightDatabaseService.shared.migrateSimulatorFlights()
+
+     // Store results
+     UserDefaults.standard.set(true, forKey: migrationKey)
+     UserDefaults.standard.set(result.migratedCount, forKey: "simulatorFlightMigrationCount")
+     UserDefaults.standard.set(result.summary, forKey: "simulatorFlightMigrationSummary")
+
+     LogManager.shared.info("Simulator flight migration complete: \(result.migratedCount) flights migrated")
+
+     // Post notification to refresh views if any flights were migrated
+     if result.migratedCount > 0 {
+         NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+     }
+ }
+
+ ---
+ Phase 4: Add Validation (Optional)
+
+ File: Models/FlightLogbook.swift
+
+ Add after line 147 (end of FlightSector init):
+
+ // MARK: - Development validation
+ #if DEBUG
+ if let blockVal = Double(self.blockTime), blockVal > 0,
+    let simVal = Double(self.simTime), simVal > 0 {
+     LogManager.shared.warning("⚠️ FlightSector created with BOTH blockTime and simTime > 0: date=\(date), flight=\(flightNumber), 
+ block=\(self.blockTime), sim=\(self.simTime)")
+ }
+ #endif
+
+ This warns developers during testing if the bug reoccurs.
+
+ ---
+ Edge Cases Handled
+
+ 1. Empty strings vs zeros: Migration predicate excludes "", "0", "0.0", "0.00"
+ 2. Different values: Skips flights where blockTime ≠ simTime (logs warning)
+ 3. Idempotency: UserDefaults flag prevents re-running
+ 4. Thread safety: Uses performAndWait for Core Data operations
+ 5. Load for editing: Existing logic (lines 1335-1342) continues to work
+ 6. Bulk edit: Existing swap logic (BulkEditViewModel:357-373) works better after migration
+
+ ---
+ Verification Steps
+
+ 1. After Implementation - Test New Flights
+
+ - Add a simulator flight via AddFlightView
+ - Query database: verify blockTime = "0.0" and simTime = calculated value
+ - Check debug logs for correct values
+
+ 2. Migration Execution
+
+ - Launch app and check logs for migration messages
+ - Verify UserDefaults:
+   - simulatorFlightMigrationCompleted = true
+   - simulatorFlightMigrationCount = number migrated
+   - simulatorFlightMigrationSummary contains details
+
+ 3. Statistics Accuracy
+
+ - Before migration: Note total flight time on Dashboard
+ - After migration: Total should DECREASE (no more double-counting)
+ - Verify: totalFlightTime = totalBlockTime + totalSIMTime matches sum of individual flights
+
+ 4. Regression Testing
+
+ - Add new simulator flight → blockTime should be "0.0"
+ - Edit existing sim flight → loads correctly
+ - Bulk edit simulator toggle → fields swap correctly
+ - Import CSV with sim flights → still works
+ - Check Dashboard totals → no double-counting
+ - FRMS calculations → still correct
+ - Regular flights unchanged
+
+ 5. Migration Idempotency
+
+ - Restart app multiple times
+ - Migration should only run once (check logs)
+
+ ---
+ Critical Files
+
+ Files to Modify:
+ 1. /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Logger/Logger/ViewModels/FlightTimeExtractorViewModel.swift - Line
+ 1249, 1233
+ 2. /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Logger/Logger/Services/FlightDatabaseService.swift - Add function after
+  line 1150
+ 3. /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Logger/Logger/LoggerApp.swift - Modify init() around line 15-18
+ 4. /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Logger/Logger/Models/FlightLogbook.swift - Optional validation after
+ line 147
+
+ Files to Reference (No Changes):
+ - /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Logger/Logger/Services/FileImportService.swift - Verify import
+ validation (lines 601-623)
+ - /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Logger/Logger/ViewModels/BulkEditViewModel.swift - Verify bulk edit
+ still works (lines 357-373)
+
+ ---
+ Expected Impact
+
+ What Changes:
+ - New simulator flights: blockTime = "0.0" (instead of same as simTime)
+ - Existing dual-field sim flights: blockTime changed from value → "0.0"
+ - Dashboard "Total Flight Time": Will decrease (removes double-counting)
+
+ What Stays the Same:
+ - Regular flights: blockTime > 0, simTime = 0 (unchanged)
+ - Correctly imported sim flights: blockTime = 0, simTime > 0 (unchanged)
+ - CSV/webCIS/Logger backup import behavior (already correct)
+ - Calculation formulas (already correct for exclusive fields)
+
+ User Experience:
+ - More accurate statistics (no double-counting)
+ - Consistent data format regardless of entry method
+ - One-time migration runs transparently on app launch
+ - No manual intervention required
+
+
+
+
+
+
+Changes Summary
+
+  Phase 1: Root Cause Fix ✓
+
+  File: FlightTimeExtractorViewModel.swift:1249
+  - Changed: blockTime: blockTimeCalculated → blockTime: isSimulator ? "0.0" : blockTimeCalculated
+  - Effect: New simulator flights will now correctly have blockTime = "0.0" instead of duplicating simTime
+  - Updated: Debug log at line 1233 to reflect the conditional logic
+
+  Phase 2: Data Migration Function ✓
+
+  File: FlightDatabaseService.swift (added after line 1182)
+  - Added: migrateSimulatorFlights() method (77 lines)
+  - Functionality:
+    - Finds flights with BOTH blockTime > 0 AND simTime > 0
+    - Excludes Summary Rows (flightNumber = "SUMMARY")
+    - Validates that blockTime ≈ simTime (expected bug signature)
+    - Sets blockTime = "0.0" while preserving simTime
+    - Returns migration count and detailed summary
+    - Thread-safe with Core Data performAndWait
+
+  Phase 3: App Launch Integration ✓
+
+  File: LoggerApp.swift:15-46
+  - Added: performSimulatorFlightMigration() method
+  - Functionality:
+    - Runs once on app launch (controlled by UserDefaults flag)
+    - Stores migration results for debugging
+    - Posts .flightDataChanged notification if flights were migrated
+    - Fully idempotent (won't re-run after completion)
+
+  Phase 4: Development Validation ✓
+
+  File: FlightLogbook.swift:148-155
+  - Added: DEBUG-only validation in FlightSector initializer
+  - Functionality:
+    - Warns developers if a FlightSector is created with both blockTime > 0 and simTime > 0
+    - Excludes Summary Rows from validation
+    - Only active in DEBUG builds (no runtime cost in production)
+
+  ---
+  ★ Insight ─────────────────────────────────────
+  Why This Architecture?
+
+  1. Defensive Programming: The migration function validates data before changing it (checks if blockTime ≈ simTime), preventing corruption of manually-edited flights with legitimately different values.
+  2. Idempotency Pattern: Using UserDefaults to track completion ensures the migration can't accidentally run twice, even if the app crashes mid-migration (Core Data transaction handles atomicity).
+  3. Debug-Time Guards: The #if DEBUG validation catches regressions during development without adding any overhead to production builds. Swift's conditional compilation completely excludes that code from release builds.
+  ─────────────────────────────────────────────────
+
+  ---
+  What Happens on Next App Launch
+
+  1. First Launch After Update:
+    - Migration runs automatically in LoggerApp.init()
+    - Logs: "Running simulator flight migration..."
+    - Finds all flights with dual blockTime/simTime fields
+    - Fixes them by setting blockTime = "0.0"
+    - Saves migration count to UserDefaults
+    - Posts notification to refresh views
+  2. Subsequent Launches:
+    - Checks simulatorFlightMigrationCompleted flag
+    - Skips migration (logs: "already completed")
+    - No performance impact
+  3. New Simulator Flights:
+    - Created via AddFlightView with blockTime = "0.0"
+    - DEBUG builds will warn if bug reoccurs
+    - Migration won't touch them (already correct format)
+
+  ---
+  Expected User Impact
+
+  Immediate Effects:
+  - ✅ Dashboard "Total Flight Time" will decrease (removes double-counting)
+  - ✅ Simulator flights will show consistent data format
+  - ✅ Statistics will be accurate
+
+  What Stays the Same:
+  - ✅ Regular flights unchanged (blockTime > 0, simTime = 0)
+  - ✅ Import functionality unchanged (already working correctly)
+  - ✅ Summary Rows preserved (special dual-field entries)
+  - ✅ All existing views, calculations, and exports work normally
+
+  ---
+  Verification Steps (Recommended)
+
+  To confirm everything is working:
+
+  1. Before Testing: Note current "Total Flight Time" on Dashboard
+  2. Launch App: Check console logs for migration messages
+  3. After Migration: Total should decrease if simulator flights existed
+  4. Add New Sim Flight: Verify blockTime = "0.0" in database/debug logs
+  5. Check UserDefaults:
+    - simulatorFlightMigrationCompleted = true
+    - simulatorFlightMigrationCount = number of flights fixed
+
+  ---
+  ★ Insight ─────────────────────────────────────
+  Critical Edge Case Handling
+
+  The migration explicitly excludes Summary Rows (flightNumber = "SUMMARY"). These are special aggregate entries that legitimately contain BOTH blockTime and simTime with different values representing historical totals. The predicate flightNumber != "SUMMARY" ensures these aren't corrupted during migration.
+
+  This demonstrates a key principle: always understand your data model before writing migrations. Without this exclusion, the migration would have destroyed important historical data.
+  ─────────────────────────────────────────────────
+
+  All files have been modified successfully and the implementation is complete! 🎉

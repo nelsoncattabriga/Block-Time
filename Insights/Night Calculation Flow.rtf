@@ -1,0 +1,314 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2867
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica-Bold;\f1\fswiss\fcharset0 Helvetica;\f2\fnil\fcharset0 Monaco;
+\f3\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww20240\viewh12460\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\b\fs28 \cf2 Night Calculation Logic and Notes
+\f1\b0\fs24 \
+\
+Also note - when calculating the night landing, the IN time is reduced by 3 minutes to be closer to landing time for the calculation.\
+\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f2\fs28 \cf2 \CocoaLigature0 1. Entry Point: FlightTimeExtractorViewModel\
+\
+  This is the main coordinator that the UI interacts with. When flight data changes (airports, times, dates), it triggers:\
+\
+  AddFlightView (UI changes)\
+      \uc0\u8595 \
+  FlightTimeExtractorViewModel.updateNightTime()\
+\
+  2. The updateNightTime() Flow\
+\
+  Location: FlightTimeExtractorViewModel.swift:1794-1818\
+\
+  func updateNightTime() \{\
+      // Step 1: Try to build a calculation context\
+      if let context = timeCalculationManager.buildCalculationContext(\
+          fromAirport: fromAirport,\
+          toAirport: toAirport,\
+          outTime: outTime,\
+          blockTime: blockTime,\
+          flightDate: flightDate\
+      ) \{\
+          // Step 2: Use context for BOTH night time AND takeoffs/landings\
+          nightTime = timeCalculationManager.calculateNightTime(using: context)\
+          updateTakeoffsLandings(using: context)\
+      \} else \{\
+          // Fallback if context can't be built\
+          nightTime = ""\
+          updateTakeoffsLandings(using: nil)\
+      \}\
+  \}\
+\
+  3. TimeCalculationManager - The Coordinator\
+\
+  This component has two main responsibilities:\
+\
+  3A. Building the Calculation Context\
+\
+  Location: TimeCalculationManager.swift:48-98\
+\
+  buildCalculationContext()\
+      \uc0\u8595 \
+      \uc0\u9500 \u9472  Get airport coordinates (via NightCalcService)\
+      \uc0\u9500 \u9472  Parse flight date (DD/MM/YYYY \u8594  Date)\
+      \uc0\u9500 \u9472  Parse departure time (HH:mm \u8594  Date)\
+      \uc0\u9500 \u9472  Parse block time (string \u8594  hours)\
+      \uc0\u9500 \u9472  Calculate arrival time\
+      \uc0\u9492 \u9472  Return FlightCalculationContext (cached values)\
+\
+  Purpose: Parse everything ONCE and cache it to avoid redundant operations.\
+\
+  3B. Calculating Night Time with Context\
+\
+  Location: TimeCalculationManager.swift:276-301\
+\
+  func calculateNightTime(using context: FlightCalculationContext) -> String \{\
+      // Extract UTC time from context\
+      let hour = utcCalendar.component(.hour, from: context.departureTime)\
+      let minute = utcCalendar.component(.minute, from: context.departureTime)\
+      let departureUTC = String(format: "%02d%02d", hour, minute)\
+\
+      // Delegate to NightCalcService\
+      if let nightHours = nightCalcService.calculateNightTime(\
+          from: context.fromAirport,\
+          to: context.toAirport,\
+          departureUTC: departureUTC,\
+          flightTimeHours: context.blockTimeHours,\
+          flightDate: context.flightDate\
+      ) \{\
+          // CORRECTION #3: Cap night time to block time\
+          let cappedNightHours = min(nightHours, context.blockTimeHours)\
+          return String(format: "%.2f", cappedNightHours)\
+      \}\
+      return ""\
+  \}\
+\
+  4. NightCalcService - The Astronomical Calculator\
+\
+  This component does the actual sun position calculations:\
+\
+  4A. Main Calculation Entry Point\
+\
+  Location: NightCalcService.swift:30-52\
+\
+  func calculateNightTime(\
+      from fromAirport: String,\
+      to toAirport: String,\
+      departureUTC: String,\
+      flightTimeHours: Double,\
+      flightDate: Date\
+  ) -> Double? \{\
+      // Get coordinates\
+      guard let fromCoords = airportLookup.getCoordinates(for: fromAirport),\
+            let toCoords = airportLookup.getCoordinates(for: toAirport) else \{\
+          return nil\
+      \}\
+\
+      // Delegate to nightPortion() for segment-based calculation\
+      return nightPortion(\
+          fromLat: fromCoords.latitude,\
+          fromLon: fromCoords.longitude,\
+          toLat: toCoords.latitude,\
+          toLon: toCoords.longitude,\
+          departureUTC: departureUTC,\
+          flightDurationHours: flightTimeHours,\
+          flightDate: flightDate\
+      )\
+  \}\
+\
+  4B. Segment-Based Night Calculation\
+\
+  Location: NightCalcService.swift:162-217\
+\
+  private func nightPortion(..., segments: Int = 200) -> Double \{\
+      // Parse departure time with CORRECTION #1 (day rollover)\
+      guard let depDate = parseUTCString(departureUTC, on: flightDate) else \{\
+          return 0\
+      \}\
+\
+      // Calculate great circle route with 200 segments\
+      let segmentDuration = flightDurationHours * 3600 / Double(segments)\
+      var nightSeconds = 0.0\
+\
+      for i in 0..<segments \{\
+          // Calculate position along route using spherical interpolation\
+          let f = Double(i) / Double(segments)\
+          let (latDeg, lonDeg) = interpolatePosition(f, ...)\
+\
+          let pointTime = depDate.addingTimeInterval(Double(i) * segmentDuration)\
+\
+          // Check if this point is at night\
+          if isNightInternal(at: latDeg, lon: lonDeg, time: pointTime) \{\
+              nightSeconds += segmentDuration\
+          \}\
+      \}\
+\
+      return nightSeconds / 3600.0  // Convert to hours\
+  \}\
+\
+  4C. Night Detection with Astronomical Calculations\
+\
+  Location: NightCalcService.swift:219-279\
+\
+  private func isNightInternal(at lat: Double, lon: Double, time: Date) -> Bool \{\
+      // Calculate sun's position using:\
+      // - Julian day\
+      // - Sun's declination\
+      // - Greenwich Sidereal Time\
+      // - Local hour angle\
+\
+      let elev = calculateSunElevation(...)\
+\
+      // CORRECTION #2: Apply atmospheric refraction\
+      let elevWithRefraction = elev + (0.833 * rad)\
+\
+      // Night = sun below -6\'b0 (civil twilight threshold)\
+      let isNight = elevWithRefraction < -6 * rad\
+\
+      return isNight\
+  \}\
+\
+  5. Parallel Calculation: Takeoffs/Landings\
+\
+  While night time is being calculated, the same context is used for takeoffs/landings:\
+\
+  Location: FlightTimeExtractorViewModel.swift:1587-1781\
+\
+  func updateTakeoffsLandings(using context: FlightCalculationContext?) \{\
+      if let context = context \{\
+          // CORRECTION #4: Check 3 minutes before arrival\
+          let checkInterval: TimeInterval = 180\
+          let arrivalCheckTime = context.departureTime.addingTimeInterval(\
+              max(0, context.blockTimeHours * 3600 - checkInterval)\
+          )\
+\
+          // Check departure (exact time)\
+          let isDepartureNight = nightCalcService.isNight(\
+              at: context.fromCoordinates.latitude,\
+              lon: context.fromCoordinates.longitude,\
+              time: context.departureTime\
+          )\
+\
+          // Check arrival (3 min before)\
+          let isArrivalNight = nightCalcService.isNight(\
+              at: context.toCoordinates.latitude,\
+              lon: context.toCoordinates.longitude,\
+              time: arrivalCheckTime\
+          )\
+\
+          // Set values based on results\
+          nightTakeoffs = isDepartureNight ? 1 : 0\
+          nightLandings = isArrivalNight ? 1 : 0\
+          ...\
+      \}\
+  \}\
+\
+  Complete Data Flow Diagram\
+\
+  \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+  \uc0\u9474                          AddFlightView (UI)                       \u9474 \
+  \uc0\u9474   User enters: airports, times, date                             \u9474 \
+  \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+                             \uc0\u9474  onChange triggers\
+                             
+\f3 \uc0\u9660 
+\f2 \
+  \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+  \uc0\u9474               FlightTimeExtractorViewModel                        \u9474 \
+  \uc0\u9474   \'95 updateNightTime()                                            \u9474 \
+  \uc0\u9474   \'95 Owns the @Published nightTime property                       \u9474 \
+  \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+                             \uc0\u9474 \
+                    \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9524 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+                    
+\f3 \uc0\u9660 
+\f2                  
+\f3 \uc0\u9660 
+\f2 \
+      \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488    \u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+      \uc0\u9474  TimeCalculation     \u9474    \u9474  updateTakeoffs       \u9474 \
+      \uc0\u9474  Manager             \u9474    \u9474  Landings()           \u9474 \
+      \uc0\u9474                      \u9474    \u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+      \uc0\u9474  buildContext()      \u9474              \u9474 \
+      \uc0\u9474      \u8595                \u9474              \u9474 \
+      \uc0\u9474  calculateNightTime()\u9474              \u9474  (uses same context)\
+      \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496              \u9474 \
+                 \uc0\u9474                         \u9474 \
+                 \uc0\u9474  Both delegate to       \u9474 \
+                 
+\f3 \uc0\u9660 
+\f2                         
+\f3 \uc0\u9660 
+\f2 \
+      \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+      \uc0\u9474         NightCalcService                 \u9474 \
+      \uc0\u9474                                          \u9474 \
+      \uc0\u9474   calculateNightTime()                   \u9474 \
+      \uc0\u9474       \u8595                                   \u9474 \
+      \uc0\u9474   nightPortion() [200 segments]          \u9474 \
+      \uc0\u9474       \u8595                                   \u9474 \
+      \uc0\u9474   isNightInternal() [each segment]       \u9474 \
+      \uc0\u9474       \u8595                                   \u9474 \
+      \uc0\u9474   Astronomical calculations:             \u9474 \
+      \uc0\u9474   \'95 Julian day                           \u9474 \
+      \uc0\u9474   \'95 Sun declination                      \u9474 \
+      \uc0\u9474   \'95 Sun elevation angle                  \u9474 \
+      \uc0\u9474   \'95 Atmospheric refraction correction    \u9474 \
+      \uc0\u9474   \'95 Civil twilight threshold (-6\'b0)       \u9474 \
+      \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+                 \uc0\u9474 \
+                 \uc0\u9474  Returns nightHours\
+                 
+\f3 \uc0\u9660 
+\f2 \
+      \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+      \uc0\u9474   TimeCalculationManager                 \u9474 \
+      \uc0\u9474   \'95 Applies capping correction           \u9474 \
+      \uc0\u9474   \'95 Formats as "%.2f"                    \u9474 \
+      \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+                         \uc0\u9474 \
+                         
+\f3 \uc0\u9660 
+\f2 \
+      \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+      \uc0\u9474   FlightTimeExtractorViewModel           \u9474 \
+      \uc0\u9474   \'95 nightTime = "3.45"                   \u9474 \
+      \uc0\u9474   \'95 nightTakeoffs = 0                    \u9474 \
+      \uc0\u9474   \'95 nightLandings = 1                    \u9474 \
+      \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+                         \uc0\u9474 \
+                         
+\f3 \uc0\u9660 
+\f2 \
+      \uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+      \uc0\u9474   AddFlightView (UI Update)              \u9474 \
+      \uc0\u9474   Displays: "NIGHT Time: 3.45"           \u9474 \
+      \uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+  Key Design Benefits\
+\
+  1. Separation of Concerns:\
+    - ViewModel = UI coordination\
+    - TimeCalculationManager = Business logic & caching\
+    - NightCalcService = Astronomical calculations\
+  2. Performance Optimization:\
+    - Context is built once and reused for both night time and takeoffs/landings\
+    - Eliminates duplicate airport lookups and date parsing\
+  3. Corrections Applied at Appropriate Layers:\
+    - NightCalcService = Astronomical corrections (refraction, day rollover)\
+    - TimeCalculationManager = Business rule corrections (capping)\
+    - ViewModel = Operational corrections (3-minute landing offset)\
+  4. Maintainability:\
+    - Each component has a single, clear responsibility\
+    - Easy to test each layer independently\
+    - Changes to astronomical calculations don't affect UI logic\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\fs24 \cf2 \CocoaLigature1 \
+}

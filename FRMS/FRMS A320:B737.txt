@@ -1,0 +1,375 @@
+Based on the FRMS Ruleset PDF for the A320/B737, here are the FRMS duty time limits for the B737:
+
+  Flight Time Limits
+
+  - 100 hours in any consecutive 28-day period
+  - 1000 hours in any consecutive 365-day period
+
+  Cumulative Duty Time Limits
+  Planning:
+  - 60 hours in any consecutive 7 days
+  - 90 hours in any consecutive 14 days (can be increased to 100 hours with pilot agreement)
+
+  Operational:
+  - Same as planning limits
+
+  Maximum Flight and Duty Periods
+  
+  Planning Limits (FD13.1):
+  
+  If crew is augmented by 3rd pilot - 14 hours maximum duty and no more than 2 sectors if crew rest is comfortable seat in cabin.
+  If crew is augmented by 3rd pilot - 16 hours maximum duty and no more than 2 sectors if crew rest is a screened off area with a comfortable seat.
+  For EPs, non Sydney or Melbourne based crew can be rostered up to 15 hours maximum duty. (Above 13 hours, next day must be a BL.)
+
+  | Local Start Time | Sectors 1-4 | Sectors 5 or 6 |
+  |------------------|-------------|----------------|
+  | 0500-1459        | 12 hours    | 11 hours       |
+  | 1500-1959        | 11 hours    | 10 hours       |
+  | 2000-0459        | 10 hours    | 10 hours       |
+
+  Flight Time Planning Limits (2-pilot operations):
+
+  - 9.5 hours where more than 7 hours of flight time is conducted in darkness
+  - 10 hours where more than 1 sector is scheduled
+  - 10.5 hours for all other occasions or if 3 pilots are carried.
+  
+  
+  
+  
+  
+  Operational Limits (FD23.1):
+
+  | Local Start Time | Sectors 1-4 | Sectors 5 | Sectors 6 |
+  |------------------|-------------|-----------|-----------|
+  | 0500-1459        | 14 hours    | 13 hours  | 12 hours  |
+  | 1500-1959        | 13 hours    | 12 hours  | 11 hours  |
+  | 2000-0459        | 12 hours    | 12 hours  | 11 hours  |
+
+  
+
+  Rest Requirements:
+
+  - Minimum 10 hours rest when previous duty ≤12 hours
+  - When previous duty >12 hours: 12 hours + 1.5 × (duty time exceeding 12 hours)
+
+
+A320/B737 FLEET - MAXIMUM NEXT DUTY REQUIREMENTS
+
+  1. BACK OF THE CLOCK Operations
+
+  Rule Reference: FD13.6 & FD49.5 (Planning)
+  - Limit Type: Consecutive Early Starts
+  - Maximum: 4 consecutive duties with sign-on prior to 0700 local time
+  - Reset: After any duty starting ≥0700 or day off
+
+  Rule Reference: FD14.4 (Australia) & FD49.6 (New Zealand) - CRITICAL
+  - Trigger: Duty includes ≥2 hours between 0100-0459 (local time at departure airport)
+  - Next Duty Restriction: Sign-on no earlier than 1000 local the following day
+  - Applies To:
+    - Australia: Only if next duty is in Australia
+    - New Zealand: All operations
+  - Limit Type: Planning only (not subject to operational discretion)
+
+  ---
+  2. LATE NIGHT OPERATIONS
+
+  Definition (FD1): Duty period including >30 minutes between 2300-0530 (referenced to local midnight per FD2)
+
+  2A. Consecutive Late Night Limits
+
+  Rule Reference: FD14.1 & FD24.1
+  - Standard Maximum: 4 consecutive nights in any 7-night period
+  - Tracking Window: Rolling 7-night period
+
+  Rule Reference: FD14.2 & FD24.2
+  - Exception: May extend to 5 nights in 7
+  - Frequency: Once per 28 consecutive days only
+  - Reset: After 28-day period from last use
+
+  2B. Recovery After Consecutive Late Nights
+
+  Rule Reference: FD14.3(c) & FD24.3(c)
+  After consecutive late night operations, pilot must EITHER:
+  - (Option 1): Remain on late night operations (within 4/5 night limits), OR
+  - (Option 2): Have ≥24 hours free of duty before any non-late-night duty
+
+  2C. Duty Hour Limits During Late Night Periods
+
+  Rule Reference: FD14.3(a) & FD24.3(a)
+  - Trigger: More than 2 duty periods involving late night ops in any 7-night period
+  - Maximum Duty: 40 hours total in that 7-night period
+  - Calculation: Sum all duty hours (not just late night portion)
+
+  ---
+  3. MINIMUM REST BETWEEN DUTIES
+
+  3A. Standard Rest Formula
+
+  Rule Reference: FD18.1 (Planning) & FD28.1 (Operational)
+
+  If Previous Duty ≤12 hours:
+  - Formula: MAX(10 hours, previous duty length)
+  - Examples:
+    - 8hr duty → 10hrs rest
+    - 10hr duty → 10hrs rest
+    - 12hr duty → 12hrs rest
+
+  If Previous Duty >12 hours:
+  - Formula: 12 + (1.5 × hours over 12)
+  - Examples:
+    - 13hr → 12 + (1.5 × 1) = 13.5hrs
+    - 14hr → 12 + (1.5 × 2) = 15hrs
+    - 15hr → 12 + (1.5 × 3) = 16.5hrs
+    - 16hr → 12 + (1.5 × 4) = 18hrs
+
+  3B. Reduced Rest (Operational Only)
+
+  Rule Reference: FD28.2
+  - Minimum: 9 consecutive hours
+  - Conditions (BOTH required):
+    a. Previous duty ≤10 hours, AND
+    b. Rest period includes 2200-0600 local time
+  - Application: Operational only (pilot discretion)
+
+  3C. Split Duty Rest Discounting
+
+  Rule Reference: FD17.3 & FD27.2
+  - Eligibility: Split duty with ≥6 hours rest at suitable sleeping accommodation
+  - Discount: 50% of rest period, maximum 4 hours
+  - Applies To:
+    - Subsequent time free of duty calculation
+    - Cumulative duty time calculation
+
+  Example:
+  - 6hr flight + 6hr rest + 4hr flight = 16hr total duty
+  - Discount: 50% × 6hrs = 3hrs
+  - Calculate next rest as: 13hr duty → 12 + (1.5 × 1) = 13.5hrs
+
+  Rule Reference: FD17.4 & FD27.4 - Exception
+  - If rest period includes 2300-0530:
+    - Must be ≥7 hours uninterrupted at suitable sleeping accommodation
+    - NO discounting permitted
+    - Calculate full duty hours for rest requirement
+
+  ---
+  4. PATTERN END REQUIREMENTS
+
+  Rule Reference: FD19 (Planning - Roster Construction)
+
+  1-2 Day Pattern:
+  - Minimum: 12 hours free immediately following
+
+  3-4 Day Pattern:
+  - Minimum: 15 hours free immediately following
+
+  ---
+  5. SIMULATOR TRAINING RESTRICTIONS
+
+  5A. Day Before Simulator (Australia)
+
+  Rule Reference: FD7.2
+  - Restriction: Must sign-off from any rostered flying duty ≤2000 hours
+  - Applies To: Trainee AND line support pilot
+  - Day: Day immediately preceding simulator duty commencement
+
+  5B. Rest Before Simulator (Australia)
+
+  Rule Reference: FD7.3
+  - Minimum: 12 hours rest
+  - Before: Simulator sign-on OR any associated deadheading
+
+  5C. Same-Day Restriction (Australia)
+
+  Rule Reference: FD7.1
+  - Prohibition: 2 duty periods with ≥1 simulator duty within single 24-hour period
+  - 24-Hour Period: Local midnight to local midnight
+
+  5D. Day Before Simulator (New Zealand)
+
+  Rule Reference: FD43.1
+  - Applies To: (Re)certification or check simulator conducted 0100-0459 local
+  - Requirement: Rest encompassing one local night (2200-0500)
+
+  ---
+  6. DAYS OFF (X DAYS) - NEXT DUTY RESTRICTIONS
+
+  6A. Duty Before X Day
+
+  Rule Reference: FD5.4
+  - Standard: Must complete ≤2230 local (previous day)
+
+  Rule Reference: FD5.5 (Operational Exception)
+  - Disruption: May extend to 2300 local on day of operations
+
+  6B. Duty After X Day
+
+  Rule Reference: FD5.6
+  - Earliest Sign-On: 0500 local
+
+  6C. Single X Day Duration
+
+  Rule Reference: FD5.3
+  - Minimum: 36 hours
+
+  ---
+  7. ANNUAL LEAVE ADJACENCY
+
+  7A. Australia-Based Crew
+
+  Rule Reference: FD9.1
+
+  Before Annual Leave:
+  - Latest Duty End: 2000 hours (day before commencement)
+
+  After Annual Leave:
+  - Earliest Duty Start: 0800 hours (day following completion)
+
+  Waiver: Subject to FD9.2 - pilot may agree to waive or as awarded through bidding
+
+  7B. New Zealand-Based Crew
+
+  Rule Reference: FD45.1
+
+  Before Annual Leave (≥7 days):
+  - Latest Duty End: 1800 hours (day before commencement)
+
+  ---
+  8. RESERVE DUTY
+
+  8A. After Reserve With Callout
+
+  Rule Reference: FD13.5, FD23.5, FD51.3, FD64.3
+  - Formula: MAX(12 hours, actual duty length)
+  - Note: If duty performed during reserve, use standard rest formula from Section 3A
+
+  8B. After Reserve Without Callout
+
+  Rule Reference: FD28.3 (Operational)
+  - Minimum: 10 hours free of all duty
+
+  8C. Between Reserve Periods
+
+  Rule Reference: FD51.3, FD64.3
+  - Formula: MAX(12 hours, previous duty length)
+
+  ---
+  9. DEADHEADING AFTER FLIGHT DUTY
+
+  Rule Reference: FD15.6 & FD25.6
+  - Absolute Maximum: 16 hours total duty (flight duty + deadheading combined)
+
+  Rule Reference: FD15.3 & FD25.3
+  - Rest Calculation: Deadheading included in total duty for subsequent rest calculation
+
+  Rule Reference: FD15.4 & FD25.4
+  - Sector Counting: Deadheading does NOT count as sector for duty limits IF it's the last sector
+  - Exception: Deadheading before flight duty DOES count as sector (FD15.5 & FD25.5)
+
+  ---
+  10. SPECIAL CIRCUMSTANCES
+
+  10A. Emergency Procedures Training
+
+  Rule Reference: FD13.2 & FD23.2
+  - Eligibility: Non-Sydney/Melbourne pilots doing EPT at other base
+  - Extension: May extend max duty to 15 hours
+
+  10B. Blank Day After Long Duty
+
+  Rule Reference: FD6.1
+  - Trigger: Rostered duty >13 hours (planned per FD13.2)
+  - Requirement: BL day must be rostered day after that duty
+
+  ---
+  11. CONSECUTIVE DUTY LIMITS
+
+  Rule Reference: FD12.2(b) & FD22.2(b)
+  - Maximum: 6 consecutive days of duty
+  - Reset: Any day off breaks the sequence
+
+  Rule Reference: FD12.2(a) & FD22.2(a)
+  - Maximum: 9 days of duty in any 11-day period
+  - Tracking: Rolling 11-day window
+
+  ---
+  12. WEEKLY/PERIODIC REST
+
+  Rule Reference: FD12.3 & FD22.3
+
+  Pilot must have EITHER:
+
+  Option (a):
+  - Duration: ≥36 consecutive hours free of all duty
+  - Period: In any consecutive 7 days
+
+  Option (b):
+  - Duration: Two consecutive local nights (starting ≤2200, finishing ≥0500)
+  - Period: In any consecutive 8 nights
+
+  ---
+  13. NEW ZEALAND-BASED CREW SPECIFIC DIFFERENCES
+
+  13A. Rest Away From Base
+
+  Rule Reference: FD55.1 & FD68.1
+
+  Standard:
+  - Minimum: 11 hours
+
+  Reduced (Delay/Disruption):
+  - Minimum: 10 hours
+  - Conditions (ALL required):
+    a. Previous duty ≤12 hours, AND
+    b. Delay or disruption, AND
+    c. Next duty ≤1 sector to return to home base
+
+  13B. Rest At Home Base
+
+  Rule Reference: FD55.1 & FD68.1
+
+  Standard:
+  - Minimum: 12 hours
+
+  Reduced (Operational Recovery):
+  - Minimum: 10 hours
+  - Condition: Previous duty ≤12 hours
+
+  13C. Single RDO Duration
+
+  Rule Reference: FD42.3
+  - Minimum: 36 hours from planned sign-off
+  - Waiver: Or as mutually agreed otherwise
+
+  ---
+  IMPLEMENTATION TRACKING REQUIREMENTS
+
+  Required Calculations:
+
+  1. Back of Clock Detector
+    - Track consecutive duties with sign-on <0700
+    - Detect ≥2 hours in 0100-0459 window
+    - Apply 1000 sign-on restriction for next duty
+  2. Late Night Counter
+    - Detect >30 min in 2300-0530 window
+    - Track consecutive late nights (rolling 7-night window)
+    - Monitor 28-day exception usage
+    - Calculate duty hours in late night periods
+  3. Rest Calculator
+    - Input: Previous duty hours
+    - Output: Minimum rest required
+    - Handle split duty discounting
+    - Flag if rest includes 2200-0600 for reduced rest eligibility
+  4. Pattern Tracker
+    - Count consecutive days in pattern
+    - Apply 12hr/15hr minimum based on pattern length
+  5. Consecutive Duty Counter
+    - Track consecutive duty days (max 6)
+    - Track duty days in rolling 11-day window (max 9)
+  6. Weekly Rest Checker
+    - Monitor 36hrs in 7 days OR
+    - Monitor 2 consecutive local nights in 8 nights
+  7. Special Restriction Flags
+    - Simulator day-before (≤2000 sign-off)
+    - X day boundaries (≤2230 before, ≥0500 after)
+    - Annual leave boundaries
+    - Reserve status and rest

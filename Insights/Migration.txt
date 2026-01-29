@@ -1,0 +1,291 @@
+Option 1: Export/Import Migration (Recommended for 10 Users)                                                                               
+                                                                                                                                             
+  This leverages your existing import/export infrastructure with enhancements.                                                               
+                                                                                                                                             
+  How it works:                                                                                                                              
+  1. Release final Logger update with enhanced "Migrate to Block-Time" feature                                                               
+  2. Users export their data to a migration file                                                                                             
+  3. Users install Block-Time (new bundle ID: com.thezoolab.blocktime)                                                                       
+  4. Block-Time detects and imports the migration file                                                                                       
+  5. Users verify data and uninstall Logger                                                                                                  
+                                                                                                                                             
+  Pros:                                                                                                                                      
+  - ✅ Clean separation between apps                                                                                                         
+  - ✅ Leverages existing import/export code                                                                                                 
+  - ✅ Simple to implement and test                                                                                                          
+  - ✅ Users maintain full control                                                                                                           
+  - ✅ Works with your small user base                                                                                                       
+                                                                                                                                             
+  Cons:                                                                                                                                      
+  - ❌ Manual process (export → install → import)                                                                                            
+  - ❌ Requires user action                                                                                                                  
+  - ❌ Potential for user error                                                                                                              
+                                                                                                                                             
+  Implementation Complexity: Low-Medium                                                                                                      
+                                                                                                                                                                                       
+  ---                                                                                                                                        
+  Detailed Implementation Plan for Option 1                                                                                                  
+                                                                                                                                             
+  Here's what needs to change:                                                                                                               
+                                                                                                                                             
+  Phase 1: Create Block-Time Project                                                                                                         
+                                                                                                                                             
+  1. Bundle Identifier Changes:                                                                                                              
+    - New bundle ID: com.thezoolab.blocktime                                                                                                 
+    - Update in project.pbxproj                                                                                                              
+  2. CloudKit Container Changes:                                                                                                             
+    - New container: iCloud.com.thezoolab.blocktime                                                                                          
+    - Update Logger.entitlements → rename to Block-Time.entitlements                                                                         
+    - Update FlightDatabaseService.swift:68 container identifier                                                                             
+    - Update Info.plist NSUbiquitousContainers section                                                                                       
+  3. CloudKit Console Setup:                                                                                                                 
+    - Create new CloudKit container in Apple Developer Portal                                                                                
+    - Deploy schema to production (from development)                                                                                         
+    - Configure subscriptions and indexes                                                                                                    
+  4. Branding Updates:                                                                                                                       
+    - App name: "Block-Time"                                                                                                                 
+    - Update all references to "Logger" in UI                                                                                                
+    - App icon and branding assets                                                                                                           
+    - Update Info.plist display name                                                                                                         
+                                                                                                                                             
+  Phase 2: Enhanced Export in Logger (Final Update)                                                                                          
+                                                                                                                                             
+  Add a comprehensive migration export feature:                                                                                              
+                                                                                                                                             
+  // New: MigrationExportService.swift                                                                                                       
+  // Exports:                                                                                                                                
+  // 1. All FlightEntity records (JSON format for fidelity)                                                                                  
+  // 2. All AircraftEntity records                                                                                                           
+  // 3. All settings from NSUbiquitousKeyValueStore                                                                                          
+  // 4. All UserDefaults preferences                                                                                                         
+  // 5. Metadata (export date, app version, record counts)                                                                                   
+                                                                                                                                             
+  Export Format: JSON (better than CSV for complex data)                                                                                     
+  File Name: Logger-Migration-[date].blocktime                                                                                               
+  Location: User's Files app / iCloud Drive                                                                                                  
+                                                                                                                                             
+  Phase 3: Enhanced Import in Block-Time                                                                                                     
+                                                                                                                                             
+  Add migration import on first launch:                                                                                                      
+                                                                                                                                             
+  // New: MigrationImportService.swift                                                                                                       
+  // Features:                                                                                                                               
+  // 1. Detects .blocktime files                                                                                                             
+  // 2. Validates migration file format                                                                                                      
+  // 3. Imports all flight records with conflict handling                                                                                    
+  // 4. Imports settings with smart merging                                                                                                  
+  // 5. Shows progress UI                                                                                                                    
+  // 6. Validates import success (record count matching)                                                                                     
+  // 7. Offers "View Imported Flights" confirmation                                                                                          
+                                                                                                                                             
+  First Launch Flow:                                                                                                                         
+  - Welcome screen explaining Block-Time                                                                                                     
+  - "Import from Logger" button (if no data exists)                                                                                          
+  - File picker for .blocktime file                                                                                                          
+  - Import progress indicator                                                                                                                
+  - Success confirmation with statistics                                                                                                     
+                                                                                                                                             
+  Phase 4: Data Migration Scope                                                                                                              
+                                                                                                                                             
+  Here's what needs to be migrated:                                                                                                          
+  ┌──────────────────────┬────────────────────────────┬──────────────────────────┬──────────┐                                                
+  │      Data Type       │           Source           │      Export Method       │ Priority │                                                
+  ├──────────────────────┼────────────────────────────┼──────────────────────────┼──────────┤                                                
+  │ Flight Records       │ Core Data (FlightEntity)   │ JSON with all attributes │ Critical │                                                
+  ├──────────────────────┼────────────────────────────┼──────────────────────────┼──────────┤                                                
+  │ Aircraft             │ Core Data (AircraftEntity) │ JSON                     │ High     │                                                
+  ├──────────────────────┼────────────────────────────┼──────────────────────────┼──────────┤                                                
+  │ Settings             │ NSUbiquitousKeyValueStore  │ Key-value JSON           │ High     │                                                
+  ├──────────────────────┼────────────────────────────┼──────────────────────────┼──────────┤                                                
+  │ Preferences          │ UserDefaults               │ Key-value JSON           │ Medium   │                                                
+  ├──────────────────────┼────────────────────────────┼──────────────────────────┼──────────┤                                                
+  │ Crew Names (recents) │ Settings sync service      │ Included in settings     │ Medium   │                                                
+  ├──────────────────────┼────────────────────────────┼──────────────────────────┼──────────┤                                                
+  │ Airport Recents      │ Settings sync service      │ Included in settings     │ Low      │                                                
+  └──────────────────────┴────────────────────────────┴──────────────────────────┴──────────┘                                                
+  Phase 5: User Communication Plan                                                                                                           
+                                                                                                                                             
+  Since you have 10 TestFlight users with valuable data:                                                                                     
+                                                                                                                                             
+  1. Email/TestFlight Announcement:                                                                                                          
+    - Explain rebranding to Block-Time                                                                                                       
+    - Outline simple 3-step migration                                                                                                        
+    - Provide migration deadline (e.g., 2 months)                                                                                            
+    - Offer 1-on-1 support if needed                                                                                                         
+  2. In-App Notice in Logger:                                                                                                                
+    - Persistent banner: "Logger is becoming Block-Time"                                                                                     
+    - Link to migration instructions                                                                                                         
+    - "Export My Data" button                                                                                                                
+  3. Step-by-Step Instructions:                                                                                                              
+  1. Open Logger → Settings → "Migrate to Block-Time"                                                                                        
+  2. Tap "Export All Data" (saves .blocktime file)                                                                                           
+  3. Install Block-Time from TestFlight                                                                                                      
+  4. Open Block-Time → "Import from Logger"                                                                                                  
+  5. Select your .blocktime file                                                                                                             
+  6. Verify your flights imported correctly                                                                                                  
+  7. Delete Logger                                                                                                                           
+                                                                                                                                             
+  ---                                                                                                                                        
+  CloudKit Considerations                                                                                                                    
+                                                                                                                                             
+  Old CloudKit Container (iCloud.com.thezoolab.logger):                                                                                      
+                                                                                                                                             
+  - Will remain accessible to Logger users                                                                                                   
+  - Data persists in iCloud                                                                                                                  
+  - After users migrate, no longer actively used                                                                                             
+  - Can be decommissioned after migration period                                                                                             
+                                                                                                                                             
+  New CloudKit Container (iCloud.com.thezoolab.blocktime):                                                                                   
+                                                                                                                                             
+  - Starts fresh with imported data                                                                                                          
+  - All new syncing happens here                                                                                                             
+  - Users' devices sync via new container                                                                                                    
+  - Requires schema deployment in CloudKit Console                                                                                           
+                                                                                                                                             
+  Multi-Device Users:                                                                                                                        
+                                                                                                                                             
+  - They'll need to migrate on each device, OR                                                                                               
+  - Better: Import on one device, let CloudKit sync to others                                                                                
+  - Recommend: "Import on your primary device, wait for sync"                                                                                
+                                                                                                                                             
+  ---                                                                                                                                        
+  Timeline Recommendation                                                                                                                    
+  ┌──────┬───────────┬──────────────────────────────────────────────────────────────────────────┐                                            
+  │ Week │   Phase   │                                  Tasks                                   │                                            
+  ├──────┼───────────┼──────────────────────────────────────────────────────────────────────────┤                                            
+  │ 1-2  │ Setup     │ Create Block-Time project, update identifiers, set up CloudKit container │                                            
+  ├──────┼───────────┼──────────────────────────────────────────────────────────────────────────┤                                            
+  │ 3    │ Export    │ Build enhanced export in Logger                                          │                                            
+  ├──────┼───────────┼──────────────────────────────────────────────────────────────────────────┤                                            
+  │ 4    │ Import    │ Build enhanced import in Block-Time                                      │                                            
+  ├──────┼───────────┼──────────────────────────────────────────────────────────────────────────┤                                            
+  │ 5    │ Testing   │ Test full migration flow yourself                                        │                                            
+  ├──────┼───────────┼──────────────────────────────────────────────────────────────────────────┤                                            
+  │ 6    │ Beta      │ Release Logger final update to TestFlight                                │                                            
+  ├──────┼───────────┼──────────────────────────────────────────────────────────────────────────┤                                            
+  │ 7    │ Beta      │ Release Block-Time to TestFlight, user testing                           │                                            
+  ├──────┼───────────┼──────────────────────────────────────────────────────────────────────────┤                                            
+  │ 8-10 │ Migration │ Support users through migration                                          │                                            
+  ├──────┼───────────┼──────────────────────────────────────────────────────────────────────────┤                                            
+  │ 11+  │ Cleanup   │ Sunset Logger, App Store submission for Block-Time                       │                                            
+  └──────┴───────────┴──────────────────────────────────────────────────────────────────────────┘                                            
+  ---                                                                                                                                        
+  ★ Insight ─────────────────────────────────────                                                                                            
+  CloudKit Container Architecture: Unlike databases you can simply rename, CloudKit containers are immutable infrastructure tied to bundle   
+  identifiers. The container ID iCloud.com.thezoolab.logger is permanent for that app. This is why app migrations always require data        
+  transfer—Apple designed this intentionally to prevent container conflicts and maintain security boundaries.                                
+                                                                                                                                             
+  Migration File Format Choice: While CSV works for tabular data, JSON is superior for complex migrations because it preserves: (1) nested   
+  data structures, (2) data types (Bool, Date, UUID), (3) null vs. empty string distinctions, and (4) metadata. Your FlightEntity has 30+    
+  attributes including booleans and dates—JSON prevents lossy conversion.                                                                    
+                                                                                                                                             
+  NSPersistentCloudKitContainer Sync Behavior: When users import data into Block-Time, Core Data assigns new CloudKit record IDs, triggering 
+  uploads to the new container. This means imported data will sync across their devices automatically—they only need to import on ONE device,
+   not all of them.                                                                                                                          
+  ─────────────────────────────────────────────────     
+
+
+
+ ✅ Migration Export Feature Complete                                                                                                       
+                                                                                                                                             
+  1. MigrationExportService.swift (New Service)                                                                                              
+                                                                                                                                             
+  Located at: /Logger/Services/MigrationExportService.swift                                                                                  
+                                                                                                                                             
+  What it does:                                                                                                                              
+  - Exports all FlightEntity records from Core Data (with full fidelity)                                                                     
+  - Exports all AircraftEntity records                                                                                                       
+  - Gathers all settings from NSUbiquitousKeyValueStore (iCloud sync settings)                                                               
+  - Gathers preferences from UserDefaults                                                                                                    
+  - Creates a comprehensive JSON structure with metadata                                                                                     
+  - Writes to a .blocktime file with timestamp                                                                                               
+                                                                                                                                             
+  Key Features:                                                                                                                              
+  - Async/await for smooth operation                                                                                                         
+  - Comprehensive error handling with specific error types                                                                                   
+  - Validation to ensure data integrity                                                                                                      
+  - ISO 8601 date encoding for compatibility                                                                                                 
+  - Pretty-printed JSON for debugging if needed                                                                                              
+                                                                                                                                             
+  2. MigrationExportView.swift (New UI)                                                                                                      
+                                                                                                                                             
+  Located at: /Logger/Views/Screens/MigrationExportView.swift                                                                                
+                                                                                                                                             
+  What it provides:                                                                                                                          
+  - Beautiful migration-focused UI with orange accent color                                                                                  
+  - Clear explanation of what will be exported                                                                                               
+  - Step-by-step migration instructions                                                                                                      
+  - Progress indicator during export                                                                                                         
+  - Success view with next steps                                                                                                             
+  - Automatic share sheet after export                                                                                                       
+  - Flight count display                                                                                                                     
+                                                                                                                                             
+  UI Sections:                                                                                                                               
+  - Setup View: Shows what will be exported, migration steps                                                                                 
+  - Success View: Confirmation, next steps, share button                                                                                     
+                                                                                                                                             
+  3. ImportExportView.swift (Updated)                                                                                                        
+                                                                                                                                             
+  Located at: /Logger/Views/Screens/ImportExportView.swift                                                                                   
+                                                                                                                                             
+  Changes made:                                                                                                                              
+  - Added "Migrate to Block-Time" button after "Export This Logbook"                                                                         
+  - Distinctive orange color to stand out                                                                                                    
+  - Clear subtitle: "Complete app migration export"                                                                                          
+  - Sheet presentation for MigrationExportView                                                                                               
+                                                                                                                                             
+  ---                                                                                                                                        
+  ★ Insight ─────────────────────────────────────                                                                                            
+  JSON Structure Design: The migration package uses a nested structure with clear separation of concerns: MigrationPackage contains metadata 
+  (counts, versions), flights array, aircraft array, settings object, and preferences object. This design makes it easy for Block-Time's     
+  importer to selectively process each section and provide granular progress feedback.                                                       
+                                                                                                                                             
+  File Extension Choice: Using .blocktime instead of .json serves multiple purposes: (1) prevents users from accidentally opening it in text 
+  editors, (2) allows Block-Time to register as the handler for this file type, (3) makes the file's purpose immediately clear, and (4)      
+  enables "Open In..." functionality where users can select Block-Time directly from Files app.                                              
+                                                                                                                                             
+  Date Encoding Strategy: ISO 8601 format ensures dates are preserved with timezone information across the migration. Core Data stores dates 
+  as Date objects, but JSON needs a string representation—ISO 8601 is unambiguous and supported by all modern JSON parsers, preventing the   
+  common timezone conversion bugs that plague migrations.                                                                                    
+  ─────────────────────────────────────────────────                                                                                          
+                                                                                                                                             
+  ---                                                                                                                                        
+  File Structure Summary                                                                                                                     
+                                                                                                                                             
+  Logger/                                                                                                                                    
+  ├── Services/                                                                                                                              
+  │   └── MigrationExportService.swift ⭐ NEW                                                                                                
+  └── Views/Screens/                                                                                                                         
+      ├── MigrationExportView.swift ⭐ NEW                                                                                                   
+      └── ImportExportView.swift ✏️ UPDATED                                                                                                  
+                                                                                                                                             
+  Migration Data Exported                                                                                                                    
+  ┌─────────────┬────────────────────────────┬────────────────────────────┐                                                                  
+  │  Data Type  │           Count            │           Source           │                                                                  
+  ├─────────────┼────────────────────────────┼────────────────────────────┤                                                                  
+  │ Flights     │ All records                │ Core Data (FlightEntity)   │                                                                  
+  ├─────────────┼────────────────────────────┼────────────────────────────┤                                                                  
+  │ Aircraft    │ All records                │ Core Data (AircraftEntity) │                                                                  
+  ├─────────────┼────────────────────────────┼────────────────────────────┤                                                                  
+  │ Settings    │ ~30 keys                   │ NSUbiquitousKeyValueStore  │                                                                  
+  ├─────────────┼────────────────────────────┼────────────────────────────┤                                                                  
+  │ Preferences │ ~5 keys                    │ UserDefaults               │                                                                  
+  ├─────────────┼────────────────────────────┼────────────────────────────┤                                                                  
+  │ Metadata    │ Version, counts, timestamp │ Generated                  │                                                                  
+  └─────────────┴────────────────────────────┴────────────────────────────┘                                                                  
+  Next Steps for You                                                                                                                         
+                                                                                                                                             
+  1. Build & Test: Build the project in Xcode and test the export                                                                            
+  2. Verify Export: Check that the .blocktime file contains valid JSON                                                                       
+  3. Share Test: Test the share sheet functionality                                                                                          
+  4. User Testing: Have one of your TestFlight users try it                                                                                  
+                                                                                                                                             
+  When You're Ready for Block-Time                                                                                                           
+                                                                                                                                             
+  Once you've tested this and are ready to build the import side for Block-Time, I can help you create:                                      
+  - MigrationImportService.swift - Reads and imports the .blocktime file                                                                     
+  - MigrationImportView.swift - First-launch import UI                                                                                       
+  - Integration with Core Data and settings restoration                                                                                      
+                                                                                                                                             
+  The export is complete and ready to test! 🚀        
+                     

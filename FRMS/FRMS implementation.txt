@@ -1,0 +1,118 @@
+FRMS Scheduled Times & Configurable Margins - Implementation Complete ✅
+
+  I've successfully implemented scheduled departure/arrival times and configurable sign-on/sign-off margins for FRMS calculations. Here's what was
+  done:
+
+  1. Added "Track FRMS Compliance" Toggle (FRMSConfiguration)
+
+  - New isEnabled property to enable/disable FRMS tracking
+  - All FRMS settings are disabled in UI when toggle is off
+  - Default: disabled (user must opt-in)
+
+  2. Added Configurable Sign-On/Sign-Off Margins (FRMSConfiguration)
+
+  var signOnMinutesBeforeSTD: Int   // Minutes before STD (default: 60)
+  var signOffMinutesAfterIN: Int    // Minutes after IN (default: fleet-specific)
+
+  Fleet-Aware Defaults:
+  - A320/B737: 60 min sign-on / 15 min sign-off
+  - A380/A330/B787: 60 min sign-on / 30 min sign-off
+  - Auto-updates when fleet changes
+
+  3. Added Scheduled Time Fields
+
+  FlightSector struct:
+  var scheduledDeparture: String  // STD in "HHMM" format
+  var scheduledArrival: String    // STA in "HHMM" format
+
+  Core Data (FlightEntity):
+  - Added scheduledDeparture (optional String)
+  - Added scheduledArrival (optional String)
+  - Non-breaking change - existing data unaffected
+
+  Database Integration:
+  - Updated saveFlight(), updateFlight(), updateScheduledFlightWithActualData(), saveFlightsBatch()
+  - Updated FlightSector.from(entity:) to map scheduled times
+
+  4. Updated FRMS Calculation Logic (FRMSCalculationService)
+
+  Sign-On Calculation:
+  func calculateSignOn(stdTime: Date?, outTime: Date) -> Date
+  - Priority 1: Use STD (Scheduled Time of Departure) if available
+  - Priority 2: Fall back to OUT (actual departure) if no STD
+  - Margin: Configurable signOnMinutesBeforeSTD (default: 60 min)
+
+  Sign-Off Calculation:
+  func calculateSignOff(inTime: Date) -> Date
+  - Uses actual IN time (arrival)
+  - Margin: Configurable signOffMinutesAfterIN (default: 15 or 30 min based on fleet)
+
+  For Rostered/Future Flights (blockTime == "0"):
+  - Sign-on = STD - 60 min (or configured)
+  - Sign-off = STA + 15/30 min (or configured)
+  - Allows FRMS to calculate duty periods for planned flights
+
+  For Completed Flights (blockTime > 0):
+  - Sign-on = STD - 60 min (if STD exists), otherwise OUT - 60 min
+  - Sign-off = IN + 15/30 min
+  - Uses actual arrival for accurate duty end time
+
+  5. Updated FRMS Settings UI (FRMSSettingsView)
+
+  New Section - FRMS Tracking:
+  - Toggle: "Track FRMS Compliance"
+  - Footer explains Qantas FRMS Ruleset
+
+  New Section - Duty Period Margins:
+  Sign-On Time: [60] min before STD    [Stepper: 30-120, step 5]
+  Sign-Off Time: [15] min after IN     [Stepper: 15-60, step 5]
+  - Footer explains STD/IN relationship and fleet defaults
+  - All settings disabled when "Track FRMS Compliance" is off
+
+  6. How It Works:
+
+  Scenario 1: Roster Import with Scheduled Times
+  Flight QF521: SYD-BNE
+  STD: 0800, STA: 1030
+  OUT: 0805, IN: 1028
+  Block: 2.4 hours
+
+  Sign-On: 0800 - 60 min = 0700 (uses STD)
+  Sign-Off: 1028 + 15 min = 1043 (uses actual IN)
+  Duty Period: 0700-1043 = 3h 43min
+
+  Scenario 2: Manual Entry without Scheduled Times (Existing flights)
+  Flight QF521: SYD-BNE
+  OUT: 0805, IN: 1028
+  Block: 2.4 hours
+  (no STD/STA)
+
+  Sign-On: 0805 - 60 min = 0705 (assumes OUT ≈ STD)
+  Sign-Off: 1028 + 15 min = 1043 (uses actual IN)
+  Duty Period: 0705-1043 = 3h 38min
+
+  Scenario 3: Future Rostered Flight
+  Flight QF521: SYD-BNE (tomorrow)
+  STD: 0800, STA: 1030
+  Block: 0 (not yet flown)
+
+  Sign-On: 0800 - 60 min = 0700
+  Sign-Off: 1030 + 15 min = 1045 (estimated)
+  Planned Duty: 0700-1045 = 3h 45min
+
+  7. Key Benefits:
+
+  ✅ Flexible for existing data - Works with flights that don't have scheduled times✅ Roster-aware - Uses STD/STA from roster imports when
+  available✅ User-configurable - Margins can be adjusted per user preference✅ Fleet-aware - Auto-adjusts sign-off time for widebody vs narrowbody✅
+  Non-breaking - Existing database unaffected, fields are optional✅ FRMS compliant - Sign-on based on planned departure, sign-off based on actual
+  arrival
+
+  Next Steps for User:
+
+  1. Enable "Track FRMS Compliance" in Settings → FRMS
+  2. Set Fleet type and Home Base
+  3. Adjust sign-on/sign-off margins if needed (defaults are good for most)
+  4. Import roster to get STD/STA for future flights
+  5. FRMS calculations will now include future rostered duties in cumulative totals
+
+  The implementation is complete and ready to use! 🎉
