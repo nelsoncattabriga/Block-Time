@@ -10,6 +10,7 @@ struct AircraftTypeTimeCard: View {
     private let settings = LogbookSettings.shared
     @State private var showTimesInHoursMinutes: Bool = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var isLandscape: Bool = UIDevice.current.orientation.isLandscape
 
     private var isIPad: Bool {
         horizontalSizeClass == .regular
@@ -46,6 +47,17 @@ struct AircraftTypeTimeCard: View {
             selectedAircraftType = settings.selectedAircraftType
             loadAvailableAircraftTypes()
             loadAircraftStats()
+
+            // Start monitoring device orientation
+            UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+            updateOrientation()
+        }
+        .onDisappear {
+            // Stop monitoring device orientation
+            UIDevice.current.endGeneratingDeviceOrientationNotifications()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+            updateOrientation()
         }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             loadAvailableAircraftTypes()
@@ -85,9 +97,20 @@ struct AircraftTypeTimeCard: View {
         aircraftStats = FlightDatabaseService.shared.getDetailedFlightStatistics(for: selectedAircraftType)
     }
 
+    private func updateOrientation() {
+        let orientation = UIDevice.current.orientation
+        // Handle landscape orientations (left and right) and fall back to checking window scene for valid orientation
+        if orientation.isLandscape {
+            isLandscape = true
+        } else if orientation.isPortrait {
+            isLandscape = false
+        }
+        // If orientation is unknown/flat/faceup/facedown, keep current state
+    }
+
     // Get time entries that have values (similar to SummaryRow)
-    // On iPad or iPhone single-column mode: show all time breakdowns
-    // On iPhone 2-column grid mode: show only Total
+    // On iPad landscape or iPhone single-column mode: show all time breakdowns
+    // On iPad portrait or iPhone 2-column grid mode: show only Total
     private var timeEntries: [(label: String, value: Double)] {
         var entries: [(String, Double)] = []
 
@@ -95,8 +118,9 @@ struct AircraftTypeTimeCard: View {
             entries.append(("Total", aircraftStats.totalHours))
         }
 
-        // Show detailed breakdowns on iPad or in iPhone single-column mode
-        if isIPad || settings.isCompactView {
+        // Show detailed breakdowns on iPad landscape or in iPhone single-column mode
+        let showFullDetails = (isIPad && isLandscape) || (!isIPad && settings.isCompactView)
+        if showFullDetails {
             if aircraftStats.p1Time > 0 {
                 entries.append(("P1", aircraftStats.p1Time))
             }
@@ -144,8 +168,8 @@ struct AircraftTypeTimeCard: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                if isIPad {
-                    // iPad: show time entries in a single row to maintain card height
+                if isIPad && isLandscape {
+                    // iPad landscape: show time entries in a single row
                     if !timeEntries.isEmpty {
                         HStack(spacing: 12) {
                             ForEach(timeEntries, id: \.label) { entry in
@@ -161,7 +185,7 @@ struct AircraftTypeTimeCard: View {
                             }
                         }
                     }
-                } else if settings.isCompactView {
+                } else if !isIPad && settings.isCompactView {
                     // iPhone single-column mode: show all time entries in 2-column grid
                     if !timeEntries.isEmpty {
                         LazyVGrid(columns: [
@@ -183,7 +207,7 @@ struct AircraftTypeTimeCard: View {
                         }
                     }
                 } else {
-                    // iPhone 2-column grid mode: show just total hours
+                    // iPad portrait or iPhone 2-column grid mode: show just total hours
                     Text(formatTime(aircraftStats.totalHours))
                         .iPadScaledFont(.subheadline)
                         .fontWeight(.bold)
