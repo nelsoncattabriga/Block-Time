@@ -2061,8 +2061,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
         statusColor = .primary
         aircraftReg = ""
 
-        LogManager.shared.info("All fields reset to default state")
-
         // Post notification to scroll view to top
         NotificationCenter.default.post(name: .scrollToTop, object: nil)
     }
@@ -2674,7 +2672,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
     /// Clear saved draft flight data
     func clearDraftFlightData() {
         UserDefaults.standard.removeObject(forKey: Self.draftFlightDataKey)
-                    LogManager.shared.debug("🗑️ Draft flight data cleared")
     }
 
     /// Check if draft data exists

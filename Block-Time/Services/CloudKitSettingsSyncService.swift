@@ -30,7 +30,7 @@ class CloudKitSettingsSyncService: ObservableObject {
     private let monitorQueue = DispatchQueue(label: "NetworkMonitor")
     private var localModificationDate: Date?
     private var isPerformingLocalSync = false
-    private var lastNetworkStatusLogTime: Date?
+    private var lastNetworkStatus: Bool?
     private var hasPerformedInitialSync = false
     private var lastSyncFromCloudTime: Date?
     private let syncFromCloudMinInterval: TimeInterval = 10.0 // Minimum 10 seconds between syncs
@@ -108,27 +108,23 @@ class CloudKitSettingsSyncService: ObservableObject {
         networkMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.isNetworkAvailable = path.status == .satisfied
+                let isAvailable = path.status == .satisfied
+                self.isNetworkAvailable = isAvailable
 
-                // Rate limit network status logging (max once per 30 seconds)
-                let now = Date()
-                let shouldLog = self.lastNetworkStatusLogTime == nil ||
-                    now.timeIntervalSince(self.lastNetworkStatusLogTime!) > 30.0
+                // Only log when network status CHANGES (not every time monitor fires)
+                let statusChanged = self.lastNetworkStatus != isAvailable
+                self.lastNetworkStatus = isAvailable
 
-                if path.status == .satisfied {
-                    if shouldLog {
+                if statusChanged {
+                    if isAvailable {
                         LogManager.shared.debug("iCloud sync: Network connection available")
-                        self.lastNetworkStatusLogTime = now
-                    }
-                    // Perform smart sync when network becomes available (but skip initial detection to avoid duplicate sync)
-                    if self.isCloudAvailable() && self.hasPerformedInitialSync {
-                        self.performSmartSync()
-                    }
-                    self.hasPerformedInitialSync = true
-                } else {
-                    if shouldLog {
+                        // Perform smart sync when network becomes available (but skip initial detection to avoid duplicate sync)
+                        if self.isCloudAvailable() && self.hasPerformedInitialSync {
+                            self.performSmartSync()
+                        }
+                        self.hasPerformedInitialSync = true
+                    } else {
                         LogManager.shared.warning("iCloud sync: Network connection unavailable")
-                        self.lastNetworkStatusLogTime = now
                     }
                 }
             }
