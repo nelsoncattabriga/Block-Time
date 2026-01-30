@@ -256,7 +256,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
         if !hasLoadedSettings {
             loadAllSettings()
             hasLoadedSettings = true
-            LogManager.shared.debug("Settings loaded from UserDefaults")
         }
 
         // Try to restore draft data first (if not in editing mode)

@@ -98,7 +98,6 @@ class AirportService {
 
             isLoaded = true
             LogManager.shared.debug("Loaded \(airportData.count) airports with timezone data")
-            LogManager.shared.debug("Loaded \(iataToIcaoMap.count) IATA/ICAO mappings")
         } catch {
             LogManager.shared.error("ERROR: Failed to load airports.dat.txt: \(error)")
         }

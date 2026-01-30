@@ -59,7 +59,7 @@ class LogManager {
     // .info   - Show info, warning, error (hide debug messages)
     // .warning - Show warning and error only
     // .error  - Show only errors (least verbose)
-    var minimumConsoleLogLevel: LogLevel = .info
+    var minimumConsoleLogLevel: LogLevel = .debug
 
     // File management
     private let fileManager = FileManager.default
@@ -133,20 +133,7 @@ class LogManager {
 
             // Format log entry
             let timestamp = self.timestamp()
-            let fileName = (file as NSString).lastPathComponent
-            let threadInfo = Thread.isMainThread ? "Main" : "Background"
-
-            // \(level.emoji) removed emoji from log file
-
-//            let logEntry = """
-//            [\(timestamp)] \(level.rawValue) - [\(threadInfo) Thread] [\(fileName):\(line)] \(function) → \(message)
-//            """
-
-            let logEntry = """
-            [\(timestamp)] [\(level.rawValue)] → \(message)
-            (\(fileName) - \(function)) - [\(threadInfo) Thread]
-            """
-
+            let logEntry = "[\(timestamp)] [\(level.rawValue)] → \(message)"
 
             // Write ALL logs to file (regardless of level)
             self.writeToFile(logEntry)

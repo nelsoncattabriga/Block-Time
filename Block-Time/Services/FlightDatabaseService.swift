@@ -111,15 +111,10 @@ class FlightDatabaseService: ObservableObject {
         // This prevents the blocking behavior when starting offline
         if networkAvailable || FileManager.default.ubiquityIdentityToken != nil {
             LogManager.shared.debug("CloudKit: Network available - enabling sync")
-            LogManager.shared.debug("CloudKit: Container - iCloud.com.thezoolab.blocktime")
 
             let containerOptions = NSPersistentCloudKitContainerOptions(
                 containerIdentifier: "iCloud.com.thezoolab.blocktime"
             )
-
-            // Log the database scope being used
-            LogManager.shared.debug("CloudKit: Database Scope - \(containerOptions.databaseScope.rawValue)")
-            LogManager.shared.debug("CloudKit: Scope values (0=Public, 1=Private, 2=Shared)")
 
             description.cloudKitContainerOptions = containerOptions
         } else {

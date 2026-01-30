@@ -31,6 +31,9 @@ class CloudKitSettingsSyncService: ObservableObject {
     private var localModificationDate: Date?
     private var isPerformingLocalSync = false
     private var lastNetworkStatusLogTime: Date?
+    private var hasPerformedInitialSync = false
+    private var lastSyncFromCloudTime: Date?
+    private let syncFromCloudMinInterval: TimeInterval = 10.0 // Minimum 10 seconds between syncs
 
     // UserDefaults key for tracking local modifications
     private let localModificationDateKey = "localSettingsModificationDate"
@@ -94,6 +97,7 @@ class CloudKitSettingsSyncService: ObservableObject {
         // Only sync from cloud on initialization if network is available
         if isNetworkAvailable && isCloudAvailable() {
             performSmartSync()
+            hasPerformedInitialSync = true
         } else {
             LogManager.shared.info("iCloud sync: Network or iCloud unavailable - skipping initial sync")
         }
@@ -116,10 +120,11 @@ class CloudKitSettingsSyncService: ObservableObject {
                         LogManager.shared.debug("iCloud sync: Network connection available")
                         self.lastNetworkStatusLogTime = now
                     }
-                    // Perform smart sync when network becomes available
-                    if self.isCloudAvailable() {
+                    // Perform smart sync when network becomes available (but skip initial detection to avoid duplicate sync)
+                    if self.isCloudAvailable() && self.hasPerformedInitialSync {
                         self.performSmartSync()
                     }
+                    self.hasPerformedInitialSync = true
                 } else {
                     if shouldLog {
                         LogManager.shared.warning("iCloud sync: Network connection unavailable")
@@ -353,6 +358,14 @@ class CloudKitSettingsSyncService: ObservableObject {
 
     /// Download settings from iCloud
     func syncFromCloud() {
+        // Rate limit: Skip if we've synced too recently (prevents excessive syncing)
+        let now = Date()
+        if let lastTime = lastSyncFromCloudTime,
+           now.timeIntervalSince(lastTime) < syncFromCloudMinInterval {
+            // Skip silently - synced too recently
+            return
+        }
+
         // Check if network and iCloud are available
         guard isNetworkAvailable else {
             LogManager.shared.warning("iCloud sync: Cannot sync FROM cloud - network unavailable")
@@ -364,6 +377,8 @@ class CloudKitSettingsSyncService: ObservableObject {
             return
         }
 
+        // Update last sync time
+        lastSyncFromCloudTime = now
         isSyncing = true
 
         // Check if cloud has data
@@ -611,7 +626,7 @@ class CloudKitSettingsSyncService: ObservableObject {
 
         // Only save and notify if something actually changed
         guard !changedKeys.isEmpty else {
-            LogManager.shared.debug("iCloud sync: Completed - no changes detected")
+            // No changes - exit silently (no need to log every time nothing changes)
             DispatchQueue.main.async {
                 self.isSyncing = false
                 self.lastSyncDate = Date()

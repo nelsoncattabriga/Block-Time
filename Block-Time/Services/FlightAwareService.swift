@@ -409,46 +409,6 @@ class FlightAwareService {
                     continue
                 }
 
-
-                // DEBUG: DEEP DIVE INTO SCHEDULED TIMES
-                LogManager.shared.info("\n" + String(repeating: "=", count: 80))
-                LogManager.shared.info("   SEARCHING FOR SCHEDULED DEPARTURE AND ARRIVAL TIMES")
-                LogManager.shared.info(String(repeating: "=", count: 80))
-
-                // Check gateDepartureTimes
-                if let gateDep = flight["gateDepartureTimes"] as? [String: Any] {
-                    LogManager.shared.info("\n   📤 GATE DEPARTURE TIMES - All keys and values:")
-                    for (key, value) in gateDep.sorted(by: { $0.key < $1.key }) {
-                        LogManager.shared.info("      \(key): \(value)")
-                    }
-                }
-
-                // Check gateArrivalTimes
-                if let gateArr = flight["gateArrivalTimes"] as? [String: Any] {
-                    LogManager.shared.info("\n   📥 GATE ARRIVAL TIMES - All keys and values:")
-                    for (key, value) in gateArr.sorted(by: { $0.key < $1.key }) {
-                        LogManager.shared.info("      \(key): \(value)")
-                    }
-                }
-
-                // Check takeoffTimes
-                if let takeoff = flight["takeoffTimes"] as? [String: Any] {
-                    LogManager.shared.info("\n   🛫 TAKEOFF TIMES - All keys and values:")
-                    for (key, value) in takeoff.sorted(by: { $0.key < $1.key }) {
-                        LogManager.shared.info("      \(key): \(value)")
-                    }
-                }
-
-                // Check landingTimes
-                if let landing = flight["landingTimes"] as? [String: Any] {
-                    LogManager.shared.info("\n   🛬 LANDING TIMES - All keys and values:")
-                    for (key, value) in landing.sorted(by: { $0.key < $1.key }) {
-                        LogManager.shared.info("      \(key): \(value)")
-                    }
-                }
-
-                LogManager.shared.info(String(repeating: "=", count: 80))
-
                 // Extract gate times (both actual and scheduled)
                 var gateOutTime: String?
                 var gateInTime: String?
@@ -581,26 +541,9 @@ class FlightAwareService {
                     }
                 }
 
-                LogManager.shared.info("\n" + String(repeating: "=", count: 80))
-                LogManager.shared.info("FlightAware Lookup Summary - Available Times:")
-                LogManager.shared.info(String(repeating: "=", count: 80))
-                LogManager.shared.info("   Gate OUT (Actual):     \(gateOutTime ?? "NOT AVAILABLE")")
-                LogManager.shared.info("   Gate OUT (Scheduled):  \(scheduledGateOutTime ?? "NOT AVAILABLE")")
-                LogManager.shared.info("   Runway OFF:            \(takeoffTime ?? "NOT AVAILABLE")")
-                LogManager.shared.info("   Runway ON:             \(landingTime ?? "NOT AVAILABLE")")
-                LogManager.shared.info("   Gate IN (Actual):      \(gateInTime ?? "NOT AVAILABLE")")
-                LogManager.shared.info("   Gate IN (Scheduled):   \(scheduledGateInTime ?? "NOT AVAILABLE")")
-
                 // Use gate times if available, otherwise fall back to runway times
                 let finalOutTime = gateOutTime ?? takeoffTime
                 let finalInTime = gateInTime ?? landingTime
-
-                LogManager.shared.info("\n   🎯 FINAL SELECTED TIMES:")
-                LogManager.shared.info("   Actual Departure:    \(finalOutTime ?? "NOT AVAILABLE") \(gateOutTime != nil ? "(GATE)" : takeoffTime != nil ? "(RUNWAY)" : "")")
-                LogManager.shared.info("   Actual Arrival:      \(finalInTime ?? "NOT AVAILABLE") \(gateInTime != nil ? "(GATE)" : landingTime != nil ? "(RUNWAY)" : "")")
-                LogManager.shared.info("   Scheduled Departure: \(scheduledGateOutTime ?? "NOT AVAILABLE")")
-                LogManager.shared.info("   Scheduled Arrival:   \(scheduledGateInTime ?? "NOT AVAILABLE")")
-                LogManager.shared.info(String(repeating: "=", count: 80) + "\n")
 
                 if let outTime = finalOutTime, let inTime = finalInTime {
                     return FlightAwareData(

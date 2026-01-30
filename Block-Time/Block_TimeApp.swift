@@ -27,7 +27,6 @@ struct Block_TimeApp: App {
 
         // Check if migration already completed
         guard !UserDefaults.standard.bool(forKey: migrationKey) else {
-            LogManager.shared.debug("Simulator flight migration already completed")
             return
         }
 
