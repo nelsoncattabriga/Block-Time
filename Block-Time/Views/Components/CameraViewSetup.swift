@@ -17,6 +17,7 @@ struct CameraView: UIViewControllerRepresentable {
         picker.sourceType = .camera
         picker.cameraCaptureMode = .photo
         picker.cameraDevice = .rear
+        picker.cameraFlashMode = .off
         // Allow editing to help frame the photo better
         picker.allowsEditing = false
         picker.delegate = context.coordinator

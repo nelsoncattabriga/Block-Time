@@ -63,6 +63,12 @@
 	</dict>
 	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Block-Time needs access to your camera for ACARS capture.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Block-Time needs permission to save ACARS images to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Block-Time needs access to your photo library to save and retrieve ACARS images.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
