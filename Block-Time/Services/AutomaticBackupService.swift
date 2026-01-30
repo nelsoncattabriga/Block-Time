@@ -338,7 +338,6 @@ class AutomaticBackupService: ObservableObject {
                 appropriateFor: nil,
                 create: true
             )
-            LogManager.shared.info("💾 Local backup path: \(baseURL.path)")
 
         case .iCloudDrive:
             // Use iCloud container
@@ -347,7 +346,6 @@ class AutomaticBackupService: ObservableObject {
                 throw BackupError.iCloudNotAvailable
             }
             baseURL = iCloudURL
-            LogManager.shared.debug("iCloud Drive backup path: \(baseURL.path)")
         }
 
         // Create "BlockTime/Backups" subdirectory
@@ -358,9 +356,8 @@ class AutomaticBackupService: ObservableObject {
         if !fileManager.fileExists(atPath: backupDir.path) {
             try fileManager.createDirectory(at: backupDir, withIntermediateDirectories: true)
             LogManager.shared.info("Created backup directory")
-        } else {
-            LogManager.shared.debug("Backup directory already exists")
         }
+        // Directory exists - no need to log
 
         return backupDir
     }

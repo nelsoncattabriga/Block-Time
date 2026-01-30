@@ -51,6 +51,10 @@ class FlightDatabaseService: ObservableObject {
     private var hasCompletedInitialSetup = false
     private var initialSetupTimer: Timer?
 
+    // MARK: - Rate limiting for remote store changes
+    private var lastRemoteStoreChangeTime: Date?
+    private let remoteStoreChangeMinInterval: TimeInterval = 1.0 // 1 second minimum between processing
+
     private init() {
         // Set up CloudKit sync notifications
         setupCloudKitNotifications()
@@ -1355,8 +1359,7 @@ class FlightDatabaseService: ObservableObject {
         // Create new timer that will fire after the debounce interval
         notificationDebounceTimer = Timer.scheduledTimer(withTimeInterval: notificationDebounceInterval, repeats: false) { _ in
             DispatchQueue.main.async {
-                LogManager.shared.info("Posting .flightDataChanged notification to all listeners")
-                LogManager.shared.debug("FlightDatabaseService: Posting .flightDataChanged (debounced)")
+                LogManager.shared.info("FlightDatabaseService: Posting .flightDataChanged (debounced)")
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             }
         }
@@ -2273,15 +2276,29 @@ class FlightDatabaseService: ObservableObject {
         // This notification fires when CloudKit changes the persistent store
         // Skip remote change notifications during initial setup to avoid unnecessary refreshes
         guard hasCompletedInitialSetup else {
-            LogManager.shared.debug("FlightDatabaseService: Remote store change skipped (initial setup not complete)")
+            // Only log the first few times during initial setup to avoid log spam
+            if lastRemoteStoreChangeTime == nil {
+                LogManager.shared.debug("FlightDatabaseService: Remote store change skipped (initial setup not complete)")
+            }
+            lastRemoteStoreChangeTime = Date()
             return
         }
+
+        // Rate limit: Skip if we've processed a notification too recently
+        let now = Date()
+        if let lastTime = lastRemoteStoreChangeTime,
+           now.timeIntervalSince(lastTime) < remoteStoreChangeMinInterval {
+            // Skip silently - too soon since last notification
+            return
+        }
+
+        // Update the timestamp
+        lastRemoteStoreChangeTime = now
 
         // It's a reliable indicator that remote data has been imported
         LogManager.shared.debug("FlightDatabaseService: Remote store change detected - posting debounced notification")
         DispatchQueue.main.async {
             self.postDebouncedFlightDataChangedNotification()
-            LogManager.shared.debug("Remote store change detected - triggering refresh")
         }
     }
 
@@ -2307,8 +2324,7 @@ class FlightDatabaseService: ObservableObject {
             // Local user change - post immediate notification for instant UI feedback
             LogManager.shared.debug("FlightDatabaseService: Context saved (local change): +\(insertedObjects.count) ~\(updatedObjects.count) -\(deletedObjects.count)")
             DispatchQueue.main.async {
-                LogManager.shared.info("Posting .flightDataChanged notification to all listeners")
-                LogManager.shared.debug("FlightDatabaseService: Posting .flightDataChanged (immediate)")
+                LogManager.shared.info("FlightDatabaseService: Posting .flightDataChanged (immediate)")
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             }
         }

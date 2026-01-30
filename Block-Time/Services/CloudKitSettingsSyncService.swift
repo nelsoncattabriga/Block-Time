@@ -30,6 +30,7 @@ class CloudKitSettingsSyncService: ObservableObject {
     private let monitorQueue = DispatchQueue(label: "NetworkMonitor")
     private var localModificationDate: Date?
     private var isPerformingLocalSync = false
+    private var lastNetworkStatusLogTime: Date?
 
     // UserDefaults key for tracking local modifications
     private let localModificationDateKey = "localSettingsModificationDate"
@@ -102,15 +103,28 @@ class CloudKitSettingsSyncService: ObservableObject {
     private func setupNetworkMonitoring() {
         networkMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async {
-                self?.isNetworkAvailable = path.status == .satisfied
+                guard let self = self else { return }
+                self.isNetworkAvailable = path.status == .satisfied
+
+                // Rate limit network status logging (max once per 30 seconds)
+                let now = Date()
+                let shouldLog = self.lastNetworkStatusLogTime == nil ||
+                    now.timeIntervalSince(self.lastNetworkStatusLogTime!) > 30.0
+
                 if path.status == .satisfied {
-                    LogManager.shared.debug("iCloud sync: Network connection available")
+                    if shouldLog {
+                        LogManager.shared.debug("iCloud sync: Network connection available")
+                        self.lastNetworkStatusLogTime = now
+                    }
                     // Perform smart sync when network becomes available
-                    if self?.isCloudAvailable() == true {
-                        self?.performSmartSync()
+                    if self.isCloudAvailable() {
+                        self.performSmartSync()
                     }
                 } else {
-                    LogManager.shared.warning("iCloud sync: Network connection unavailable")
+                    if shouldLog {
+                        LogManager.shared.warning("iCloud sync: Network connection unavailable")
+                        self.lastNetworkStatusLogTime = now
+                    }
                 }
             }
         }
