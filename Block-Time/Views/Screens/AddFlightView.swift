@@ -515,14 +515,14 @@ private struct ModernCapturedDataCard: View {
                             .font(.subheadline.bold())
                             .foregroundColor(viewModel.isSimulator ? .white : .secondary)
                             .frame(width: 50, height: 30)
-                            .background(viewModel.isSimulator ? Color.blue : Color.clear)
+                            .background(viewModel.isSimulator ? Color.purple : Color.clear)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(viewModel.isPositioning ? Color.orange : Color.blue, lineWidth: 2)
+                        .stroke(viewModel.isPositioning ? Color.orange : (viewModel.isSimulator ? Color.purple : Color.blue), lineWidth: 2)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
