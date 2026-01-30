@@ -4,6 +4,7 @@
 //
 //  Centralized logging service with file rotation and severity levels
 //
+//
 
 import Foundation
 import UIKit

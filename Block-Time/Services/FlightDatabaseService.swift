@@ -1800,7 +1800,7 @@ class FlightDatabaseService: ObservableObject {
 
         do {
             let flights = try viewContext.fetch(request)
-            LogManager.shared.debug("getAllAircraftTypes: Fetched \(flights.count) flights from database (excluding PAX)")
+            LogManager.shared.debug("getAllAircraftTypes: Fetched \(flights.count) flights from database")
 
             let aircraftTypes = flights.compactMap { flight -> String? in
                 guard let rawType = flight.aircraftType else {
