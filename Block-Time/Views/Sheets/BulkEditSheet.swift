@@ -48,7 +48,8 @@ struct BulkEditSheet: View {
                             BulkEditTextField(
                                 label: "A/C Registration",
                                 fieldState: $bulkEditViewModel.aircraftReg,
-                                textCase: .uppercase
+                                textCase: .uppercase,
+                                autocapitalization: .characters
                             )
 
                             BulkEditTextField(
@@ -94,43 +95,43 @@ struct BulkEditSheet: View {
                             BulkEditTextField(
                                 label: "BLOCK Time",
                                 fieldState: $bulkEditViewModel.blockTime,
-                                keyboardType: .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
 
                             BulkEditTextField(
                                 label: "NIGHT Time",
                                 fieldState: $bulkEditViewModel.nightTime,
-                                keyboardType: .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
 
                             BulkEditTextField(
                                 label: "P1 Time",
                                 fieldState: $bulkEditViewModel.p1Time,
-                                keyboardType: .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
 
                             BulkEditTextField(
                                 label: "P1US Time",
                                 fieldState: $bulkEditViewModel.p1usTime,
-                                keyboardType: .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
 
                             BulkEditTextField(
                                 label: "P2 Time",
                                 fieldState: $bulkEditViewModel.p2Time,
-                                keyboardType: .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
 
                             BulkEditTextField(
                                 label: "Instrument Time",
                                 fieldState: $bulkEditViewModel.instrumentTime,
-                                keyboardType: .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
 
                             BulkEditTextField(
                                 label: "SIM Time",
                                 fieldState: $bulkEditViewModel.simTime,
-                                keyboardType: .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
                         }
                     }
@@ -141,25 +142,33 @@ struct BulkEditSheet: View {
                             BulkEditTextField(
                                 label: "OUT",
                                 fieldState: $bulkEditViewModel.outTime,
-                                placeholder: "HH:MM"
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                placeholder: "HH:MM",
+                                isTimeField: true
                             )
 
                             BulkEditTextField(
                                 label: "IN",
                                 fieldState: $bulkEditViewModel.inTime,
-                                placeholder: "HH:MM"
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                placeholder: "HH:MM",
+                                isTimeField: true
                             )
 
                             BulkEditTextField(
                                 label: "STD",
                                 fieldState: $bulkEditViewModel.scheduledDeparture,
-                                placeholder: "HH:MM"
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                placeholder: "HH:MM",
+                                isTimeField: true
                             )
 
                             BulkEditTextField(
                                 label: "STA",
                                 fieldState: $bulkEditViewModel.scheduledArrival,
-                                placeholder: "HH:MM"
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                placeholder: "HH:MM",
+                                isTimeField: true
                             )
                         }
                     }
@@ -194,22 +203,26 @@ struct BulkEditSheet: View {
                         VStack(spacing: 12) {
                             BulkEditIntField(
                                 label: "Day T/O",
-                                fieldState: $bulkEditViewModel.dayTakeoffs
+                                fieldState: $bulkEditViewModel.dayTakeoffs,
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad
                             )
 
                             BulkEditIntField(
                                 label: "Day Ldg",
-                                fieldState: $bulkEditViewModel.dayLandings
+                                fieldState: $bulkEditViewModel.dayLandings,
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad
                             )
 
                             BulkEditIntField(
                                 label: "Night T/O",
-                                fieldState: $bulkEditViewModel.nightTakeoffs
+                                fieldState: $bulkEditViewModel.nightTakeoffs,
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad
                             )
 
                             BulkEditIntField(
                                 label: "Night Ldg",
-                                fieldState: $bulkEditViewModel.nightLandings
+                                fieldState: $bulkEditViewModel.nightLandings,
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad
                             )
                         }
                     }
@@ -320,9 +333,36 @@ struct BulkEditTextField: View {
     var autocapitalization: TextInputAutocapitalization = .never
     var keyboardType: UIKeyboardType = .default
     var placeholder: String? = nil
+    var isTimeField: Bool = false
 
     @State private var textValue: String = ""
     @FocusState private var isFocused: Bool
+
+    private func applyTimeFormatting(_ input: String) -> String {
+        // Allow only digits and colon; auto-insert colon for 4 digits
+        let filtered = input.filter { $0.isNumber || $0 == ":" }
+        if filtered.count == 4 && !filtered.contains(":") {
+            let hours = String(filtered.prefix(2))
+            let minutes = String(filtered.suffix(2))
+            return "\(hours):\(minutes)"
+        }
+        return String(filtered.prefix(5))
+    }
+
+    private func formatTimeWithLeadingZeros(_ input: String) -> String {
+        // Parse and reformat to ensure HH:MM format with leading zeros
+        if input.contains(":") {
+            let components = input.split(separator: ":")
+            if components.count == 2,
+               let hours = Int(components[0]),
+               let minutes = Int(components[1]),
+               hours < 24, minutes < 60 {
+                return String(format: "%02d:%02d", hours, minutes)
+            }
+        }
+        // If already valid or can't parse, return as-is
+        return input
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -349,11 +389,17 @@ struct BulkEditTextField: View {
                     .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
             )
             .onChange(of: textValue) { _, newValue in
-                fieldState = .value(newValue)
+                let formattedValue = isTimeField ? applyTimeFormatting(newValue) : newValue
+                textValue = formattedValue
+                fieldState = .value(formattedValue)
             }
             .onChange(of: isFocused) { _, focused in
                 if focused && fieldState.isMixed {
                     textValue = ""
+                } else if !focused && isTimeField && !textValue.isEmpty {
+                    // Format with leading zeros when user finishes editing
+                    textValue = formatTimeWithLeadingZeros(textValue)
+                    fieldState = .value(textValue)
                 }
             }
             .onAppear {
@@ -421,6 +467,7 @@ struct BulkEditOptionalTextField: View {
 struct BulkEditIntField: View {
     let label: String
     @Binding var fieldState: BulkEditViewModel.FieldState<Int>
+    var keyboardType: UIKeyboardType = .numberPad
 
     @State private var textValue: String = ""
     @FocusState private var isFocused: Bool
@@ -436,7 +483,7 @@ struct BulkEditIntField: View {
                 fieldState.isMixed ? "(Mixed)" : label,
                 text: $textValue
             )
-            .keyboardType(.numberPad)
+            .keyboardType(keyboardType)
             .focused($isFocused)
             .font(.body)
             .padding(10)
