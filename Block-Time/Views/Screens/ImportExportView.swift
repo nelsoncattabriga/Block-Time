@@ -283,7 +283,7 @@ struct ImportExportView: View {
                 // Migration Import from Logger
                 ActionButton(
                     title: "Import from Logger",
-                    subtitle: "Complete app migration import",
+                    subtitle: "App migration from Logger",
                     icon: "square.and.arrow.down.fill",
                     color: .orange,
                     isLoading: false
