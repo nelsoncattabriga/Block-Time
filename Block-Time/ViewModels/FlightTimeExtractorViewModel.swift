@@ -401,6 +401,16 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 recentAircraftRegs = settings.recentAircraftRegs
             case "recentAirports":
                 recentAirports = userDefaultsService.getRecentAirports()
+
+            // FRMS settings - handled by FRMSViewModel
+            case "frmsShowFRMS", "frmsFleet", "frmsHomeBase", "frmsDefaultLimitType",
+                 "frmsShowWarningsAtPercentage", "frmsSignOnMinutesBeforeSTD", "frmsSignOffMinutesAfterIN":
+                break  // Handled by FRMSViewModel
+
+            // Backup settings - handled by AutomaticBackupService
+            case "backupIsEnabled", "backupFrequency", "backupLocation", "backupMaxToKeep":
+                break  // Handled by AutomaticBackupService
+
             default:
                             LogManager.shared.debug("Unknown setting key from CloudKit sync: \(key)")
             }
