@@ -52,20 +52,20 @@ struct AboutView: View {
                             .onTapGesture {
                                 versionTapCount += 1
                                 if versionTapCount >= 10 {
-                                    devToolsExpanded = true
+                                    //devToolsExpanded = true
                                     HapticManager.shared.notification(.success)
                                 }
                             }
 
                         Spacer(minLength: 20)
 
-                        VStack(spacing: 8){
-                            Text("support@block-time.app")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-
+                        VStack(spacing: 20){
                             Text("www.block-time.app")
-                                .font(.subheadline)
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            
+                            Text("support@block-time.app")
+                                .font(.headline)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -75,13 +75,9 @@ struct AboutView: View {
                 // Push content down
                 Spacer(minLength: 40)
 
-                // Developer Tools Card - Collapsible (Hidden in production, unlocked with secret tap)
-//                #if DEBUG
-//                let showDebugTools = true
-//                #else
+                // Debug Tools Requires 10 taps to unhide
                 let showDebugTools = versionTapCount >= 10
-//                #endif
-
+                
                 if showDebugTools {
                     DisclosureGroup(
                     isExpanded: $devToolsExpanded,
