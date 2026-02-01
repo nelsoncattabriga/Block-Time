@@ -87,9 +87,9 @@ struct AverageMetricCard: View {
     }
 
     private var formattedValue: String {
-        let sectorsText = String(format: "%.0f Sectors", averageSectors)
-        let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f Hrs", averageHours)
-        return "\(sectorsText) & \(hoursText)"
+        let sectorsText = String(format: "%.0f sectors", averageSectors)
+        let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
+        return "\(hoursText)  |  \(sectorsText)"
     }
 
     private var displaySubtitle: String {
