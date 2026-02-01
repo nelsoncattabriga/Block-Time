@@ -51,7 +51,7 @@ struct DraftFlightData: Codable {
 class FlightTimeExtractorViewModel: ObservableObject {
     // MARK: - Services
     private let textRecognitionService = TextRecognitionService()
-    private let logTenProService = LogTenProService()
+//    private let logTenProService = LogTenProService()
     internal let userDefaultsService = UserDefaultsService()
     private let photoSavingService = PhotoSavingService()
     private let nightCalcService = NightCalcService()
@@ -1133,54 +1133,54 @@ class FlightTimeExtractorViewModel: ObservableObject {
     
     // MARK: - LogTen Pro Integration (unchanged except updated `sendToLogTenPro`)
     
-    func sendToLogTenPro() {
-        HapticManager.shared.impact(.medium) // Haptic for action start
-        statusMessage = "Sending to LogTen Pro..."
-        statusColor = .blue
-
-        let flightEntry = LogTenProService.createFlightEntry(
-            flightDate: flightDate,
-            aircraftReg: aircraftReg,
-            outTime: outTime,
-            inTime: inTime,
-            flightNumber: formattedFlightNumber.isEmpty ? nil : formattedFlightNumber,
-            fromAirport: fromAirport.isEmpty ? nil : AirportService.shared.convertToICAO(fromAirport),
-            toAirport: toAirport.isEmpty ? nil : AirportService.shared.convertToICAO(toAirport),
-            captainName: captainName,
-            coPilotName: coPilotName,
-            so1Name: so1Name,
-            so2Name: so2Name,
-            flightTimePosition: flightTimePosition,
-            isPilotFlying: isPilotFlying,
-            isAIII: isPilotFlying && isAIII,
-            isRNP: isPilotFlying && isRNP,
-            isILS: isPilotFlying && isILS,
-            isGLS: isPilotFlying && isGLS,
-            isNPA: isPilotFlying && isNPA,
-            isICUS: isICUS,
-            isSimulator: isSimulator,
-            isPositioning: isPositioning,
-            instrumentTimeMinutes: isPilotFlying ? pfAutoInstrumentMinutes : nil,
-            remarks: remarks.isEmpty ? nil : remarks
-        )
-
-        Task {
-            let result = await logTenProService.sendFlightToLogTenPro(flightEntry)
-
-            await MainActor.run {
-                switch result {
-                case .success:
-                    HapticManager.shared.notification(.success) // Success haptic
-                    self.statusMessage = "Successfully sent to LogTen Pro!"
-                    self.statusColor = .green
-
-                case .failure(let error):
-                    HapticManager.shared.notification(.error) // Error haptic
-                    self.showError(error.localizedDescription)
-                }
-            }
-        }
-    }
+//    func sendToLogTenPro() {
+//        HapticManager.shared.impact(.medium) // Haptic for action start
+//        statusMessage = "Sending to LogTen Pro..."
+//        statusColor = .blue
+//
+//        let flightEntry = LogTenProService.createFlightEntry(
+//            flightDate: flightDate,
+//            aircraftReg: aircraftReg,
+//            outTime: outTime,
+//            inTime: inTime,
+//            flightNumber: formattedFlightNumber.isEmpty ? nil : formattedFlightNumber,
+//            fromAirport: fromAirport.isEmpty ? nil : AirportService.shared.convertToICAO(fromAirport),
+//            toAirport: toAirport.isEmpty ? nil : AirportService.shared.convertToICAO(toAirport),
+//            captainName: captainName,
+//            coPilotName: coPilotName,
+//            so1Name: so1Name,
+//            so2Name: so2Name,
+//            flightTimePosition: flightTimePosition,
+//            isPilotFlying: isPilotFlying,
+//            isAIII: isPilotFlying && isAIII,
+//            isRNP: isPilotFlying && isRNP,
+//            isILS: isPilotFlying && isILS,
+//            isGLS: isPilotFlying && isGLS,
+//            isNPA: isPilotFlying && isNPA,
+//            isICUS: isICUS,
+//            isSimulator: isSimulator,
+//            isPositioning: isPositioning,
+//            instrumentTimeMinutes: isPilotFlying ? pfAutoInstrumentMinutes : nil,
+//            remarks: remarks.isEmpty ? nil : remarks
+//        )
+//
+//        Task {
+//            let result = await logTenProService.sendFlightToLogTenPro(flightEntry)
+//
+//            await MainActor.run {
+//                switch result {
+//                case .success:
+//                    HapticManager.shared.notification(.success) // Success haptic
+//                    self.statusMessage = "Successfully sent to LogTen Pro!"
+//                    self.statusColor = .green
+//
+//                case .failure(let error):
+//                    HapticManager.shared.notification(.error) // Error haptic
+//                    self.showError(error.localizedDescription)
+//                }
+//            }
+//        }
+//    }
     
     
     // MARK: - Add to internal Logbook

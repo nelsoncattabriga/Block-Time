@@ -227,7 +227,7 @@ struct AircraftSummarySheet: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("This will permanently delete this aircraft summary. This action cannot be undone.")
+                Text("This will permanently delete this aircraft summary.")
             }
             .onAppear {
                 loadEditingData()
