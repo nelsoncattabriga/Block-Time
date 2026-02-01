@@ -2053,7 +2053,7 @@ private struct SyncDetailRowView: View {
                                                 .fontWeight(.medium)
                                                 .foregroundColor(.secondary)
                                                 .frame(width: 100, alignment: .leading)
-                                            Text(detailedError.rawErrorDescription)
+                                            Text(errorInfo.suggestion)
                                                 .font(.system(.caption2, design: .monospaced))
                                                 .foregroundColor(.primary)
                                                 .fixedSize(horizontal: false, vertical: true)

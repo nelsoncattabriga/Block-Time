@@ -153,7 +153,9 @@ class FlightDatabaseService: ObservableObject {
                     try container.initializeCloudKitSchema(options: [])
                     LogManager.shared.debug("CloudKit Schema: Initialized in Development environment")
                 } catch {
-                    LogManager.shared.error("CloudKit Schema: Initialization failed - \(error.localizedDescription)")
+                    let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: error)
+                    LogManager.shared.error("CloudKit Schema: \(errorInfo.message) - \(errorInfo.suggestion)")
+                    LogManager.shared.debug("  Technical: \(error.localizedDescription)")
                 }
             }
         }
@@ -2166,9 +2168,11 @@ class FlightDatabaseService: ObservableObject {
         let nsError = error as NSError
 
         // Log comprehensive error information for debugging
+        let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: error)
         LogManager.shared.error("CloudKit Sync Error: \(operation)")
-        LogManager.shared.error("  Description: \(error.localizedDescription)")
-        LogManager.shared.error("  Domain: \(nsError.domain), Code: \(nsError.code)")
+        LogManager.shared.error("  \(errorInfo.message) - \(errorInfo.suggestion)")
+        LogManager.shared.debug("  Technical: \(error.localizedDescription)")
+        LogManager.shared.debug("  Domain: \(nsError.domain), Code: \(nsError.code)")
         LogManager.shared.debug("  Error Type: \(type(of: error))")
 
         // Log all userInfo keys and values for debugging
@@ -2348,7 +2352,9 @@ class FlightDatabaseService: ObservableObject {
 //                print("CloudKit setup event")
                 if let error = event.error {
                     // Handle setup errors gracefully - likely network or account issues
-                    LogManager.shared.error("CloudKit: Setup error - \(error.localizedDescription)")
+                    let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: error)
+                    LogManager.shared.error("CloudKit: \(errorInfo.message) - \(errorInfo.suggestion)")
+                    LogManager.shared.debug("  Technical: \(error.localizedDescription)")
                     self.lastSyncError = error
                     // Don't crash - allow app to continue with local-only operation
                 }
@@ -2378,11 +2384,14 @@ class FlightDatabaseService: ObservableObject {
                     self.detailedSyncError = detailedError
 
                     let nsError = error as NSError
+                    let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: error)
                     // Check if it's a network-related error
                     if nsError.domain == "NSCocoaErrorDomain" || nsError.domain == "CKErrorDomain" {
-                        LogManager.shared.warning("CloudKit: Import error (network) - \(error.localizedDescription)")
+                        LogManager.shared.warning("CloudKit: \(errorInfo.message) - \(errorInfo.suggestion)")
+                        LogManager.shared.debug("  Technical: \(error.localizedDescription)")
                     } else {
-                        LogManager.shared.error("CloudKit: Import error - \(error.localizedDescription)")
+                        LogManager.shared.error("CloudKit: \(errorInfo.message) - \(errorInfo.suggestion)")
+                        LogManager.shared.debug("  Technical: \(error.localizedDescription)")
                     }
                 } else if event.endDate != nil {
                     self.lastSyncDate = Date()
@@ -2411,11 +2420,14 @@ class FlightDatabaseService: ObservableObject {
                     self.detailedSyncError = detailedError
 
                     let nsError = error as NSError
+                    let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: error)
                     // Check if it's a network-related error
                     if nsError.domain == "NSCocoaErrorDomain" || nsError.domain == "CKErrorDomain" {
-                        LogManager.shared.warning("CloudKit: Export error (network) - \(error.localizedDescription)")
+                        LogManager.shared.warning("CloudKit: \(errorInfo.message) - \(errorInfo.suggestion)")
+                        LogManager.shared.debug("  Technical: \(error.localizedDescription)")
                     } else {
-                        LogManager.shared.error("CloudKit: Export error - \(error.localizedDescription)")
+                        LogManager.shared.error("CloudKit: \(errorInfo.message) - \(errorInfo.suggestion)")
+                        LogManager.shared.debug("  Technical: \(error.localizedDescription)")
                     }
                 } else if event.endDate != nil {
                     self.lastSyncDate = Date()
