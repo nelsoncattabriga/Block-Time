@@ -12,6 +12,7 @@ struct AboutView: View {
     @AppStorage("debugModeEnabled") private var debugModeEnabled = false
     @State private var showingLogViewer = false
     @State private var devToolsExpanded = false
+    @State private var versionTapCount = 0
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
@@ -48,6 +49,13 @@ struct AboutView: View {
                         Text("Version \(appVersion).\(buildNumber)")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+                            .onTapGesture {
+                                versionTapCount += 1
+                                if versionTapCount >= 10 {
+                                    devToolsExpanded = true
+                                    HapticManager.shared.notification(.success)
+                                }
+                            }
 
                         Spacer(minLength: 20)
 
@@ -67,8 +75,15 @@ struct AboutView: View {
                 // Push content down
                 Spacer(minLength: 40)
 
-                // Developer Tools Card - Collapsible
-                DisclosureGroup(
+                // Developer Tools Card - Collapsible (Hidden in production, unlocked with secret tap)
+//                #if DEBUG
+//                let showDebugTools = true
+//                #else
+                let showDebugTools = versionTapCount >= 10
+//                #endif
+
+                if showDebugTools {
+                    DisclosureGroup(
                     isExpanded: $devToolsExpanded,
                     content: {
                         VStack(spacing: 8) {
@@ -153,15 +168,16 @@ struct AboutView: View {
                                 .foregroundColor(.primary)
                         }
                     }
-                )
-                .padding(16)
-                .background(.thinMaterial)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.orange.opacity(0.2), lineWidth: 1)
-                )
+                    )
+                    .padding(16)
+                    .background(.thinMaterial)
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+                    )
+                }
 
                 Spacer(minLength: 20)
             }
