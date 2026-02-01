@@ -1815,7 +1815,7 @@ class FlightDatabaseService: ObservableObject {
             }
             // Remove duplicates and sort
             let uniqueTypes = Array(Set(aircraftTypes)).sorted()
-            LogManager.shared.debug("getAllAircraftTypes: Returning \(uniqueTypes.count) unique types: \(uniqueTypes)")
+            LogManager.shared.debug("getAllAircraftTypes: Found \(uniqueTypes.count) unique types") //: \(uniqueTypes)")
             return uniqueTypes
         } catch {
             LogManager.shared.error("getAllAircraftTypes: Fetch error - \(error.localizedDescription)")

@@ -105,7 +105,7 @@ struct FRMSView: View {
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGroupedBackground))
             .onAppear {
-                LogManager.shared.debug("FRMSView: onAppear called")
+                //LogManager.shared.debug("FRMSView: onAppear called")
                 viewModel.loadFlightData(crewPosition: flightTimePosition)
                 updateMBTT()  // Initialize MBTT calculation
             }

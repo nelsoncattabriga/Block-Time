@@ -36,7 +36,7 @@ struct FlightsSplitView: View {
                     isSelectMode: $isSelectMode,
                     refreshTrigger: refreshTrigger,
                     onFlightSelected: { flight in
-                                LogManager.shared.debug("onFlightSelected callback: \(flight.flightNumberFormatted)")
+//                                LogManager.shared.debug("onFlightSelected callback: \(flight.flightNumberFormatted)")
                         isAddingNewFlight = false
                         viewModel.loadFlightForEditing(flight)
                     }
@@ -79,8 +79,8 @@ struct FlightsSplitView: View {
                                 }
                             }
                             .onAppear {
-                                        LogManager.shared.debug("Detail view appeared for flight: \(flight.flightNumberFormatted)")
-                                        LogManager.shared.debug("isEditingMode: \(viewModel.isEditingMode)")
+//                                        LogManager.shared.debug("Detail view appeared for flight: \(flight.flightNumberFormatted)")
+//                                        LogManager.shared.debug("isEditingMode: \(viewModel.isEditingMode)")
                             }
                     } else {
                         // Show empty state with + button
@@ -91,7 +91,7 @@ struct FlightsSplitView: View {
                             }
                         )
                         .onAppear {
-                                    LogManager.shared.debug("Empty detail view showing - selectedFlight is nil")
+//                                    LogManager.shared.debug("Empty detail view showing - selectedFlight is nil")
                         }
                     }
                 }
@@ -544,7 +544,7 @@ private struct FlightsListContent: View {
                 summaryToEdit = sector
             } else {
                 // Normal flight - show in detail pane
-                LogManager.shared.debug("Flight tapped: \(sector.flightNumberFormatted)")
+//                LogManager.shared.debug("Flight tapped: \(sector.flightNumberFormatted)")
                 selectedFlight = sector
                 onFlightSelected(sector)
             }
@@ -553,11 +553,11 @@ private struct FlightsListContent: View {
     }
 
     private func loadFlights() {
-        LogManager.shared.debug("FlightsSplitView: loadFlights() called")
+//        LogManager.shared.debug("FlightsSplitView: loadFlights() called")
         self.allFlightSectors = self.databaseService.fetchAllFlights()
         LogManager.shared.debug("FlightsSplitView: Loaded \(self.allFlightSectors.count) flights from database")
         self.applyFilters()
-        LogManager.shared.debug("FlightsSplitView: After filtering: \(self.filteredFlightSectors.count) flights")
+//        LogManager.shared.debug("FlightsSplitView: After filtering: \(self.filteredFlightSectors.count) flights")
     }
 
     private func refreshFlights() async {

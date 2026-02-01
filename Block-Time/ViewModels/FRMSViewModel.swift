@@ -102,7 +102,7 @@ class FRMSViewModel: ObservableObject {
     func loadFlightData(crewPosition: FlightTimePosition) {
         // Skip if already loaded or currently loading
         guard !hasLoadedData && !isLoading else {
-            LogManager.shared.debug("FRMSViewModel: loadFlightData skipped (hasLoadedData: \(hasLoadedData), isLoading: \(isLoading))")
+//            LogManager.shared.debug("FRMSViewModel: loadFlightData skipped (hasLoadedData: \(hasLoadedData), isLoading: \(isLoading))")
             return
         }
 
@@ -187,7 +187,7 @@ class FRMSViewModel: ObservableObject {
             self.a320B737NextDutyLimits = a320Limits
             self.hasLoadedData = true
             self.isLoading = false
-            LogManager.shared.debug("FRMSViewModel: loadFlightData completed")
+            //LogManager.shared.debug("FRMSViewModel: loadFlightData completed")
         }
     }
 

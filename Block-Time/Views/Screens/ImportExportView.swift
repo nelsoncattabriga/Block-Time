@@ -78,16 +78,16 @@ struct ImportExportView: View {
             isPresented: Binding(
                 get: {
                     let isPresented = activeFilePickerMode != nil
-                    print("📁 fileImporter isPresented getter called, returning: \(isPresented), activeFilePickerMode: \(String(describing: activeFilePickerMode))")
+                    //print("📁 fileImporter isPresented getter called, returning: \(isPresented), activeFilePickerMode: \(String(describing: activeFilePickerMode))")
                     return isPresented
                 },
                 set: { isPresented in
-                    print("📁 fileImporter isPresented setter called with: \(isPresented), current activeFilePickerMode: \(String(describing: activeFilePickerMode))")
+                    //print("📁 fileImporter isPresented setter called with: \(isPresented), current activeFilePickerMode: \(String(describing: activeFilePickerMode))")
                     if !isPresented {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            print("📁 Delayed clear of activeFilePickerMode in setter")
+                      //      print("📁 Delayed clear of activeFilePickerMode in setter")
                             if activeFilePickerMode != nil {
-                                print("📁 Result handler didn't clear it, so clearing now")
+                        //        print("📁 Result handler didn't clear it, so clearing now")
                                 activeFilePickerMode = nil
                             }
                         }
@@ -97,25 +97,25 @@ struct ImportExportView: View {
             allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText],
             allowsMultipleSelection: false
         ) { result in
-            print("📁 File importer result handler called")
-            print("📁 Result: \(result)")
-            print("📁 activeFilePickerMode before handling: \(String(describing: activeFilePickerMode))")
+//            print("📁 File importer result handler called")
+//            print("📁 Result: \(result)")
+//            print("📁 activeFilePickerMode before handling: \(String(describing: activeFilePickerMode))")
 
             guard let mode = activeFilePickerMode else {
-                print("📁 No active mode!")
+              //  print("📁 No active mode!")
                 return
             }
 
             switch mode {
             case .importWithMapping:
-                print("📁 Handling as import with mapping")
+//                print("📁 Handling as import with mapping")
                 handleImportFileSelection(result)
             case .webCIS:
-                print("📁 Handling as webCIS import")
+//                print("📁 Handling as webCIS import")
                 handleWebCISFileSelection(result)
             }
 
-            print("📁 Clearing activeFilePickerMode after handling")
+//            print("📁 Clearing activeFilePickerMode after handling")
             activeFilePickerMode = nil
         }
         .sheet(item: $importData) { data in

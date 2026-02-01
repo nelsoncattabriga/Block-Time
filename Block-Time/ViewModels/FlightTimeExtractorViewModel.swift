@@ -334,7 +334,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
 
         let settings = userDefaultsService.loadSettings()
-        LogManager.shared.debug("📥 Loading settings for selective update...")
+//        LogManager.shared.debug("Loading settings for selective update...")
 
         // Only update the settings that actually changed
         for key in changedKeys {
