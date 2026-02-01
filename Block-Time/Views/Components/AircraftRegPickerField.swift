@@ -70,7 +70,7 @@ struct AircraftRegPickerSheet: View {
     @State private var availableFleets: [Fleet] = []
     @State private var selectedFleet: Fleet?
     @State private var otherFleets: [Fleet] = []
-    @AppStorage("selectedFleetID") private var selectedFleetID: String = "All Aircraft"
+    @AppStorage("selectedFleetID") private var selectedFleetID: String = "B737"
     @State private var searchText = ""
     @State private var filteredAircraftByFleet: [(fleet: Fleet, aircraft: [Aircraft])] = []
     @State private var searchTask: Task<Void, Never>?
@@ -82,9 +82,9 @@ struct AircraftRegPickerSheet: View {
         // Find the selected fleet
         selectedFleet = availableFleets.first(where: { $0.id == selectedFleetID }) ?? availableFleets.first
 
-        // Get all other fleets (excluding "All Aircraft" and the selected fleet)
+        // Get all other fleets (excluding the selected fleet)
         otherFleets = availableFleets.filter { fleet in
-            fleet.id != "All Aircraft" && fleet.id != selectedFleetID
+            fleet.id != selectedFleetID
         }
 
         updateFilteredAircraft()

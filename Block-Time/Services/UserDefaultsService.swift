@@ -131,7 +131,7 @@ struct AppSettings {
         recentAircraftRegs: [],
         recentAirports: [],
         showTimesInHoursMinutes: false,
-        selectedFleetID: "All Aircraft",
+        selectedFleetID: "B737",
         decimalRoundingMode: .standard  // Default to standard rounding
     )
 }
@@ -222,7 +222,7 @@ class UserDefaultsService: ObservableObject {
             recentAircraftRegs: userDefaults.stringArray(forKey: Keys.recentAircraftRegs) ?? [],
             recentAirports: userDefaults.stringArray(forKey: Keys.recentAirports) ?? [],
             showTimesInHoursMinutes: userDefaults.bool(forKey: Keys.showTimesInHoursMinutes),
-            selectedFleetID: userDefaults.string(forKey: Keys.selectedFleetID) ?? "All Aircraft",
+            selectedFleetID: userDefaults.string(forKey: Keys.selectedFleetID) ?? "B737",
             decimalRoundingMode: roundingMode
         )
     }

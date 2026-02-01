@@ -141,7 +141,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var logApproaches = false  // Auto-log approaches toggle
     @Published var defaultApproachType: String? = nil  // Default approach type
     @Published var showTimesInHoursMinutes = false  // Show times in HH:MM format
-    @Published var selectedFleetID = "All Aircraft"  // Selected fleet for filtering
+    @Published var selectedFleetID = "B737"  // Selected fleet for filtering
     @Published var decimalRoundingMode: RoundingMode = .standard  // Rounding mode for decimal times
 
     // Saved crew names

@@ -424,7 +424,7 @@ private struct ModernDefaultCrewNamesCard: View {
                     .padding(.horizontal, 8)
 
                 ModernToggleRow(
-                    title: "Show S/O Names",
+                    title: "Log S/O Names",
                     subtitle: "Show S/O Name Fields",
                     isOn: Binding(
                         get: { viewModel.showSONameFields },
@@ -470,7 +470,7 @@ private struct ModernFormatOptionsCard: View {
                 ModernFleetSelectorRow(viewModel: viewModel)
 
                 ModernToggleRow(
-                    title: "Full Aircraft Registration",
+                    title: "Long A/C Registration",
                     subtitle: "VH-ABC vs ABC",
                     isOn: Binding(
                         get: { viewModel.showFullAircraftReg },
@@ -501,7 +501,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Airport ID")
+                        Text("Airport Code")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -534,7 +534,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Date & Time Display")
+                        Text("Dates & Times")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -566,7 +566,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Flight Times Display")
+                        Text("Flight Times")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -780,66 +780,6 @@ struct ModernPhotoBackupCard: View {
     }
 }
 
-//private struct ModernLogbookCard: View {
-//    @ObservedObject var viewModel: FlightTimeExtractorViewModel
-//
-//    var body: some View {
-//        VStack(spacing: 16) {
-//            HStack {
-//                Image(systemName: "book.closed")
-//                    .foregroundColor(.indigo)
-//                    .font(.title3)
-//
-//                Text("Logbook Destination")
-//                    .font(.headline)
-//                    .fontWeight(.semibold)
-//                    .foregroundColor(.primary)
-//
-//                Spacer()
-//            }
-//
-//            HStack(spacing: 12) {
-//                Image(systemName: "square.and.arrow.down.on.square")
-//                    .foregroundColor(.indigo)
-//                    .frame(width: 20)
-//
-//                VStack(alignment: .leading, spacing: 2) {
-//                    Text("Save Data to")
-//                        .font(.subheadline)
-//                        .fontWeight(.medium)
-//                        .foregroundColor(.primary)
-//
-//                    Text(viewModel.logbookDestination.displayName)
-//                        .font(.caption)
-//                        .foregroundColor(.secondary)
-//                }
-//
-//                Spacer()
-//
-//                Picker("", selection: Binding(
-//                    get: { viewModel.logbookDestination },
-//                    set: { viewModel.updateLogbookDestination($0) }
-//                )) {
-//                    ForEach(LogbookDestination.allCases, id: \.self) { destination in
-//                        Text(destination.menuLabel).tag(destination)
-//                    }
-//                }
-//                .pickerStyle(.menu)
-//            }
-//            .padding(12)
-//            .background(Color(.systemGray6).opacity(0.5))
-//            .cornerRadius(8)
-//        }
-//        .padding(16)
-//        .background(.thinMaterial)
-//        .cornerRadius(12)
-//        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-//        .overlay(
-//            RoundedRectangle(cornerRadius: 12)
-//                .stroke(Color.indigo.opacity(0.2), lineWidth: 1)
-//        )
-//    }
-//}
 
 private struct ModernDataImportCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
@@ -1493,7 +1433,7 @@ private struct ModernFleetSelectorRow: View {
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Fleet Rego Selection")
+                Text("Fleet Selection")
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
@@ -1509,11 +1449,7 @@ private struct ModernFleetSelectorRow: View {
                     HapticManager.shared.impact(.light)
                 }
             )) {
-                ForEach(availableFleets.sorted { fleet1, fleet2 in
-                    if fleet1.name == "All Aircraft" { return true }
-                    if fleet2.name == "All Aircraft" { return false }
-                    return fleet1.name < fleet2.name
-                }, id: \.id) { fleet in
+                ForEach(availableFleets.sorted { $0.name < $1.name }, id: \.id) { fleet in
                     Text(fleet.name).tag(fleet.id)
                 }
             }
@@ -2132,8 +2068,4 @@ private struct SyncDetailRowView: View {
         .background(Color(.systemGray6).opacity(0.5))
         .cornerRadius(6)
     }
-}
-
-#Preview {
-    SettingsView(viewModel: FlightTimeExtractorViewModel(), frmsViewModel: FRMSViewModel())
 }

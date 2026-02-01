@@ -99,7 +99,7 @@ private struct CompactLayoutView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
     @State private var showingDeleteAlert = false
-    @AppStorage("selectedFleetID") private var selectedFleetID: String = "All Aircraft"
+    @AppStorage("selectedFleetID") private var selectedFleetID: String = "B737"
 
     // Check if we're in iPad split view mode
     private var isInSplitView: Bool {
@@ -188,7 +188,7 @@ private struct WideLayoutView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
     @State private var showingDeleteAlert = false
-    @AppStorage("selectedFleetID") private var selectedFleetID: String = "All Aircraft"
+    @AppStorage("selectedFleetID") private var selectedFleetID: String = "B737"
 
     // Check if we're in iPad split view mode
     private var isInSplitView: Bool {

@@ -224,16 +224,15 @@ class AircraftFleetService: ObservableObject {
     // MARK: - Fleet Collections
     static let availableFleets: [Fleet] = {
         //let b737Aircraft = qantasFleet.filter { $0.type == "B738" }
-        
+
         return [
-            Fleet(name: "All Aircraft", aircraft: qantasFleet),
             Fleet(name: "B737", aircraft: qantasFleet.filter { $0.type == "B738" }),
             Fleet(name: "A321", aircraft: qantasFleet.filter { $0.type == "A321" }),
             Fleet(name: "A330", aircraft: qantasFleet.filter { ["A332", "A333"].contains($0.type) }),
             Fleet(name: "B787", aircraft: qantasFleet.filter { $0.type == "B789" }),
             Fleet(name: "A380", aircraft: qantasFleet.filter { $0.type == "A388" }),
             //Fleet(name: "A350", aircraft: qantasFleet.filter { $0.type == "A35K" }),
-            
+
         ]
     }()
     
@@ -353,7 +352,7 @@ class AircraftFleetService: ObservableObject {
         let allTypes = Set(allAircraft.map { $0.type })
 
         // Create a fleet for each type with proper grouping
-        var fleets: [Fleet] = [Fleet(name: "All Aircraft", aircraft: allAircraft)]
+        var fleets: [Fleet] = []
         var processedTypes: Set<String> = []
 
         for type in allTypes.sorted() {
