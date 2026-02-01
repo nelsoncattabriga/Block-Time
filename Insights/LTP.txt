@@ -1,0 +1,38 @@
+⏺ Based on my search, here are the remaining references to LogTenProService and related LogTen Pro      
+  functionality in your codebase:                                                                       
+                                                                                                        
+  Already Commented Out (Good)                                                                          
+                                                                                                        
+  1. Block-Time/ViewModels/FlightTimeExtractorViewModel.swift:54 - Service initialization               
+  2. Block-Time/ViewModels/FlightTimeExtractorViewModel.swift:1136-1180 - sendToLogTenPro() function    
+  3. Block-Time/Views/Screens/SettingsView.swift:819-826 - UI picker for selecting logbook destination  
+                                                                                                        
+  Still Active (May Need Cleanup)                                                                       
+                                                                                                        
+  UserDefaultsService.swift:                                                                            
+  - Lines 11-40: LogbookDestination enum with .logTenPro case still exists                              
+  - The enum is used throughout for settings management                                                 
+                                                                                                        
+  FlightTimeExtractorViewModel.swift:                                                                   
+  - Line 83: @Published var logbookDestination property still active                                    
+  - Line 296: Loads logbookDestination from settings                                                    
+  - Line 343: Updates logbookDestination when settings change                                           
+  - Line 407-410: updateLogbookDestination() function still active                                      
+                                                                                                        
+  CloudKitSettingsSyncService.swift:                                                                    
+  - Line 57: CloudKeys for logbookDestination                                                           
+  - Lines 289, 466-470: Syncs logbookDestination to iCloud                                              
+                                                                                                        
+  MigrationImportService.swift:                                                                         
+  - Lines 100, 574-575: Migrates logbookDestination setting                                             
+                                                                                                        
+  Info.plist:                                                                                           
+  - Line 50: URL scheme logtenprox for LogTen Pro deep linking                                          
+                                                                                                        
+  Since you only save to the internal logbook now, you may want to:                                     
+  1. Remove the LogbookDestination enum entirely, or keep only .internalLogbook                         
+  2. Remove the logbookDestination property and related functions                                       
+  3. Remove the URL scheme from Info.plist                                                              
+  4. Clean up the CloudKit and migration code                                                           
+                                                                                                        
+  Would you like me to remove these remaining references?  
