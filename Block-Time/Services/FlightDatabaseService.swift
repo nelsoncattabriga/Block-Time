@@ -2089,22 +2089,34 @@ class FlightDatabaseService: ObservableObject {
         do {
             let flights = try viewContext.fetch(request)
 
-            guard !flights.isEmpty,
-                  let firstFlightDate = flights.first?.date,
-                  let lastFlightDate = flights.last?.date else {
+            guard !flights.isEmpty else {
                 return 0.0
             }
 
-            // Calculate the total span of days in the data
-            let totalDays = calendar.dateComponents([.day], from: firstFlightDate, to: lastFlightDate).day ?? 0
+            // Calculate number of periods based on whether we have a specific comparison timeframe
+            let numberOfPeriods: Double
 
-            // If we don't have enough data for even one period, return 0
-            guard totalDays >= days else {
-                return 0.0
+            if let comparisonDays = comparisonPeriodDays {
+                // When comparison period is specified, use it as the divisor
+                // This gives the actual average over the specified timeframe
+                numberOfPeriods = Double(comparisonDays) / Double(days)
+            } else {
+                // When "All Time", use span-based calculation
+                // This shows the rate over the entire flying history
+                guard let firstFlightDate = flights.first?.date,
+                      let lastFlightDate = flights.last?.date else {
+                    return 0.0
+                }
+
+                let totalDays = calendar.dateComponents([.day], from: firstFlightDate, to: lastFlightDate).day ?? 0
+
+                // If we don't have enough data for even one period, return 0
+                guard totalDays >= days else {
+                    return 0.0
+                }
+
+                numberOfPeriods = Double(totalDays) / Double(days)
             }
-
-            // Calculate number of complete periods
-            let numberOfPeriods = Double(totalDays) / Double(days)
 
             if metricType == "hours" {
                 let totalHours = flights.reduce(0.0) { sum, flight in

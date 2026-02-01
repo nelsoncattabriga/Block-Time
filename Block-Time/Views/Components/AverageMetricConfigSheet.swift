@@ -18,17 +18,17 @@ struct AverageMetricConfigSheet: View {
 
         if selectedComparisonPeriod.isEmpty {
             // All Time - no timeframe mention
-            return "This shows the average hours and sectors per \(period) on \(aircraft)."
+            return "Show the average hours and sectors per \(period) on \(aircraft)."
         } else {
             // Last X - include "over the last..."
-            return "This shows the average hours and sectors per \(period) on \(aircraft) over the \(timeframe.lowercased())."
+            return "Show the average hours and sectors per \(period) on \(aircraft) over the \(timeframe.lowercased())."
         }
     }
 
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Aircraft Type")) {
+                Section {
                     Picker("Aircraft", selection: $selectedAircraftType) {
                         Text("All Aircraft").tag("")
                         ForEach(availableAircraftTypes, id: \.self) { type in
@@ -37,8 +37,8 @@ struct AverageMetricConfigSheet: View {
                     }
                 }
 
-                Section(header: Text("Average Per")) {
-                    Picker("Period", selection: $selectedTimePeriod) {
+                Section {
+                    Picker("Average Per", selection: $selectedTimePeriod) {
                         ForEach(timePeriodOptions.keys.sorted(by: { Int($0) ?? 0 < Int($1) ?? 0 }), id: \.self) { key in
                             Text(timePeriodOptions[key] ?? key).tag(key)
                         }
@@ -46,7 +46,7 @@ struct AverageMetricConfigSheet: View {
                     .pickerStyle(.menu)
                 }
 
-                Section(header: Text("Comparison Timeframe")) {
+                Section {
                     Picker("Timeframe", selection: $selectedComparisonPeriod) {
                         ForEach(comparisonPeriodOptions.keys.sorted(by: {
                             let val1 = $0.isEmpty ? Int.max : (Int($0) ?? 0)
