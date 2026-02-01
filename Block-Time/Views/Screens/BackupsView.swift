@@ -563,8 +563,6 @@ struct ManageBackupsView: View {
     @ObservedObject var backupService: AutomaticBackupService
     @ObservedObject private var themeService = ThemeService.shared
     @Environment(\.dismiss) var dismiss
-    @Environment(\.editMode) var editMode
-    @State private var showingDeleteAllConfirmation = false
     @State private var showingBackupDetails: BackupFileInfo?
     @State private var showingFilePicker = false
     @State private var showingRestoreConfirmation = false
@@ -597,30 +595,8 @@ struct ManageBackupsView: View {
         )
         .navigationTitle("Restore")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if !backupService.availableBackups.isEmpty {
-                    Button(editMode?.wrappedValue == .active ? "Done" : "Edit") {
-                        withAnimation {
-                            editMode?.wrappedValue = editMode?.wrappedValue == .active ? .inactive : .active
-                        }
-                    }
-                }
-            }
-        }
         .sheet(item: $showingBackupDetails) { backup in
             BackupDetailSheet(backup: backup, backupService: backupService)
-        }
-        .refreshable {
-            backupService.refreshAvailableBackups()
-        }
-        .alert("Delete All Backups", isPresented: $showingDeleteAllConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete All", role: .destructive) {
-                deleteAllBackups()
-            }
-        } message: {
-            Text("This will permanently delete all \(backupService.availableBackups.count) backup file(s). This action cannot be undone.")
         }
         .refreshable {
             backupService.refreshAvailableBackups()
@@ -765,82 +741,58 @@ struct ManageBackupsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
             } else {
-                VStack(spacing: 12) {
-                    ForEach(backupService.availableBackups) { backup in
-                        Button(action: {
-                            showingBackupDetails = backup
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "doc.fill")
-                                    .foregroundColor(.blue)
-                                    .font(.title3)
-                                    .frame(width: 24)
+                VStack(spacing: 0) {
+                    List {
+                        ForEach(backupService.availableBackups) { backup in
+                            Button(action: {
+                                showingBackupDetails = backup
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "doc.fill")
+                                        .foregroundColor(.blue)
+                                        .font(.title3)
+                                        .frame(width: 24)
 
-                                VStack(alignment: .leading, spacing: 4) {
-                                    if let count = backup.flightCount {
-                                        Text("\(count) flights")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.primary)
-                                    } else {
-                                        Text("Backup")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.primary)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        if let count = backup.flightCount {
+                                            Text("\(count) flights")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.primary)
+                                        } else {
+                                            Text("Backup")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.primary)
+                                        }
+
+                                        Text(backup.formattedDate)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
                                     }
 
-                                    Text(backup.formattedDate)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                                    Spacer()
 
-                                Spacer()
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        Text(backup.formattedSize)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
 
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    Text(backup.formattedSize)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-
-                                    if editMode?.wrappedValue != .active {
                                         Image(systemName: "chevron.right")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
                                 }
+                                .padding(.vertical, 4)
                             }
-                            .padding(12)
-                            .background(Color(.systemGray6).opacity(0.5))
-                            .cornerRadius(8)
+                            .buttonStyle(PlainButtonStyle())
+                            .listRowBackground(Color(.systemGray6).opacity(0.5))
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .disabled(editMode?.wrappedValue == .active)
-                        .deleteDisabled(editMode?.wrappedValue != .active)
+                        .onDelete(perform: deleteBackups)
                     }
-                    .onDelete(perform: deleteBackups)
-
-                    // Delete All Button
-                    if editMode?.wrappedValue != .active {
-                        Divider()
-                            .padding(.vertical, 4)
-
-                        Button(role: .destructive, action: {
-                            showingDeleteAllConfirmation = true
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "trash")
-                                    .font(.title3)
-                                    .frame(width: 24)
-                                Text("Delete All Backups")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                Spacer()
-                            }
-                            .padding(12)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(8)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: CGFloat(backupService.availableBackups.count * 70))
                 }
             }
         }
@@ -896,10 +848,6 @@ struct ManageBackupsView: View {
             let backup = backupService.availableBackups[index]
             try? backupService.deleteBackup(backup)
         }
-    }
-
-    private func deleteAllBackups() {
-        try? backupService.deleteAllBackups()
     }
 }
 
