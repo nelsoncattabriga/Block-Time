@@ -293,7 +293,14 @@ class FlightTimeExtractorViewModel: ObservableObject {
     
     private func loadAllSettings() {
         let settings = userDefaultsService.loadSettings()
-        logbookDestination = settings.logbookDestination
+
+        // Auto-migrate away from LogTen Pro (no longer supported)
+        if settings.logbookDestination == .logTenPro || settings.logbookDestination == .both {
+            updateLogbookDestination(.internalLogbook)
+        } else {
+            logbookDestination = settings.logbookDestination
+        }
+
         savedSONames = settings.savedSONames
         defaultCaptainName = settings.defaultCaptainName
         defaultCoPilotName = settings.defaultCoPilotName
