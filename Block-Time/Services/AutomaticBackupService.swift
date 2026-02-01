@@ -104,7 +104,6 @@ class AutomaticBackupService: ObservableObject {
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
 
     // Backup file naming
-//    private let backupFilePrefix = "Logger_Backup_"
     private let backupFilePrefix = "Block-Time_Backup_"
     private let backupFileExtension = "csv"
 

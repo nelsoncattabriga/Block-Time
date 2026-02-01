@@ -76,7 +76,7 @@ struct UnifiedRosterImportView: View {
 
                     InstructionRow(
                         icon: "3.circle.fill",
-                        text: "Share to Logger via Share Sheet"
+                        text: "Share to Block-Time via Share Sheet"
                     )
                 }
                                 .padding()

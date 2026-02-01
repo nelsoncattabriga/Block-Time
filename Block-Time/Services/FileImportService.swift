@@ -702,9 +702,9 @@ class FileImportService {
         skipSecurityScoping: Bool = false,
         completion: @escaping (Result<ImportResult, Error>) -> Void
     ) {
-        LogManager.shared.info("📂 quickRestoreFromBackup called with mode: \(mode)")
-        LogManager.shared.info("   File: \(url.lastPathComponent)")
-        LogManager.shared.info("   skipSecurityScoping: \(skipSecurityScoping)")
+        LogManager.shared.info("quickRestoreFromBackup called with mode: \(mode)")
+        LogManager.shared.info("File: \(url.lastPathComponent)")
+        LogManager.shared.info("skipSecurityScoping: \(skipSecurityScoping)")
 
         do {
             // Parse the file
@@ -727,7 +727,7 @@ class FileImportService {
             LogManager.shared.info("Created \(mappings.count) field mappings")
 
             // Perform import with automatic mapping
-            LogManager.shared.info("🚀 Starting import with mode: \(mode)")
+            LogManager.shared.info("Starting import with mode: \(mode)")
             importFlights(from: importData, mapping: mappings, mode: mode, completion: completion)
 
         } catch {
