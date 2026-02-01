@@ -5,12 +5,25 @@ struct AverageMetricConfigSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedAircraftType: String
     @Binding var selectedTimePeriod: String
-    @Binding var selectedMetricType: String
     @Binding var selectedComparisonPeriod: String
     let availableAircraftTypes: [String]
     let timePeriodOptions: [String: String]
     let comparisonPeriodOptions: [String: String]
     let onSave: () -> Void
+
+    private var summaryText: String {
+        let aircraft = selectedAircraftType.isEmpty ? "all aircraft" : "the \(selectedAircraftType)"
+        let period = timePeriodOptions[selectedTimePeriod] ?? "\(selectedTimePeriod) days"
+        let timeframe = comparisonPeriodOptions[selectedComparisonPeriod] ?? "all time"
+
+        if selectedComparisonPeriod.isEmpty {
+            // All Time - no timeframe mention
+            return "This shows the average hours and sectors per \(period) on \(aircraft)."
+        } else {
+            // Last X - include "over the last..."
+            return "This shows the average hours and sectors per \(period) on \(aircraft) over the \(timeframe.lowercased())."
+        }
+    }
 
     var body: some View {
         NavigationView {
@@ -46,20 +59,8 @@ struct AverageMetricConfigSheet: View {
                     .pickerStyle(.menu)
                 }
 
-                Section(header: Text("Metric")) {
-                    Picker("Metric", selection: $selectedMetricType) {
-                        Text("Hours").tag("hours")
-                        Text("Sectors").tag("sectors")
-                    }
-                    .pickerStyle(.segmented)
-                }
-
                 Section {
-                    let aircraft = selectedAircraftType.isEmpty ? "all aircraft" : selectedAircraftType
-                    let period = timePeriodOptions[selectedTimePeriod] ?? "\(selectedTimePeriod) days"
-                    let timeframe = comparisonPeriodOptions[selectedComparisonPeriod] ?? "all time"
-
-                    Text("This shows the average \(selectedMetricType) per \(period) on \(aircraft) over the  \(timeframe.lowercased()).")
+                    Text(summaryText)
                         .font(.headline)
                         .foregroundColor(.primary)
                 }

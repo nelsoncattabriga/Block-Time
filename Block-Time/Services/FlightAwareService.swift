@@ -85,7 +85,7 @@ class FlightAwareService {
             LogManager.shared.info("FlightAware lookup successful: Found \(flights.count) flight(s) for \(flightNumber)")
             return flights
         } catch let error as FlightAwareError {
-            LogManager.shared.error("FlightAware lookup failed: \(error.localizedDescription)")
+            LogManager.shared.info("FlightAware lookup failed: \(error.localizedDescription)")
             throw error
         } catch {
             LogManager.shared.error("FlightAware network error: \(error.localizedDescription)")

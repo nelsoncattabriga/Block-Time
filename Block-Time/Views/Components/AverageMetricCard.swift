@@ -6,10 +6,10 @@ struct AverageMetricCard: View {
     var isEditMode: Bool = false
     @State private var selectedAircraftType: String = ""
     @State private var selectedTimePeriod: String = "28"
-    @State private var selectedMetricType: String = "hours"
     @State private var selectedComparisonPeriod: String = ""
     @State private var availableAircraftTypes: [String] = []
-    @State private var averageValue: Double = 0.0
+    @State private var averageHours: Double = 0.0
+    @State private var averageSectors: Double = 0.0
     @State private var showingConfig = false
     private let settings = LogbookSettings.shared
     private let databaseService = FlightDatabaseService.shared
@@ -52,7 +52,6 @@ struct AverageMetricCard: View {
             AverageMetricConfigSheet(
                 selectedAircraftType: $selectedAircraftType,
                 selectedTimePeriod: $selectedTimePeriod,
-                selectedMetricType: $selectedMetricType,
                 selectedComparisonPeriod: $selectedComparisonPeriod,
                 availableAircraftTypes: availableAircraftTypes,
                 timePeriodOptions: timePeriodOptions,
@@ -61,7 +60,6 @@ struct AverageMetricCard: View {
                     settings.averageMetricConfig = [
                         "aircraftType": selectedAircraftType,
                         "timePeriod": selectedTimePeriod,
-                        "metricType": selectedMetricType,
                         "comparisonPeriod": selectedComparisonPeriod
                     ]
                     settings.saveSettings()
@@ -85,26 +83,31 @@ struct AverageMetricCard: View {
 
     private var displayTitle: String {
         let period = timePeriodOptions[selectedTimePeriod] ?? "\(selectedTimePeriod) Days"
-        return "\(period)"
+        return "Avg per \(period)"
     }
 
     private var formattedValue: String {
-        if selectedMetricType == "hours" {
-            return showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageValue) : String(format: "%.1f hrs", averageValue)
-        } else {
-            return String(format: "%.0f sectors", averageValue)
-        }
+        let sectorsText = String(format: "%.0f Sectors", averageSectors)
+        let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f Hrs", averageHours)
+        return "\(sectorsText) & \(hoursText)"
     }
 
     private var displaySubtitle: String {
-        let aircraft = selectedAircraftType.isEmpty ? "All aircraft" : selectedAircraftType
-        return "\(aircraft)"
+        let aircraft = selectedAircraftType.isEmpty ? "all aircraft" : "the \(selectedAircraftType)"
+        let timeframe = comparisonPeriodOptions[selectedComparisonPeriod] ?? "All Time"
+
+        if selectedComparisonPeriod.isEmpty {
+            // All Time - just show aircraft
+            return selectedAircraftType.isEmpty ? "All aircraft" : selectedAircraftType
+        } else {
+            // Last X Days/Months - show "Over the last..."
+            return "Over the \(timeframe.lowercased()) on \(aircraft)"
+        }
     }
 
     private func loadSettings() {
         selectedAircraftType = settings.averageMetricConfig["aircraftType"] ?? ""
         selectedTimePeriod = settings.averageMetricConfig["timePeriod"] ?? "28"
-        selectedMetricType = settings.averageMetricConfig["metricType"] ?? "hours"
         selectedComparisonPeriod = settings.averageMetricConfig["comparisonPeriod"] ?? ""
     }
 
@@ -114,16 +117,24 @@ struct AverageMetricCard: View {
 
     private func calculateAverage() {
         guard let days = Int(selectedTimePeriod) else {
-            averageValue = 0.0
+            averageHours = 0.0
+            averageSectors = 0.0
             return
         }
 
         let comparisonDays = selectedComparisonPeriod.isEmpty ? nil : Int(selectedComparisonPeriod)
 
-        averageValue = databaseService.getAverageMetric(
+        averageHours = databaseService.getAverageMetric(
             aircraftType: selectedAircraftType,
             days: days,
-            metricType: selectedMetricType,
+            metricType: "hours",
+            comparisonPeriodDays: comparisonDays
+        )
+
+        averageSectors = databaseService.getAverageMetric(
+            aircraftType: selectedAircraftType,
+            days: days,
+            metricType: "sectors",
             comparisonPeriodDays: comparisonDays
         )
     }
