@@ -213,7 +213,6 @@ struct FlightsView: View {
             }
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelectMode)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedFlights.count)
-            .navigationTitle("Logbook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationDestination(item: $selectedFlight) { sector in
@@ -775,8 +774,7 @@ struct FlightsView: View {
                         filterViewModel.filterNoBlockTime ||
                         filterViewModel.filterNoCrewNames ||
                         filterViewModel.filterNoFlightNumber ||
-                        filterViewModel.filterTypeSummary ||
-                        !filterViewModel.filterKeywordSearch.isEmpty
+                        filterViewModel.filterTypeSummary
 
         showingFilterSheet = false
 

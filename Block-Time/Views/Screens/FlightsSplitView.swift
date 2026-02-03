@@ -190,6 +190,9 @@ private struct FlightsListContent: View {
                         Button(action: {
                             filterViewModel.filterKeywordSearch = ""
                             applyFilters()
+                            // Reset scroll flag and trigger scroll to last flight
+                            hasPerformedInitialScroll = false
+                            shouldScrollToLastFlight = true
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.secondary)
@@ -826,8 +829,7 @@ private struct FlightsListContent: View {
                         filterViewModel.filterNoBlockTime ||
                         filterViewModel.filterNoCrewNames ||
                         filterViewModel.filterNoFlightNumber ||
-                        filterViewModel.filterTypeSummary ||
-                        !filterViewModel.filterKeywordSearch.isEmpty
+                        filterViewModel.filterTypeSummary
 
         showingFilterSheet = false
 
