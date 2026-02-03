@@ -635,6 +635,10 @@ private struct ModernFormatOptionsCard: View {
                         get: { viewModel.airlinePrefix },
                         set: { viewModel.updateAirlinePrefix($0) }
                     ),
+                    isCustomSelected: Binding(
+                        get: { viewModel.isCustomAirlinePrefix },
+                        set: { viewModel.updateIsCustomAirlinePrefix($0) }
+                    ),
                     color: .orange
                 )
 
@@ -1277,10 +1281,10 @@ private struct ModernToggleRow: View {
 private struct ModernAirlinePrefixRow: View {
     @Binding var isEnabled: Bool
     @Binding var prefix: String
+    @Binding var isCustomSelected: Bool
     let color: Color
     @State private var showingAirlinePicker = false
     @State private var customPrefix: String = ""
-    @State private var isCustomSelected: Bool = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -1366,10 +1370,8 @@ private struct ModernAirlinePrefixRow: View {
             )
         }
         .onAppear {
-            // Check if current prefix is custom (not in the predefined list)
-            let predefinedPrefixes = Airline.airlines.filter { $0.id != "CUSTOM" }.map { $0.prefix }
-            if !prefix.isEmpty && !predefinedPrefixes.contains(prefix) {
-                isCustomSelected = true
+            // Initialize customPrefix if custom is selected
+            if isCustomSelected && customPrefix.isEmpty {
                 customPrefix = prefix
             }
         }

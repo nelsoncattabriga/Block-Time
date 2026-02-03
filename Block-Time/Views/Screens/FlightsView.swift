@@ -433,7 +433,9 @@ struct FlightsView: View {
                     sector: sector,
                     useLocalTime: viewModel.displayFlightsInLocalTime,
                     useIATACodes: viewModel.useIATACodes,
-                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes
+                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
+                    includeAirlinePrefixInFlightNumber: viewModel.includeAirlinePrefixInFlightNumber,
+                    isCustomAirlinePrefix: viewModel.isCustomAirlinePrefix
                 )
                 .equatable()
             }
@@ -475,7 +477,9 @@ struct FlightsView: View {
                     sector: sector,
                     useLocalTime: viewModel.displayFlightsInLocalTime,
                     useIATACodes: viewModel.useIATACodes,
-                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes
+                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
+                    includeAirlinePrefixInFlightNumber: viewModel.includeAirlinePrefixInFlightNumber,
+                    isCustomAirlinePrefix: viewModel.isCustomAirlinePrefix
                 )
                 .equatable()
             }

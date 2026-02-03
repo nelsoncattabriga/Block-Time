@@ -6,6 +6,8 @@ struct FlightSectorRow: View, Equatable {
     var useLocalTime: Bool = false
     var useIATACodes: Bool = false
     var showTimesInHoursMinutes: Bool = false
+    var includeAirlinePrefixInFlightNumber: Bool = UserDefaults.standard.bool(forKey: "includeAirlinePrefixInFlightNumber")
+    var isCustomAirlinePrefix: Bool = UserDefaults.standard.bool(forKey: "isCustomAirlinePrefix")
     @Environment(\.colorScheme) var colorScheme
 
     // Cached computed values - initialized once
@@ -42,7 +44,9 @@ struct FlightSectorRow: View, Equatable {
                lhs.sector.isPositioning == rhs.sector.isPositioning &&
                lhs.useLocalTime == rhs.useLocalTime &&
                lhs.useIATACodes == rhs.useIATACodes &&
-               lhs.showTimesInHoursMinutes == rhs.showTimesInHoursMinutes
+               lhs.showTimesInHoursMinutes == rhs.showTimesInHoursMinutes &&
+               lhs.includeAirlinePrefixInFlightNumber == rhs.includeAirlinePrefixInFlightNumber &&
+               lhs.isCustomAirlinePrefix == rhs.isCustomAirlinePrefix
     }
 
     // Cached date formatter - shared across all instances
@@ -133,6 +137,13 @@ struct FlightSectorRow: View, Equatable {
 
     // Calculate airline logo lookup
     private func calculateAirlineLogo() -> String? {
+        // Don't show airline icon if:
+        // 1. Airline prefix toggle is OFF
+        // 2. User has selected custom prefix
+        if !includeAirlinePrefixInFlightNumber || isCustomAirlinePrefix {
+            return nil
+        }
+
         let uppercased = sector.flightNumberFormatted.uppercased()
         for airline in Airline.airlines {
             if uppercased.hasPrefix(airline.prefix) && !airline.iconName.isEmpty {

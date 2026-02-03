@@ -133,6 +133,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var includeLeadingZeroInFlightNumber = false
     @Published var includeAirlinePrefixInFlightNumber = false
     @Published var airlinePrefix = "QF"
+    @Published var isCustomAirlinePrefix = false
     @Published var showFullAircraftReg = true
     @Published var savePhotosToLibrary = false  // NEW SETTING
     @Published var showSONameFields = false  // Show/hide SO 1 and SO 2 fields
@@ -309,6 +310,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         includeLeadingZeroInFlightNumber = settings.includeLeadingZeroInFlightNumber
         includeAirlinePrefixInFlightNumber = settings.includeAirlinePrefixInFlightNumber
         airlinePrefix = settings.airlinePrefix
+        isCustomAirlinePrefix = settings.isCustomAirlinePrefix
         showFullAircraftReg = settings.showFullAircraftReg
         savedCaptainNames = settings.savedCaptainNames
         savedCoPilotNames = settings.savedCoPilotNames
@@ -364,6 +366,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 includeAirlinePrefixInFlightNumber = settings.includeAirlinePrefixInFlightNumber
             case "airlinePrefix":
                 airlinePrefix = settings.airlinePrefix
+            case "isCustomAirlinePrefix":
+                isCustomAirlinePrefix = settings.isCustomAirlinePrefix
             case "showFullAircraftReg":
                 showFullAircraftReg = settings.showFullAircraftReg
             case "savedCaptainNames":
@@ -587,6 +591,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
     func updateAirlinePrefix(_ value: String) {
         airlinePrefix = value
         userDefaultsService.setAirlinePrefix(value)
+    }
+
+    func updateIsCustomAirlinePrefix(_ value: Bool) {
+        isCustomAirlinePrefix = value
+        userDefaultsService.setIsCustomAirlinePrefix(value)
     }
 
     func updateShowFullAircraftReg(_ value: Bool) {
@@ -1086,6 +1095,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
     }
     
     private func formatFlightNumber(_ flightNumber: String) -> String {
+        // Don't format empty flight numbers
+        guard !flightNumber.isEmpty else {
+            return flightNumber
+        }
+
         var formatted = flightNumber
 
         if includeAirlinePrefixInFlightNumber {

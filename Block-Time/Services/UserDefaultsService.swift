@@ -79,6 +79,7 @@ struct AppSettings {
     var includeLeadingZeroInFlightNumber: Bool
     var includeAirlinePrefixInFlightNumber: Bool
     var airlinePrefix: String
+    var isCustomAirlinePrefix: Bool
     var showFullAircraftReg: Bool
     var savedCaptainNames: [String]
     var savedCoPilotNames: [String]
@@ -113,6 +114,7 @@ struct AppSettings {
         includeLeadingZeroInFlightNumber: false,
         includeAirlinePrefixInFlightNumber: true,
         airlinePrefix: "QF",
+        isCustomAirlinePrefix: false,
         showFullAircraftReg: false,
         savedCaptainNames: [],
         savedCoPilotNames: [],
@@ -152,6 +154,7 @@ class UserDefaultsService: ObservableObject {
         static let includeLeadingZeroInFlightNumber = "includeLeadingZeroInFlightNumber"
         static let includeAirlinePrefixInFlightNumber = "includeAirlinePrefixInFlightNumber"
         static let airlinePrefix = "airlinePrefix"
+        static let isCustomAirlinePrefix = "isCustomAirlinePrefix"
         static let showFullAircraftReg = "showFullAircraftReg"
         static let savedCaptainNames = "savedCaptainNames"
         static let savedCoPilotNames = "savedCoPilotNames"
@@ -205,6 +208,7 @@ class UserDefaultsService: ObservableObject {
             includeLeadingZeroInFlightNumber: userDefaults.bool(forKey: Keys.includeLeadingZeroInFlightNumber),
             includeAirlinePrefixInFlightNumber: userDefaults.bool(forKey: Keys.includeAirlinePrefixInFlightNumber),
             airlinePrefix: userDefaults.string(forKey: Keys.airlinePrefix) ?? "QF",
+            isCustomAirlinePrefix: userDefaults.bool(forKey: Keys.isCustomAirlinePrefix),
             showFullAircraftReg: userDefaults.object(forKey: Keys.showFullAircraftReg) as? Bool ?? false,
             savedCaptainNames: loadAndSortCrewNames(forKey: Keys.savedCaptainNames),
             savedCoPilotNames: loadAndSortCrewNames(forKey: Keys.savedCoPilotNames),
@@ -331,6 +335,12 @@ class UserDefaultsService: ObservableObject {
     func setAirlinePrefix(_ value: String) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.airlinePrefix)
+        syncToCloudAfterChange()
+    }
+
+    func setIsCustomAirlinePrefix(_ value: Bool) {
+        markModificationAndSyncToCloud()
+        userDefaults.set(value, forKey: Keys.isCustomAirlinePrefix)
         syncToCloudAfterChange()
     }
 
