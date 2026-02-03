@@ -549,6 +549,12 @@ private struct FlightsListContent: View {
                 onFlightSelected(sector)
             }
         }
+        .onLongPressGesture {
+            // Enter select mode and select this flight
+            HapticManager.shared.impact(.medium)
+            isSelectMode = true
+            selectedFlightsForDeletion.insert(sector.id)
+        }
         .id(sector.id)
     }
 

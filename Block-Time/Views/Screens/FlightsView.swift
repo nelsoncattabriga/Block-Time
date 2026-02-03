@@ -418,6 +418,12 @@ struct FlightsView: View {
                 viewModel.loadFlightForEditing(sector)
             }
         }
+        .onLongPressGesture {
+            // Enter select mode and select this flight
+            HapticManager.shared.impact(.medium)
+            isSelectMode = true
+            selectedFlights.insert(sector.id)
+        }
         .id(sector.id)
     }
 
