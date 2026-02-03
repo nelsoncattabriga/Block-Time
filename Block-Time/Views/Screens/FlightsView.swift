@@ -53,6 +53,8 @@ struct FlightsView: View {
     @State private var hasPerformedInitialScroll: Bool = false
     @State private var shouldScrollToLastFlight: Bool = false
     @State private var shouldScrollToTop: Bool = false
+    @State private var showSearchBar: Bool = false
+    @FocusState private var isSearchFieldFocused: Bool
 
     // Made internal so it can be used by FlightsSplitView
     enum DateRangeOption: Int {
@@ -61,9 +63,9 @@ struct FlightsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-                if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty {
+                if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
                     NoResultsView(onClearFilters: clearFilters)
-                } else if filteredFlightSectors.isEmpty {
+                } else if filteredFlightSectors.isEmpty && allFlightSectors.isEmpty {
                     EmptyFlightsView()
                 } else {
                     // Flight count header
@@ -81,6 +83,41 @@ struct FlightsView: View {
                     }
                     .padding()
                     .background(Color.clear)
+
+                    // Search bar (collapsible)
+                    if showSearchBar {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 12)
+
+                            TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .focused($isSearchFieldFocused)
+                                .onChange(of: filterViewModel.filterKeywordSearch) { _, _ in
+                                    applyFilters()
+                                }
+
+                            if !filterViewModel.filterKeywordSearch.isEmpty {
+                                Button(action: {
+                                    filterViewModel.filterKeywordSearch = ""
+                                    applyFilters()
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(.trailing, 12)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
 
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -224,17 +261,56 @@ struct FlightsView: View {
                                 .foregroundColor(.blue)
                         }
                     } else {
-                        // Show sort and filter buttons in normal mode
+                        // Show search, sort and filter buttons in normal mode
                         HStack(spacing: 16) {
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+
+                                if showSearchBar {
+                                    // Hiding the search bar
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        showSearchBar = false
+                                    }
+                                    isSearchFieldFocused = false
+
+                                    // Clear search and scroll back to last completed flight
+                                    if !filterViewModel.filterKeywordSearch.isEmpty {
+                                        filterViewModel.filterKeywordSearch = ""
+                                        applyFilters()
+                                        // Reset scroll flag and trigger scroll to last flight
+                                        hasPerformedInitialScroll = false
+                                        shouldScrollToLastFlight = true
+                                    }
+                                } else {
+                                    // Showing the search bar
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        showSearchBar = true
+                                    }
+                                    // Delay focus slightly to ensure the text field is rendered
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        isSearchFieldFocused = true
+                                    }
+                                }
+                            }) {
+                                ZStack {
+                                    Image(systemName: "magnifyingglass.circle")
+                                        .font(.title3)
+                                    // Show indicator when search is active
+                                    if !filterViewModel.filterKeywordSearch.isEmpty {
+                                        Circle()
+                                            .fill(Color.blue)
+                                            .frame(width: 8, height: 8)
+                                            .offset(x: 10, y: -10)
+                                    }
+                                }
+                            }
+
                             Button(action: {
                                 HapticManager.shared.impact(.light)
                                 filterViewModel.sortOrderReversed.toggle()
                                 applyFilters()
                                 shouldScrollToTop = true
                             }) {
-    //                            Text("Sort")
-    //                                .font(.subheadline)
-    //                            Image(systemName: filterViewModel.sortOrderReversed ? "arrow.up" : "arrow.down")
                                 Image(systemName: "arrow.up.arrow.down.circle")
                                 .font(.title3)
                             }
@@ -910,6 +986,31 @@ struct FlightsView: View {
         summaryToEdit = nil
     }
 
+    /// Check if only keyword search is active (no other filters)
+    private func isOnlyKeywordSearchActive() -> Bool {
+        let isCustomDateRange = !(filterViewModel.filterStartDate == Date.distantPast && filterViewModel.filterEndDate == Date.distantFuture)
+
+        return !filterViewModel.filterKeywordSearch.isEmpty &&
+               !isCustomDateRange &&
+               filterViewModel.filterAircraftType.isEmpty &&
+               filterViewModel.filterAircraftReg.isEmpty &&
+               filterViewModel.filterCaptainName.isEmpty &&
+               filterViewModel.filterFOName.isEmpty &&
+               filterViewModel.filterSOName.isEmpty &&
+               filterViewModel.filterFromAirport.isEmpty &&
+               filterViewModel.filterToAirport.isEmpty &&
+               filterViewModel.filterFlightNumber.isEmpty &&
+               !filterViewModel.filterPilotFlyingOnly &&
+               filterViewModel.filterApproachType == nil &&
+               !filterViewModel.filterContainsRemarks &&
+               !filterViewModel.filterSimulator &&
+               !filterViewModel.filterPositioning &&
+               !filterViewModel.filterNoBlockTime &&
+               !filterViewModel.filterNoCrewNames &&
+               !filterViewModel.filterNoFlightNumber &&
+               !filterViewModel.filterTypeSummary
+    }
+
     private func scrollToFirstNonDimmedFlight(proxy: ScrollViewProxy) {
         // Only scroll once per view lifecycle to avoid disrupting user scrolling
         guard !hasPerformedInitialScroll else { return }
@@ -1062,28 +1163,6 @@ struct FilterSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                        TextField("Search logbook for...", text: $filterKeywordSearch)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        if !filterKeywordSearch.isEmpty {
-                            Button(action: { filterKeywordSearch = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                    }
-                } header: {
-                    Text("Keyword Search")
-                }
-//                footer: {
-//                    Text("Search everywhere for this string.")
-//                }
-
                 Section {
                     VStack(spacing: 12) {
                         HStack(spacing: 8) {

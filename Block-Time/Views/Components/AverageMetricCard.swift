@@ -22,7 +22,7 @@ struct AverageMetricCard: View {
         "28": "28 Days",
         "90": "90 Days",
         "180": "180 Days",
-        "365": "1 Year",
+        "365": "365 Days",
     ]
 
     // Comparison period options (over what timeframe to calculate)

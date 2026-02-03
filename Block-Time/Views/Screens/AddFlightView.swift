@@ -1679,17 +1679,8 @@ private struct ModernFlightNumberField: View {
 
                         Text("Online Search")
                             .font(.caption.bold())
-                            //.foregroundColor(.primary)
                             .foregroundColor(.blue)
                             .opacity(canSearch ? 1.0 : 0.4)
-
-
-                        //                    Image("FlightAwareLogo")
-                        //                        .resizable()
-                        //                        .aspectRatio(contentMode: .fill)
-                        //                        .frame(width: 100, height: 50)
-                        //                        .cornerRadius(6)
-                        //                        .opacity(canSearch ? 1.0 : 0.4)
                     }
                 }
             }

@@ -153,9 +153,9 @@ private struct FlightsListContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty {
+            if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
                 NoResultsView(onClearFilters: clearFilters)
-            } else if filteredFlightSectors.isEmpty {
+            } else if filteredFlightSectors.isEmpty && allFlightSectors.isEmpty {
                 EmptyFlightsView()
             } else {
                 // Flight count header
@@ -172,6 +172,37 @@ private struct FlightsListContent: View {
                 }
                 .padding()
                 .background(Color.clear)
+
+                // Search bar
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 12)
+
+                    TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onChange(of: filterViewModel.filterKeywordSearch) { _, _ in
+                            applyFilters()
+                        }
+
+                    if !filterViewModel.filterKeywordSearch.isEmpty {
+                        Button(action: {
+                            filterViewModel.filterKeywordSearch = ""
+                            applyFilters()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.trailing, 12)
+                    }
+                }
+                .padding(.vertical, 8)
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
 
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -999,6 +1030,31 @@ private struct FlightsListContent: View {
 
         // Clear the editing state
         summaryToEdit = nil
+    }
+
+    /// Check if only keyword search is active (no other filters)
+    private func isOnlyKeywordSearchActive() -> Bool {
+        let isCustomDateRange = !(filterViewModel.filterStartDate == Date.distantPast && filterViewModel.filterEndDate == Date.distantFuture)
+
+        return !filterViewModel.filterKeywordSearch.isEmpty &&
+               !isCustomDateRange &&
+               filterViewModel.filterAircraftType.isEmpty &&
+               filterViewModel.filterAircraftReg.isEmpty &&
+               filterViewModel.filterCaptainName.isEmpty &&
+               filterViewModel.filterFOName.isEmpty &&
+               filterViewModel.filterSOName.isEmpty &&
+               filterViewModel.filterFromAirport.isEmpty &&
+               filterViewModel.filterToAirport.isEmpty &&
+               filterViewModel.filterFlightNumber.isEmpty &&
+               !filterViewModel.filterPilotFlyingOnly &&
+               filterViewModel.filterApproachType == nil &&
+               !filterViewModel.filterContainsRemarks &&
+               !filterViewModel.filterSimulator &&
+               !filterViewModel.filterPositioning &&
+               !filterViewModel.filterNoBlockTime &&
+               !filterViewModel.filterNoCrewNames &&
+               !filterViewModel.filterNoFlightNumber &&
+               !filterViewModel.filterTypeSummary
     }
 
     private func scrollToFirstNonDimmedFlight(proxy: ScrollViewProxy) {
