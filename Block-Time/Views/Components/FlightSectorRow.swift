@@ -228,9 +228,12 @@ struct FlightSectorRow: View, Equatable {
                         .font(.headline)
                         .foregroundColor(cachedIsFutureFlight ? .secondary : .blue.opacity(0.7))
 
-                    Image(systemName: "airplane")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    // Only show airplane icon if not a SIM flight, or if SIM flight has airports
+                    if sector.simTimeValue == 0 || (!sector.fromAirport.isEmpty && !sector.toAirport.isEmpty) {
+                        Image(systemName: "airplane")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
 
                     Text(cachedToAirportCode)
                         .font(.headline)

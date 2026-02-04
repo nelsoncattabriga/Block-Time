@@ -163,9 +163,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
     
     // MARK: - Computed Properties
     var canSendToLogTen: Bool {
-        // For simulator flights, only require block time and date (OUT/IN times optional)
+        // For simulator flights, only require block time and date (airports and OUT/IN times optional)
         if isSimulator {
-            return !blockTime.isEmpty && !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty
+            return !blockTime.isEmpty && !flightDate.isEmpty
         }
         // For regular flights, require OUT, IN, date, and airports
         return !outTime.isEmpty && !inTime.isEmpty && !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty
@@ -1997,6 +1997,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
     // MARK: - Night Time Calculation (moved from View)
     func updateNightTime() {
+        // For simulator flights, don't calculate night time - let user enter it manually
+        if isSimulator {
+            return
+        }
+
         // PERFORMANCE OPTIMIZATION: Build context once and reuse for both calculations
         // This eliminates duplicate airport lookups and date parsing
         if let context = timeCalculationManager.buildCalculationContext(

@@ -544,7 +544,7 @@ private struct ModernCapturedDataCard: View {
                     
                     // Flight Number field with search button
                     ModernFlightNumberField(
-                        label: "FLIGHT #",
+                        label: viewModel.isSimulator ? "SIM #" : "FLIGHT #",
                         value: Binding(
                             get: { viewModel.flightNumber },
                             set: { viewModel.updateFlightNumber($0) }
