@@ -53,8 +53,8 @@ class LogbookSettings {
         } else {
             // Default configuration
             averageMetricConfig = [
-                "aircraftType": "", // All aircraft
-                "timePeriod": "28", // 28 days
+                "aircraftType": selectedAircraftType, // Use fleet selection from settings
+                "timePeriod": "365", // 365 days
                 "metricType": "hours", // hours
                 "comparisonPeriod": "" // Entire logbook (empty = all time)
             ]

@@ -14,6 +14,7 @@ struct AverageMetricCard: View {
     private let settings = LogbookSettings.shared
     private let databaseService = FlightDatabaseService.shared
     @State private var showTimesInHoursMinutes: Bool = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     // Time period options (for the average calculation)
     let timePeriodOptions = [
@@ -83,13 +84,26 @@ struct AverageMetricCard: View {
 
     private var displayTitle: String {
         let period = timePeriodOptions[selectedTimePeriod] ?? "\(selectedTimePeriod) Days"
-        return "Avg per \(period)"
+        return "\(period) Avg"
+    }
+
+    // Determine if we should stack hours and sectors vertically (iPhone 2-column view)
+    private var shouldStackVertically: Bool {
+        return horizontalSizeClass == .compact && !settings.isCompactView
     }
 
     private var formattedValue: String {
-        let sectorsText = String(format: "%.0f sectors", averageSectors)
-        let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
-        return "\(hoursText)  |  \(sectorsText)"
+        if shouldStackVertically {
+            // Use abbreviations in iPhone 2-column mode
+            let sectorsText = String(format: "%.0f flts", averageSectors)
+            let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
+            return "\(hoursText) | \(sectorsText)"
+        } else {
+            // Use full text in wider layouts
+            let sectorsText = String(format: "%.0f flights", averageSectors)
+            let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
+            return "\(hoursText) | \(sectorsText)"
+        }
     }
 
     private var displaySubtitle: String {
@@ -143,31 +157,36 @@ struct AverageMetricCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(displayTitle)
-                    .iPadScaledFont(.callout)
+                    .iPadScaledFont(.headline)
                     .foregroundColor(.secondary)
-                    .fontWeight(.medium)
+                    .fontWeight(.bold)
                     .lineLimit(1)
 
-                Image(systemName: "chevron.down")
-                    .imageScale(.small)
-                    .foregroundColor(.secondary)
+                if !shouldStackVertically {
+                    Image(systemName: "chevron.down")
+                        .imageScale(.small)
+                        .foregroundColor(.secondary)
+                }
 
                 Spacer()
 
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .foregroundColor(.purple)
-                    .iPadScaledFont(.title3)
+                    .iPadScaledFont(.headline)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(formattedValue)
-                    .iPadScaledFont(.headline)
+                    .iPadScaledFont(.subheadline)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
 
                 // Spacer to match progress bar height in other cards
-                Spacer()
-                    .frame(height: 6)
+                // Show spacer if not in compact mode OR if showing "All Time" (shorter subtitle)
+                if !shouldStackVertically || selectedComparisonPeriod.isEmpty {
+                    Spacer()
+                        .frame(height: 6)
+                }
 
                 Text(displaySubtitle)
                     .iPadScaledFont(.caption)
