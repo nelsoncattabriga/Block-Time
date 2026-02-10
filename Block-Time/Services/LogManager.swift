@@ -51,7 +51,7 @@ class LogManager {
     static let shared = LogManager()
 
     // Configuration - Single large log file for easier troubleshooting
-    private let maxFileSize: Int = 10 * 1024 * 1024 // 10MB - provides extensive history
+    private let maxFileSize: Int = 2 * 1024 * 1024 // 2MB - provides good history
     private let logFileName = "Block-Time_LogFile.log"
 
     // Log level filtering
