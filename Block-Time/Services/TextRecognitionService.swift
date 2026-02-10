@@ -136,13 +136,50 @@ class TextRecognitionService: ObservableObject {
 
         print("Recognized text: \(recognizedText)")
 
-        // Extract the different components
+        // Try columnar ACARS extraction first (where labels and values are in separate sections)
+        if let columnarTimes = extractTimesFromColumnarLayout(from: recognizedText) {
+            print("✓ Using columnar ACARS layout extraction")
+            let flightDetails = extractFlightDetails(from: recognizedText)
+
+            // Validate time sequence and cross-check with FLT/BLK times
+            validateAndCorrectTimeSequence(
+                out: columnarTimes.out,
+                off: columnarTimes.off,
+                on: columnarTimes.on,
+                in: columnarTimes.in,
+                fltTime: columnarTimes.flt,
+                blkTime: columnarTimes.blk
+            )
+
+            let flightData = FlightData(
+                outTime: columnarTimes.out,
+                inTime: columnarTimes.in,
+                offTime: columnarTimes.off,
+                onTime: columnarTimes.on,
+                blockTime: columnarTimes.blk.isEmpty ? "" : columnarTimes.blk, // Use extracted BLK if available
+                flightNumber: flightDetails.flightNumber,
+                fromAirport: flightDetails.fromAirport,
+                toAirport: flightDetails.toAirport,
+                dayOfMonth: flightDetails.dayOfMonth,
+                aircraftRegistration: nil,
+                fullDate: nil
+            )
+
+            return flightData
+        }
+
+        // Fall back to standard pattern-based extraction
+        print("✓ Using standard pattern-based extraction")
         let outTime = extractOutTime(from: recognizedText)
         let inTime = extractInTime(from: recognizedText)
         let offTime = extractOffTime(from: recognizedText)
         let onTime = extractOnTime(from: recognizedText)
         let blockTime = extractBlockTime(from: recognizedText)
+        let fltTime = extractFlightTime(from: recognizedText)
         let flightDetails = extractFlightDetails(from: recognizedText)
+
+        // Validate time sequence (OUT < OFF < ON < IN) and cross-check with FLT/BLK
+        validateAndCorrectTimeSequence(out: outTime, off: offTime, on: onTime, in: inTime, fltTime: fltTime, blkTime: blockTime)
 
         // Build list of missing fields for user feedback
         var missingFields: [String] = []
@@ -175,7 +212,128 @@ class TextRecognitionService: ObservableObject {
 
         return flightData
     }
-    
+
+    // MARK: - Columnar Layout Extraction
+
+    /// Detect and extract times from columnar ACARS layout where labels and values are separated
+    /// Layout pattern:
+    ///   OUT
+    ///   OFF
+    ///   ON
+    ///   IN
+    ///   HH:MM  <- OUT time
+    ///   ...
+    ///   HH:MM  <- OFF time
+    ///   ...
+    ///   HH:MM  <- ON time
+    ///   ...
+    ///   HH:MM  <- IN time
+    private func extractTimesFromColumnarLayout(from text: String) -> (out: String, off: String, on: String, in: String, flt: String, blk: String)? {
+        let lines = text.components(separatedBy: .newlines)
+
+        // Find the section with OUT, OFF, ON, IN on consecutive lines
+        var labelStartIndex: Int?
+        for i in 0..<(lines.count - 3) {
+            let line1 = lines[i].trimmingCharacters(in: .whitespaces)
+            let line2 = lines[i + 1].trimmingCharacters(in: .whitespaces)
+            let line3 = lines[i + 2].trimmingCharacters(in: .whitespaces)
+            let line4 = lines[i + 3].trimmingCharacters(in: .whitespaces)
+
+            if line1 == "OUT" && line2 == "OFF" && line3 == "ON" && line4 == "IN" {
+                labelStartIndex = i
+                print("Found columnar ACARS layout starting at line \(i)")
+                break
+            }
+        }
+
+        guard let startIndex = labelStartIndex else {
+            return nil
+        }
+
+        // Extract times that appear after the labels
+        // Look for times in the format HH:MM or with OCR errors (Ø, O, 8, etc.)
+        let timePattern = try! NSRegularExpression(pattern: "^\\s*([0-9ØøOo8]{2}:[0-9ØøOo]{2})\\s*$")
+
+        // Track which label we're capturing for
+        let skipLabelsOnly = ["ON-BLX", "FUEL", "STATE", "*PRINT", "SENSORS", "INIT", "REF", "FIX", "MENU"]
+
+        var extractedTimes: [String] = []
+        var fltTime = ""
+        var blkTime = ""
+        var searchIndex = startIndex + 4  // Start after IN label
+        var lastTimeIndex = searchIndex  // Track where we found the last time
+        var captureNextTimeAs: String? = nil  // Track which field the next time belongs to
+
+        // Extract up to 4 times (OUT, OFF, ON, IN), and also capture FLT/BLK for validation
+        while extractedTimes.count < 4 && searchIndex < lines.count && (searchIndex - lastTimeIndex) < 20 {
+            let line = lines[searchIndex].trimmingCharacters(in: .whitespaces)
+
+            // Check if this line is FLT or BLK label
+            if line == "FLT" {
+                captureNextTimeAs = "FLT"
+                searchIndex += 1
+                continue
+            } else if line == "BLK" {
+                captureNextTimeAs = "BLK"
+                searchIndex += 1
+                continue
+            }
+
+            // Skip lines that are labels without associated times
+            if skipLabelsOnly.contains(line) || line.isEmpty {
+                searchIndex += 1
+                continue
+            }
+
+            let matches = timePattern.matches(in: line, range: NSRange(line.startIndex..., in: line))
+
+            if let match = matches.first, let timeRange = Range(match.range(at: 1), in: line) {
+                let rawTime = String(line[timeRange])
+                let correctedTime = smartCorrectTime(rawTime)
+
+                // Check if this time belongs to FLT or BLK
+                if let captureAs = captureNextTimeAs {
+                    if captureAs == "FLT" {
+                        fltTime = correctedTime
+                        print("  Captured FLT time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
+                    } else if captureAs == "BLK" {
+                        blkTime = correctedTime
+                        print("  Captured BLK time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
+                    }
+                    captureNextTimeAs = nil
+                    searchIndex += 1
+                    continue
+                }
+
+                // This is a flight time (OUT, OFF, ON, or IN)
+                extractedTimes.append(correctedTime)
+                lastTimeIndex = searchIndex
+
+                // Map to field names for logging
+                let fieldNames = ["OUT", "OFF", "ON", "IN"]
+                let fieldName = extractedTimes.count <= fieldNames.count ? fieldNames[extractedTimes.count - 1] : "?"
+                print("  Columnar \(fieldName) time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
+            }
+
+            searchIndex += 1
+        }
+
+        // Need exactly 4 times
+        guard extractedTimes.count == 4 else {
+            print("⚠️ Columnar layout detected but found \(extractedTimes.count) times (expected 4)")
+            return nil
+        }
+
+        return (
+            out: extractedTimes[0],
+            off: extractedTimes[1],
+            on: extractedTimes[2],
+            in: extractedTimes[3],
+            flt: fltTime,
+            blk: blkTime
+        )
+    }
+
     private func extractOutTime(from text: String) -> String {
         let outPatterns: [NSRegularExpression] = [
             try! NSRegularExpression(pattern: "OUT\\s+(\\d{2}:\\d{2})"),
@@ -206,15 +364,30 @@ class TextRecognitionService: ObservableObject {
     
     private func extractInTime(from text: String) -> String {
         let inPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "IN\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "IN\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "IN\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
+            // SPECIAL CASE: ON and IN on consecutive lines followed by TWO times (capture second time for IN)
+            // Pattern: ON\n IN\n HH:MM\n HH:MM - we want the second HH:MM
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*\\d{2}:\\d{2}\\s*\\n\\s*(\\d{2}:\\d{2})"),
+            // Also handle with OCR errors in first time (8 instead of 0)
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*[8\\d]{2}:[\\d]{2}\\s*\\n\\s*(\\d{2}:\\d{2})"),
+            // Stricter: only spaces/tabs on same line (not newlines)
+            try! NSRegularExpression(pattern: "IN[ \\t]+(\\d{2}:\\d{2})"),
+            // Allow one newline but time must be within 5 spaces
+            try! NSRegularExpression(pattern: "IN\\s*\\n[ \\t]{0,5}(\\d{2}:\\d{2})"),
+            // Colon/dash/dot separator on same line
+            try! NSRegularExpression(pattern: "IN[ \\t]*[:\\-\\.]?[ \\t]*(\\d{2}:\\d{2})"),
+            // One newline with up to 10 chars, then another newline and time
             try! NSRegularExpression(pattern: "IN\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
+            // Newline with colon prefix
             try! NSRegularExpression(pattern: "IN\\s*\\n\\s*:\\s*(\\d{2})"),
+            // Newline with semicolon/period prefix
             try! NSRegularExpression(pattern: "IN\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "IN[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
+            // More restrictive: max 10 non-digit chars between IN and time
+            try! NSRegularExpression(pattern: "IN[^\\d]{0,10}(\\d{2})[ \\t]*[:\\-;\\.]?[ \\t]*(\\d{2})"),
+            // Strict: max 10 chars between IN and HH:MM
             try! NSRegularExpression(pattern: "IN[^\\d]{0,10}(\\d{2}:\\d{2})"),
+            // Hour and minute on separate lines after IN
             try! NSRegularExpression(pattern: "IN\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
+            // Fallback: allow up to 30 chars but prefer earlier matches
             try! NSRegularExpression(pattern: "IN.{0,30}?(\\d{2}:\\d{2})")
         ]
 
@@ -240,19 +413,32 @@ class TextRecognitionService: ObservableObject {
 
     private func extractOnTime(from text: String) -> String {
         let onPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "ON\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "ON\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
+            // SPECIAL CASE: ON and IN on consecutive lines followed by TWO times (capture first time for ON)
+            // Pattern: ON\n IN\n HH:MM\n HH:MM - we want the first HH:MM
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*([8\\d]{2}:[\\d]{2})"),
+            // Stricter: only spaces/tabs on same line (not newlines)
+            try! NSRegularExpression(pattern: "ON[ \\t]+(\\d{2}:\\d{2})"),
+            // Allow one newline but time must be within 5 spaces
+            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}(\\d{2}:\\d{2})"),
+            // Colon/dash/dot separator on same line
+            try! NSRegularExpression(pattern: "ON[ \\t]*[:\\-\\.]?[ \\t]*(\\d{2}:\\d{2})"),
+            // One newline with up to 10 chars, then another newline and time
             try! NSRegularExpression(pattern: "ON\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
+            // Newline with colon prefix
             try! NSRegularExpression(pattern: "ON\\s*\\n\\s*:\\s*(\\d{2})"),
+            // Newline with semicolon/period prefix
             try! NSRegularExpression(pattern: "ON\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "ON[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
+            // More restrictive: max 10 non-digit chars between ON and time
+            try! NSRegularExpression(pattern: "ON[^\\d]{0,10}(\\d{2})[ \\t]*[:\\-;\\.]?[ \\t]*(\\d{2})"),
+            // Strict: max 10 chars between ON and HH:MM
             try! NSRegularExpression(pattern: "ON[^\\d]{0,10}(\\d{2}:\\d{2})"),
+            // Hour and minute on separate lines after ON
             try! NSRegularExpression(pattern: "ON\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
+            // Fallback: allow up to 30 chars but prefer earlier matches
             try! NSRegularExpression(pattern: "ON.{0,30}?(\\d{2}:\\d{2})"),
             // Relaxed patterns for OCR errors ($ or other chars instead of digits)
-            try! NSRegularExpression(pattern: "ON\\s+([\\$\\d]{1,2}:[\\d]{2})"),
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*([\\$\\d]{1,2}:[\\d]{2})")
+            try! NSRegularExpression(pattern: "ON[ \\t]+([\\$\\d]{1,2}:[\\d]{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}([\\$\\d]{1,2}:[\\d]{2})")
         ]
 
         return extractTimeWithPatterns(onPatterns, from: text, timeType: "ON")
@@ -272,48 +458,83 @@ class TextRecognitionService: ObservableObject {
             try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
             try! NSRegularExpression(pattern: "BLK.{0,30}?(\\d{2}:\\d{2})")
         ]
-        
+
         return extractTimeWithPatterns(blockPatterns, from: text, timeType: "BLOCK")
     }
-    
+
+    private func extractFlightTime(from text: String) -> String {
+        let flightPatterns: [NSRegularExpression] = [
+            try! NSRegularExpression(pattern: "FLT\\s+(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*:\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT[^\\d]{0,10}(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "FLT.{0,30}?(\\d{2}:\\d{2})")
+        ]
+
+        return extractTimeWithPatterns(flightPatterns, from: text, timeType: "FLT")
+    }
+
     private func extractTimeWithPatterns(_ patterns: [NSRegularExpression], from text: String, timeType: String) -> String {
+        // Footer keywords that indicate non-flight times (like print timestamps)
+        let footerKeywords = ["<RETURN", "<PRINT", "SENSORS", "MENU", "EXEC", "INIT", "REF", "FIX", "PREV", "PAGE"]
+
         for (index, pattern) in patterns.enumerated() {
             let matches = pattern.matches(in: text, range: NSRange(text.startIndex..., in: text))
-            if let match = matches.first {
+
+            // Try all matches, not just the first one
+            for match in matches {
                 let extractedTime: String
 
-                switch index {
-                case 0...3, 7, 9, 10...15: // Patterns that capture full HH:MM (including OCR error patterns with $, Ø, O)
-                    let timeRange = Range(match.range(at: 1), in: text)!
-                    extractedTime = String(text[timeRange])
+                // Dynamically determine how to extract based on number of capture groups
+                let numberOfRanges = match.numberOfRanges
 
-                case 4, 5: // Patterns that capture only minutes
-                    let minuteRange = Range(match.range(at: 1), in: text)!
-                    let minutes = String(text[minuteRange])
-                    let hour = findHourForMinutes(minutes, in: text) ?? "00"
-                    extractedTime = "\(hour):\(minutes)"
+                if numberOfRanges == 2 {
+                    // Single capture group - could be full HH:MM or just minutes
+                    guard let timeRange = Range(match.range(at: 1), in: text) else { continue }
+                    let captured = String(text[timeRange])
 
-                case 6: // Pattern that captures separate hour and minute groups
-                    let hourRange = Range(match.range(at: 1), in: text)!
-                    let minuteRange = Range(match.range(at: 2), in: text)!
+                    // Check if it's a full time (contains ':') or just minutes
+                    if captured.contains(":") {
+                        // Full HH:MM format
+                        extractedTime = captured
+                    } else {
+                        // Just minutes - find the hour
+                        let hour = findHourForMinutes(captured, in: text) ?? "00"
+                        extractedTime = "\(hour):\(captured)"
+                    }
+                } else if numberOfRanges == 3 {
+                    // Two capture groups - separate hour and minute
+                    guard let hourRange = Range(match.range(at: 1), in: text),
+                          let minuteRange = Range(match.range(at: 2), in: text) else { continue }
                     let hour = String(text[hourRange])
                     let minute = String(text[minuteRange])
                     extractedTime = "\(hour):\(minute)"
-
-                case 8: // Pattern for hour and minute on separate lines
-                    let hourRange = Range(match.range(at: 1), in: text)!
-                    let minuteRange = Range(match.range(at: 2), in: text)!
-                    let hour = String(text[hourRange])
-                    let minute = String(text[minuteRange])
-                    extractedTime = "\(hour):\(minute)"
-
-                default:
+                } else {
+                    // Unexpected number of capture groups
                     continue
+                }
+
+                // Check if time is near footer keywords (within 30 characters before or after)
+                if let matchRange = Range(match.range, in: text) {
+                    let contextStart = text.index(matchRange.lowerBound, offsetBy: -30, limitedBy: text.startIndex) ?? text.startIndex
+                    let contextEnd = text.index(matchRange.upperBound, offsetBy: 30, limitedBy: text.endIndex) ?? text.endIndex
+                    let context = String(text[contextStart..<contextEnd])
+
+                    if footerKeywords.contains(where: { context.contains($0) }) {
+                        print("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - near footer keyword in context: \(context.replacingOccurrences(of: "\n", with: " "))")
+                        continue  // Try next match
+                    }
                 }
 
                 // Apply smart correction for common OCR errors
                 let correctedTime = smartCorrectTime(extractedTime)
-                print("Found \(timeType) time (pattern \(index)): \(extractedTime)\(correctedTime != extractedTime ? " → corrected to: \(correctedTime)" : "")")
+                let patternDesc = (index == 0 && (timeType == "ON" || timeType == "IN")) ? " [ON/IN special case]" : ""
+                print("Found \(timeType) time (pattern \(index)\(patternDesc)): \(extractedTime)\(correctedTime != extractedTime ? " → corrected to: \(correctedTime)" : "")")
                 return correctedTime
             }
         }
@@ -392,7 +613,112 @@ class TextRecognitionService: ObservableObject {
         }
         return nil
     }
-    
+
+    // MARK: - Time Sequence Validation Helpers
+
+    /// Convert time string (HH:MM) to total minutes for comparison
+    private func timeToMinutes(_ time: String) -> Int? {
+        let components = time.split(separator: ":").compactMap { Int($0) }
+        guard components.count == 2, components[0] >= 0, components[0] < 24, components[1] >= 0, components[1] < 60 else {
+            return nil
+        }
+        return components[0] * 60 + components[1]
+    }
+
+    /// Validate that extracted times follow chronological order: OUT < OFF < ON < IN
+    /// Returns true if sequence is valid or if times are empty
+    private func isValidTimeSequence(out: String, off: String, on: String, in inTime: String) -> Bool {
+        // Convert times to minutes
+        guard let outMin = timeToMinutes(out), !out.isEmpty else { return true }
+        guard let offMin = timeToMinutes(off), !off.isEmpty else { return true }
+        guard let onMin = timeToMinutes(on), !on.isEmpty else { return true }
+        guard let inMin = timeToMinutes(inTime), !inTime.isEmpty else { return true }
+
+        // Check chronological order
+        return outMin < offMin && offMin < onMin && onMin < inMin
+    }
+
+    /// Validate time sequence and log warnings if issues detected
+    private func validateAndCorrectTimeSequence(out: String, off: String, on: String, in inTime: String, fltTime: String = "", blkTime: String = "") {
+        guard !out.isEmpty && !off.isEmpty && !on.isEmpty && !inTime.isEmpty else {
+            print("⚠️ Cannot validate time sequence - some times are missing")
+            return
+        }
+
+        if !isValidTimeSequence(out: out, off: off, on: on, in: inTime) {
+            print("⚠️ TIME SEQUENCE VIOLATION DETECTED!")
+            print("   Expected: OUT < OFF < ON < IN")
+            print("   Found: OUT=\(out), OFF=\(off), ON=\(on), IN=\(inTime)")
+
+            // Log individual violations
+            if let outMin = timeToMinutes(out), let offMin = timeToMinutes(off), outMin >= offMin {
+                print("   ❌ OUT (\(out)) should be before OFF (\(off))")
+            }
+            if let offMin = timeToMinutes(off), let onMin = timeToMinutes(on), offMin >= onMin {
+                print("   ❌ OFF (\(off)) should be before ON (\(on))")
+            }
+            if let onMin = timeToMinutes(on), let inMin = timeToMinutes(inTime), onMin >= inMin {
+                print("   ❌ ON (\(on)) should be before IN (\(inTime))")
+            }
+        } else {
+            print("✅ Time sequence is valid: OUT=\(out) < OFF=\(off) < ON=\(on) < IN=\(inTime)")
+        }
+
+        // Additional validation: Check FLT and BLK times match the extracted values
+        validateFlightAndBlockTimes(out: out, off: off, on: on, in: inTime, fltTime: fltTime, blkTime: blkTime)
+    }
+
+    /// Validate FLT and BLK times against calculated values
+    /// FLT = ON - OFF (flight time), BLK = IN - OUT (block time), BLK > FLT
+    private func validateFlightAndBlockTimes(out: String, off: String, on: String, in inTime: String, fltTime: String, blkTime: String) {
+        guard let outMin = timeToMinutes(out),
+              let offMin = timeToMinutes(off),
+              let onMin = timeToMinutes(on),
+              let inMin = timeToMinutes(inTime) else {
+            return
+        }
+
+        // Calculate expected FLT and BLK times
+        let calculatedFltMinutes = onMin - offMin
+        let calculatedBlkMinutes = inMin - outMin
+
+        let calculatedFlt = minutesToHHMM(calculatedFltMinutes)
+        let calculatedBlk = minutesToHHMM(calculatedBlkMinutes)
+
+        print("📊 Calculated times: FLT=\(calculatedFlt), BLK=\(calculatedBlk)")
+
+        // Validate BLK > FLT (always true, since block includes taxi time)
+        if calculatedBlkMinutes <= calculatedFltMinutes {
+            print("⚠️ BLK time (\(calculatedBlk)) should be greater than FLT time (\(calculatedFlt))")
+        }
+
+        // If we extracted FLT/BLK times, compare them
+        if !fltTime.isEmpty, let extractedFltMin = timeToMinutes(fltTime) {
+            let difference = abs(extractedFltMin - calculatedFltMinutes)
+            if difference > 2 { // Allow 2 minute tolerance for rounding
+                print("⚠️ Extracted FLT time (\(fltTime)) doesn't match calculated (\(calculatedFlt)) - difference: \(difference) min")
+            } else {
+                print("✅ FLT time verified: extracted \(fltTime) ≈ calculated \(calculatedFlt)")
+            }
+        }
+
+        if !blkTime.isEmpty, let extractedBlkMin = timeToMinutes(blkTime) {
+            let difference = abs(extractedBlkMin - calculatedBlkMinutes)
+            if difference > 2 { // Allow 2 minute tolerance for rounding
+                print("⚠️ Extracted BLK time (\(blkTime)) doesn't match calculated (\(calculatedBlk)) - difference: \(difference) min")
+            } else {
+                print("✅ BLK time verified: extracted \(blkTime) ≈ calculated \(calculatedBlk)")
+            }
+        }
+    }
+
+    /// Convert minutes to HH:MM format
+    private func minutesToHHMM(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let mins = minutes % 60
+        return String(format: "%02d:%02d", hours, mins)
+    }
+
     private func extractFlightDetails(from text: String) -> (flightNumber: String, fromAirport: String, toAirport: String, dayOfMonth: String?) {
         let lines = text.components(separatedBy: .newlines)
         
