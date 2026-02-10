@@ -519,14 +519,16 @@ class TextRecognitionService: ObservableObject {
                     continue
                 }
 
-                // Check if time is near footer keywords (within 30 characters before or after)
+                // Check if time appears AFTER footer keywords (not before)
+                // Only skip times that are part of the footer section
                 if let matchRange = Range(match.range, in: text) {
+                    // Check 30 chars BEFORE the time for footer keywords
                     let contextStart = text.index(matchRange.lowerBound, offsetBy: -30, limitedBy: text.startIndex) ?? text.startIndex
-                    let contextEnd = text.index(matchRange.upperBound, offsetBy: 30, limitedBy: text.endIndex) ?? text.endIndex
-                    let context = String(text[contextStart..<contextEnd])
+                    let beforeContext = String(text[contextStart..<matchRange.lowerBound])
 
-                    if footerKeywords.contains(where: { context.contains($0) }) {
-                        print("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - near footer keyword in context: \(context.replacingOccurrences(of: "\n", with: " "))")
+                    // If a footer keyword appears before this time, skip it
+                    if footerKeywords.contains(where: { beforeContext.contains($0) }) {
+                        print("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - appears after footer keyword")
                         continue  // Try next match
                     }
                 }
