@@ -131,20 +131,6 @@ class FRMSViewModel: ObservableObject {
             let now = Date()
             let completedDuties = duties.filter { $0.signOff <= now }
 
-            // Log filtered future duties for today
-            let futureDuties = duties.filter { $0.signOff > now }
-            let todayStart = Calendar.current.startOfDay(for: Date())
-            let tomorrowStart = Calendar.current.date(byAdding: .day, value: 1, to: todayStart) ?? Date()
-            let todaysFutureDuties = futureDuties.filter { $0.date >= todayStart && $0.date < tomorrowStart }
-            if !todaysFutureDuties.isEmpty {
-                let timeFormatter = DateFormatter()
-                timeFormatter.dateFormat = "HHmm"
-                LogManager.shared.debug("FRMSViewModel: Filtered out \(todaysFutureDuties.count) future duties for today (signOff > now):")
-                for duty in todaysFutureDuties {
-                    LogManager.shared.debug("  Future duty: \(duty.sectors) sectors, SignOff=\(timeFormatter.string(from: duty.signOff))")
-                }
-            }
-
             // Filter to last 365 days for FRMS calculations (longest lookback period)
             let calendar = Calendar.current
             let cutoffDate = calendar.date(byAdding: .day, value: -365, to: Date()) ?? Date()
@@ -227,20 +213,6 @@ class FRMSViewModel: ObservableObject {
         // Use sign-off time to determine if a duty is complete
         let now = Date()
         let completedDuties = duties.filter { $0.signOff <= now }
-
-        // Log filtered future duties for today
-        let futureDuties = duties.filter { $0.signOff > now }
-        let todayStart = Calendar.current.startOfDay(for: Date())
-        let tomorrowStart = Calendar.current.date(byAdding: .day, value: 1, to: todayStart) ?? Date()
-        let todaysFutureDuties = futureDuties.filter { $0.date >= todayStart && $0.date < tomorrowStart }
-        if !todaysFutureDuties.isEmpty {
-            let timeFormatter = DateFormatter()
-            timeFormatter.dateFormat = "HHmm"
-            LogManager.shared.debug("FRMSViewModel: Filtered out \(todaysFutureDuties.count) future duties for today (signOff > now):")
-            for duty in todaysFutureDuties {
-                LogManager.shared.debug("  Future duty: \(duty.sectors) sectors, SignOff=\(timeFormatter.string(from: duty.signOff))")
-            }
-        }
 
         // Filter to last 365 days for FRMS calculations (longest lookback period)
         let calendar = Calendar.current
@@ -439,16 +411,7 @@ class FRMSViewModel: ObservableObject {
 
         // Convert to DailyDutySummary and sort by date (newest first)
         let summaries = grouped.map { date, dutiesForDay in
-            let summary = DailyDutySummary(date: date, duties: dutiesForDay)
-
-            // Only log last 3 days
-            let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()
-            if date >= threeDaysAgo {
-                let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "dd/MM/yyyy"
-                LogManager.shared.debug("FRMSViewModel: Date \(dateFormatter.string(from: date)): \(dutiesForDay.count) duties, \(summary.totalSectors) total sectors")
-            }
-            return summary
+            DailyDutySummary(date: date, duties: dutiesForDay)
         }.sorted { $0.date > $1.date }
 
         return summaries
@@ -459,30 +422,6 @@ class FRMSViewModel: ObservableObject {
     /// Group individual FlightSectors into consolidated duty periods
     /// Multiple sectors that occur within the same duty period are combined into a single FRMSDuty
     private func groupFlightsIntoDuties(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
-        // Filter to last 3 days for logging purposes
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-        let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()
-        let recentFlights = flights.filter {
-            guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
-            return flightDate >= threeDaysAgo
-        }
-
-        LogManager.shared.debug("FRMSViewModel: Processing \(flights.count) total flights (\(recentFlights.count) in last 3 days)")
-
-        // Log ALL flights for today (to debug the issue)
-        let today = Calendar.current.startOfDay(for: Date())
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        let todayString = dateFormatter.string(from: today)
-        let todaysFlights = flights.filter { $0.date == todayString }
-        if !todaysFlights.isEmpty {
-            LogManager.shared.debug("  ALL flights on \(todayString): \(todaysFlights.count) flights")
-            for flight in todaysFlights {
-                LogManager.shared.debug("    \(flight.flightNumber): OUT=\(flight.outTime), IN=\(flight.inTime), blockTime=\(flight.blockTime)")
-            }
-        }
-
         // First, convert each flight to a temporary duty structure so we have proper DateTimes
         // This allows us to sort chronologically regardless of UTC date boundaries
         var individualFlightDuties: [(flight: FlightSector, duty: FRMSDuty)] = []
@@ -496,8 +435,6 @@ class FRMSViewModel: ObservableObject {
 
         // Sort by actual sign-on time (not UTC date string)
         individualFlightDuties.sort { $0.duty.signOn < $1.duty.signOn }
-
-        LogManager.shared.debug("FRMSViewModel: Created \(individualFlightDuties.count) individual flight duties")
 
         // Now determine which duties are the first of each LOCAL day
         // Use home base timezone to determine local date
@@ -517,21 +454,11 @@ class FRMSViewModel: ObservableObject {
                 // Recreate duty with correct isFirstOfDay flag
                 if let correctedDuty = calculationService.createDuty(from: flightDuty.flight, crewPosition: crewPosition, isFirstFlightOfDay: true) {
                     correctedDuties.append((flight: flightDuty.flight, duty: correctedDuty))
-
-                    // Only log flights from last 3 days
-                    if recentFlights.contains(where: { $0.flightNumber == flightDuty.flight.flightNumber && $0.date == flightDuty.flight.date }) {
-                        LogManager.shared.debug("  Flight: \(flightDuty.flight.flightNumber) on \(flightDuty.flight.date) - OUT: \(flightDuty.flight.outTime), IN: \(flightDuty.flight.inTime) [FIRST OF DAY]")
-                    }
                 } else {
                     correctedDuties.append(flightDuty)
                 }
             } else {
                 correctedDuties.append(flightDuty)
-
-                // Only log flights from last 3 days
-                if recentFlights.contains(where: { $0.flightNumber == flightDuty.flight.flightNumber && $0.date == flightDuty.flight.date }) {
-                    LogManager.shared.debug("  Flight: \(flightDuty.flight.flightNumber) on \(flightDuty.flight.date) - OUT: \(flightDuty.flight.outTime), IN: \(flightDuty.flight.inTime)")
-                }
             }
         }
 
@@ -587,17 +514,6 @@ class FRMSViewModel: ObservableObject {
             if let consolidatedDuty = createConsolidatedDuty(from: currentDutyFlights, calculationService: calculationService) {
                 consolidatedDuties.append(consolidatedDuty)
             }
-        }
-
-        // Filter to last 3 days for logging (reuse threeDaysAgo from top of function)
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-        let recentDuties = consolidatedDuties.filter { $0.date >= threeDaysAgo && $0.date < tomorrow }
-
-        LogManager.shared.debug("FRMSViewModel: Created \(consolidatedDuties.count) consolidated duties (\(recentDuties.count) in last 3 days)")
-        for duty in recentDuties {
-            let dutyDateFormatter = DateFormatter()
-            dutyDateFormatter.dateFormat = "dd/MM/yyyy HHmm"
-            LogManager.shared.debug("  Duty: Date=\(dutyDateFormatter.string(from: duty.date)), Sectors=\(duty.sectors), SignOn=\(dutyDateFormatter.string(from: duty.signOn)), SignOff=\(dutyDateFormatter.string(from: duty.signOff))")
         }
 
         // Sort by date (newest first for display)
