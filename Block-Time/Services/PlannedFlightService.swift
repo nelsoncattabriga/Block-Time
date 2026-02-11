@@ -63,7 +63,7 @@ class PlannedFlightService {
         var errors = 0
         var results: [ImportedFlight] = []
 
-        print("Starting import of \(parsedFlights.count) parsed flights")
+        LogManager.shared.debug("Starting import of \(parsedFlights.count) parsed flights")
 
         // Enable batch import mode to debounce notifications during import
         databaseService.startBatchImport()
@@ -76,13 +76,13 @@ class PlannedFlightService {
             dateFormatter.dateFormat = "dd/MM/yyyy"
             let dateString = dateFormatter.string(from: parsedFlight.date)
 
-            print("\n✈️  Processing: \(parsedFlight.flightNumber) on \(dateString) (\(parsedFlight.departureAirport)-\(parsedFlight.arrivalAirport))")
+            LogManager.shared.debug("\n✈️  Processing: \(parsedFlight.flightNumber) on \(dateString) (\(parsedFlight.departureAirport)-\(parsedFlight.arrivalAirport))")
 
             // Check if this flight already exists (query for each flight individually)
             let existingFlights = try await findExistingFlights(for: [parsedFlight])
 
             if isDuplicate(parsedFlight, in: existingFlights) {
-                print("    DUPLICATE - skipping")
+                LogManager.shared.debug("    DUPLICATE - skipping")
                 duplicates += 1
                 results.append(ImportedFlight(
                     flight: parsedFlight,
@@ -95,7 +95,7 @@ class PlannedFlightService {
             // Import the flight
             do {
                 try await createFlight(from: parsedFlight)
-                print("   IMPORTED successfully")
+                            LogManager.shared.debug("   IMPORTED successfully")
                 imported += 1
                 results.append(ImportedFlight(
                     flight: parsedFlight,
@@ -103,7 +103,7 @@ class PlannedFlightService {
                     error: nil
                 ))
             } catch {
-                print("   ERROR: \(error.localizedDescription)")
+                    LogManager.shared.debug("   ERROR: \(error.localizedDescription)")
                 errors += 1
                 results.append(ImportedFlight(
                     flight: parsedFlight,
@@ -113,10 +113,10 @@ class PlannedFlightService {
             }
         }
 
-        print("\n📈 Import Summary:")
-        print("   Imported: \(imported)")
-        print("    Duplicates: \(duplicates)")
-        print("   Errors: \(errors)")
+                    LogManager.shared.debug("\n📈 Import Summary:")
+                    LogManager.shared.debug("   Imported: \(imported)")
+                    LogManager.shared.debug("    Duplicates: \(duplicates)")
+                    LogManager.shared.debug("   Errors: \(errors)")
 
         return ImportResult(
             imported: imported,
@@ -242,9 +242,9 @@ class PlannedFlightService {
             airportICAO: departureICAO
         )
 
-        print("   Date conversion for duplicate check:")
-        print("      Local date: \(localDateString) \(localOutTime)")
-        print("      UTC date string: \(utcDateString)")
+                    LogManager.shared.debug("   Date conversion for duplicate check:")
+                    LogManager.shared.debug("      Local date: \(localDateString) \(localOutTime)")
+                    LogManager.shared.debug("      UTC date string: \(utcDateString)")
 
         let utcDateFormatter = DateFormatter()
         utcDateFormatter.dateFormat = "dd/MM/yyyy"
@@ -261,13 +261,13 @@ class PlannedFlightService {
             debugFormatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
             debugFormatter.timeZone = TimeZone(secondsFromGMT: 0)
 
-            print("   Comparing with existing flight:")
-            print("      Parsed UTC date: \(debugFormatter.string(from: utcDate))")
+                        LogManager.shared.debug("   Comparing with existing flight:")
+                        LogManager.shared.debug("      Parsed UTC date: \(debugFormatter.string(from: utcDate))")
             if let existingDate = existing.date {
-                print("      Existing UTC date: \(debugFormatter.string(from: existingDate))")
+                            LogManager.shared.debug("      Existing UTC date: \(debugFormatter.string(from: existingDate))")
             }
-            print("      Flight numbers: \(parsedFlight.flightNumber) vs \(existing.flightNumber ?? "nil")")
-            print("      Routes: \(departureICAO)-\(arrivalICAO) vs \(existing.fromAirport ?? "nil")-\(existing.toAirport ?? "nil")")
+                        LogManager.shared.debug("      Flight numbers: \(parsedFlight.flightNumber) vs \(existing.flightNumber ?? "nil")")
+                        LogManager.shared.debug("      Routes: \(departureICAO)-\(arrivalICAO) vs \(existing.fromAirport ?? "nil")-\(existing.toAirport ?? "nil")")
 
             // Match on UTC date, flight number, and ICAO airport codes
             // Normalize flight numbers for comparison (remove "QF" prefix if present)
@@ -278,7 +278,7 @@ class PlannedFlightService {
                existingFlightNum == parsedFlightNum &&
                existing.fromAirport == departureICAO &&
                existing.toAirport == arrivalICAO {
-                print("      ✓ MATCH FOUND - this is a duplicate!")
+                            LogManager.shared.debug("      ✓ MATCH FOUND - this is a duplicate!")
                 return true
             }
         }
@@ -319,7 +319,7 @@ class PlannedFlightService {
             localTimeString: localOutTime,
             airportICAO: departureICAO
         )
-        print("   ⏰ STD conversion: Local '\(localOutTime)' -> UTC '\(utcOutTime)'")
+                    LogManager.shared.debug("   ⏰ STD conversion: Local '\(localOutTime)' -> UTC '\(utcOutTime)'")
 
         // For arrival time, we need to calculate the local arrival date first
         // (it might be next day if flight crosses midnight)
@@ -341,7 +341,7 @@ class PlannedFlightService {
             localTimeString: localInTime,
             airportICAO: arrivalICAO
         )
-        print("   ⏰ STA conversion: Local '\(localInTime)' -> UTC '\(utcInTime)'")
+                    LogManager.shared.debug("   ⏰ STA conversion: Local '\(localInTime)' -> UTC '\(utcInTime)'")
 
         // Convert departure date from local to UTC
         let utcDateString = airportService.convertFromLocalToUTCDate(
@@ -358,7 +358,7 @@ class PlannedFlightService {
         utcDateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
         let utcDate = utcDateFormatter.date(from: utcDateString) ?? parsedFlight.date
 
-        print("   Date conversion: Local '\(localDateString)' -> UTC '\(utcDateString)'")
+                    LogManager.shared.debug("   Date conversion: Local '\(localDateString)' -> UTC '\(utcDateString)'")
 
         // Format flight number with airline prefix if setting is enabled (before entering closure)
         let formattedFlightNumber = formatFlightNumber(parsedFlight.flightNumber)
@@ -520,7 +520,7 @@ class PlannedFlightService {
         do {
             return try databaseService.viewContext.fetch(request)
         } catch {
-            print("Error fetching future flights: \(error.localizedDescription)")
+                        LogManager.shared.debug("Error fetching future flights: \(error.localizedDescription)")
             return []
         }
     }
@@ -556,7 +556,7 @@ class PlannedFlightService {
         do {
             return try databaseService.viewContext.count(for: request)
         } catch {
-            print("Error counting future flights: \(error.localizedDescription)")
+                        LogManager.shared.debug("Error counting future flights: \(error.localizedDescription)")
             return 0
         }
     }

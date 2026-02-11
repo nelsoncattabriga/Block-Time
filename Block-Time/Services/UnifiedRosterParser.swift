@@ -97,13 +97,13 @@ class UnifiedRosterService {
 
         // Try SH parser
         if SHRosterParser.canParse(content: content) {
-            print("Detected Short Haul roster")
+            LogManager.shared.debug("Detected Short Haul roster")
             return try SHRosterParser.parseRoster(from: content)
         }
 
         // Try LH parser
         if LHRosterParser.canParse(content: content) {
-            print("Detected Long Haul roster")
+                        LogManager.shared.debug("Detected Long Haul roster")
             return try LHRosterParser.parseRoster(from: content)
         }
 

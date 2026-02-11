@@ -96,7 +96,7 @@ struct AircraftRegPickerSheet: View {
         let result = Dictionary(uniqueKeysWithValues:
             selectedFleet.aircraft.map { ($0.id, $0.displayRegistration(showFullReg: showFullReg)) }
         )
-        print("Generated displayedRegs for \(selectedFleet.aircraft.count) aircraft: \(result)")
+        LogManager.shared.debug("Generated displayedRegs for \(selectedFleet.aircraft.count) aircraft: \(result)")
         return result
     }
 
@@ -304,10 +304,10 @@ struct AircraftRegPickerSheet: View {
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     HapticManager.shared.impact(.light)
-                                    print("Tapped aircraft: \(aircraft.registration), displayReg: \(displayReg)")
+                                            LogManager.shared.debug("Tapped aircraft: \(aircraft.registration), displayReg: \(displayReg)")
                                     selectedReg = displayReg
                                     selectedType = aircraft.type
-                                    print("Updated selectedReg: \(selectedReg), selectedType: \(selectedType)")
+                                            LogManager.shared.debug("Updated selectedReg: \(selectedReg), selectedType: \(selectedType)")
                                     onDismiss()
                                 }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -493,7 +493,7 @@ private struct AddAircraftSheet: View {
             HapticManager.shared.impact(.medium)
 //            print("Aircraft added and saved: \(trimmedReg) - \(trimmedType)")
         } else {
-            print("Failed to save aircraft")
+                    LogManager.shared.debug("Failed to save aircraft")
         }
 
         onDismiss()

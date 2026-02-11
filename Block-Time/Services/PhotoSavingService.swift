@@ -107,11 +107,11 @@ class PhotoSavingService: ObservableObject {
                 PHAssetChangeRequest.creationRequestForAsset(from: image)
             }) { success, error in
                 if success {
-                    print("Photo saved successfully to photo library")
+                    LogManager.shared.debug("Photo saved successfully to photo library")
                     continuation.resume(returning: .success(()))
                 } else {
                     let errorMessage = error?.localizedDescription ?? "Unknown error"
-                    print("Failed to save photo: \(errorMessage)")
+                    LogManager.shared.debug("Failed to save photo: \(errorMessage)")
                     continuation.resume(returning: .failure(.savingFailed(errorMessage)))
                 }
             }
@@ -160,11 +160,11 @@ class PhotoSavingService: ObservableObject {
                 }
             }) { success, error in
                 if success {
-                    print("Photo with metadata saved successfully")
+                                        LogManager.shared.debug("Photo with metadata saved successfully")
                     continuation.resume(returning: .success(()))
                 } else {
                     let errorMessage = error?.localizedDescription ?? "Unknown error"
-                    print("Failed to save photo with metadata: \(errorMessage)")
+                                        LogManager.shared.debug("Failed to save photo with metadata: \(errorMessage)")
                     continuation.resume(returning: .failure(.savingFailed(errorMessage)))
                 }
             }

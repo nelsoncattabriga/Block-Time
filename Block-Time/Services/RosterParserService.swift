@@ -118,7 +118,7 @@ class RosterParserService {
                         let yearDigitsStr = String(yearStr.suffix(2))
                         if let yearDigits = Int(yearDigitsStr) {
                             year = 2000 + yearDigits
-                            print("Detected year from header: 20\(yearDigitsStr) = \(year)")
+                                            LogManager.shared.debug("Detected year from header: 20\(yearDigitsStr) = \(year)")
                         }
                     }
                 }
@@ -128,7 +128,7 @@ class RosterParserService {
                 let pattern = #"Bid Period (\d{4})"#
                 if let match = line.range(of: pattern, options: .regularExpression) {
                     bidPeriod = String(line[match]).replacingOccurrences(of: "Bid Period ", with: "")
-                    print("📋 Detected bid period: \(bidPeriod)")
+                                    LogManager.shared.debug("📋 Detected bid period: \(bidPeriod)")
                 }
             }
 
@@ -184,16 +184,16 @@ class RosterParserService {
         var currentRole = "Captain"  // Default role
         var currentDutyCode: String?
 
-        print("Starting flight extraction from \(lines.count) lines")
+                        LogManager.shared.debug("Starting flight extraction from \(lines.count) lines")
 
         for (index, line) in lines.enumerated() {
             // Detect role from section headers
             if line.contains("1-CPT") {
                 currentRole = "Captain"
-                print("👨‍✈️ Role detected: Captain (line \(index))")
+                                LogManager.shared.debug("👨‍✈️ Role detected: Captain (line \(index))")
             } else if line.contains("1-F/O") {
                 currentRole = "First Officer"
-                print("👨‍✈️ Role detected: First Officer (line \(index))")
+                                LogManager.shared.debug("👨‍✈️ Role detected: First Officer (line \(index))")
             }
 
             // Extract duty code from reason lines (e.g., "5017A2 DATED 06Oct25")
@@ -202,7 +202,7 @@ class RosterParserService {
                 if let match = line.range(of: pattern, options: .regularExpression) {
                     let matched = String(line[match])
                     currentDutyCode = matched.replacingOccurrences(of: " DATED", with: "").trimmingCharacters(in: .whitespaces)
-                    print("📋 Duty code detected: \(currentDutyCode ?? "nil") (line \(index))")
+                                    LogManager.shared.debug("📋 Duty code detected: \(currentDutyCode ?? "nil") (line \(index))")
                 }
             }
 
@@ -214,15 +214,15 @@ class RosterParserService {
             let pattern = #"^(\d{2}\w{3})\s+(P)?\s*(\d{3,4})\s+([A-Z]{3})\s+(\d{4})\s+([A-Z]{3})\s+(\d{4})\s+([A-Z0-9]{3})"#
 
             if let match = line.range(of: pattern, options: .regularExpression) {
-                print("✈️  Line \(index): \(line.trimmingCharacters(in: .whitespaces))")
+                LogManager.shared.debug("✈️  Line \(index): \(line.trimmingCharacters(in: .whitespaces))")
 
                 let matched = String(line[match])
                 let components = matched.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
 
-                print("   Components: \(components)")
+                LogManager.shared.debug("   Components: \(components)")
 
                 guard components.count >= 7 else {
-                    print("    Not enough components (need 7+, got \(components.count))")
+                    LogManager.shared.debug("    Not enough components (need 7+, got \(components.count))")
                     continue
                 }
 
@@ -239,12 +239,12 @@ class RosterParserService {
                 let arrivalTime = components[flightIndex + 4]
                 let equipmentCode = components[flightIndex + 5]
 
-                print("   Date: \(dateString)")
-                print("   ✈️  Flight: \(flightNumber)")
-                print("   🛫 From: \(departureAirport) at \(departureTime)")
-                print("   🛬 To: \(arrivalAirport) at \(arrivalTime)")
-                print("   🛩️  Aircraft: \(equipmentCode)")
-                print("   🅿️  Positioning: \(isPositioning)")
+                LogManager.shared.debug("   Date: \(dateString)")
+                LogManager.shared.debug("   ✈️  Flight: \(flightNumber)")
+                LogManager.shared.debug("   🛫 From: \(departureAirport) at \(departureTime)")
+                LogManager.shared.debug("   🛬 To: \(arrivalAirport) at \(arrivalTime)")
+                LogManager.shared.debug("   🛩️  Aircraft: \(equipmentCode)")
+                LogManager.shared.debug("   🅿️  Positioning: \(isPositioning)")
 
                 // Convert date string to Date
                 if let date = convertDate(dateString, year: pilotInfo.year) {
@@ -266,14 +266,14 @@ class RosterParserService {
                     )
 
                     flights.append(flight)
-                    print("   Flight added! Total flights: \(flights.count)")
+                                    LogManager.shared.debug("   Flight added! Total flights: \(flights.count)")
                 } else {
-                    print("   Failed to convert date: \(dateString)")
+                                    LogManager.shared.debug("   Failed to convert date: \(dateString)")
                 }
             }
         }
 
-        print("🎯 Total flights extracted: \(flights.count)")
+                        LogManager.shared.debug("🎯 Total flights extracted: \(flights.count)")
         return flights
     }
 

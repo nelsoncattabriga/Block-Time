@@ -1301,7 +1301,7 @@ class FlightDatabaseService: ObservableObject {
             var duplicatesRemoved = 0
 
             for (signature, flights) in flightsBySignature where flights.count > 1 {
-                print("Found \(flights.count) duplicates for: \(signature)")
+                LogManager.shared.debug("Found \(flights.count) duplicates for: \(signature)")
 
                 // Sort by createdAt to keep the oldest one
                 let sortedFlights = flights.sorted { flight1, flight2 in
@@ -1316,10 +1316,10 @@ class FlightDatabaseService: ObservableObject {
                 let toKeep = sortedFlights.first!
                 let toDelete = sortedFlights.dropFirst()
 
-                print("   ✓ Keeping flight created at: \(toKeep.createdAt ?? Date()) (UUID: \(toKeep.id?.uuidString ?? "unknown"))")
+                                LogManager.shared.debug("   ✓ Keeping flight created at: \(toKeep.createdAt ?? Date()) (UUID: \(toKeep.id?.uuidString ?? "unknown"))")
 
                 for duplicate in toDelete {
-                    print("   Deleting duplicate created at: \(duplicate.createdAt ?? Date()) (UUID: \(duplicate.id?.uuidString ?? "unknown"))")
+                                    LogManager.shared.debug("   Deleting duplicate created at: \(duplicate.createdAt ?? Date()) (UUID: \(duplicate.id?.uuidString ?? "unknown"))")
                     viewContext.delete(duplicate)
                     duplicatesRemoved += 1
                 }
@@ -2199,9 +2199,9 @@ class FlightDatabaseService: ObservableObject {
 
                 // Log each individual error
                 let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: itemError)
-                print("   Record: \(recordIDString)")
-                print("      Error: \(errorInfo.message)")
-                print("      Details: \(errorInfo.suggestion)")
+                                LogManager.shared.debug("   Record: \(recordIDString)")
+                                LogManager.shared.debug("      Error: \(errorInfo.message)")
+                                LogManager.shared.debug("      Details: \(errorInfo.suggestion)")
             }
         }
         // Approach 2: Check for NSError with partial errors in different formats
@@ -2213,9 +2213,9 @@ class FlightDatabaseService: ObservableObject {
                 individualErrors.append((recordID: recordIDString, error: itemError))
 
                 let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: itemError)
-                print("   Record: \(recordIDString)")
-                print("      Error: \(errorInfo.message)")
-                print("      Details: \(errorInfo.suggestion)")
+                                LogManager.shared.debug("   Record: \(recordIDString)")
+                                LogManager.shared.debug("      Error: \(errorInfo.message)")
+                                LogManager.shared.debug("      Details: \(errorInfo.suggestion)")
             }
         }
         // Approach 3: Check for underlying errors
@@ -2242,7 +2242,7 @@ class FlightDatabaseService: ObservableObject {
 
         // Debug separator
         LogManager.shared.debug("CloudKit: Extraction complete - Found \(individualErrors.count) individual errors")
-        print("═══════════════════════════════════════════════════════\n")
+                        LogManager.shared.debug("═══════════════════════════════════════════════════════\n")
 
         return DetailedSyncError(
             timestamp: Date(),
@@ -2518,7 +2518,7 @@ class FlightDatabaseService: ObservableObject {
 
     /// Clear simulated errors and restore normal state
     func clearSimulatedErrors() {
-        print("🧪 Clearing simulated errors")
+                        LogManager.shared.debug("🧪 Clearing simulated errors")
 
         DispatchQueue.main.async {
             self.lastSyncError = nil

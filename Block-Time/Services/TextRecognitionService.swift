@@ -134,11 +134,11 @@ class TextRecognitionService: ObservableObject {
             recognizedText += topCandidate.string + "\n"
         }
 
-        print("Recognized text: \(recognizedText)")
+        LogManager.shared.debug("Recognized text: \(recognizedText)")
 
         // Try columnar ACARS extraction first (where labels and values are in separate sections)
         if let columnarTimes = extractTimesFromColumnarLayout(from: recognizedText) {
-            print("✓ Using columnar ACARS layout extraction")
+        LogManager.shared.debug("✓ Using columnar ACARS layout extraction")
             let flightDetails = extractFlightDetails(from: recognizedText)
 
             // Validate time sequence and cross-check with FLT/BLK times
@@ -169,7 +169,7 @@ class TextRecognitionService: ObservableObject {
         }
 
         // Fall back to standard pattern-based extraction
-        print("✓ Using standard pattern-based extraction")
+                LogManager.shared.debug("✓ Using standard pattern-based extraction")
         let outTime = extractOutTime(from: recognizedText)
         let inTime = extractInTime(from: recognizedText)
         let offTime = extractOffTime(from: recognizedText)
@@ -206,7 +206,7 @@ class TextRecognitionService: ObservableObject {
 
         // If we have missing critical fields, throw error but it will be caught with partial data
         if !missingFields.isEmpty {
-            print("Partial extraction - missing: \(missingFields.joined(separator: ", "))")
+                    LogManager.shared.debug("Partial extraction - missing: \(missingFields.joined(separator: ", "))")
             throw PartialExtractionError(message: "Could not extract: \(missingFields.joined(separator: ", ")). Please verify and fill in missing fields.", partialData: flightData)
         }
 
@@ -241,7 +241,7 @@ class TextRecognitionService: ObservableObject {
 
             if line1 == "OUT" && line2 == "OFF" && line3 == "ON" && line4 == "IN" {
                 labelStartIndex = i
-                print("Found columnar ACARS layout starting at line \(i)")
+                        LogManager.shared.debug("Found columnar ACARS layout starting at line \(i)")
                 break
             }
         }
@@ -295,10 +295,10 @@ class TextRecognitionService: ObservableObject {
                 if let captureAs = captureNextTimeAs {
                     if captureAs == "FLT" {
                         fltTime = correctedTime
-                        print("  Captured FLT time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
+                                LogManager.shared.debug("  Captured FLT time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
                     } else if captureAs == "BLK" {
                         blkTime = correctedTime
-                        print("  Captured BLK time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
+                                LogManager.shared.debug("  Captured BLK time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
                     }
                     captureNextTimeAs = nil
                     searchIndex += 1
@@ -312,7 +312,7 @@ class TextRecognitionService: ObservableObject {
                 // Map to field names for logging
                 let fieldNames = ["OUT", "OFF", "ON", "IN"]
                 let fieldName = extractedTimes.count <= fieldNames.count ? fieldNames[extractedTimes.count - 1] : "?"
-                print("  Columnar \(fieldName) time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
+                        LogManager.shared.debug("  Columnar \(fieldName) time at line \(searchIndex): \(rawTime)\(rawTime != correctedTime ? " → \(correctedTime)" : "")")
             }
 
             searchIndex += 1
@@ -320,7 +320,7 @@ class TextRecognitionService: ObservableObject {
 
         // Need exactly 4 times
         guard extractedTimes.count == 4 else {
-            print("⚠️ Columnar layout detected but found \(extractedTimes.count) times (expected 4)")
+                    LogManager.shared.debug("⚠️ Columnar layout detected but found \(extractedTimes.count) times (expected 4)")
             return nil
         }
 
@@ -528,7 +528,7 @@ class TextRecognitionService: ObservableObject {
 
                     // If a footer keyword appears before this time, skip it
                     if footerKeywords.contains(where: { beforeContext.contains($0) }) {
-                        print("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - appears after footer keyword")
+                                LogManager.shared.debug("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - appears after footer keyword")
                         continue  // Try next match
                     }
                 }
@@ -536,7 +536,7 @@ class TextRecognitionService: ObservableObject {
                 // Apply smart correction for common OCR errors
                 let correctedTime = smartCorrectTime(extractedTime)
                 let patternDesc = (index == 0 && (timeType == "ON" || timeType == "IN")) ? " [ON/IN special case]" : ""
-                print("Found \(timeType) time (pattern \(index)\(patternDesc)): \(extractedTime)\(correctedTime != extractedTime ? " → corrected to: \(correctedTime)" : "")")
+                        LogManager.shared.debug("Found \(timeType) time (pattern \(index)\(patternDesc)): \(extractedTime)\(correctedTime != extractedTime ? " → corrected to: \(correctedTime)" : "")")
                 return correctedTime
             }
         }
@@ -656,7 +656,7 @@ class TextRecognitionService: ObservableObject {
     /// Handles midnight crossings by checking if times appear to cross into the next day
     private func validateAndCorrectTimeSequence(out: String, off: String, on: String, in inTime: String, fltTime: String = "", blkTime: String = "") {
         guard !out.isEmpty && !off.isEmpty && !on.isEmpty && !inTime.isEmpty else {
-            print("⚠️ Cannot validate time sequence - some times are missing")
+                    LogManager.shared.debug("⚠️ Cannot validate time sequence - some times are missing")
             return
         }
 
@@ -674,19 +674,19 @@ class TextRecognitionService: ObservableObject {
         }
 
         if midnightCrossing {
-            print("🌙 Midnight crossing detected (flight departed late evening, landed early morning)")
+                    LogManager.shared.debug("🌙 Midnight crossing detected (flight departed late evening, landed early morning)")
         }
 
         if !isValidTimeSequence(out: out, off: off, on: on, in: inTime) {
-            print("⚠️ TIME SEQUENCE VIOLATION DETECTED!")
-            print("   Expected: OUT < OFF < ON < IN")
-            print("   Found: OUT=\(out), OFF=\(off), ON=\(on), IN=\(inTime)")
-            print("   This might indicate an OCR error or data issue")
+                    LogManager.shared.debug("⚠️ TIME SEQUENCE VIOLATION DETECTED!")
+                    LogManager.shared.debug("   Expected: OUT < OFF < ON < IN")
+                    LogManager.shared.debug("   Found: OUT=\(out), OFF=\(off), ON=\(on), IN=\(inTime)")
+                    LogManager.shared.debug("   This might indicate an OCR error or data issue")
         } else {
             if midnightCrossing {
-                print("✅ Time sequence is valid (with midnight crossing): OUT=\(out), OFF=\(off), ON=\(on) [next day], IN=\(inTime) [next day]")
+                        LogManager.shared.debug("✅ Time sequence is valid (with midnight crossing): OUT=\(out), OFF=\(off), ON=\(on) [next day], IN=\(inTime) [next day]")
             } else {
-                print("✅ Time sequence is valid: OUT=\(out) < OFF=\(off) < ON=\(on) < IN=\(inTime)")
+                        LogManager.shared.debug("✅ Time sequence is valid: OUT=\(out) < OFF=\(off) < ON=\(on) < IN=\(inTime)")
             }
         }
 
@@ -708,13 +708,13 @@ class TextRecognitionService: ObservableObject {
         // Handle midnight crossing for ON time: if ON < OFF, assume ON is on the next day
         if onMin < offMin {
             onMin += 1440  // Add 24 hours
-            print("🕐 Detected midnight crossing: ON time adjusted from \(on) to next day (\(onMin) minutes)")
+                    LogManager.shared.debug("🕐 Detected midnight crossing: ON time adjusted from \(on) to next day (\(onMin) minutes)")
         }
 
         // Handle midnight crossing for IN time: if IN < OUT or IN < ON (adjusted), assume IN is on the next day
         if inMin < outMin || inMin < onMin {
             inMin += 1440  // Add 24 hours
-            print("🕐 Detected midnight crossing: IN time adjusted from \(inTime) to next day (\(inMin) minutes)")
+                    LogManager.shared.debug("🕐 Detected midnight crossing: IN time adjusted from \(inTime) to next day (\(inMin) minutes)")
         }
 
         // Calculate expected FLT and BLK times with adjusted values
@@ -724,29 +724,29 @@ class TextRecognitionService: ObservableObject {
         let calculatedFlt = minutesToHHMM(calculatedFltMinutes)
         let calculatedBlk = minutesToHHMM(calculatedBlkMinutes)
 
-        print("📊 Calculated times: FLT=\(calculatedFlt), BLK=\(calculatedBlk)")
+                LogManager.shared.debug("📊 Calculated times: FLT=\(calculatedFlt), BLK=\(calculatedBlk)")
 
         // Validate BLK > FLT (always true, since block includes taxi time)
         if calculatedBlkMinutes <= calculatedFltMinutes {
-            print("⚠️ BLK time (\(calculatedBlk)) should be greater than FLT time (\(calculatedFlt))")
+                    LogManager.shared.debug("⚠️ BLK time (\(calculatedBlk)) should be greater than FLT time (\(calculatedFlt))")
         }
 
         // If we extracted FLT/BLK times, compare them
         if !fltTime.isEmpty, let extractedFltMin = timeToMinutes(fltTime) {
             let difference = abs(extractedFltMin - calculatedFltMinutes)
             if difference > 2 { // Allow 2 minute tolerance for rounding
-                print("⚠️ Extracted FLT time (\(fltTime)) doesn't match calculated (\(calculatedFlt)) - difference: \(difference) min")
+                        LogManager.shared.debug("⚠️ Extracted FLT time (\(fltTime)) doesn't match calculated (\(calculatedFlt)) - difference: \(difference) min")
             } else {
-                print("✅ FLT time verified: extracted \(fltTime) ≈ calculated \(calculatedFlt)")
+                        LogManager.shared.debug("✅ FLT time verified: extracted \(fltTime) ≈ calculated \(calculatedFlt)")
             }
         }
 
         if !blkTime.isEmpty, let extractedBlkMin = timeToMinutes(blkTime) {
             let difference = abs(extractedBlkMin - calculatedBlkMinutes)
             if difference > 2 { // Allow 2 minute tolerance for rounding
-                print("⚠️ Extracted BLK time (\(blkTime)) doesn't match calculated (\(calculatedBlk)) - difference: \(difference) min")
+                        LogManager.shared.debug("⚠️ Extracted BLK time (\(blkTime)) doesn't match calculated (\(calculatedBlk)) - difference: \(difference) min")
             } else {
-                print("✅ BLK time verified: extracted \(blkTime) ≈ calculated \(calculatedBlk)")
+                        LogManager.shared.debug("✅ BLK time verified: extracted \(blkTime) ≈ calculated \(calculatedBlk)")
             }
         }
     }
@@ -789,11 +789,11 @@ class TextRecognitionService: ObservableObject {
         // This handles cases like Ø (scandinavian O), special chars, etc.
         let flightNumberPatternVeryRelaxed = try! NSRegularExpression(pattern: "QFA([^\\s/]{4})/(\\d{2})")
 
-        print("Searching for flight number in \(lines.count) lines...")
+                LogManager.shared.debug("Searching for flight number in \(lines.count) lines...")
 
         // Try strict QFA format first
         for (index, line) in lines.enumerated() {
-            print("  Line \(index): \(line)")
+                    LogManager.shared.debug("  Line \(index): \(line)")
             let matches = flightNumberPattern1.matches(in: line, range: NSRange(line.startIndex..., in: line))
             if let match = matches.first {
                 let numberPart = Range(match.range(at: 1), in: line)!
@@ -806,7 +806,7 @@ class TextRecognitionService: ObservableObject {
 
                 // Apply smart correction for leading 8 → 0
                 let correctedFlightNum = smartCorrectFlightNumber(flightNum)
-                print("Flight number extracted (QFA format): \(flightNum)\(correctedFlightNum != flightNum ? " → corrected to: \(correctedFlightNum)" : ""), Day: \(rawDay)")
+                        LogManager.shared.debug("Flight number extracted (QFA format): \(flightNum)\(correctedFlightNum != flightNum ? " → corrected to: \(correctedFlightNum)" : ""), Day: \(rawDay)")
                 return correctedFlightNum
             }
         }
@@ -826,7 +826,7 @@ class TextRecognitionService: ObservableObject {
                 // Clean and correct the flight number
                 let cleanedFlightNum = smartExtractFlightNumber(flightNum)
                 if !cleanedFlightNum.isEmpty {
-                    print("Flight number extracted (QFA format with OCR correction) from line \(index): \(flightNum) → corrected to: \(cleanedFlightNum), Day: \(rawDay)")
+                            LogManager.shared.debug("Flight number extracted (QFA format with OCR correction) from line \(index): \(flightNum) → corrected to: \(cleanedFlightNum), Day: \(rawDay)")
                     return cleanedFlightNum
                 }
             }
@@ -841,7 +841,7 @@ class TextRecognitionService: ObservableObject {
                 let flightNum = String(line[numberPart])
                 let rawDay = String(line[dayPart])
 
-                print("  Found potential match with very relaxed pattern on line \(index): \(flightNum)")
+                        LogManager.shared.debug("  Found potential match with very relaxed pattern on line \(index): \(flightNum)")
 
                 // Store the day as-is (no correction - month inference happens in ViewModel)
                 extractedDay = rawDay
@@ -849,7 +849,7 @@ class TextRecognitionService: ObservableObject {
                 // Clean and correct the flight number (handles special chars like Ø)
                 let cleanedFlightNum = smartExtractFlightNumberVeryRelaxed(flightNum)
                 if !cleanedFlightNum.isEmpty {
-                    print("Flight number extracted (QFA very relaxed format) from line \(index): \(flightNum) → corrected to: \(cleanedFlightNum), Day: \(rawDay)")
+                            LogManager.shared.debug("Flight number extracted (QFA very relaxed format) from line \(index): \(flightNum) → corrected to: \(cleanedFlightNum), Day: \(rawDay)")
                     return cleanedFlightNum
                 }
             }
@@ -871,13 +871,13 @@ class TextRecognitionService: ObservableObject {
 
                     // Apply smart correction for leading 8 → 0
                     let correctedFlightNum = smartCorrectFlightNumber(flightNum)
-                    print("Flight number extracted (numeric format) from line \(index): \(flightNum)\(correctedFlightNum != flightNum ? " → corrected to: \(correctedFlightNum)" : ""), Day: \(rawDay)")
+                            LogManager.shared.debug("Flight number extracted (numeric format) from line \(index): \(flightNum)\(correctedFlightNum != flightNum ? " → corrected to: \(correctedFlightNum)" : ""), Day: \(rawDay)")
                     return correctedFlightNum
                 }
             }
         }
 
-        print("No flight number found in any pattern")
+                LogManager.shared.debug("No flight number found in any pattern")
         return ""
     }
 
@@ -920,7 +920,7 @@ class TextRecognitionService: ObservableObject {
     /// Handles special Unicode characters like Ø (Scandinavian O) and other OCR misreads
     /// Processes any non-whitespace characters and converts them to digits
     private func smartExtractFlightNumberVeryRelaxed(_ flightNumber: String) -> String {
-        print("  Attempting very relaxed extraction on: \(flightNumber)")
+                LogManager.shared.debug("  Attempting very relaxed extraction on: \(flightNumber)")
 
         // Extended OCR character substitutions including Unicode variants
         let ocrSubstitutions: [Character: Character] = [
@@ -950,27 +950,27 @@ class TextRecognitionService: ObservableObject {
         for char in flightNumber {
             if let digit = ocrSubstitutions[char] {
                 corrected.append(digit)
-                print("    Converted '\(char)' → '\(digit)'")
+                        LogManager.shared.debug("    Converted '\(char)' → '\(digit)'")
             } else if char.isNumber {
                 corrected.append(char)
             } else {
                 // Unknown character - log it but skip
-                print("    Unknown character '\(char)' (Unicode: \\u{\(String(char.unicodeScalars.first!.value, radix: 16))})")
+                        LogManager.shared.debug("    Unknown character '\(char)' (Unicode: \\u{\(String(char.unicodeScalars.first!.value, radix: 16))})")
             }
         }
 
         // Should have exactly 4 digits now
         guard corrected.count == 4 else {
-            print("    After conversion, got \(corrected.count) digits instead of 4: \(corrected)")
+                    LogManager.shared.debug("    After conversion, got \(corrected.count) digits instead of 4: \(corrected)")
             return ""
         }
 
-        print("    ✓ Converted to 4 digits: \(corrected)")
+                LogManager.shared.debug("    ✓ Converted to 4 digits: \(corrected)")
 
         // Apply the standard 8 → 0 correction for leading position
         let finalCorrected = smartCorrectFlightNumber(corrected)
         if finalCorrected != corrected {
-            print("    ✓ Applied leading 8→0 correction: \(corrected) → \(finalCorrected)")
+                    LogManager.shared.debug("    ✓ Applied leading 8→0 correction: \(corrected) → \(finalCorrected)")
         }
 
         return finalCorrected
@@ -1016,7 +1016,7 @@ class TextRecognitionService: ObservableObject {
                     let toAirport = String(line[toRange])
                     
                     if fromAirport.allSatisfy({ $0.isLetter }) && toAirport.allSatisfy({ $0.isLetter }) {
-                        print("Airports extracted: FROM=\(fromAirport), TO=\(toAirport)")
+                                LogManager.shared.debug("Airports extracted: FROM=\(fromAirport), TO=\(toAirport)")
                         return (fromAirport, toAirport)
                     }
                 }
@@ -1042,7 +1042,7 @@ class TextRecognitionService: ObservableObject {
             recognizedText += topCandidate.string + "\n"
         }
 
-        print("B787 Recognized text: \(recognizedText)")
+                LogManager.shared.debug("B787 Recognized text: \(recognizedText)")
 
         // Extract the different components for B787
         let outTime = extractB787CurrentFlightTime(from: recognizedText, timeType: "OUT")
@@ -1075,7 +1075,7 @@ class TextRecognitionService: ObservableObject {
 
         // If we have missing critical fields, throw error but it will be caught with partial data
         if !missingFields.isEmpty {
-            print("B787 Partial extraction - missing: \(missingFields.joined(separator: ", "))")
+                    LogManager.shared.debug("B787 Partial extraction - missing: \(missingFields.joined(separator: ", "))")
             throw PartialExtractionError(message: "Could not extract: \(missingFields.joined(separator: ", ")). Please verify and fill in missing fields.", partialData: flightData)
         }
 
@@ -1090,7 +1090,7 @@ class TextRecognitionService: ObservableObject {
 
         // Find the line with "TAIL NO:" - times appear after this
         guard let tailNoIndex = lines.firstIndex(where: { $0.contains("TAIL NO:") }) else {
-            print("Could not find TAIL NO: line")
+                    LogManager.shared.debug("Could not find TAIL NO: line")
             return ""
         }
 
@@ -1098,7 +1098,7 @@ class TextRecognitionService: ObservableObject {
         // Order is: OUT, OFF, ON, IN
         let timeFields = ["OUT", "OFF", "ON", "IN"]
         guard let fieldIndex = timeFields.firstIndex(of: timeType) else {
-            print("Invalid time type: \(timeType)")
+                    LogManager.shared.debug("Invalid time type: \(timeType)")
             return ""
         }
 
@@ -1129,11 +1129,11 @@ class TextRecognitionService: ObservableObject {
             let extractedTime = timeValues[fieldIndex]
             // Apply smart correction for common OCR errors
             let correctedTime = smartCorrectTime(extractedTime)
-            print("Found B787 \(timeType) time: \(extractedTime)\(correctedTime != extractedTime ? " → corrected to: \(correctedTime)" : "")")
+                    LogManager.shared.debug("Found B787 \(timeType) time: \(extractedTime)\(correctedTime != extractedTime ? " → corrected to: \(correctedTime)" : "")")
             return correctedTime
         }
 
-        print("No B787 \(timeType) time found at index \(fieldIndex) (found \(timeValues.count) times total)")
+                LogManager.shared.debug("No B787 \(timeType) time found at index \(fieldIndex) (found \(timeValues.count) times total)")
         return ""
     }
 
@@ -1152,7 +1152,7 @@ class TextRecognitionService: ObservableObject {
             if let match = matches.first {
                 let numberPart = Range(match.range(at: 1), in: line)!
                 flightNumber = String(line[numberPart])
-                print("B787 Flight number extracted: \(flightNumber)")
+                        LogManager.shared.debug("B787 Flight number extracted: \(flightNumber)")
                 break
             }
         }
@@ -1187,7 +1187,7 @@ class TextRecognitionService: ObservableObject {
                         let yyyy = "20\(yy)"
 
                         fullDate = "\(dd)/\(mm)/\(yyyy)"
-                        print("B787 Date extracted: \(fullDate ?? "") from MMDDYY: \(dateString)")
+                                LogManager.shared.debug("B787 Date extracted: \(fullDate ?? "") from MMDDYY: \(dateString)")
                     }
                 }
             }
@@ -1201,7 +1201,7 @@ class TextRecognitionService: ObservableObject {
             if let match = matches.first {
                 let tailPart = Range(match.range(at: 1), in: line)!
                 aircraftRegistration = String(line[tailPart])
-                print("B787 Aircraft registration extracted: \(aircraftRegistration ?? "")")
+                        LogManager.shared.debug("B787 Aircraft registration extracted: \(aircraftRegistration ?? "")")
                 break
             }
         }

@@ -630,7 +630,7 @@ class UserDefaultsService: ObservableObject {
             userDefaults.removeObject(forKey: key)
         }
         
-        print("All UserDefaults settings have been reset")
+        LogManager.shared.debug("All UserDefaults settings have been reset")
     }
     
     func exportSettings() -> [String: Any] {

@@ -173,7 +173,7 @@ struct AirportPickerSheet: View {
 
         // Load from airports.dat.txt file
         guard let fileURL = Bundle.main.url(forResource: "airports.dat", withExtension: "txt") else {
-            print("ERROR: airports.dat.txt not found in bundle")
+            LogManager.shared.error("ERROR: airports.dat.txt not found in bundle")
             isLoading = false
             return
         }
@@ -218,7 +218,7 @@ struct AirportPickerSheet: View {
                 isLoading = false
             }
         } catch {
-            print("ERROR: Failed to load airports.dat.txt: \(error)")
+            LogManager.shared.error("ERROR: Failed to load airports.dat.txt: \(error)")
             await MainActor.run {
                 isLoading = false
             }
