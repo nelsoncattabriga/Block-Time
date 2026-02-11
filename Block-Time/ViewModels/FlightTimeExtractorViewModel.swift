@@ -2103,7 +2103,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     
     private func updateFlightDateWithDay(_ dayString: String) {
         guard let day = Int(dayString), day >= 1 && day <= 31 else {
-                        LogManager.shared.error("Invalid day extracted: \(dayString)")
+            LogManager.shared.error("Invalid day extracted: \(dayString)")
             return
         }
 
@@ -2112,13 +2112,29 @@ class FlightTimeExtractorViewModel: ObservableObject {
         calendar.timeZone = TimeZone(abbreviation: "UTC")!
 
         let now = Date()
-        let currentMonth = calendar.component(.month, from: now)
-        let currentYear = calendar.component(.year, from: now)
+        let currentDay = calendar.component(.day, from: now)
+        var targetMonth = calendar.component(.month, from: now)
+        var targetYear = calendar.component(.year, from: now)
 
+        // Simple month crossing logic:
+        // If extracted day > current day, it must be from last month
+        // (device time is always ahead of flight start time)
+        if day > currentDay {
+            targetMonth -= 1
+            if targetMonth < 1 {
+                targetMonth = 12
+                targetYear -= 1
+            }
+            LogManager.shared.debug("Day \(day) > current day \(currentDay) → using previous month (\(targetMonth)/\(targetYear))")
+        } else {
+            LogManager.shared.debug("Day \(day) <= current day \(currentDay) → using current month (\(targetMonth)/\(targetYear))")
+        }
+
+        // Create the date
         var dateComponents = DateComponents()
         dateComponents.day = day
-        dateComponents.month = currentMonth
-        dateComponents.year = currentYear
+        dateComponents.month = targetMonth
+        dateComponents.year = targetYear
         dateComponents.timeZone = TimeZone(abbreviation: "UTC")
 
         if let newDate = calendar.date(from: dateComponents) {
@@ -2127,8 +2143,10 @@ class FlightTimeExtractorViewModel: ObservableObject {
             formatter.timeZone = TimeZone(abbreviation: "UTC")
             let newDateString = formatter.string(from: newDate)
 
-                        LogManager.shared.info("Updated flight date from '\(self.flightDate)' to '\(newDateString)' (day \(day))")
+            LogManager.shared.info("Updated flight date from '\(self.flightDate)' to '\(newDateString)' (day \(day))")
             self.flightDate = newDateString
+        } else {
+            LogManager.shared.error("Failed to create date for day \(day), month \(targetMonth), year \(targetYear)")
         }
     }
     

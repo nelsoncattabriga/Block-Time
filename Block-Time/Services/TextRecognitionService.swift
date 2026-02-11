@@ -629,41 +629,65 @@ class TextRecognitionService: ObservableObject {
 
     /// Validate that extracted times follow chronological order: OUT < OFF < ON < IN
     /// Returns true if sequence is valid or if times are empty
+    /// Handles midnight crossings by adding 24 hours to times that appear on the next day
     private func isValidTimeSequence(out: String, off: String, on: String, in inTime: String) -> Bool {
         // Convert times to minutes
         guard let outMin = timeToMinutes(out), !out.isEmpty else { return true }
         guard let offMin = timeToMinutes(off), !off.isEmpty else { return true }
-        guard let onMin = timeToMinutes(on), !on.isEmpty else { return true }
-        guard let inMin = timeToMinutes(inTime), !inTime.isEmpty else { return true }
+        guard var onMin = timeToMinutes(on), !on.isEmpty else { return true }
+        guard var inMin = timeToMinutes(inTime), !inTime.isEmpty else { return true }
 
-        // Check chronological order
+        // Handle midnight crossing: if ON < OFF, assume ON is on the next day
+        if onMin < offMin {
+            onMin += 1440  // Add 24 hours
+        }
+
+        // Handle midnight crossing: if IN < ON (adjusted), assume IN is on the next day
+        // Also check if IN < OUT (original) as another indicator
+        if inMin < onMin || inMin < outMin {
+            inMin += 1440  // Add 24 hours
+        }
+
+        // Check chronological order with adjusted times
         return outMin < offMin && offMin < onMin && onMin < inMin
     }
 
     /// Validate time sequence and log warnings if issues detected
+    /// Handles midnight crossings by checking if times appear to cross into the next day
     private func validateAndCorrectTimeSequence(out: String, off: String, on: String, in inTime: String, fltTime: String = "", blkTime: String = "") {
         guard !out.isEmpty && !off.isEmpty && !on.isEmpty && !inTime.isEmpty else {
             print("⚠️ Cannot validate time sequence - some times are missing")
             return
         }
 
+        // Check for midnight crossing indicators
+        let outMin = timeToMinutes(out)
+        let offMin = timeToMinutes(off)
+        let onMin = timeToMinutes(on)
+        let inMin = timeToMinutes(inTime)
+
+        var midnightCrossing = false
+        if let off = offMin, let on = onMin, on < off {
+            midnightCrossing = true
+        } else if let out = outMin, let in_ = inMin, in_ < out {
+            midnightCrossing = true
+        }
+
+        if midnightCrossing {
+            print("🌙 Midnight crossing detected (flight departed late evening, landed early morning)")
+        }
+
         if !isValidTimeSequence(out: out, off: off, on: on, in: inTime) {
             print("⚠️ TIME SEQUENCE VIOLATION DETECTED!")
             print("   Expected: OUT < OFF < ON < IN")
             print("   Found: OUT=\(out), OFF=\(off), ON=\(on), IN=\(inTime)")
-
-            // Log individual violations
-            if let outMin = timeToMinutes(out), let offMin = timeToMinutes(off), outMin >= offMin {
-                print("   ❌ OUT (\(out)) should be before OFF (\(off))")
-            }
-            if let offMin = timeToMinutes(off), let onMin = timeToMinutes(on), offMin >= onMin {
-                print("   ❌ OFF (\(off)) should be before ON (\(on))")
-            }
-            if let onMin = timeToMinutes(on), let inMin = timeToMinutes(inTime), onMin >= inMin {
-                print("   ❌ ON (\(on)) should be before IN (\(inTime))")
-            }
+            print("   This might indicate an OCR error or data issue")
         } else {
-            print("✅ Time sequence is valid: OUT=\(out) < OFF=\(off) < ON=\(on) < IN=\(inTime)")
+            if midnightCrossing {
+                print("✅ Time sequence is valid (with midnight crossing): OUT=\(out), OFF=\(off), ON=\(on) [next day], IN=\(inTime) [next day]")
+            } else {
+                print("✅ Time sequence is valid: OUT=\(out) < OFF=\(off) < ON=\(on) < IN=\(inTime)")
+            }
         }
 
         // Additional validation: Check FLT and BLK times match the extracted values
@@ -672,15 +696,28 @@ class TextRecognitionService: ObservableObject {
 
     /// Validate FLT and BLK times against calculated values
     /// FLT = ON - OFF (flight time), BLK = IN - OUT (block time), BLK > FLT
+    /// Handles midnight crossings by adding 24 hours when necessary
     private func validateFlightAndBlockTimes(out: String, off: String, on: String, in inTime: String, fltTime: String, blkTime: String) {
         guard let outMin = timeToMinutes(out),
               let offMin = timeToMinutes(off),
-              let onMin = timeToMinutes(on),
-              let inMin = timeToMinutes(inTime) else {
+              var onMin = timeToMinutes(on),
+              var inMin = timeToMinutes(inTime) else {
             return
         }
 
-        // Calculate expected FLT and BLK times
+        // Handle midnight crossing for ON time: if ON < OFF, assume ON is on the next day
+        if onMin < offMin {
+            onMin += 1440  // Add 24 hours
+            print("🕐 Detected midnight crossing: ON time adjusted from \(on) to next day (\(onMin) minutes)")
+        }
+
+        // Handle midnight crossing for IN time: if IN < OUT or IN < ON (adjusted), assume IN is on the next day
+        if inMin < outMin || inMin < onMin {
+            inMin += 1440  // Add 24 hours
+            print("🕐 Detected midnight crossing: IN time adjusted from \(inTime) to next day (\(inMin) minutes)")
+        }
+
+        // Calculate expected FLT and BLK times with adjusted values
         let calculatedFltMinutes = onMin - offMin
         let calculatedBlkMinutes = inMin - outMin
 
@@ -764,12 +801,12 @@ class TextRecognitionService: ObservableObject {
                 let flightNum = String(line[numberPart])
                 let rawDay = String(line[dayPart])
 
-                // Apply smart date correction based on current UTC date
-                extractedDay = smartCorrectDayOfMonth(rawDay)
+                // Store the day as-is (no correction - month inference happens in ViewModel)
+                extractedDay = rawDay
 
                 // Apply smart correction for leading 8 → 0
                 let correctedFlightNum = smartCorrectFlightNumber(flightNum)
-                print("Flight number extracted (QFA format): \(flightNum)\(correctedFlightNum != flightNum ? " → corrected to: \(correctedFlightNum)" : ""), Day: \(rawDay)\(extractedDay != rawDay ? " → corrected to: \(extractedDay ?? "nil")" : "")")
+                print("Flight number extracted (QFA format): \(flightNum)\(correctedFlightNum != flightNum ? " → corrected to: \(correctedFlightNum)" : ""), Day: \(rawDay)")
                 return correctedFlightNum
             }
         }
@@ -783,13 +820,13 @@ class TextRecognitionService: ObservableObject {
                 let flightNum = String(line[numberPart])
                 let rawDay = String(line[dayPart])
 
-                // Apply smart date correction based on current UTC date
-                extractedDay = smartCorrectDayOfMonth(rawDay)
+                // Store the day as-is (no correction - month inference happens in ViewModel)
+                extractedDay = rawDay
 
                 // Clean and correct the flight number
                 let cleanedFlightNum = smartExtractFlightNumber(flightNum)
                 if !cleanedFlightNum.isEmpty {
-                    print("Flight number extracted (QFA format with OCR correction) from line \(index): \(flightNum) → corrected to: \(cleanedFlightNum), Day: \(rawDay)\(extractedDay != rawDay ? " → corrected to: \(extractedDay ?? "nil")" : "")")
+                    print("Flight number extracted (QFA format with OCR correction) from line \(index): \(flightNum) → corrected to: \(cleanedFlightNum), Day: \(rawDay)")
                     return cleanedFlightNum
                 }
             }
@@ -806,13 +843,13 @@ class TextRecognitionService: ObservableObject {
 
                 print("  Found potential match with very relaxed pattern on line \(index): \(flightNum)")
 
-                // Apply smart date correction based on current UTC date
-                extractedDay = smartCorrectDayOfMonth(rawDay)
+                // Store the day as-is (no correction - month inference happens in ViewModel)
+                extractedDay = rawDay
 
                 // Clean and correct the flight number (handles special chars like Ø)
                 let cleanedFlightNum = smartExtractFlightNumberVeryRelaxed(flightNum)
                 if !cleanedFlightNum.isEmpty {
-                    print("Flight number extracted (QFA very relaxed format) from line \(index): \(flightNum) → corrected to: \(cleanedFlightNum), Day: \(rawDay)\(extractedDay != rawDay ? " → corrected to: \(extractedDay ?? "nil")" : "")")
+                    print("Flight number extracted (QFA very relaxed format) from line \(index): \(flightNum) → corrected to: \(cleanedFlightNum), Day: \(rawDay)")
                     return cleanedFlightNum
                 }
             }
@@ -829,12 +866,12 @@ class TextRecognitionService: ObservableObject {
                     let flightNum = String(line[numberPart])
                     let rawDay = String(line[dayPart])
 
-                    // Apply smart date correction based on current UTC date
-                    extractedDay = smartCorrectDayOfMonth(rawDay)
+                    // Store the day as-is (no correction - month inference happens in ViewModel)
+                    extractedDay = rawDay
 
                     // Apply smart correction for leading 8 → 0
                     let correctedFlightNum = smartCorrectFlightNumber(flightNum)
-                    print("Flight number extracted (numeric format) from line \(index): \(flightNum)\(correctedFlightNum != flightNum ? " → corrected to: \(correctedFlightNum)" : ""), Day: \(rawDay)\(extractedDay != rawDay ? " → corrected to: \(extractedDay ?? "nil")" : "")")
+                    print("Flight number extracted (numeric format) from line \(index): \(flightNum)\(correctedFlightNum != flightNum ? " → corrected to: \(correctedFlightNum)" : ""), Day: \(rawDay)")
                     return correctedFlightNum
                 }
             }
@@ -844,106 +881,6 @@ class TextRecognitionService: ObservableObject {
         return ""
     }
 
-    /// Smart correction for day of month based on current UTC date
-    /// Handles common OCR errors like "28" when it should be "20" (0 misread as 8)
-    /// Only corrects when the date contains digits that could be confused (0 and 8)
-    /// Uses current UTC date as context to validate and correct extracted day
-    private func smartCorrectDayOfMonth(_ day: String) -> String {
-        guard let extractedDay = Int(day), extractedDay >= 1, extractedDay <= 31 else {
-            print("Invalid day format: \(day)")
-            return day
-        }
-
-        // Only attempt correction if the day contains 0 or 8 (digits that can be confused)
-        guard day.count == 2, day.contains("0") || day.contains("8") else {
-            print("Day \(day) doesn't contain 0 or 8, no OCR confusion possible")
-            return day
-        }
-
-        // Get current UTC date components
-        var calendar = Calendar.current
-        calendar.timeZone = TimeZone(identifier: "UTC")!
-        let now = Date()
-        let currentDay = calendar.component(.day, from: now)
-
-        // Calculate how far in the future the extracted day would be
-        let daysUntilExtracted: Int
-        if extractedDay >= currentDay {
-            // Same month, future date
-            daysUntilExtracted = extractedDay - currentDay
-        } else {
-            // Would be next month
-            // Get days in current month
-            let range = calendar.range(of: .day, in: .month, for: now)!
-            let daysInMonth = range.count
-            daysUntilExtracted = (daysInMonth - currentDay) + extractedDay
-        }
-
-        // If the extracted date is more than 7 days in the future, it's likely an OCR error
-        // Most flights are logged within a few days of occurrence
-        let maxFutureDays = 7
-
-        if daysUntilExtracted > maxFutureDays {
-            print("Day \(day) is \(daysUntilExtracted) days in future (current UTC day: \(currentDay)), checking for OCR errors...")
-
-            let firstDigit = day.first!
-            let secondDigit = day.last!
-
-            // Try common OCR corrections for the second digit
-            // Most common: 8 misread as 0 (e.g., "28" → "20")
-            if secondDigit == "8" {
-                let correctedDay = "\(firstDigit)0"
-                if let correctedDayInt = Int(correctedDay),
-                   correctedDayInt >= 1 && correctedDayInt <= 31 {
-
-                    // Check if corrected day makes more sense
-                    let daysUntilCorrected: Int
-                    if correctedDayInt >= currentDay {
-                        daysUntilCorrected = correctedDayInt - currentDay
-                    } else {
-                        let range = calendar.range(of: .day, in: .month, for: now)!
-                        let daysInMonth = range.count
-                        daysUntilCorrected = (daysInMonth - currentDay) + correctedDayInt
-                    }
-
-                    // If corrected date is within acceptable range, use it
-                    if daysUntilCorrected <= maxFutureDays {
-                        print("→ Corrected day from \(day) to \(correctedDay) (now \(daysUntilCorrected) days from current date)")
-                        return correctedDay
-                    }
-                }
-            }
-
-            // Less common: 0 misread as 8 (e.g., "20" scanned as "28")
-            // Only try this if second digit is 0 and first digit is 1 or 2
-            if secondDigit == "0" && (firstDigit == "1" || firstDigit == "2") {
-                let correctedDay = "\(firstDigit)8"
-                if let correctedDayInt = Int(correctedDay),
-                   correctedDayInt >= 1 && correctedDayInt <= 31 {
-
-                    let daysUntilCorrected: Int
-                    if correctedDayInt >= currentDay {
-                        daysUntilCorrected = correctedDayInt - currentDay
-                    } else {
-                        let range = calendar.range(of: .day, in: .month, for: now)!
-                        let daysInMonth = range.count
-                        daysUntilCorrected = (daysInMonth - currentDay) + correctedDayInt
-                    }
-
-                    if daysUntilCorrected <= maxFutureDays {
-                        print("→ Corrected day from \(day) to \(correctedDay) (now \(daysUntilCorrected) days from current date)")
-                        return correctedDay
-                    }
-                }
-            }
-
-            print("→ No valid correction found, keeping original: \(day)")
-        } else {
-            print("Day \(day) is valid (\(daysUntilExtracted) days from current UTC day: \(currentDay))")
-        }
-
-        return day
-    }
 
     /// Smart extraction and correction for flight numbers with OCR errors
     /// Handles cases like "B474" → "0474" where letters are misread digits
