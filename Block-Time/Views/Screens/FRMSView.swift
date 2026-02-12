@@ -46,7 +46,6 @@ struct FRMSView: View {
     @State private var expandAnnualLeave = false
     @State private var expandReserve = false
     @State private var expandDeadheading = false
-    @State private var expandLimitsBySignOnTime = false
 
     var body: some View {
         NavigationStack {
@@ -629,38 +628,60 @@ struct FRMSView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            // Input Parameters
-            VStack(spacing: 12) {
-                Picker("Crew Complement", selection: $selectedCrewComplement) {
-                    ForEach([CrewComplement.twoPilot, .threePilot, .fourPilot], id: \.self) { complement in
-                        Text(complement.description).tag(complement)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: selectedCrewComplement) { _, newValue in
-                    LogManager.shared.debug("FRMSView: Crew complement changed to \(newValue)")
-                    updateMaxNextDuty()
-                }
-
-                if selectedCrewComplement != .twoPilot {
-                    Picker("Rest Facility", selection: $selectedRestFacility) {
-                        ForEach([RestFacilityClass.none, .class2, .class1, .mixed], id: \.self) { facility in
-                            Text(facility.description).tag(facility)
+            // Input Parameters and Limits
+            VStack(spacing: 16) {
+                // Crew Complement Picker
+                VStack(spacing: 12) {
+                    Picker("Crew Complement", selection: $selectedCrewComplement) {
+                        ForEach([CrewComplement.twoPilot, .threePilot, .fourPilot], id: \.self) { complement in
+                            Text(complement.description).tag(complement)
                         }
                     }
-                    .pickerStyle(.menu)
-                    .onChange(of: selectedRestFacility) { _, newValue in
-                        LogManager.shared.debug("FRMSView: Rest facility changed to \(newValue)")
+                    .pickerStyle(.segmented)
+                    .onChange(of: selectedCrewComplement) { _, newValue in
+                        LogManager.shared.debug("FRMSView: Crew complement changed to \(newValue)")
                         updateMaxNextDuty()
                     }
-                } else {
-                    // Reset to none for 2-pilot
-                    Text("No rest facility (2-pilot operation)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .onAppear {
-                            selectedRestFacility = .none
+
+                    if selectedCrewComplement != .twoPilot {
+                        Picker("Rest Facility", selection: $selectedRestFacility) {
+                            ForEach([RestFacilityClass.none, .class2, .class1, .mixed], id: \.self) { facility in
+                                Text(facility.description).tag(facility)
+                            }
                         }
+                        .pickerStyle(.menu)
+                        .onChange(of: selectedRestFacility) { _, newValue in
+                            LogManager.shared.debug("FRMSView: Rest facility changed to \(newValue)")
+                            updateMaxNextDuty()
+                        }
+                    } else {
+                        // Reset to none for 2-pilot
+                        Text("No rest facility (2-pilot operation)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .onAppear {
+                                selectedRestFacility = .none
+                            }
+                    }
+                }
+
+                // Sign-On Time Based Limits (for A380/A330/B787)
+                if let maxDuty = viewModel.maximumNextDuty,
+                   let signOnLimits = maxDuty.signOnBasedLimits,
+                   !signOnLimits.isEmpty {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Limits by Sign-On Time")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+
+                        VStack(spacing: 12) {
+                            ForEach(signOnLimits.indices, id: \.self) { index in
+                                signOnTimeRangeCard(range: signOnLimits[index], limitType: maxDuty.limitType)
+                            }
+                        }
+                    }
                 }
             }
             .padding()
@@ -669,43 +690,6 @@ struct FRMSView: View {
 
             // Maximum Next Duty Display
            if let maxDuty = viewModel.maximumNextDuty {
-//                VStack(spacing: 12) {
-//                    maxDutyParameterRow(
-//                        icon: "clock",
-//                        title: "Max Duty Period",
-//                        value: maxDuty.formattedMaxDutyPeriod,
-//                        color: maxDuty.hasSevereRestrictions ? .orange : .primary
-//                    )
-//
-//                    maxDutyParameterRow(
-//                        icon: "airplane",
-//                        title: "Max Flight Time",
-//                        value: maxDuty.formattedMaxFlightTime,
-//                        color: maxDuty.hasSevereRestrictions ? .orange : .primary
-//                    )
-
-//                    maxDutyParameterRow(
-//                        icon: "number",
-//                        title: "Max Sectors",
-//                        value: "\(maxDuty.maxSectors) sectors",
-//                        color: .primary
-//                    )
-
-//                    maxDutyParameterRow(
-//                        icon: "bed.double",
-//                        title: "Minimum Rest",
-//                        value: maxDuty.formattedMinimumRest,
-//                        color: .primary
-//                    )
-//
-//                    if let earliestSignOn = maxDuty.earliestSignOn {
-//                        maxDutyParameterRow(
-//                            icon: "calendar.badge.clock",
-//                            title: "Earliest Sign-On",
-//                            value: formatDate(earliestSignOn),
-//                            color: .primary
-//                        )
-//                    }
 
                     if !maxDuty.restrictions.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
@@ -725,36 +709,6 @@ struct FRMSView: View {
                         .background(.orange.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
-//                }
-//                .padding()
-//                .background(.thinMaterial)
-//                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                // Sign-On Time Based Limits (for A380/A330/B787)
-                if let signOnLimits = maxDuty.signOnBasedLimits, !signOnLimits.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        DisclosureGroup(
-                            isExpanded: $expandLimitsBySignOnTime,
-                            content: {
-                                VStack(spacing: 12) {
-                                    ForEach(signOnLimits.indices, id: \.self) { index in
-                                        signOnTimeRangeCard(range: signOnLimits[index], limitType: maxDuty.limitType)
-                                    }
-                                }
-                                .padding(.top, 8)
-                            },
-                            label: {
-                                Text("Limits by Sign-On Time")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                            }
-                        )
-                    }
-                    .padding()
-                    .background(.thinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-
             }
         }
     }
@@ -767,8 +721,8 @@ struct FRMSView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            // Input Parameters
-            VStack(spacing: 12) {
+            // Input Parameters and Result
+            VStack(spacing: 16) {
                 // Previous Trip Length Picker
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Trip Length")
@@ -808,7 +762,7 @@ struct FRMSView: View {
                     }
                 }
 
-                
+
                 // >18 hour duty toggle
                 Toggle(isOn: $mbttHadDutyOver18Hours) {
                     Text("Planned duty >18 hrs")
@@ -818,31 +772,33 @@ struct FRMSView: View {
                     LogManager.shared.debug("FRMSView: MBTT duty over 18 hours changed to \(newValue)")
                     updateMBTT()
                 }
+
+                // MBTT Result Display
+                if let mbtt = calculatedMBTT {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Label("Rest Required:", systemImage: "house.fill")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+
+                            // Spacer()
+
+                            Text(mbtt.description)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                    .padding()
+                    .background(.blue.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
             }
             .padding()
             .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            // MBTT Result Display
-            if let mbtt = calculatedMBTT {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Label("Rest Required:", systemImage: "house.fill")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-
-                        // Spacer()
-
-                        Text(mbtt.description)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.blue)
-                    }
-                }
-                .padding()
-                .background(.blue.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
         }
     }
 
@@ -860,7 +816,7 @@ struct FRMSView: View {
 
             if !viewModel.recentDutiesByDay.isEmpty {
                 VStack(spacing: 8) {
-                    ForEach(viewModel.recentDutiesByDay.prefix(10)) { dailySummary in
+                    ForEach(viewModel.recentDutiesByDay.prefix(7)) { dailySummary in
                         dailyDutyRow(dailySummary: dailySummary)
                     }
                 }
@@ -1050,12 +1006,14 @@ struct FRMSView: View {
             
             if let notes = range.notes {
                 Text(notes)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(.footnote)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(.blue.opacity(0.2))
-                    .clipShape(Capsule())
+                    .background(.orange.opacity(0.2))
+                    //.clipShape(Capsule())
             }
         }
         .padding()
