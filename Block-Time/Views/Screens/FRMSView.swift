@@ -47,6 +47,11 @@ struct FRMSView: View {
     @State private var expandReserve = false
     @State private var expandDeadheading = false
 
+    // LH section expansion state
+    @State private var expandNextDutyLimits = false
+    @State private var expandMinimumBaseTurnaround = false
+    @State private var expandRecentDuties = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -60,17 +65,67 @@ struct FRMSView: View {
                             // Cumulative Limits Section
                             cumulativeLimitsSection
 
-                            
+
                             // Maximum Next Duty Calculator
-                            maximumNextDutySection
+                            if viewModel.configuration.fleet == .a380A330B787 {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    DisclosureGroup(
+                                        isExpanded: $expandNextDutyLimits,
+                                        content: {
+                                            maximumNextDutySection
+                                                .padding(.top, 8)
+                                        },
+                                        label: {
+                                            Text("Next Duty Limits")
+                                                .font(.title2)
+                                                .fontWeight(.semibold)
+                                        }
+                                    )
+                                    .foregroundStyle(.primary)
+                                }
+                            } else {
+                                maximumNextDutySection
+                            }
 
                             // MBTT Calculator Section (for A380/A330/B787)
                             if viewModel.configuration.fleet == .a380A330B787 {
-                                minimumBaseTurnaroundSection
+                                VStack(alignment: .leading, spacing: 16) {
+                                    DisclosureGroup(
+                                        isExpanded: $expandMinimumBaseTurnaround,
+                                        content: {
+                                            minimumBaseTurnaroundSection
+                                                .padding(.top, 8)
+                                        },
+                                        label: {
+                                            Text("Minimum Base Turnaround Time")
+                                                .font(.title2)
+                                                .fontWeight(.semibold)
+                                        }
+                                    )
+                                    .foregroundStyle(.primary)
+                                }
                             }
 
                             // Recent Duties
-                            recentDutiesSection
+                            if viewModel.configuration.fleet == .a380A330B787 {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    DisclosureGroup(
+                                        isExpanded: $expandRecentDuties,
+                                        content: {
+                                            recentDutiesSection
+                                                .padding(.top, 8)
+                                        },
+                                        label: {
+                                            Text("Recent Duties")
+                                                .font(.title2)
+                                                .fontWeight(.semibold)
+                                        }
+                                    )
+                                    .foregroundStyle(.primary)
+                                }
+                            } else {
+                                recentDutiesSection
+                            }
                         }
                         .padding()
                     }
@@ -625,10 +680,6 @@ struct FRMSView: View {
 
     private var maximumNextDutyContent: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Next Duty Limits")
-                .font(.title2)
-                .fontWeight(.semibold)
-
             // Input Parameters and Limits
             VStack(spacing: 16) {
                 // Crew Complement Picker
@@ -718,10 +769,6 @@ struct FRMSView: View {
 
     private var minimumBaseTurnaroundSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Minimum Base Turnaround Time")
-                .font(.title2)
-                .fontWeight(.semibold)
-
             // Input Parameters and Result
             VStack(spacing: 16) {
                 // Previous Trip Length Picker
@@ -807,9 +854,12 @@ struct FRMSView: View {
 
     private var recentDutiesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Recent Duties") // - \(viewModel.configuration.homeBase)")
-                .font(.title2)
-                .fontWeight(.semibold)
+            // Title only shown for SH fleet (LH has it in DisclosureGroup)
+            if viewModel.configuration.fleet == .a320B737 {
+                Text("Recent Duties") // - \(viewModel.configuration.homeBase)")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+            }
 
             Text("Home Base: \(viewModel.configuration.homeBase)")
                 .font(.subheadline)
