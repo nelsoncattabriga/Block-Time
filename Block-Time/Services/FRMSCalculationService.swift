@@ -743,91 +743,183 @@ class FRMSCalculationService {
         return ranges
     }
 
+    // MARK: - A380/A330/B787 Duty and Flight Time Helpers
+
+    /// Get LH duty limit from FD10.1 operational limits
+    /// - Parameters:
+    ///   - crewComplement: Crew complement
+    ///   - restFacility: Rest facility class
+    ///   - limitType: Planning or operational limits
+    /// - Returns: Duty limit or nil if not found
+    private func getLHDutyLimit(crewComplement: CrewComplement,
+                                restFacility: RestFacilityClass,
+                                limitType: FRMSLimitType) -> DutyLimit? {
+
+        // Map CrewComplement to LH_CrewComplement
+        let lhCrewComp: LH_CrewComplement
+        switch crewComplement {
+        case .twoPilot: lhCrewComp = .twoPilot
+        case .threePilot: lhCrewComp = .threePilot
+        case .fourPilot: lhCrewComp = .fourPilot
+        }
+
+        // Map RestFacilityClass to CrewRestFacility (context-aware based on crew complement)
+        let lhRestFacility: CrewRestFacility?
+        switch (crewComplement, restFacility) {
+        // 2-pilot operations
+        case (.twoPilot, _):
+            lhRestFacility = nil  // All 2-pilot limits have nil rest facility
+
+        // 3-pilot operations
+        case (.threePilot, .none):
+            lhRestFacility = .seatInPassengerCompartment
+        case (.threePilot, .class1):
+            lhRestFacility = .class1
+        case (.threePilot, .class2):
+            lhRestFacility = .class2
+        case (.threePilot, .mixed):
+            lhRestFacility = .class1  // Use class1 as fallback for 3-pilot mixed
+
+        // 4-pilot operations
+        case (.fourPilot, .none):
+            lhRestFacility = .seatInPassengerCompartment
+        case (.fourPilot, .class1):
+            lhRestFacility = .twoClass1  // 4-pilot with class1 = 2× Class 1 Rest
+        case (.fourPilot, .class2):
+            lhRestFacility = .twoClass2  // 4-pilot with class2 = 2× Class 2 Rest
+        case (.fourPilot, .mixed):
+            lhRestFacility = .oneClass1OneClass2  // 1× Class 1 & 1× Class 2 Rest
+        }
+
+        // Get duty limits based on crew complement
+        let limits: [DutyLimit]
+        switch lhCrewComp {
+        case .twoPilot: limits = LH_Operational_FltDuty.twoPilotLimits
+        case .threePilot: limits = LH_Operational_FltDuty.threePilotLimits
+        case .fourPilot: limits = LH_Operational_FltDuty.fourPilotLimits
+        }
+
+        // Find matching limits
+        let matchingLimits = limits.filter { limit in
+            limit.crewComplement == lhCrewComp && limit.restFacility == lhRestFacility
+        }
+
+        // For 2-pilot operations, there are multiple entries with different requirements
+        // Return the baseline entry (nil requirements = most permissive)
+        // For augmented operations, there should be only one match
+        if crewComplement == .twoPilot {
+            // Return the entry with no requirements (baseline limits)
+            return matchingLimits.first { $0.requirements == nil } ?? matchingLimits.first
+        } else {
+            return matchingLimits.first
+        }
+    }
+
+    /// Get LH rest requirement from FD10.1 operational limits
+    /// - Parameters:
+    ///   - crewComplement: Crew complement
+    ///   - direction: Pre-duty or post-duty
+    ///   - dutyHours: Duty hours to determine applicable threshold
+    /// - Returns: Rest requirement or nil if not found
+    private func getLHRestRequirement(crewComplement: CrewComplement,
+                                      direction: RestDirection,
+                                      dutyHours: Double) -> RestRequirement? {
+
+        // Map CrewComplement to LH_CrewComplement
+        let lhCrewComp: LH_CrewComplement
+        switch crewComplement {
+        case .twoPilot: lhCrewComp = .twoPilot
+        case .threePilot: lhCrewComp = .threePilot
+        case .fourPilot: lhCrewComp = .fourPilot
+        }
+
+        // Get rest requirements based on crew complement and direction
+        let requirements: [RestRequirement]
+        switch (lhCrewComp, direction) {
+        case (.twoPilot, .preDuty): requirements = LH_Operational_FltDuty.twoPilotPreDutyRest
+        case (.twoPilot, .postDuty): requirements = LH_Operational_FltDuty.twoPilotPostDutyRest
+        case (.threePilot, .preDuty): requirements = LH_Operational_FltDuty.threePilotPreDutyRest
+        case (.threePilot, .postDuty): requirements = LH_Operational_FltDuty.threePilotPostDutyRest
+        case (.fourPilot, .preDuty): requirements = LH_Operational_FltDuty.fourPilotPreDutyRest
+        case (.fourPilot, .postDuty): requirements = LH_Operational_FltDuty.fourPilotPostDutyRest
+        }
+
+        // Find matching requirement based on duty threshold
+        // This is a simplified approach - actual threshold matching would need more complex logic
+        for requirement in requirements {
+            if requirement.minimumRestHours != nil {
+                // Simple threshold matching for common cases
+                if requirement.dutyPeriodThreshold.contains("≤ 11") && dutyHours <= 11 {
+                    return requirement
+                } else if requirement.dutyPeriodThreshold.contains("> 11") && requirement.dutyPeriodThreshold.contains("≤") == false && dutyHours > 11 {
+                    return requirement
+                } else if requirement.dutyPeriodThreshold.contains("≤ 12") && dutyHours <= 12 {
+                    return requirement
+                } else if requirement.dutyPeriodThreshold.contains("≤ 16") && dutyHours <= 16 {
+                    return requirement
+                } else if requirement.dutyPeriodThreshold.contains("> 16") && dutyHours > 16 {
+                    return requirement
+                } else if requirement.dutyPeriodThreshold == "—" {
+                    return requirement  // Default case
+                }
+            } else if requirement.minimumRestFormula != nil {
+                // Formula-based rest (e.g., for extensions)
+                return requirement
+            }
+        }
+
+        // Return first requirement as fallback
+        return requirements.first
+    }
+
     // MARK: - A380/A330/B787 Specific Limits
 
     private func getBaseLimitsA380A330B787(crewComplement: CrewComplement,
                                           restFacility: RestFacilityClass,
                                           limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
 
-        switch crewComplement {
-        case .twoPilot:
-            // FD3.1 & FD10.1: 2-pilot limits vary by sign-on time
-            // Return the most restrictive as baseline (night operations)
-            if limitType == .planning {
-                // Planning: 10-11 hours depending on sign-on, 8-9.5 hours flight time
-                return (maxDuty: 10.0, maxFlight: 8.0, maxSectors: 4)
-            } else {
-                // Operational: Can extend with pilot discretion, 9.5-10.5 hours flight time
-                return (maxDuty: 11.0, maxFlight: 9.5, maxSectors: 4)
-            }
-
-        case .threePilot:
-            // FD3.1 & FD10.1: 3-pilot limits depend on rest facility
-            switch restFacility {
-            case .class1:
-                if limitType == .planning {
-                    // Planning: 14 hours duty, 12.5 hours flight
-                    return (maxDuty: 14.0, maxFlight: 12.5, maxSectors: 4)
-                } else {
-                    // Operational: 18 hours duty
-                    return (maxDuty: 18.0, maxFlight: 14.0, maxSectors: 4)
-                }
-            case .class2:
-                if limitType == .planning {
-                    // Planning: 12 hours duty, 8.5 hours flight
-                    return (maxDuty: 12.0, maxFlight: 8.5, maxSectors: 4)
-                } else {
-                    // Operational: 16 hours duty
-                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 4)
-                }
-            default:
-                // No rest facility (seats in passenger compartment)
-                if limitType == .operational {
-                    return (maxDuty: 14.0, maxFlight: 8.0, maxSectors: 4)
-                } else {
-                    return (maxDuty: 12.0, maxFlight: 8.5, maxSectors: 4)
-                }
-            }
-
-        case .fourPilot:
-            // FD3.1 & FD10.1: 4-pilot limits depend on rest facilities
-            switch restFacility {
-            case .class1:
-                // 2x CLASS 1 REST
-                if limitType == .planning {
-                    // Planning: 20 hours duty, no more than 14 hours in flight deck
-                    return (maxDuty: 20.0, maxFlight: 14.0, maxSectors: 2)
-                } else {
-                    // Operational: 21 hours for relevant sectors (>18 hour duties)
-                    return (maxDuty: 21.0, maxFlight: 14.0, maxSectors: 2)
-                }
-            case .class2:
-                // 2x CLASS 2 REST
-                if limitType == .planning {
-                    // Planning: 16 hours duty
-                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 2)
-                } else {
-                    // Operational: 16 hours duty
-                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 2)
-                }
-            case .mixed:
-                // 1x CLASS 1 & 1x CLASS 2 REST
-                if limitType == .planning {
-                    // Planning: 17.5 hours duty
-                    return (maxDuty: 17.5, maxFlight: 14.0, maxSectors: 2)
-                } else {
-                    // Operational: 20 hours duty
-                    return (maxDuty: 20.0, maxFlight: 14.0, maxSectors: 2)
-                }
-            default:
-                // Seats in passenger compartment
-                if limitType == .operational {
-                    return (maxDuty: 14.0, maxFlight: 8.0, maxSectors: 2)
-                } else {
-                    return (maxDuty: 14.0, maxFlight: 8.0, maxSectors: 2)
-                }
-            }
+        // Get duty limit from LH_Operational_FltDuty - must always succeed
+        guard let dutyLimit = getLHDutyLimit(crewComplement: crewComplement, restFacility: restFacility, limitType: limitType) else {
+            // This should never happen if LH_Operational_FltDuty is complete
+            LogManager.shared.error("FRMS: Failed to find LH duty limit for \(crewComplement.description) with \(restFacility.description)")
+            fatalError("LH_Operational_FltDuty lookup failed - data structure incomplete")
         }
+
+        let maxDuty: Double
+        let maxFlight: Double
+        let maxSectors: Int
+
+        // Use planning or operational (discretion) limits - these must exist
+        if limitType == .planning {
+            guard let planned = dutyLimit.dutyPeriodLimitPlanned else {
+                LogManager.shared.error("FRMS: No planned duty limit in LH_Operational_FltDuty")
+                fatalError("LH_Operational_FltDuty missing planned duty limit")
+            }
+            maxDuty = planned
+        } else {
+            // Operational: use discretion limit if available, otherwise planned limit
+            guard let operational = dutyLimit.dutyPeriodLimitDiscretion ?? dutyLimit.dutyPeriodLimitPlanned else {
+                LogManager.shared.error("FRMS: No operational/planned duty limit in LH_Operational_FltDuty")
+                fatalError("LH_Operational_FltDuty missing operational duty limit")
+            }
+            maxDuty = operational
+        }
+
+        // Flight time limit
+        // Note: Augmented crew operations (3/4-pilot) don't have simple flight time limits
+        // Instead they limit total duty in flight deck (14 hours max per FD10.1)
+        // This is captured in flightTimeLimitNote, not flightTimeLimit
+        if let flightLimit = dutyLimit.flightTimeLimit {
+            maxFlight = flightLimit
+        } else {
+            // Augmented operations: use 14.0 (max total duty in flight deck per FD10.1)
+            maxFlight = 14.0
+        }
+
+        // Sectors: 2-pilot = 4 sectors, augmented = typically 2 sectors
+        maxSectors = crewComplement == .twoPilot ? 4 : 2
+
+        return (maxDuty: maxDuty, maxFlight: maxFlight, maxSectors: maxSectors)
     }
 
     // MARK: - A320/B737 Duty and Flight Time Helpers
@@ -948,92 +1040,59 @@ class FRMSCalculationService {
 
     private func calculateMinimumRestA380A330B787(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
 
-        var minimumRest: Double
+        // Get rest requirement from LH_Operational_FltDuty - must always succeed
+        guard let restReq = getLHRestRequirement(crewComplement: duty.crewComplement,
+                                                  direction: .postDuty,
+                                                  dutyHours: duty.dutyTime) else {
+            // This should never happen if LH_Operational_FltDuty is complete
+            LogManager.shared.error("FRMS: Failed to find LH rest requirement for \(duty.crewComplement.description) after \(String(format: "%.1f", duty.dutyTime))h duty")
+            fatalError("LH_Operational_FltDuty rest lookup failed - data structure incomplete")
+        }
 
-        switch duty.crewComplement {
-        case .twoPilot:
-            // FD3.1 & FD10.1: 2-pilot rest requirements
-            if duty.dutyTime <= 11 {
-                if limitType == .planning {
-                    // Planning: 11 hours if flight time ≤ 8, otherwise 22 hours
-                    minimumRest = duty.flightTime <= 8.0 ? 11.0 : 22.0
-                } else {
-                    // Operational: 10 hours
-                    minimumRest = 10.0
-                }
-            } else if duty.dutyTime <= 12 {
-                if limitType == .planning {
-                    minimumRest = 22.0
-                } else {
-                    minimumRest = 12.0
-                }
-            } else {
-                // Over 12 hours operational: 10 + 1 hour for each 15 minutes over 11 hours
-                if limitType == .operational {
-                    let excessMinutes = (duty.dutyTime - 11.0) * 60.0
-                    let additionalHours = ceil(excessMinutes / 15.0)
-                    minimumRest = 10.0 + additionalHours
-                } else {
-                    minimumRest = 24.0
-                }
-            }
-
-        case .threePilot:
-            // FD3.1 & FD10.1: 3-pilot rest requirements
-            if duty.dutyTime <= 12 {
-                if limitType == .planning {
-                    minimumRest = 12.0
-                } else {
-                    minimumRest = 12.0
-                }
-            } else if duty.dutyTime <= 16 {
-                if limitType == .planning {
-                    minimumRest = 22.0  // Acclimated crew
-                } else {
-                    minimumRest = 12.0
-                }
-            } else {
-                // Over 16 hours
-                if limitType == .planning {
-                    minimumRest = 32.0  // Not acclimated
-                } else {
-                    minimumRest = 24.0
-                }
-            }
-
-        case .fourPilot:
-            // FD3.1 & FD10.1: 4-pilot rest requirements
-            if duty.dutyTime <= 12 {
-                if limitType == .planning {
-                    // Planning: 12 hours if flight time < 9.5, otherwise 18 hours
-                    minimumRest = duty.flightTime < 9.5 ? 12.0 : 18.0
-                } else {
-                    // Operational: 12 hours if flight time ≤ 9.5
-                    minimumRest = duty.flightTime <= 9.5 ? 12.0 : 18.0
-                }
-            } else if duty.dutyTime <= 14 {
-                if limitType == .planning {
-                    minimumRest = 22.0  // Or 32 hours depending on conditions
-                } else {
-                    minimumRest = 22.0
-                }
-            } else if duty.dutyTime <= 16 {
-                if limitType == .planning {
-                    minimumRest = 32.0  // Or 48 hours within West Coast North America
-                } else {
-                    minimumRest = 24.0
-                }
-            } else {
-                // Over 16 hours (>18 hour duties - special rules apply)
-                if limitType == .planning {
-                    minimumRest = 48.0  // Or 22 hours if prior duty was deadheading
-                } else {
-                    minimumRest = 32.0  // Or 48 hours within West Coast North America
-                }
+        // Check if formula-based rest applies (2-pilot duty/flight time extensions)
+        if restReq.minimumRestFormula != nil && duty.crewComplement == .twoPilot {
+            // Formula: "10 + 1 additional hour for each 15 minutes or part thereof when TOD exceeded 11 hours"
+            if duty.dutyTime > 11 || duty.flightTime > 8 {
+                let excessMinutes = (duty.dutyTime - 11.0) * 60.0
+                let additionalHours = ceil(excessMinutes / 15.0)
+                return 10.0 + additionalHours
             }
         }
 
-        return minimumRest
+        // Use minimum rest hours from rest requirement
+        if let minRest = restReq.minimumRestHours {
+            // Apply planning vs operational logic
+            if limitType == .planning {
+                // For 2-pilot, consider flight time limit for special cases
+                if duty.crewComplement == .twoPilot && duty.dutyTime <= 11 {
+                    // Planning: 11 hours if flight time ≤ 8, otherwise use table value
+                    // This is from FD10.1 2-pilot pre-duty rest requirements
+                    return duty.flightTime <= 8.0 ? 11.0 : minRest
+                }
+                return minRest
+            } else {
+                // Operational: use the minimum from table
+                return minRest
+            }
+        }
+
+        // Special cases where minimumRestHours is nil (e.g., Relevant Sectors >18 hours)
+        // These have special requirements defined in the requirements field
+        if let requirements = restReq.requirements, requirements.contains("Relevant Sector") {
+            // For >18 hour duties (Relevant Sectors), use special rest from LH_Operational_FltDuty
+            // Pre-duty: 22 hours (relevantSectorPreDutyRestHours)
+            // Post-duty: 27-36 hours depending on crew (relevantSectorPostDutyRest)
+            if restReq.direction == .preDuty {
+                return LH_Operational_FltDuty.relevantSectorPreDutyRestHours
+            } else {
+                // Post-duty for relevant sectors: use minimum from table (27 hours)
+                return LH_Operational_FltDuty.relevantSectorPostDutyRest.first?.minimumRestHours ?? 27.0
+            }
+        }
+
+        // Default to 12 hours for any unhandled cases (standard minimum rest)
+        LogManager.shared.warning("FRMS: Using default 12h rest for unhandled case: \(restReq.dutyPeriodThreshold)")
+        return 12.0
     }
 
     // MARK: - A320/B737 Next Duty Limits Calculation
@@ -1481,7 +1540,7 @@ class FRMSCalculationService {
 
         // Check rest requirements
         if let prevDuty = previousDuty {
-            let requiredRest = calculateMinimumRest(afterDuty: prevDuty, limitType: .planning)
+            let requiredRest = calculateMinimumRest(afterDuty: prevDuty, limitType: .operational)
             // Use standardized conversion with proper rounding
             let actualRest = proposedDuty.signOn.timeIntervalSince(prevDuty.signOff).toDecimalHours
 
