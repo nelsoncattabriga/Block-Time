@@ -21,6 +21,7 @@ struct FRMSView: View {
     let flightTimePosition: FlightTimePosition
     @ObservedObject private var themeService = ThemeService.shared
     @EnvironmentObject var appViewModel: FlightTimeExtractorViewModel
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
     @State private var selectedCrewComplement: CrewComplement = .twoPilot
     @State private var selectedRestFacility: RestFacilityClass = .none
@@ -160,8 +161,8 @@ struct FRMSView: View {
 
             if let limits = viewModel.a320B737NextDutyLimits, let totals = viewModel.cumulativeTotals {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Consecutive Duties Summary (A320/B737 only)
-                    if totals.hasConsecutiveDutyLimits {
+                    // Consecutive Duties Summary (A320/B737 only - iPhone only, iPad shows in cumulative section)
+                    if totals.hasConsecutiveDutyLimits && horizontalSizeClass == .compact {
                         buildConsecutiveInfoCard(totals: totals)
                     }
 
@@ -169,7 +170,7 @@ struct FRMSView: View {
                     if limits.backOfClockRestriction != nil || limits.lateNightStatus != nil || limits.consecutiveDutyStatus.hasActiveRestrictions {
                         activeRestrictionsSection(limits: limits)
                     }
-                    
+
                     // Unified Next Duty Card
                     nextDutyLimitsCard(limits: limits)
                 }
@@ -1238,10 +1239,19 @@ struct FRMSView: View {
 
                     // Row 3: Days Off + Consecutive Duties (A320/B737 only)
                     if viewModel.configuration.fleet == .a320B737 {
-                        buildDaysOffCard(
-                            daysOff: totals.daysOff28Days,
-                            required: 7
-                        )
+                        HStack(spacing: 12) {
+                            buildDaysOffCard(
+                                daysOff: totals.daysOff28Days,
+                                required: 7
+                            )
+
+                            if totals.hasConsecutiveDutyLimits {
+                                buildConsecutiveInfoCard(totals: totals)
+                            } else {
+                                Spacer()
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
                     }
                 }
             }
@@ -1361,6 +1371,88 @@ struct FRMSView: View {
                 // Spacer to match the height of ProgressView in buildLimitCard
                 Spacer()
                     .frame(height: 6)
+            }
+            .padding()
+            .background(.thinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+
+        private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Consecutive Duties")
+                    .font(.headline)
+                    .fontWeight(.medium)
+
+                HStack(spacing: 16) {
+                    if let maxConsec = totals.maxConsecutiveDuties {
+                        VStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(totals.consecutiveDuties)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
+                                Text("/\(maxConsec)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Cons. Days")
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+
+                    if let maxDuty11 = totals.maxDutyDaysIn11Days {
+                        VStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(totals.dutyDaysIn11Days)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
+                                Text("/\(maxDuty11)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("in 11 Days")
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+
+                    if let maxEarly = totals.maxConsecutiveEarlyStarts {
+                        VStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(totals.consecutiveEarlyStarts)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
+                                Text("/\(maxEarly)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Early Starts")
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+
+                    if let maxLate = totals.maxConsecutiveLateNights {
+                        VStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(totals.consecutiveLateNights)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
+                                Text("/\(maxLate)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Late Nights")
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
             .padding()
             .background(.thinMaterial)
