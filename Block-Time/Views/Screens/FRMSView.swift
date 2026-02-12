@@ -170,6 +170,11 @@ struct FRMSView: View {
                         activeRestrictionsSection(limits: limits)
                     }
 
+                    // Next Duty Limits Title
+                    Text("Next Duty Limits")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+
                     // Unified Next Duty Card
                     nextDutyLimitsCard(limits: limits)
                 }
@@ -186,10 +191,6 @@ struct FRMSView: View {
 
     private func nextDutyLimitsCard(limits: A320B737NextDutyLimits) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Next Duty Limits")
-                .font(.title2)
-                .fontWeight(.semibold)
-
             // Rest Requirements
             VStack(alignment: .leading, spacing: 8) {
 //                Text("Rest Required")
