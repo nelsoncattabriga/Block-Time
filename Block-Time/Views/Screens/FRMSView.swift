@@ -283,7 +283,9 @@ struct FRMSView: View {
                             .fontWeight(.semibold)
                     }
                 }
-Spacer()
+                
+                Spacer()
+                
                 // Flight time limit with darkness conditional
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Max Flight Time")
@@ -1236,19 +1238,10 @@ Spacer()
 
                     // Row 3: Days Off + Consecutive Duties (A320/B737 only)
                     if viewModel.configuration.fleet == .a320B737 {
-                        HStack(spacing: 12) {
-                            buildDaysOffCard(
-                                daysOff: totals.daysOff28Days,
-                                required: 7
-                            )
-
-                            if totals.hasConsecutiveDutyLimits {
-                                buildConsecutiveInfoCard(totals: totals)
-                            } else {
-                                Spacer()
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
+                        buildDaysOffCard(
+                            daysOff: totals.daysOff28Days,
+                            required: 7
+                        )
                     }
                 }
             }
@@ -1374,89 +1367,6 @@ Spacer()
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
 
-        private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Consecutive Duties")
-                    .font(.headline)
-                    .fontWeight(.medium)
-
-                // First row - 4 items (only for A320/B737)
-                HStack(spacing: 16) {
-                    if let maxConsec = totals.maxConsecutiveDuties {
-                        VStack {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(totals.consecutiveDuties)")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
-                                Text("/\(maxConsec)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text("Cons.")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if let maxDuty11 = totals.maxDutyDaysIn11Days {
-                        VStack {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(totals.dutyDaysIn11Days)")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
-                                Text("/\(maxDuty11)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text("in 11 Days")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if let maxEarly = totals.maxConsecutiveEarlyStarts {
-                        VStack {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(totals.consecutiveEarlyStarts)")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
-                                Text("/\(maxEarly)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text("Early Starts")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if let maxLate = totals.maxConsecutiveLateNights {
-                        VStack {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(totals.consecutiveLateNights)")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
-                                Text("/\(maxLate)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text("Late Nights")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding()
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-
         // MARK: - Helper Methods
 
         private func statusColor(_ status: FRMSComplianceStatus) -> Color {
@@ -1503,7 +1413,7 @@ Spacer()
                                 .foregroundStyle(.secondary)
                         }
                         Text("Cons. Days")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.primary)
                     }
                 }
@@ -1520,7 +1430,7 @@ Spacer()
                                 .foregroundStyle(.secondary)
                         }
                         Text("in 11 Days")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.primary)
                     }
                 }
@@ -1537,7 +1447,7 @@ Spacer()
                                 .foregroundStyle(.secondary)
                         }
                         Text("Early Starts")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.primary)
                     }
                 }
@@ -1554,7 +1464,7 @@ Spacer()
                                 .foregroundStyle(.secondary)
                         }
                         Text("Late Nights")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.primary)
                     }
                 }
