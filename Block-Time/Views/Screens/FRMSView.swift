@@ -60,6 +60,7 @@ struct FRMSView: View {
                             // Cumulative Limits Section
                             cumulativeLimitsSection
 
+                            
                             // Maximum Next Duty Calculator
                             maximumNextDutySection
 
@@ -156,9 +157,6 @@ struct FRMSView: View {
 
     private var a320B737NextDutyContent: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Next Duty Limits")
-                .font(.title2)
-                .fontWeight(.semibold)
 
             if let limits = viewModel.a320B737NextDutyLimits, let totals = viewModel.cumulativeTotals {
                 VStack(alignment: .leading, spacing: 16) {
@@ -188,20 +186,24 @@ struct FRMSView: View {
 
     private func nextDutyLimitsCard(limits: A320B737NextDutyLimits) -> some View {
         VStack(alignment: .leading, spacing: 16) {
+            Text("Next Duty Limits")
+                .font(.title2)
+                .fontWeight(.semibold)
+
             // Rest Requirements
             VStack(alignment: .leading, spacing: 8) {
-                Text("Rest Required")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+//                Text("Rest Required")
+//                    .font(.headline)
+//                    .fontWeight(.semibold)
+//                    .foregroundStyle(.primary)
 
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Minimum Rest")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
                         Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
-                            .font(.title3)
+                            .font(.headline)
                             .fontWeight(.semibold)
                     }
 
@@ -209,10 +211,10 @@ struct FRMSView: View {
 
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("Earliest Sign-On")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
                         Text(formatDateTime(limits.earliestSignOn))
-                            .font(.title3)
+                            .font(.headline)
                             .fontWeight(.semibold)
                     }
                 }
@@ -227,7 +229,7 @@ struct FRMSView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Max Duty")
-                        .font(.subheadline)
+                        .font(.headline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
                     Spacer()
@@ -253,7 +255,7 @@ struct FRMSView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)) hrs")
-                            .font(.headline)
+                            .font(.subheadline)
                             .fontWeight(.semibold)
                     }
 
@@ -265,7 +267,7 @@ struct FRMSView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors5)) hrs")
-                            .font(.headline)
+                            .font(.subheadline)
                             .fontWeight(.semibold)
                     }
 
@@ -277,7 +279,7 @@ struct FRMSView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors6)) hrs")
-                            .font(.headline)
+                            .font(.subheadline)
                             .fontWeight(.semibold)
                     }
                 }
@@ -288,7 +290,7 @@ Spacer()
                         .font(.subheadline)
                         .foregroundStyle(.primary)
                     Text(displayWindow.limits.maxFlightTimeDescription)
-                        .font(.headline)
+                        .font(.subheadline)
                         .fontWeight(.semibold)
                 }
             }
@@ -1263,7 +1265,7 @@ Spacer()
                 status: totals.status28Days,
                 unit: "hrs"
             )
-
+            
             // Flight Time - 365 Days
             buildLimitCard(
                 title: "Flight Time (365 Days)",
@@ -1272,7 +1274,7 @@ Spacer()
                 status: totals.status365Days,
                 unit: "hrs"
             )
-
+            
             // Duty Time - 7 Days
             buildLimitCard(
                 title: "Duty Time (7 Days)",
@@ -1281,7 +1283,7 @@ Spacer()
                 status: totals.dutyStatus7Days,
                 unit: "hrs"
             )
-
+            
             // Duty Time - 14 Days
             buildLimitCard(
                 title: "Duty Time (14 Days)",
@@ -1290,6 +1292,16 @@ Spacer()
                 status: totals.dutyStatus14Days,
                 unit: "hrs"
             )
+            
+            // ADDED HERE
+            if viewModel.configuration.fleet == .a320B737 {
+                    buildDaysOffCard(
+                    daysOff: totals.daysOff28Days,
+                    required: 7
+                    )
+                
+            }
+            
         }
 
         // MARK: - Card Building Functions
