@@ -1558,40 +1558,7 @@ private struct ModernFRMSCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
-                Divider()
-                    .padding(.horizontal, 8)
-
-                // Default Limit Type
-                HStack(spacing: 12) {
-                    Image(systemName: "doc.text")
-                        .foregroundColor(.green)
-                        .frame(width: 20)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Default Limits")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
-
-                        Text(viewModel.configuration.defaultLimitType == .planning ? "Planning Limits" : "Operational Limits")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-
-                    Spacer()
-
-                    Picker("", selection: $viewModel.configuration.defaultLimitType) {
-                        Text("Planning").tag(FRMSLimitType.planning)
-                        Text("Operational").tag(FRMSLimitType.operational)
-                    }
-                    .pickerStyle(.menu)
-                    .fixedSize()
-                }
-                .padding(12)
-                .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                // Default Limits removed - always using operational limits
             }
         }
         .padding(16)

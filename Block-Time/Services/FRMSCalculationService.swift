@@ -830,6 +830,49 @@ class FRMSCalculationService {
         }
     }
 
+    // MARK: - A320/B737 Duty and Flight Time Helpers
+
+    /// Get maximum duty hours for A320/B737 based on local start time and sectors (FD23.1)
+    /// - Parameters:
+    ///   - signOn: Sign-on time
+    ///   - sectors: Number of sectors
+    ///   - crewComplement: Crew complement
+    /// - Returns: Maximum duty hours or nil if not applicable
+    private func getA320B737MaxDutyHours(signOn: Date, sectors: Int, crewComplement: CrewComplement) -> Double? {
+        guard crewComplement == .twoPilot else {
+            return nil  // Use base limits for augmented crews
+        }
+
+        // Classify local start time using home base timezone
+        let homeTimeZone = getHomeBaseTimeZone()
+        let localStartTime = SH_Operational_FltDuty.LocalStartTime.classify(signOn: signOn, homeBaseTimeZone: homeTimeZone)
+
+        // Get max duty from FD23 rules
+        return SH_Operational_FltDuty.maxDutyHours(localStartTime: localStartTime, sectors: sectors)
+    }
+
+    /// Get maximum flight time for A320/B737 based on sectors and darkness (FD23.3)
+    /// - Parameters:
+    ///   - sectors: Number of sectors scheduled
+    ///   - nightTime: Hours of flight time in darkness
+    ///   - crewComplement: Crew complement
+    /// - Returns: Maximum flight time hours
+    private func getA320B737MaxFlightTime(sectors: Int, nightTime: Double, crewComplement: CrewComplement) -> Double {
+        // Augmented crews use different limit (FD23.4)
+        guard crewComplement == .twoPilot else {
+            return SH_Operational_FltDuty.augmentedFlightTimeLimitHours
+        }
+
+        // Check if more than 7 hours of flight time in darkness
+        let darknessExceeds7Hours = nightTime > 7.0
+
+        // Get max flight time from FD23 rules
+        return SH_Operational_FltDuty.maxFlightTimeHours(
+            sectorsScheduled: sectors,
+            darknessFlightTimeExceeds7Hours: darknessExceeds7Hours
+        )
+    }
+
     // MARK: - A320/B737 Specific Limits
 
     private func getBaseLimitsA320B737(crewComplement: CrewComplement,
@@ -838,56 +881,53 @@ class FRMSCalculationService {
 
         switch crewComplement {
         case .twoPilot:
-            // A320/B737 2-pilot limits (simplified - doesn't account for time of day yet)
-            if limitType == .planning {
-                return (maxDuty: 11.0, maxFlight: 8.5, maxSectors: 4)
+            // A320/B737 2-pilot operational limits (FD23)
+            // NOTE: These are baseline values. Actual limits vary by local start time (see SH_Operational_FltDuty)
+            // Use the most restrictive baseline (night operations) for general calculations
+            if limitType == .operational {
+                // Operational: Night window baseline (most restrictive)
+                // Max duty: 12h (1-4 sectors), 12h (5 sectors), 11h (6 sectors)
+                // Max flight: 10h (multi-sector), 10.5h (single sector), 9.5h (>7h darkness)
+                return (maxDuty: 12.0, maxFlight: 10.0, maxSectors: 6)
             } else {
-                return (maxDuty: 12.0, maxFlight: 10.0, maxSectors: 4)
+                // Planning: More conservative baseline
+                // Note: Planning limits not explicitly defined in FD23, using operational -2h as per typical FRMS
+                return (maxDuty: 10.0, maxFlight: 8.0, maxSectors: 6)
             }
 
         case .threePilot:
-            // A320/B737 3-pilot limits depend on rest facility
+            // A320/B737 augmented crew (3-pilot) limits depend on rest facility
+            // Map RestFacilityClass to AugmentedRestFacility for SH rules
+            let shRestFacility: SH_Operational_FltDuty.AugmentedRestFacility
             switch restFacility {
             case .class1:
-                if limitType == .planning {
-                    return (maxDuty: 14.0, maxFlight: 12.5, maxSectors: 4)
-                } else {
-                    return (maxDuty: 18.0, maxFlight: 12.5, maxSectors: 4)
-                }
-            case .class2:
-                if limitType == .planning {
-                    return (maxDuty: 12.0, maxFlight: 8.5, maxSectors: 4)
-                } else {
-                    return (maxDuty: 16.0, maxFlight: 8.5, maxSectors: 4)
-                }
-            default:
-                return (maxDuty: 12.0, maxFlight: 8.5, maxSectors: 4)
+                shRestFacility = .separateScreenedSeat  // Class 1 = separate screened seat
+            case .class2, .mixed, .none:
+                shRestFacility = .passengerCompartmentSeat  // Class 2 = passenger compartment seat
             }
 
-        case .fourPilot:
-            // A320/B737 4-pilot limits depend on rest facilities
-            switch restFacility {
-            case .class1:
-                if limitType == .planning {
-                    return (maxDuty: 20.0, maxFlight: 14.0, maxSectors: 2)
-                } else {
-                    return (maxDuty: 21.0, maxFlight: 14.0, maxSectors: 2)
-                }
-            case .class2:
-                if limitType == .planning {
-                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 2)
-                } else {
-                    return (maxDuty: 16.0, maxFlight: 14.0, maxSectors: 2)
-                }
-            case .mixed:
-                if limitType == .planning {
-                    return (maxDuty: 17.5, maxFlight: 14.0, maxSectors: 2)
-                } else {
-                    return (maxDuty: 20.0, maxFlight: 14.0, maxSectors: 2)
-                }
-            default:
-                return (maxDuty: 14.0, maxFlight: 8.0, maxSectors: 4)
+            // Get limits from SH_Operational_FltDuty
+            if let augmentedLimit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == shRestFacility }) {
+                // Flight time limit is 10.5h for augmented operations (FD23.4)
+                return (maxDuty: augmentedLimit.maxDutyHours,
+                       maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours,
+                       maxSectors: augmentedLimit.maxSectors ?? 6)
             }
+
+            // Fallback to conservative values
+            return (maxDuty: 14.0, maxFlight: 10.5, maxSectors: 6)
+
+        case .fourPilot:
+            // A320/B737 4-pilot operations are rare but follow similar augmented rules
+            // Use most generous augmented limit (separate screened seat)
+            if let augmentedLimit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == .separateScreenedSeat }) {
+                return (maxDuty: augmentedLimit.maxDutyHours,
+                       maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours,
+                       maxSectors: augmentedLimit.maxSectors ?? 2)
+            }
+
+            // Fallback
+            return (maxDuty: 16.0, maxFlight: 10.5, maxSectors: 2)
         }
     }
 
@@ -1073,49 +1113,21 @@ class FRMSCalculationService {
             )
         }
 
-        // Build sign-on time windows
+        // Build sign-on time windows using FD23 Operational Limits
+        // Windows now pull limits directly from SH_Operational_FltDuty
+
         let earlyWindow = buildA320B737DutyWindow(
-            timeRange: "0500-1459",
-            displayName: "Early",
-            startHour: 5,
-            endHour: 14,
-            planningDuty1to4: 12.0,
-            planningDuty5: 11.0,
-            planningDuty6: nil,
-            operationalDuty1to4: 14.0,
-            operationalDuty5: 13.0,
-            operationalDuty6: 12.0,
-            flightTime: 10.5,
+            localStartTime: .early,
             earliestSignOn: earliestSignOn
         )
 
         let afternoonWindow = buildA320B737DutyWindow(
-            timeRange: "1500-1959",
-            displayName: "Afternoon",
-            startHour: 15,
-            endHour: 19,
-            planningDuty1to4: 11.0,
-            planningDuty5: 10.0,
-            planningDuty6: nil,
-            operationalDuty1to4: 13.0,
-            operationalDuty5: 12.0,
-            operationalDuty6: 11.0,
-            flightTime: 10.0,
+            localStartTime: .afternoon,
             earliestSignOn: earliestSignOn
         )
 
         let nightWindow = buildA320B737DutyWindow(
-            timeRange: "2000-0459",
-            displayName: "Night",
-            startHour: 20,
-            endHour: 4,
-            planningDuty1to4: 10.0,
-            planningDuty5: 10.0,
-            planningDuty6: nil,
-            operationalDuty1to4: 12.0,
-            operationalDuty5: 12.0,
-            operationalDuty6: 11.0,
-            flightTime: 10.0,
+            localStartTime: .night,
             earliestSignOn: earliestSignOn
         )
 
@@ -1312,8 +1324,8 @@ class FRMSCalculationService {
             violations.append("Sign-on before earliest allowed: \(formatter.string(from: a320B737Limits.earliestSignOn))")
         }
 
-        // Get limits based on sector count
-        let limits = configuration.defaultLimitType == .planning ? applicableWindow.planningLimits : applicableWindow.operationalLimits
+        // Get operational limits (only limit type we use now)
+        let limits = applicableWindow.limits
         let maxDuty = limits.maxDuty(forSectors: scenario.estimatedSectors)
 
         // Check duty time
@@ -1371,25 +1383,22 @@ class FRMSCalculationService {
         )
     }
 
-    /// Helper to build a duty time window
-    private func buildA320B737DutyWindow(timeRange: String,
-                                         displayName: String,
-                                         startHour: Int,
-                                         endHour: Int,
-                                         planningDuty1to4: Double,
-                                         planningDuty5: Double?,
-                                         planningDuty6: Double?,
-                                         operationalDuty1to4: Double,
-                                         operationalDuty5: Double?,
-                                         operationalDuty6: Double?,
-                                         flightTime: Double,
+    /// Helper to build a duty time window from SH_Operational_FltDuty rules
+    /// - Parameters:
+    ///   - localStartTime: The local start time classification (early/afternoon/night)
+    ///   - earliestSignOn: Earliest sign-on time to determine availability
+    /// - Returns: DutyTimeWindow with limits calculated from FD23 rules
+    private func buildA320B737DutyWindow(localStartTime: SH_Operational_FltDuty.LocalStartTime,
                                          earliestSignOn: Date) -> DutyTimeWindow {
 
         // Check if this window is currently available based on earliest sign-on
-        // Use device's current timezone (where you currently are)
         let calendar = Calendar.current
-
         let signOnHour = calendar.component(.hour, from: earliestSignOn)
+
+        // Get start and end hours from the LocalStartTime
+        let range = localStartTime.range
+        let startHour = range.lowerBound / 100
+        let endHour = range.upperBound / 100
 
         // Check if sign-on hour falls within this window
         let isAvailable: Bool
@@ -1400,27 +1409,12 @@ class FRMSCalculationService {
             isAvailable = signOnHour >= startHour && signOnHour <= endHour
         }
 
-        let planningLimits = DutyLimits(
-            maxDutySectors1to4: planningDuty1to4,
-            maxDutySectors5: planningDuty5,
-            maxDutySectors6: planningDuty6,
-            maxFlightTime: flightTime
-        )
-
-        let operationalLimits = DutyLimits(
-            maxDutySectors1to4: operationalDuty1to4,
-            maxDutySectors5: operationalDuty5,
-            maxDutySectors6: operationalDuty6,
-            maxFlightTime: flightTime
-        )
-
         return DutyTimeWindow(
-            timeRange: timeRange,
-            displayName: displayName,
+            timeRange: localStartTime.rawValue,
+            displayName: localStartTime.displayName,
             startHour: startHour,
             endHour: endHour,
-            planningLimits: planningLimits,
-            operationalLimits: operationalLimits,
+            localStartTime: localStartTime.rawValue,
             isCurrentlyAvailable: isAvailable
         )
     }

@@ -596,28 +596,68 @@ struct DailyDutySummary: Identifiable, Codable, Sendable {
 // MARK: - A320/B737 Next Duty Limits
 
 /// Sign-on time window with duty and flight limits
+/// This structure wraps SH_Operational_FltDuty rules for UI display (OPERATIONAL LIMITS ONLY)
 struct DutyTimeWindow: Codable {
     let timeRange: String           // e.g., "0500-1459"
     let displayName: String         // e.g., "Early Morning"
     let startHour: Int              // e.g., 5 for 0500
     let endHour: Int                // e.g., 14 for 1459 (use 24 for wraparound)
-    let planningLimits: DutyLimits
-    let operationalLimits: DutyLimits
+    let localStartTime: String      // Maps to SH_Operational_FltDuty.LocalStartTime rawValue
     let isCurrentlyAvailable: Bool  // Based on earliest sign-on time
+
+    // Computed property that pulls operational limits from SH_Operational_FltDuty
+    var limits: DutyLimits {
+        DutyLimits(localStartTime: localStartTime)
+    }
 }
 
 /// Duty and flight time limits for different sector counts
+/// This dynamically calculates OPERATIONAL limits from SH_Operational_FltDuty based on local start time
 struct DutyLimits: Codable {
-    let maxDutySectors1to4: Double
-    let maxDutySectors5: Double?
-    let maxDutySectors6: Double?
-    let maxFlightTime: Double
+    let localStartTime: String      // SH_Operational_FltDuty.LocalStartTime rawValue
+
+    // Computed properties from SH_Operational_FltDuty (OPERATIONAL LIMITS ONLY)
+    var maxDutySectors1to4: Double {
+        guard let startTime = SH_Operational_FltDuty.LocalStartTime(rawValue: localStartTime),
+              let dutyLimit = SH_Operational_FltDuty.twoPilotDutyLimits.first(where: { $0.localStartTime == startTime }) else {
+            return 12.0  // Fallback
+        }
+        return dutyLimit.maxDutySectors1to4
+    }
+
+    var maxDutySectors5: Double {
+        guard let startTime = SH_Operational_FltDuty.LocalStartTime(rawValue: localStartTime),
+              let dutyLimit = SH_Operational_FltDuty.twoPilotDutyLimits.first(where: { $0.localStartTime == startTime }) else {
+            return 12.0  // Fallback
+        }
+        return dutyLimit.maxDutySectors5
+    }
+
+    var maxDutySectors6: Double {
+        guard let startTime = SH_Operational_FltDuty.LocalStartTime(rawValue: localStartTime),
+              let dutyLimit = SH_Operational_FltDuty.twoPilotDutyLimits.first(where: { $0.localStartTime == startTime }) else {
+            return 11.0  // Fallback
+        }
+        return dutyLimit.maxDutySectors6
+    }
+
+    /// Maximum flight time with darkness conditional
+    /// Returns: "10h (9.5h if >7h darkness)" or "10.5h (9.5h if >7h darkness)"
+    var maxFlightTimeDescription: String {
+        // FD23.3: Multi-sector: 10h, Single-sector: 10.5h, >7h darkness: 9.5h
+        return "10h (9.5h if >7h darkness)"
+    }
+
+    /// Base maximum flight time (without darkness consideration)
+    var maxFlightTime: Double {
+        return 10.5  // Single sector max (FD23.3)
+    }
 
     func maxDuty(forSectors sectors: Int) -> Double {
-        if sectors >= 6, let max6 = maxDutySectors6 {
-            return max6
-        } else if sectors >= 5, let max5 = maxDutySectors5 {
-            return max5
+        if sectors >= 6 {
+            return maxDutySectors6
+        } else if sectors >= 5 {
+            return maxDutySectors5
         } else {
             return maxDutySectors1to4
         }
@@ -792,7 +832,7 @@ struct FRMSConfiguration: Codable, Sendable {
     var showFRMS: Bool = true            // Show FRMS tab (always visible)
     var fleet: FRMSFleet
     var homeBase: String                 // e.g., "SYD", "MEL", "PER"
-    var defaultLimitType: FRMSLimitType
+    var defaultLimitType: FRMSLimitType  // Deprecated: kept for backward compatibility, always use .operational
     var showWarningsAtPercentage: Double // e.g., 0.9 = warn at 90% of limit
 
     // Sign-on/Sign-off time margins (in minutes)
@@ -803,7 +843,7 @@ struct FRMSConfiguration: Codable, Sendable {
          showFRMS: Bool = true,
          fleet: FRMSFleet = .a320B737,
          homeBase: String = "SYD",
-         defaultLimitType: FRMSLimitType = .planning,
+         defaultLimitType: FRMSLimitType = .operational,  // Always operational now
          showWarningsAtPercentage: Double = 0.9,
          signOnMinutesBeforeSTD: Int? = nil,
          signOffMinutesAfterIN: Int? = nil) {
@@ -812,7 +852,7 @@ struct FRMSConfiguration: Codable, Sendable {
         self.showFRMS = true   // Always visible
         self.fleet = fleet
         self.homeBase = homeBase
-        self.defaultLimitType = defaultLimitType
+        self.defaultLimitType = .operational  // Always use operational limits
         self.showWarningsAtPercentage = showWarningsAtPercentage
 
         // Set fleet-specific defaults if not provided
