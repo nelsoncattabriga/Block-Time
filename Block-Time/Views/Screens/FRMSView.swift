@@ -25,6 +25,14 @@ struct FRMSView: View {
     @State private var selectedCrewComplement: CrewComplement = .twoPilot
     @State private var selectedRestFacility: RestFacilityClass = .none
 
+    // Time window selection for SH duty limits display
+    enum TimeWindowSelection: String, CaseIterable {
+        case early = "0500-1459"
+        case afternoon = "1500-1959"
+        case night = "2000-0459"
+    }
+    @State private var selectedTimeWindow: TimeWindowSelection = .early
+
     // MBTT parameters (for A380/A330/B787)
     @State private var mbttDaysAwayCategory: String = "2-4"  // Options: "1", "2-4", "5-8", "9-12", ">12"
     @State private var mbttCreditedHoursCategory: String = "≤20"  // Options: "≤20", ">20", ">40", ">60"
@@ -182,10 +190,10 @@ struct FRMSView: View {
         VStack(alignment: .leading, spacing: 16) {
             // Rest Requirements
             VStack(alignment: .leading, spacing: 8) {
-                Text("REST REQUIRED")
-                    .font(.caption)
+                Text("Rest Required")
+                    .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
 
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
@@ -212,29 +220,39 @@ struct FRMSView: View {
 
             Divider()
 
-            // Determine which window applies based on earliest sign-on
-            let applicableWindow = determineApplicableWindow(limits: limits)
+            // Get the window to display based on user selection
+            let displayWindow = getSelectedWindow(limits: limits, selection: selectedTimeWindow)
 
-            // Duty Limits for applicable window
+            // Duty Limits for selected window
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("DUTY LIMITS")
-                        .font(.caption)
+                    Text("Max Duty")
+                        .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                     Spacer()
-                    Text("\(applicableWindow.displayName) • \(applicableWindow.timeRange)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+
+                    // Time window picker
+                    Picker("Time Window", selection: $selectedTimeWindow) {
+                        ForEach(TimeWindowSelection.allCases, id: \.self) { window in
+                            Text(window.rawValue).tag(window)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .font(.caption)
                 }
+
+//                Text("\(displayWindow.timeRange)")
+//                    .font(.caption2)
+//                    .foregroundStyle(.secondary)
 
                 // Sector-based duty limits
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("1-4 Sectors")
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text("\(formatHoursMinutes(applicableWindow.limits.maxDutySectors1to4)) hrs")
+                        Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)) hrs")
                             .font(.headline)
                             .fontWeight(.semibold)
                     }
@@ -244,9 +262,9 @@ struct FRMSView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("5 Sectors")
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text("\(formatHoursMinutes(applicableWindow.limits.maxDutySectors5)) hrs")
+                        Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors5)) hrs")
                             .font(.headline)
                             .fontWeight(.semibold)
                     }
@@ -256,28 +274,39 @@ struct FRMSView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("6 Sectors")
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text("\(formatHoursMinutes(applicableWindow.limits.maxDutySectors6)) hrs")
+                        Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors6)) hrs")
                             .font(.headline)
                             .fontWeight(.semibold)
                     }
                 }
-
+Spacer()
                 // Flight time limit with darkness conditional
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Max Flight Time")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(applicableWindow.limits.maxFlightTimeDescription)
                         .font(.subheadline)
-                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    Text(displayWindow.limits.maxFlightTimeDescription)
+                        .font(.headline)
+                        .fontWeight(.semibold)
                 }
             }
         }
         .padding()
         .background(.thinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .onAppear {
+            // Set initial selection to the applicable window based on earliest sign-on
+            let applicableWindow = determineApplicableWindow(limits: limits)
+            if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
+                selectedTimeWindow = .early
+            } else if applicableWindow.localStartTime == limits.afternoonWindow.localStartTime {
+                selectedTimeWindow = .afternoon
+            } else {
+                selectedTimeWindow = .night
+            }
+        }
     }
 
     /// Determine which time window applies based on earliest sign-on
@@ -288,6 +317,18 @@ struct FRMSView: View {
         } else if limits.afternoonWindow.isCurrentlyAvailable {
             return limits.afternoonWindow
         } else {
+            return limits.nightWindow
+        }
+    }
+
+    /// Get the window to display based on user selection
+    private func getSelectedWindow(limits: A320B737NextDutyLimits, selection: TimeWindowSelection) -> DutyTimeWindow {
+        switch selection {
+        case .early:
+            return limits.earlyWindow
+        case .afternoon:
+            return limits.afternoonWindow
+        case .night:
             return limits.nightWindow
         }
     }
@@ -893,88 +934,88 @@ struct FRMSView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private func consecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Consecutive Duties")
-                .font(.subheadline)
-                .fontWeight(.medium)
-
-            // First row - 4 items (only for A320/B737)
-            HStack(spacing: 16) {
-                if let maxConsec = totals.maxConsecutiveDuties {
-                    VStack {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(totals.consecutiveDuties)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
-                            Text("/\(maxConsec)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("Consec")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if let maxDuty11 = totals.maxDutyDaysIn11Days {
-                    VStack {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(totals.dutyDaysIn11Days)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
-                            Text("/\(maxDuty11)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("in 11 Days")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if let maxEarly = totals.maxConsecutiveEarlyStarts {
-                    VStack {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(totals.consecutiveEarlyStarts)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
-                            Text("/\(maxEarly)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("Early Starts")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if let maxLate = totals.maxConsecutiveLateNights {
-                    VStack {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(totals.consecutiveLateNights)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
-                            Text("/\(maxLate)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("Late Nights")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
+//    private func consecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
+//        VStack(alignment: .leading, spacing: 12) {
+//            Text("Consecutive Duties")
+//                .font(.headline)
+//                .fontWeight(.medium)
+//
+//            // First row - 4 items (only for A320/B737)
+//            HStack(spacing: 16) {
+//                if let maxConsec = totals.maxConsecutiveDuties {
+//                    VStack {
+//                        HStack(alignment: .lastTextBaseline, spacing: 2) {
+//                            Text("\(totals.consecutiveDuties)")
+//                                .font(.title2)
+//                                .fontWeight(.bold)
+//                                .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
+//                            Text("/\(maxConsec)")
+//                                .font(.subheadline)
+//                                .foregroundStyle(.secondary)
+//                        }
+//                        Text("Consec")
+//                            .font(.subheadline)
+//                            .foregroundStyle(.secondary)
+//                    }
+//                }
+//
+//                if let maxDuty11 = totals.maxDutyDaysIn11Days {
+//                    VStack {
+//                        HStack(alignment: .lastTextBaseline, spacing: 2) {
+//                            Text("\(totals.dutyDaysIn11Days)")
+//                                .font(.title2)
+//                                .fontWeight(.bold)
+//                                .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
+//                            Text("/\(maxDuty11)")
+//                                .font(.subheadline)
+//                                .foregroundStyle(.secondary)
+//                        }
+//                        Text("in 11 Days")
+//                            .font(.subheadline)
+//                            .foregroundStyle(.secondary)
+//                    }
+//                }
+//
+//                if let maxEarly = totals.maxConsecutiveEarlyStarts {
+//                    VStack {
+//                        HStack(alignment: .lastTextBaseline, spacing: 2) {
+//                            Text("\(totals.consecutiveEarlyStarts)")
+//                                .font(.title2)
+//                                .fontWeight(.bold)
+//                                .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
+//                            Text("/\(maxEarly)")
+//                                .font(.subheadline)
+//                                .foregroundStyle(.secondary)
+//                        }
+//                        Text("Early Starts")
+//                            .font(.subheadline)
+//                            .foregroundStyle(.secondary)
+//                    }
+//                }
+//
+//                if let maxLate = totals.maxConsecutiveLateNights {
+//                    VStack {
+//                        HStack(alignment: .lastTextBaseline, spacing: 2) {
+//                            Text("\(totals.consecutiveLateNights)")
+//                                .font(.title2)
+//                                .fontWeight(.bold)
+//                                .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
+//                            Text("/\(maxLate)")
+//                                .font(.subheadline)
+//                                .foregroundStyle(.secondary)
+//                        }
+//                        Text("Late Nights")
+//                            .font(.subheadline)
+//                            .foregroundStyle(.secondary)
+//                    }
+//                }
+//            }
+//            .frame(maxWidth: .infinity)
+//        }
+//        .padding()
+//        .background(.thinMaterial)
+//        .clipShape(RoundedRectangle(cornerRadius: 12))
+//    }
 
     private func maxDutyParameterRow(icon: String, title: String, value: String, color: Color) -> some View {
         HStack {
@@ -1324,7 +1365,7 @@ struct FRMSView: View {
         private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Consecutive Duties")
-                    .font(.subheadline)
+                    .font(.headline)
                     .fontWeight(.medium)
 
                 // First row - 4 items (only for A320/B737)
@@ -1433,8 +1474,8 @@ struct FRMSView: View {
     private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Consecutive Duties")
-                .font(.subheadline)
-                .fontWeight(.medium)
+                .font(.headline)
+                .fontWeight(.semibold)
 
             // First row - 4 items (only for A320/B737)
             HStack(spacing: 16) {
@@ -1449,9 +1490,9 @@ struct FRMSView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        Text("In a Row")
+                        Text("Cons. Days")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                     }
                 }
 
@@ -1468,7 +1509,7 @@ struct FRMSView: View {
                         }
                         Text("in 11 Days")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                     }
                 }
 
@@ -1485,7 +1526,7 @@ struct FRMSView: View {
                         }
                         Text("Early Starts")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                     }
                 }
 
@@ -1502,7 +1543,7 @@ struct FRMSView: View {
                         }
                         Text("Late Nights")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                     }
                 }
             }
