@@ -408,7 +408,7 @@ private struct ModernDefaultCrewNamesCard: View {
                             get: { viewModel.foPilotFlyingCredit },
                             set: { viewModel.updateFOPilotFlyingCredit($0) }
                         )) {
-                            Text("P1US").tag(TimeCreditType.p1us)
+                            Text("P1U/S").tag(TimeCreditType.p1us)
                             Text("P2").tag(TimeCreditType.p2)
                         }
                         .pickerStyle(.menu)

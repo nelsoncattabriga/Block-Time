@@ -826,7 +826,10 @@ private struct ModernManualEntryDataCard: View {
                         )
                     }
                 }
+                // Toggles section
+                ModernTogglesSection(viewModel: viewModel)
                 
+                // Remarks section
                 ModernRemarksField(
                     label: "REMARKS",
                     value: Binding(
@@ -836,8 +839,7 @@ private struct ModernManualEntryDataCard: View {
                     icon: "note.text"
                 )
                 
-                // Toggles section
-                ModernTogglesSection(viewModel: viewModel)
+                
             }
         }
         .padding(16)
@@ -1414,9 +1416,9 @@ private struct ModernTogglesSection: View {
 //                Spacer()
 //            }
 
-                VStack(spacing: 16) {
+                VStack(spacing: 18) {
                 // First row: PF/PM, APP
-                HStack(spacing: 12) {
+                HStack(spacing: 18) {
                     // PF/PM Segmented Picker
                     HStack(spacing: 0) {
                         // PF Button
@@ -1433,17 +1435,13 @@ private struct ModernTogglesSection: View {
                             Text("PF")
                                 .font(.subheadline.bold())
                                 .foregroundColor(viewModel.isPilotFlying ? .white : .secondary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 28)
-                                .background(viewModel.isPilotFlying ? Color.green : Color(.secondarySystemBackground))
+                                .frame(width: 50, height: 30)
+                                .background(viewModel.isPilotFlying ? Color.green : Color.clear)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
                         .disabled(viewModel.isPositioning)
                         .opacity(viewModel.isPositioning ? 0.5 : 1.0)
-
-                        Divider()
-                            .frame(height: 20)
 
                         // PM Button
                         Button(action: {
@@ -1455,22 +1453,19 @@ private struct ModernTogglesSection: View {
                             Text("PM")
                                 .font(.subheadline.bold())
                                 .foregroundColor(!viewModel.isPilotFlying ? .white : .secondary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 28)
-                                .background(!viewModel.isPilotFlying ? Color.gray : Color(.secondarySystemBackground))
+                                .frame(width: 50, height: 30)
+                                .background(!viewModel.isPilotFlying ? Color.gray : Color.clear)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
                         .disabled(viewModel.isPositioning)
                         .opacity(viewModel.isPositioning ? 0.5 : 1.0)
                     }
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                            .stroke(viewModel.isPilotFlying ? Color.green : Color.gray, lineWidth: 2)
                     )
-                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
 
                     // ICUS toggle removed - now using explicit P1/P1US/P2 radio buttons
 
@@ -1484,81 +1479,87 @@ private struct ModernTogglesSection: View {
                             ),
                             isDisabled: !viewModel.isPilotFlying
                         )
-                        .frame(minWidth: 0, maxWidth: .infinity)
                     }
+
+                    Spacer()
                 }
 
                 // Second row: P1/P1US/P2 Time Credits
-                HStack(spacing: 0) {
-                // P1 Button
-                Button(action: {
-                    if !viewModel.isPositioning {
-                        viewModel.selectedTimeCredit = .p1
-                        HapticManager.shared.impact(.light)
+                HStack {
+                    HStack(spacing: 0) {
+                    // P1 Button
+                    Button(action: {
+                        if !viewModel.isPositioning {
+                            viewModel.selectedTimeCredit = .p1
+                            HapticManager.shared.impact(.light)
+                        }
+                    }) {
+                        Text("P1")
+                            .font(.footnote.bold())
+                            .foregroundColor(viewModel.selectedTimeCredit == .p1 ? .white : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 24)
+                            .background(viewModel.selectedTimeCredit == .p1 ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
                     }
-                }) {
-                    Text("P1")
-                        .font(.subheadline.bold())
-                        .foregroundColor(viewModel.selectedTimeCredit == .p1 ? .white : .secondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 28)
-                        .background(viewModel.selectedTimeCredit == .p1 ? Color.blue : Color(.secondarySystemBackground))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PlainButtonStyle())
-                .disabled(viewModel.isPositioning)
-                .opacity(viewModel.isPositioning ? 0.5 : 1.0)
-
-                Divider()
-                    .frame(height: 20)
-
-                // P1US Button
-                Button(action: {
-                    if !viewModel.isPositioning {
-                        viewModel.selectedTimeCredit = .p1us
-                        HapticManager.shared.impact(.light)
-                    }
-                }) {
-                    Text("P1US")
-                        .font(.subheadline.bold())
-                        .foregroundColor(viewModel.selectedTimeCredit == .p1us ? .white : .secondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 28)
-                        .background(viewModel.selectedTimeCredit == .p1us ? Color.blue : Color(.secondarySystemBackground))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PlainButtonStyle())
-                .disabled(viewModel.isPositioning)
-                .opacity(viewModel.isPositioning ? 0.5 : 1.0)
-
-                Divider()
-                    .frame(height: 20)
-
-                // P2 Button
-                Button(action: {
-                    if !viewModel.isPositioning {
-                        viewModel.selectedTimeCredit = .p2
-                        HapticManager.shared.impact(.light)
-                    }
-                }) {
-                    Text("P2")
-                        .font(.subheadline.bold())
-                        .foregroundColor(viewModel.selectedTimeCredit == .p2 ? .white : .secondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 28)
-                        .background(viewModel.selectedTimeCredit == .p2 ? Color.blue : Color(.secondarySystemBackground))
-                        .contentShape(Rectangle())
-                }
                     .buttonStyle(PlainButtonStyle())
                     .disabled(viewModel.isPositioning)
                     .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+
+                    Divider()
+                        .frame(height: 24)
+
+                    // P1US Button
+                    Button(action: {
+                        if !viewModel.isPositioning {
+                            viewModel.selectedTimeCredit = .p1us
+                            HapticManager.shared.impact(.light)
+                        }
+                    }) {
+                        Text("P1U/S")
+                            .font(.footnote.bold())
+                            .foregroundColor(viewModel.selectedTimeCredit == .p1us ? .white : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 24)
+                            .background(viewModel.selectedTimeCredit == .p1us ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(viewModel.isPositioning)
+                    .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+
+                    Divider()
+                        .frame(height: 24)
+
+                    // P2 Button
+                    Button(action: {
+                        if !viewModel.isPositioning {
+                            viewModel.selectedTimeCredit = .p2
+                            HapticManager.shared.impact(.light)
+                        }
+                    }) {
+                        Text("P2")
+                            .font(.footnote.bold())
+                            .foregroundColor(viewModel.selectedTimeCredit == .p2 ? .white : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 24)
+                            .background(viewModel.selectedTimeCredit == .p2 ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                        .buttonStyle(PlainButtonStyle())
+                        .disabled(viewModel.isPositioning)
+                        .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                    }
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                    )
+                    .frame(maxWidth: 400)
+
+                    Spacer()
                 }
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                )
             }
             .padding(12)
             .background(Color(.systemGray6).opacity(0.75))
@@ -1658,7 +1659,7 @@ private struct ModernApproachToggle: View {
     }
 
     private var displayText: String {
-        selectedApproachType ?? "Nil"
+        selectedApproachType ?? "NIL"
     }
 
     var body: some View {
@@ -1675,15 +1676,15 @@ private struct ModernApproachToggle: View {
             }) {
                 HStack(spacing: 4) {
                     Text(displayText)
-                        .font(.subheadline.bold())
+                        .font(.footnote.bold())
                         .foregroundColor(isOn ? .white : .secondary)
 
                     Image(systemName: "chevron.down")
                         .font(.caption2)
                         .foregroundColor(isOn ? .white : .secondary)
                 }
-                .frame(width: 70, height: 28)
-                .background(isOn ? Color.orange : Color(.secondarySystemBackground))
+                .frame(width: 64, height: 28)
+                .background(isOn ? Color.orange.opacity(0.8) : Color(.secondarySystemBackground))
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
@@ -1693,7 +1694,7 @@ private struct ModernApproachToggle: View {
             .disabled(isDisabled)
             .opacity(isDisabled ? 0.5 : 1.0)
             .confirmationDialog("Select Approach Type", isPresented: $showingPicker, titleVisibility: .visible) {
-                Button("Nil") {
+                Button("NIL") {
                     selectedApproachType = nil
                 }
                 Button("ILS") {
