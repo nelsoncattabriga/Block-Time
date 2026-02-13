@@ -38,31 +38,13 @@ struct MainTabView: View {
     // MARK: - Tab Layout (for both iPhone and iPad)
     private var tabLayout: some View {
         TabView(selection: $selectedTab) {
-            // Only show Add Flight tab on iPhone
-            if !isIPadLandscape {
-                NavigationStack {
-                    AddFlightView()
-                        .environmentObject(viewModel)
-                }
-                .tabItem {
-                    Image(systemName: "airplane")
-                    Text("Add Flight")
-                }
-                .tag(0)
-                .onAppear {
-                    if viewModel.isEditingMode {
-                        viewModel.exitEditingMode()
-                    }
-                }
-            }
-
             FlightsSplitView(filterViewModel: flightsFilterViewModel)
                 .environmentObject(viewModel)
                 .tabItem {
                     Image(systemName: "airplane.departure")
                     Text("Logbook")
                 }
-                .tag(2)
+                .tag(0)
 
             NavigationStack {
                 DashboardView()
@@ -80,7 +62,7 @@ struct MainTabView: View {
                     Image(systemName: "clock.badge.checkmark")
                     Text("FRMS")
                 }
-                .tag(4)
+                .tag(2)
 
             SettingsSplitView(viewModel: viewModel, frmsViewModel: frmsViewModel)
                 .environmentObject(viewModel)

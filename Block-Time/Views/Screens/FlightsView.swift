@@ -54,6 +54,7 @@ struct FlightsView: View {
     @State private var shouldScrollToLastFlight: Bool = false
     @State private var shouldScrollToTop: Bool = false
     @State private var showSearchBar: Bool = false
+    @State private var isAddingNewFlight: Bool = false
     @FocusState private var isSearchFieldFocused: Bool
 
     // Device-dependent corner radius for action buttons
@@ -238,15 +239,28 @@ struct FlightsView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if !filteredFlightSectors.isEmpty {
-                        Button(action: {
-                            HapticManager.shared.impact(.light)
-                            isSelectMode.toggle()
-                            if !isSelectMode {
-                                selectedFlights.removeAll()
+                    HStack(spacing: 16) {
+                        // Add new flight button - hide in select mode
+                        if !isSelectMode {
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                isAddingNewFlight = true
+                            }) {
+                                Image(systemName: "plus.circle")
+                                    .font(.title3)
                             }
-                        }) {
-                            Text(isSelectMode ? "Cancel" : "Select")
+                        }
+
+                        if !filteredFlightSectors.isEmpty {
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                isSelectMode.toggle()
+                                if !isSelectMode {
+                                    selectedFlights.removeAll()
+                                }
+                            }) {
+                                Text(isSelectMode ? "Cancel" : "Select")
+                            }
                         }
                     }
                 }
@@ -421,6 +435,24 @@ struct FlightsView: View {
                         deleteSummary(summaryToDelete)
                     }
                 )
+            }
+            .sheet(isPresented: $isAddingNewFlight) {
+                NavigationStack {
+                    AddFlightView()
+                        .environmentObject(viewModel)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Cancel") {
+                                    isAddingNewFlight = false
+                                    viewModel.resetAllFields()
+                                }
+                            }
+                        }
+                        .onAppear {
+                            viewModel.exitEditingMode() // Ensure we're not in edit mode
+                        }
+                }
             }
     }
 
