@@ -109,8 +109,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             // Only do this when not in editing mode and when position is F/O
             if !isEditingMode && flightTimePosition == .firstOfficer {
                 if isPilotFlying {
-                    // F/O + PF = P1US (ICUS)
-                    selectedTimeCredit = .p1us
+                    // F/O + PF = use the foPilotFlyingCredit setting (ICUS or P2)
+                    selectedTimeCredit = foPilotFlyingCredit
                 } else {
                     // F/O + not PF = P2
                     selectedTimeCredit = .p2
@@ -151,6 +151,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var defaultCoPilotName = ""
     @Published var defaultSOName = ""
     @Published var flightTimePosition = FlightTimePosition.captain
+    @Published var foPilotFlyingCredit: TimeCreditType = .p1us  // What time credit to use when F/O is PF
     @Published var includeLeadingZeroInFlightNumber = false
     @Published var includeAirlinePrefixInFlightNumber = false
     @Published var airlinePrefix = "QF"
@@ -328,6 +329,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         defaultCoPilotName = settings.defaultCoPilotName
         defaultSOName = settings.defaultSOName
         flightTimePosition = settings.flightTimePosition
+        foPilotFlyingCredit = settings.foPilotFlyingCredit
         includeLeadingZeroInFlightNumber = settings.includeLeadingZeroInFlightNumber
         includeAirlinePrefixInFlightNumber = settings.includeAirlinePrefixInFlightNumber
         airlinePrefix = settings.airlinePrefix
@@ -381,6 +383,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 defaultSOName = settings.defaultSOName
             case "flightTimePosition":
                 flightTimePosition = settings.flightTimePosition
+            case "foPilotFlyingCredit":
+                foPilotFlyingCredit = settings.foPilotFlyingCredit
             case "includeLeadingZeroInFlightNumber":
                 includeLeadingZeroInFlightNumber = settings.includeLeadingZeroInFlightNumber
             case "includeAirlinePrefixInFlightNumber":
@@ -610,7 +614,17 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
     }
-    
+
+    func updateFOPilotFlyingCredit(_ value: TimeCreditType) {
+        foPilotFlyingCredit = value
+        userDefaultsService.setFOPilotFlyingCredit(value)
+
+        // Update selectedTimeCredit if currently F/O and PF
+        if !isEditingMode && flightTimePosition == .firstOfficer && isPilotFlying {
+            selectedTimeCredit = value
+        }
+    }
+
     func updateIncludeLeadingZeroInFlightNumber(_ value: Bool) {
         includeLeadingZeroInFlightNumber = value
         userDefaultsService.setIncludeLeadingZeroInFlightNumber(value)

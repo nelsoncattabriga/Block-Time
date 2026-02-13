@@ -76,6 +76,7 @@ struct AppSettings {
     var defaultSOName: String
     var savedSONames: [String]  // Shared list for both SO 1 and SO 2
     var flightTimePosition: FlightTimePosition
+    var foPilotFlyingCredit: TimeCreditType  // What time credit to use when F/O is PF (ICUS or P2)
     var includeLeadingZeroInFlightNumber: Bool
     var includeAirlinePrefixInFlightNumber: Bool
     var airlinePrefix: String
@@ -111,6 +112,7 @@ struct AppSettings {
         defaultSOName: "",
         savedSONames: [],
         flightTimePosition: .captain,
+        foPilotFlyingCredit: .p1us,  // Default to ICUS
         includeLeadingZeroInFlightNumber: false,
         includeAirlinePrefixInFlightNumber: true,
         airlinePrefix: "QF",
@@ -151,6 +153,7 @@ class UserDefaultsService: ObservableObject {
         static let defaultSOName = "defaultSOName"
         static let savedSONames = "savedSONames"
         static let flightTimePosition = "flightTimePosition"
+        static let foPilotFlyingCredit = "foPilotFlyingCredit"
         static let includeLeadingZeroInFlightNumber = "includeLeadingZeroInFlightNumber"
         static let includeAirlinePrefixInFlightNumber = "includeAirlinePrefixInFlightNumber"
         static let airlinePrefix = "airlinePrefix"
@@ -190,6 +193,8 @@ class UserDefaultsService: ObservableObject {
     func loadSettings() -> AppSettings {
         let flightTimePositionString = userDefaults.string(forKey: Keys.flightTimePosition) ?? FlightTimePosition.captain.rawValue
         let flightTimePosition = FlightTimePosition(rawValue: flightTimePositionString) ?? .captain
+        let foPilotFlyingCreditString = userDefaults.string(forKey: Keys.foPilotFlyingCredit) ?? TimeCreditType.p1us.rawValue
+        let foPilotFlyingCredit = TimeCreditType(rawValue: foPilotFlyingCreditString) ?? .p1us
         let logbookDestinationString = userDefaults.string(forKey: Keys.logbookDestination) ?? LogbookDestination.internalLogbook.rawValue
         let logbookDestination = LogbookDestination(rawValue: logbookDestinationString) ?? .internalLogbook
         let roundingModeString = userDefaults.string(forKey: Keys.decimalRoundingMode) ?? RoundingMode.standard.rawValue
@@ -205,6 +210,7 @@ class UserDefaultsService: ObservableObject {
             defaultSOName: userDefaults.string(forKey: Keys.defaultSOName) ?? "",
             savedSONames: loadAndSortCrewNames(forKey: Keys.savedSONames),
             flightTimePosition: flightTimePosition,
+            foPilotFlyingCredit: foPilotFlyingCredit,
             includeLeadingZeroInFlightNumber: userDefaults.bool(forKey: Keys.includeLeadingZeroInFlightNumber),
             includeAirlinePrefixInFlightNumber: userDefaults.bool(forKey: Keys.includeAirlinePrefixInFlightNumber),
             airlinePrefix: userDefaults.string(forKey: Keys.airlinePrefix) ?? "QF",
@@ -317,6 +323,12 @@ class UserDefaultsService: ObservableObject {
     func setFlightTimePosition(_ value: FlightTimePosition) {
         markModificationAndSyncToCloud()
         userDefaults.set(value.rawValue, forKey: Keys.flightTimePosition)
+        syncToCloudAfterChange()
+    }
+
+    func setFOPilotFlyingCredit(_ value: TimeCreditType) {
+        markModificationAndSyncToCloud()
+        userDefaults.set(value.rawValue, forKey: Keys.foPilotFlyingCredit)
         syncToCloudAfterChange()
     }
 

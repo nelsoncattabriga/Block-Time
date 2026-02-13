@@ -384,6 +384,40 @@ private struct ModernDefaultCrewNamesCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
+                // F/O PF Time Credit Picker (only show when F/O is selected)
+                if viewModel.flightTimePosition == .firstOfficer {
+                    HStack(spacing: 12) {
+                        Image(systemName: "airplane.circle")
+                            .foregroundColor(.blue)
+                            .frame(width: 20)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Log PF time as")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+
+//                            Text(viewModel.foPilotFlyingCredit == .p1us ? "ICUS" : "P2")
+//                                .font(.caption)
+//                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Picker("", selection: Binding(
+                            get: { viewModel.foPilotFlyingCredit },
+                            set: { viewModel.updateFOPilotFlyingCredit($0) }
+                        )) {
+                            Text("P1US").tag(TimeCreditType.p1us)
+                            Text("P2").tag(TimeCreditType.p2)
+                        }
+                        .pickerStyle(.menu)
+                    }
+                    .padding(12)
+                    .background(Color(.systemGray6).opacity(0.5))
+                    .cornerRadius(8)
+                }
+
                 // Default Name Field
                 switch viewModel.flightTimePosition {
                 case .captain:
