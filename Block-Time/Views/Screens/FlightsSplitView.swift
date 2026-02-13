@@ -151,6 +151,16 @@ private struct FlightsListContent: View {
         return formatter
     }()
 
+    // Device-dependent corner radius for action buttons
+    private var actionButtonCornerRadius: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 10 : 25
+    }
+
+    // Device-dependent vertical padding for action buttons
+    private var actionButtonVerticalPadding: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 10 : 14
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
@@ -263,9 +273,9 @@ private struct FlightsListContent: View {
                         }
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, actionButtonVerticalPadding)
                         .background(selectedFlightsForDeletion.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
-                        .cornerRadius(25)
+                        .cornerRadius(actionButtonCornerRadius)
                         .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
                     .disabled(selectedFlightsForDeletion.isEmpty)
@@ -283,9 +293,9 @@ private struct FlightsListContent: View {
                         }
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, actionButtonVerticalPadding)
                         .background(selectedFlightsForDeletion.isEmpty ? Color.red.opacity(0.5) : Color.red)
-                        .cornerRadius(25)
+                        .cornerRadius(actionButtonCornerRadius)
                         .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
                     .disabled(selectedFlightsForDeletion.isEmpty)

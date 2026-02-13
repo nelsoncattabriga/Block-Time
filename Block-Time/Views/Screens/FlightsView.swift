@@ -56,6 +56,16 @@ struct FlightsView: View {
     @State private var showSearchBar: Bool = false
     @FocusState private var isSearchFieldFocused: Bool
 
+    // Device-dependent corner radius for action buttons
+    private var actionButtonCornerRadius: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 10 : 25
+    }
+
+    // Device-dependent vertical padding for action buttons
+    private var actionButtonVerticalPadding: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 10 : 14
+    }
+
     // Made internal so it can be used by FlightsSplitView
     enum DateRangeOption: Int {
         case allFlights = 0, twelveMonths = 1, sixMonths = 2, twentyEightDays = 3, custom = 4
@@ -179,9 +189,9 @@ struct FlightsView: View {
                             }
                             .foregroundColor(.white)
                             .padding(.horizontal, 20)
-                            .padding(.vertical, 14)
+                            .padding(.vertical, actionButtonVerticalPadding)
                             .background(selectedFlights.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
-                            .cornerRadius(25)
+                            .cornerRadius(actionButtonCornerRadius)
                             .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
                         .disabled(selectedFlights.isEmpty)
@@ -199,9 +209,9 @@ struct FlightsView: View {
                             }
                             .foregroundColor(.white)
                             .padding(.horizontal, 20)
-                            .padding(.vertical, 14)
+                            .padding(.vertical, actionButtonVerticalPadding)
                             .background(selectedFlights.isEmpty ? Color.red.opacity(0.5) : Color.red)
-                            .cornerRadius(25)
+                            .cornerRadius(actionButtonCornerRadius)
                             .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
                         .disabled(selectedFlights.isEmpty)

@@ -1414,68 +1414,62 @@ private struct ModernTogglesSection: View {
 //                Spacer()
 //            }
 
-                VStack(spacing: 8) {
+                VStack(spacing: 16) {
                 // First row: PF/PM, APP
                 HStack(spacing: 12) {
                     // PF/PM Segmented Picker
-                    VStack(spacing: 4) {
-                        Text("Role")
-                            .font(.subheadline.bold())
-                            .foregroundColor(.secondary)
-
-                        HStack(spacing: 0) {
-                            // PF Button
-                            Button(action: {
-                                if !viewModel.isPositioning {
-                                    viewModel.isPilotFlying = true
-                                    HapticManager.shared.impact(.light)
-                                    // When PF is turned on, restore default approach type if set
-                                    if !viewModel.isEditingMode && viewModel.logApproaches && viewModel.defaultApproachType != nil {
-                                        viewModel.updateSelectedApproachType(viewModel.defaultApproachType)
-                                    }
+                    HStack(spacing: 0) {
+                        // PF Button
+                        Button(action: {
+                            if !viewModel.isPositioning {
+                                viewModel.isPilotFlying = true
+                                HapticManager.shared.impact(.light)
+                                // When PF is turned on, restore default approach type if set
+                                if !viewModel.isEditingMode && viewModel.logApproaches && viewModel.defaultApproachType != nil {
+                                    viewModel.updateSelectedApproachType(viewModel.defaultApproachType)
                                 }
-                            }) {
-                                Text("PF")
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(viewModel.isPilotFlying ? .white : .secondary)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 28)
-                                    .background(viewModel.isPilotFlying ? Color.green : Color(.secondarySystemBackground))
-                                    .contentShape(Rectangle())
                             }
-                            .buttonStyle(PlainButtonStyle())
-                            .disabled(viewModel.isPositioning)
-                            .opacity(viewModel.isPositioning ? 0.5 : 1.0)
-
-                            Divider()
-                                .frame(height: 20)
-
-                            // PM Button
-                            Button(action: {
-                                if !viewModel.isPositioning {
-                                    viewModel.isPilotFlying = false
-                                    HapticManager.shared.impact(.light)
-                                }
-                            }) {
-                                Text("PM")
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(!viewModel.isPilotFlying ? .white : .secondary)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 28)
-                                    .background(!viewModel.isPilotFlying ? Color.gray : Color(.secondarySystemBackground))
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .disabled(viewModel.isPositioning)
-                            .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                        }) {
+                            Text("PF")
+                                .font(.subheadline.bold())
+                                .foregroundColor(viewModel.isPilotFlying ? .white : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 28)
+                                .background(viewModel.isPilotFlying ? Color.green : Color(.secondarySystemBackground))
+                                .contentShape(Rectangle())
                         }
-                        .background(Color(.secondarySystemBackground))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                        )
+                        .buttonStyle(PlainButtonStyle())
+                        .disabled(viewModel.isPositioning)
+                        .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+
+                        Divider()
+                            .frame(height: 20)
+
+                        // PM Button
+                        Button(action: {
+                            if !viewModel.isPositioning {
+                                viewModel.isPilotFlying = false
+                                HapticManager.shared.impact(.light)
+                            }
+                        }) {
+                            Text("PM")
+                                .font(.subheadline.bold())
+                                .foregroundColor(!viewModel.isPilotFlying ? .white : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 28)
+                                .background(!viewModel.isPilotFlying ? Color.gray : Color(.secondarySystemBackground))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .disabled(viewModel.isPositioning)
+                        .opacity(viewModel.isPositioning ? 0.5 : 1.0)
                     }
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
                     .frame(minWidth: 0, maxWidth: .infinity)
 
                     // ICUS toggle removed - now using explicit P1/P1US/P2 radio buttons
@@ -1493,18 +1487,9 @@ private struct ModernTogglesSection: View {
                         .frame(minWidth: 0, maxWidth: .infinity)
                     }
                 }
-                .padding(12)
-                .background(Color(.systemGray6).opacity(0.75))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(.systemGray4), lineWidth: 1)
-                )
-            }
 
-            
-            // Time Credits section
-            HStack(spacing: 0) {
+                // Second row: P1/P1US/P2 Time Credits
+                HStack(spacing: 0) {
                 // P1 Button
                 Button(action: {
                     if !viewModel.isPositioning {
@@ -1564,24 +1549,29 @@ private struct ModernTogglesSection: View {
                         .background(viewModel.selectedTimeCredit == .p2 ? Color.blue : Color(.secondarySystemBackground))
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(PlainButtonStyle())
-                .disabled(viewModel.isPositioning)
-                .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(viewModel.isPositioning)
+                    .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                }
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                )
             }
-            .background(Color(.secondarySystemBackground))
+            .padding(12)
+            .background(Color(.systemGray6).opacity(0.75))
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
             )
 
-
-            
-            
             // Takeoffs and Landings section - only show when Pilot Flying is selected
             if viewModel.isPilotFlying {
                 HStack {
-                    Text("Takeoffs & Landings")
+                    Text("T/O & LDG")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
                     Spacer()
@@ -1599,7 +1589,7 @@ private struct ModernTogglesSection: View {
                         )
 
                         ModernIntegerField(
-                            label: "Day Ldg",
+                            label: "Day LDG",
                             value: $viewModel.dayLandings,
                             icon: "airplane.arrival",
                             onValueChanged: {
@@ -1619,7 +1609,7 @@ private struct ModernTogglesSection: View {
                         )
 
                         ModernIntegerField(
-                            label: "Night Ldg",
+                            label: "Night LDG",
                             value: $viewModel.nightLandings,
                             icon: "moon.stars.fill",
                             onValueChanged: {
@@ -1672,8 +1662,8 @@ private struct ModernApproachToggle: View {
     }
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text("Appr")
+        HStack(spacing: 8) {
+            Text("APP")
                 .font(.subheadline.bold())
                 .foregroundColor(.secondary)
 
