@@ -1415,24 +1415,70 @@ private struct ModernTogglesSection: View {
 //            }
 
                 VStack(spacing: 8) {
-                // First row: PF, ICUS (when F/O), APP
+                // First row: PF/PM, APP
                 HStack(spacing: 12) {
-                    ModernToggle(
-                        title: "PF",
-                        isOn: $viewModel.isPilotFlying,
-                        color: .green,
-                        isDisabled: viewModel.isPositioning
-                    )
-                    .frame(minWidth: 0, maxWidth: .infinity)
-                    .onChange(of: viewModel.isPilotFlying) { oldValue, newValue in
-                        // When PF is turned back on, restore default approach type if set
-                        // BUT only if NOT in editing mode (to preserve loaded flight's approach type)
-                        if newValue && !viewModel.isEditingMode && viewModel.logApproaches && viewModel.defaultApproachType != nil {
-                            viewModel.updateSelectedApproachType(viewModel.defaultApproachType)
-                        }
-                    }
+                    // PF/PM Segmented Picker
+                    VStack(spacing: 4) {
+                        Text("Role")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.secondary)
 
-                    // ICUS toggle removed - now using explicit P1/P1US/P2 radio buttons above
+                        HStack(spacing: 0) {
+                            // PF Button
+                            Button(action: {
+                                if !viewModel.isPositioning {
+                                    viewModel.isPilotFlying = true
+                                    HapticManager.shared.impact(.light)
+                                    // When PF is turned on, restore default approach type if set
+                                    if !viewModel.isEditingMode && viewModel.logApproaches && viewModel.defaultApproachType != nil {
+                                        viewModel.updateSelectedApproachType(viewModel.defaultApproachType)
+                                    }
+                                }
+                            }) {
+                                Text("PF")
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(viewModel.isPilotFlying ? .white : .secondary)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 28)
+                                    .background(viewModel.isPilotFlying ? Color.green : Color(.secondarySystemBackground))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .disabled(viewModel.isPositioning)
+                            .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+
+                            Divider()
+                                .frame(height: 20)
+
+                            // PM Button
+                            Button(action: {
+                                if !viewModel.isPositioning {
+                                    viewModel.isPilotFlying = false
+                                    HapticManager.shared.impact(.light)
+                                }
+                            }) {
+                                Text("PM")
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(!viewModel.isPilotFlying ? .white : .secondary)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 28)
+                                    .background(!viewModel.isPilotFlying ? Color.gray : Color(.secondarySystemBackground))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .disabled(viewModel.isPositioning)
+                            .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                        }
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                    }
+                    .frame(minWidth: 0, maxWidth: .infinity)
+
+                    // ICUS toggle removed - now using explicit P1/P1US/P2 radio buttons
 
                     if viewModel.logApproaches {
                         ModernApproachToggle(
@@ -1458,30 +1504,76 @@ private struct ModernTogglesSection: View {
 
             
             // Time Credits section
-            VStack(spacing: 4) {
-                HStack(spacing: 6) {
-                    ForEach(TimeCreditType.allCases, id: \.self) { creditType in
-                        TimeCreditRadioButton(
-                            title: creditType.shortName,
-                            //subtitle: creditType == .p1 ? "CMD" : (creditType == .p1us ? "ICUS" : "CO-PLT"),
-                            isSelected: viewModel.selectedTimeCredit == creditType,
-                            color: .blue, //creditType == .p1 ? .blue : (creditType == .p1us ? .orange : .purple),
-                            isDisabled: viewModel.isPositioning
-                        ) {
-                            viewModel.selectedTimeCredit = creditType
-                            HapticManager.shared.impact(.light)
-                        }
-                        .frame(minWidth: 0, maxWidth: .infinity)
+            HStack(spacing: 0) {
+                // P1 Button
+                Button(action: {
+                    if !viewModel.isPositioning {
+                        viewModel.selectedTimeCredit = .p1
+                        HapticManager.shared.impact(.light)
                     }
+                }) {
+                    Text("P1")
+                        .font(.subheadline.bold())
+                        .foregroundColor(viewModel.selectedTimeCredit == .p1 ? .white : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 28)
+                        .background(viewModel.selectedTimeCredit == .p1 ? Color.blue : Color(.secondarySystemBackground))
+                        .contentShape(Rectangle())
                 }
-                .padding(8)
-                .background(Color(.systemGray6).opacity(0.75))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(.systemGray4), lineWidth: 1)
-                )
+                .buttonStyle(PlainButtonStyle())
+                .disabled(viewModel.isPositioning)
+                .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+
+                Divider()
+                    .frame(height: 20)
+
+                // P1US Button
+                Button(action: {
+                    if !viewModel.isPositioning {
+                        viewModel.selectedTimeCredit = .p1us
+                        HapticManager.shared.impact(.light)
+                    }
+                }) {
+                    Text("P1US")
+                        .font(.subheadline.bold())
+                        .foregroundColor(viewModel.selectedTimeCredit == .p1us ? .white : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 28)
+                        .background(viewModel.selectedTimeCredit == .p1us ? Color.blue : Color(.secondarySystemBackground))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(viewModel.isPositioning)
+                .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+
+                Divider()
+                    .frame(height: 20)
+
+                // P2 Button
+                Button(action: {
+                    if !viewModel.isPositioning {
+                        viewModel.selectedTimeCredit = .p2
+                        HapticManager.shared.impact(.light)
+                    }
+                }) {
+                    Text("P2")
+                        .font(.subheadline.bold())
+                        .foregroundColor(viewModel.selectedTimeCredit == .p2 ? .white : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 28)
+                        .background(viewModel.selectedTimeCredit == .p2 ? Color.blue : Color(.secondarySystemBackground))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(viewModel.isPositioning)
+                .opacity(viewModel.isPositioning ? 0.5 : 1.0)
             }
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            )
 
 
             
@@ -1591,16 +1683,22 @@ private struct ModernApproachToggle: View {
                     HapticManager.shared.impact(.light)
                 }
             }) {
-                Text(displayText)
-                    .font(.caption.bold())
-                    .foregroundColor(isOn ? .white : .orange)
-                    .frame(width: 50, height: 28)
-                    .background(isOn ? Color.orange : Color.clear)
-                    .cornerRadius(14)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.orange, lineWidth: 2)
-                    )
+                HStack(spacing: 4) {
+                    Text(displayText)
+                        .font(.subheadline.bold())
+                        .foregroundColor(isOn ? .white : .secondary)
+
+                    Image(systemName: "chevron.down")
+                        .font(.caption2)
+                        .foregroundColor(isOn ? .white : .secondary)
+                }
+                .frame(width: 70, height: 28)
+                .background(isOn ? Color.orange : Color(.secondarySystemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                )
             }
             .disabled(isDisabled)
             .opacity(isDisabled ? 0.5 : 1.0)

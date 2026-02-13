@@ -176,19 +176,13 @@ struct BulkEditSheet: View {
                     // Operations Card
                     SectionCard(title: "Operations", icon: "slider.horizontal.3", color: .orange) {
                         VStack(spacing: 16) {
-                            BulkEditToggle(
-                                label: "PF",
-                                fieldState: $bulkEditViewModel.isPilotFlying
-                            )
-
-                            BulkEditToggle(
-                                label: "ICUS",
-                                fieldState: $bulkEditViewModel.isICUS
-                            )
-
                             BulkEditFlightTypeToggle(
                                 isPositioning: $bulkEditViewModel.isPositioning,
                                 isSimulator: $bulkEditViewModel.isSimulator
+                            )
+
+                            BulkEditPilotRoleSegmentedPicker(
+                                fieldState: $bulkEditViewModel.isPilotFlying
                             )
 
                             BulkEditApproachPicker(
@@ -527,7 +521,7 @@ struct BulkEditToggle: View {
                 .font(.body)
                 .fontWeight(.medium)
 
-            Spacer()
+            //Spacer()
 
             if isIndeterminate {
                 Button {
@@ -688,7 +682,7 @@ struct BulkEditFlightTypeToggle: View {
                         Text("FLT")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .flight ? .white : .secondary)
-                            .frame(width: 55, height: 32)
+                            .frame(width: 55, height: 28)
                             .background(currentType == .flight ? Color.blue : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
@@ -706,7 +700,7 @@ struct BulkEditFlightTypeToggle: View {
                         Text("PAX")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .positioning ? .white : .secondary)
-                            .frame(width: 55, height: 32)
+                            .frame(width: 55, height: 28)
                             .background(currentType == .positioning ? Color.orange : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
@@ -724,7 +718,7 @@ struct BulkEditFlightTypeToggle: View {
                         Text("SIM")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .simulator ? .white : .secondary)
-                            .frame(width: 55, height: 32)
+                            .frame(width: 55, height: 28)
                             .background(currentType == .simulator ? Color.purple : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
@@ -739,6 +733,220 @@ struct BulkEditFlightTypeToggle: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - BulkEditPilotRoleSegmentedPicker
+
+struct BulkEditPilotRoleSegmentedPicker: View {
+    @Binding var fieldState: BulkEditViewModel.FieldState<Bool>
+
+    @State private var isPilotFlying: Bool = true
+    @State private var isIndeterminate: Bool = false
+
+    var body: some View {
+        HStack {
+            Text("Role")
+                .font(.body)
+                .fontWeight(.medium)
+
+            Spacer()
+
+            if isIndeterminate {
+                Button {
+                    // First tap on mixed sets to PF
+                    isIndeterminate = false
+                    isPilotFlying = true
+                    fieldState = .value(true)
+                    HapticManager.shared.impact(.light)
+                } label: {
+                    Text("(Mixed)")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(.secondarySystemBackground))
+                        )
+                }
+            } else {
+                HStack(spacing: 0) {
+                    // PF Button
+                    Button(action: {
+                        isPilotFlying = true
+                        fieldState = .value(true)
+                        HapticManager.shared.impact(.light)
+                    }) {
+                        Text("PF")
+                            .font(.subheadline.bold())
+                            .foregroundColor(isPilotFlying ? .white : .secondary)
+                            .frame(width: 55, height: 28)
+                            .background(isPilotFlying ? Color.green : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    Divider()
+                        .frame(height: 20)
+
+                    // PM Button
+                    Button(action: {
+                        isPilotFlying = false
+                        fieldState = .value(false)
+                        HapticManager.shared.impact(.light)
+                    }) {
+                        Text("PM")
+                            .font(.subheadline.bold())
+                            .foregroundColor(!isPilotFlying ? .white : .secondary)
+                            .frame(width: 55, height: 28)
+                            .background(!isPilotFlying ? Color.gray : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                )
+            }
+        }
+        .padding(.vertical, 4)
+        .onAppear {
+            if case .value(let pf) = fieldState {
+                isPilotFlying = pf
+                isIndeterminate = false
+            } else if fieldState.isMixed {
+                isIndeterminate = true
+            }
+        }
+    }
+}
+
+// MARK: - BulkEditTimeCreditRadioButton
+
+struct BulkEditTimeCreditRadioButton: View {
+    @Binding var fieldState: BulkEditViewModel.FieldState<TimeCreditType>
+    let isDisabled: BulkEditViewModel.FieldState<Bool>
+
+    @State private var selectedCredit: TimeCreditType = .p1
+    @State private var isIndeterminate: Bool = false
+
+    private var isActuallyDisabled: Bool {
+        if case .value(let disabled) = isDisabled {
+            return disabled
+        }
+        return false
+    }
+
+    var body: some View {
+        Group {
+            if isIndeterminate {
+                Button {
+                    // First tap on mixed sets to P1
+                    isIndeterminate = false
+                    selectedCredit = .p1
+                    fieldState = .value(.p1)
+                    HapticManager.shared.impact(.light)
+                } label: {
+                    Text("(Mixed)")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(.secondarySystemBackground))
+                        )
+                }
+            } else {
+                HStack(spacing: 0) {
+                    // P1 Button
+                    Button(action: {
+                        if !isActuallyDisabled {
+                            selectedCredit = .p1
+                            fieldState = .value(.p1)
+                            HapticManager.shared.impact(.light)
+                        }
+                    }) {
+                        Text("P1")
+                            .font(.subheadline.bold())
+                            .foregroundColor(selectedCredit == .p1 ? .white : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 28)
+                            .background(selectedCredit == .p1 ? Color.blue : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(isActuallyDisabled)
+                    .opacity(isActuallyDisabled ? 0.5 : 1.0)
+
+                    Divider()
+                        .frame(height: 20)
+
+                    // P1US Button
+                    Button(action: {
+                        if !isActuallyDisabled {
+                            selectedCredit = .p1us
+                            fieldState = .value(.p1us)
+                            HapticManager.shared.impact(.light)
+                        }
+                    }) {
+                        Text("P1US")
+                            .font(.subheadline.bold())
+                            .foregroundColor(selectedCredit == .p1us ? .white : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 28)
+                            .background(selectedCredit == .p1us ? Color.blue : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(isActuallyDisabled)
+                    .opacity(isActuallyDisabled ? 0.5 : 1.0)
+
+                    Divider()
+                        .frame(height: 20)
+
+                    // P2 Button
+                    Button(action: {
+                        if !isActuallyDisabled {
+                            selectedCredit = .p2
+                            fieldState = .value(.p2)
+                            HapticManager.shared.impact(.light)
+                        }
+                    }) {
+                        Text("P2")
+                            .font(.subheadline.bold())
+                            .foregroundColor(selectedCredit == .p2 ? .white : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 28)
+                            .background(selectedCredit == .p2 ? Color.blue : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(isActuallyDisabled)
+                    .opacity(isActuallyDisabled ? 0.5 : 1.0)
+                }
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                )
+            }
+        }
+        .onAppear {
+            if case .value(let credit) = fieldState {
+                selectedCredit = credit
+                isIndeterminate = false
+            } else if fieldState.isMixed {
+                isIndeterminate = true
+            }
+        }
     }
 }
 
@@ -789,24 +997,22 @@ struct BulkEditApproachPicker: View {
                     HapticManager.shared.impact(.light)
                 }
             }) {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     Text(displayText)
                         .font(.subheadline.bold())
-                        .foregroundColor(isOn ? .white : .orange)
+                        .foregroundColor(isOn ? .white : .secondary)
 
                     Image(systemName: "chevron.down")
-                        .font(.caption)
-                        .foregroundColor(isOn ? .white : .orange)
+                        .font(.caption2)
+                        .foregroundColor(isOn ? .white : .secondary)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isOn ? Color.orange : Color(.secondarySystemBackground))
-                )
+                .frame(height: 28)
+                .padding(.horizontal, 12)
+                .background(isOn ? Color.orange : Color(.secondarySystemBackground))
+                .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.orange.opacity(isOn ? 0 : 0.5), lineWidth: 1.5)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
                 )
             }
             .disabled(isDisabled)

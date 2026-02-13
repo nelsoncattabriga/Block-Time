@@ -61,9 +61,11 @@ class BulkEditViewModel: ObservableObject {
 
     // Booleans
     @Published var isPilotFlying: FieldState<Bool> = .notEdited
-    @Published var isICUS: FieldState<Bool> = .notEdited
     @Published var isPositioning: FieldState<Bool> = .notEdited
     @Published var isSimulator: FieldState<Bool> = .notEdited
+
+    // Time Credit Type
+    @Published var selectedTimeCredit: FieldState<TimeCreditType> = .notEdited
 
     // Approach types (stored as individual bools but presented as single selection)
     @Published var isAIII: FieldState<Bool> = .notEdited
@@ -90,6 +92,9 @@ class BulkEditViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let selectedFlights: [FlightSector]
 
+    // Store initial states to detect actual modifications
+    private var initialStates: [String: Any] = [:]
+
     // MARK: - Initialization
 
     init(selectedFlights: [FlightSector]) {
@@ -97,6 +102,9 @@ class BulkEditViewModel: ObservableObject {
 
         // Analyze initial field states
         analyzeFields()
+
+        // Store initial states before tracking begins
+        storeInitialStates()
 
         // Setup modification tracking
         setupModificationTracking()
@@ -127,15 +135,14 @@ class BulkEditViewModel: ObservableObject {
         scheduledArrival = Self.analyzeStringField(selectedFlights) { $0.scheduledArrival }
 
         isPilotFlying = Self.analyzeBoolField(selectedFlights) { $0.isPilotFlying }
-        isICUS = Self.analyzeBoolField(selectedFlights) { flight in
-            let p1usValue = Double(flight.p1usTime) ?? 0.0
-            return p1usValue > 0.0
-        }
         isPositioning = Self.analyzeBoolField(selectedFlights) { $0.isPositioning }
         isSimulator = Self.analyzeBoolField(selectedFlights) { flight in
             let simValue = Double(flight.simTime) ?? 0.0
             return simValue > 0.0
         }
+
+        // Analyze time credit type
+        selectedTimeCredit = Self.analyzeTimeCreditType(selectedFlights)
 
         // Analyze individual approach booleans
         isAIII = Self.analyzeBoolField(selectedFlights) { $0.isAIII }
@@ -204,6 +211,67 @@ class BulkEditViewModel: ObservableObject {
         return .mixed
     }
 
+    private static func analyzeTimeCreditType(_ flights: [FlightSector]) -> FieldState<TimeCreditType> {
+        let creditTypes = flights.map { flight -> TimeCreditType in
+            let p1usValue = Double(flight.p1usTime) ?? 0.0
+            let p2Value = Double(flight.p2Time) ?? 0.0
+
+            // Determine which time credit type has the value
+            if p1usValue > 0.0 {
+                return .p1us
+            } else if p2Value > 0.0 {
+                return .p2
+            } else {
+                return .p1  // Default to P1
+            }
+        }
+
+        let uniqueTypes = Set(creditTypes)
+        if uniqueTypes.count == 1, let type = uniqueTypes.first {
+            return .value(type)
+        }
+        return .mixed
+    }
+
+    // MARK: - Initial State Storage
+
+    private func storeInitialStates() {
+        initialStates = [
+            "aircraftReg": aircraftReg,
+            "aircraftType": aircraftType,
+            "captainName": captainName,
+            "foName": foName,
+            "so1Name": so1Name,
+            "so2Name": so2Name,
+            "blockTime": blockTime,
+            "nightTime": nightTime,
+            "p1Time": p1Time,
+            "p1usTime": p1usTime,
+            "p2Time": p2Time,
+            "instrumentTime": instrumentTime,
+            "simTime": simTime,
+            "outTime": outTime,
+            "inTime": inTime,
+            "scheduledDeparture": scheduledDeparture,
+            "scheduledArrival": scheduledArrival,
+            "isPilotFlying": isPilotFlying,
+            "isPositioning": isPositioning,
+            "isSimulator": isSimulator,
+            "selectedTimeCredit": selectedTimeCredit,
+            "selectedApproachType": selectedApproachType,
+            "isAIII": isAIII,
+            "isRNP": isRNP,
+            "isILS": isILS,
+            "isGLS": isGLS,
+            "isNPA": isNPA,
+            "dayTakeoffs": dayTakeoffs,
+            "dayLandings": dayLandings,
+            "nightTakeoffs": nightTakeoffs,
+            "nightLandings": nightLandings,
+            "remarks": remarks
+        ]
+    }
+
     // MARK: - Modification Tracking
 
     private func setupModificationTracking() {
@@ -241,7 +309,7 @@ class BulkEditViewModel: ObservableObject {
         .store(in: &cancellables)
 
         Publishers.CombineLatest4(
-            $scheduledArrival, $isPilotFlying, $isICUS, $isPositioning
+            $scheduledArrival, $isPilotFlying, $isPositioning, $isSimulator
         )
         .sink { [weak self] _ in
             self?.checkForModifications()
@@ -249,7 +317,7 @@ class BulkEditViewModel: ObservableObject {
         .store(in: &cancellables)
 
         Publishers.CombineLatest4(
-            $isSimulator, $isAIII, $isRNP, $isILS
+            $isAIII, $isRNP, $isILS, $selectedTimeCredit
         )
         .sink { [weak self] _ in
             self?.checkForModifications()
@@ -281,47 +349,48 @@ class BulkEditViewModel: ObservableObject {
 
     private func checkForModifications() {
         // Check if any field has been changed from its initial state
-        hasModifications = hasFieldBeenModified(aircraftReg) ||
-                          hasFieldBeenModified(aircraftType) ||
-                          hasFieldBeenModified(captainName) ||
-                          hasFieldBeenModified(foName) ||
-                          hasFieldBeenModified(so1Name) ||
-                          hasFieldBeenModified(so2Name) ||
-                          hasFieldBeenModified(blockTime) ||
-                          hasFieldBeenModified(nightTime) ||
-                          hasFieldBeenModified(p1Time) ||
-                          hasFieldBeenModified(p1usTime) ||
-                          hasFieldBeenModified(p2Time) ||
-                          hasFieldBeenModified(instrumentTime) ||
-                          hasFieldBeenModified(simTime) ||
-                          hasFieldBeenModified(outTime) ||
-                          hasFieldBeenModified(inTime) ||
-                          hasFieldBeenModified(scheduledDeparture) ||
-                          hasFieldBeenModified(scheduledArrival) ||
-                          hasFieldBeenModified(isPilotFlying) ||
-                          hasFieldBeenModified(isICUS) ||
-                          hasFieldBeenModified(isPositioning) ||
-                          hasFieldBeenModified(isSimulator) ||
-                          hasFieldBeenModified(selectedApproachType) ||
-                          hasFieldBeenModified(isAIII) ||
-                          hasFieldBeenModified(isRNP) ||
-                          hasFieldBeenModified(isILS) ||
-                          hasFieldBeenModified(isGLS) ||
-                          hasFieldBeenModified(isNPA) ||
-                          hasFieldBeenModified(dayTakeoffs) ||
-                          hasFieldBeenModified(dayLandings) ||
-                          hasFieldBeenModified(nightTakeoffs) ||
-                          hasFieldBeenModified(nightLandings) ||
-                          hasFieldBeenModified(remarks)
+        hasModifications = hasFieldBeenModified(aircraftReg, key: "aircraftReg") ||
+                          hasFieldBeenModified(aircraftType, key: "aircraftType") ||
+                          hasFieldBeenModified(captainName, key: "captainName") ||
+                          hasFieldBeenModified(foName, key: "foName") ||
+                          hasFieldBeenModified(so1Name, key: "so1Name") ||
+                          hasFieldBeenModified(so2Name, key: "so2Name") ||
+                          hasFieldBeenModified(blockTime, key: "blockTime") ||
+                          hasFieldBeenModified(nightTime, key: "nightTime") ||
+                          hasFieldBeenModified(p1Time, key: "p1Time") ||
+                          hasFieldBeenModified(p1usTime, key: "p1usTime") ||
+                          hasFieldBeenModified(p2Time, key: "p2Time") ||
+                          hasFieldBeenModified(instrumentTime, key: "instrumentTime") ||
+                          hasFieldBeenModified(simTime, key: "simTime") ||
+                          hasFieldBeenModified(outTime, key: "outTime") ||
+                          hasFieldBeenModified(inTime, key: "inTime") ||
+                          hasFieldBeenModified(scheduledDeparture, key: "scheduledDeparture") ||
+                          hasFieldBeenModified(scheduledArrival, key: "scheduledArrival") ||
+                          hasFieldBeenModified(isPilotFlying, key: "isPilotFlying") ||
+                          hasFieldBeenModified(isPositioning, key: "isPositioning") ||
+                          hasFieldBeenModified(isSimulator, key: "isSimulator") ||
+                          hasFieldBeenModified(selectedTimeCredit, key: "selectedTimeCredit") ||
+                          hasFieldBeenModified(selectedApproachType, key: "selectedApproachType") ||
+                          hasFieldBeenModified(isAIII, key: "isAIII") ||
+                          hasFieldBeenModified(isRNP, key: "isRNP") ||
+                          hasFieldBeenModified(isILS, key: "isILS") ||
+                          hasFieldBeenModified(isGLS, key: "isGLS") ||
+                          hasFieldBeenModified(isNPA, key: "isNPA") ||
+                          hasFieldBeenModified(dayTakeoffs, key: "dayTakeoffs") ||
+                          hasFieldBeenModified(dayLandings, key: "dayLandings") ||
+                          hasFieldBeenModified(nightTakeoffs, key: "nightTakeoffs") ||
+                          hasFieldBeenModified(nightLandings, key: "nightLandings") ||
+                          hasFieldBeenModified(remarks, key: "remarks")
     }
 
-    private func hasFieldBeenModified<T: Equatable>(_ field: FieldState<T>) -> Bool {
-        // Field is modified if it's now .value and wasn't originally .value,
-        // or if it's .value but different from all original values
-        if case .value = field {
-            return true
+    private func hasFieldBeenModified<T: Equatable>(_ field: FieldState<T>, key: String) -> Bool {
+        // Get the initial state for this field
+        guard let initialState = initialStates[key] as? FieldState<T> else {
+            return false
         }
-        return false
+
+        // Field is modified only if the current state differs from the initial state
+        return field != initialState
     }
 
     // MARK: - Apply Changes
@@ -372,7 +441,29 @@ class BulkEditViewModel: ObservableObject {
                 }
             }
 
-            // Apply individual time fields (these override simulator conversion if specified)
+            // Handle time credit type change
+            // This redistributes time from the current credit type to the new one
+            if case .value(let creditType) = selectedTimeCredit {
+                // Get the current block time
+                let currentBlockTime = updated.blockTime
+
+                // Clear all credit times first
+                updated.p1Time = "0.0"
+                updated.p1usTime = "0.0"
+                updated.p2Time = "0.0"
+
+                // Set the selected credit time to block time
+                switch creditType {
+                case .p1:
+                    updated.p1Time = currentBlockTime
+                case .p1us:
+                    updated.p1usTime = currentBlockTime
+                case .p2:
+                    updated.p2Time = currentBlockTime
+                }
+            }
+
+            // Apply individual time fields (these override time credit selection if specified)
             if case .value(let block) = blockTime {
                 updated.blockTime = block
             }
