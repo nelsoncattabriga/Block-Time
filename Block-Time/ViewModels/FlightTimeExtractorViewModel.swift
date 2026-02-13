@@ -34,6 +34,7 @@ struct DraftFlightData: Codable {
     let scheduledDeparture: String
     let scheduledArrival: String
     let isICUS: Bool
+    let selectedTimeCredit: TimeCreditType
     let remarks: String
     let dayTakeoffs: Int
     let dayLandings: Int
@@ -102,7 +103,21 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var coPilotName = ""
     @Published var so1Name = ""
     @Published var so2Name = ""
-    @Published var isPilotFlying = false
+    @Published var isPilotFlying = false {
+        didSet {
+            // Auto-update time credit when F/O toggles PF
+            // Only do this when not in editing mode and when position is F/O
+            if !isEditingMode && flightTimePosition == .firstOfficer {
+                if isPilotFlying {
+                    // F/O + PF = P1US (ICUS)
+                    selectedTimeCredit = .p1us
+                } else {
+                    // F/O + not PF = P2
+                    selectedTimeCredit = .p2
+                }
+            }
+        }
+    }
     @Published var isAIII = false
     @Published var isRNP = false
     @Published var isILS = false
@@ -116,6 +131,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var scheduledDeparture = ""  // STD - Scheduled Time of Departure
     @Published var scheduledArrival = ""     // STA - Scheduled Time of Arrival
     @Published var isICUS = false
+    @Published var selectedTimeCredit: TimeCreditType = .p1 {  // Explicit time credit selection
+        didSet {
+            // Keep isICUS in sync with selectedTimeCredit for backward compatibility
+            isICUS = (selectedTimeCredit == .p1us)
+        }
+    }
     @Published var remarks = ""
     @Published var dayTakeoffs = 0
     @Published var dayLandings = 0
@@ -523,6 +544,18 @@ class FlightTimeExtractorViewModel: ObservableObject {
     func updateFlightTimePosition(_ value: FlightTimePosition) {
         flightTimePosition = value
         userDefaultsService.setFlightTimePosition(value)
+
+        // Update selectedTimeCredit to match the new position (but only when not editing)
+        if !isEditingMode {
+            switch value {
+            case .captain:
+                selectedTimeCredit = .p1
+            case .firstOfficer:
+                selectedTimeCredit = .p2  // Default to P2, can manually change to P1US
+            case .secondOfficer:
+                selectedTimeCredit = .p2
+            }
+        }
 
         // Set the appropriate default name to "Self" based on position
         switch value {
@@ -1230,7 +1263,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let blockTimeCalculated = (isSimulator && (outTime.isEmpty || inTime.isEmpty)) ? blockTime : calculateFlightTime()
         if nightTime.isEmpty { updateNightTime() }
 
-        // Calculate time credits based on position
+        // Calculate time credits based on selected time credit type
         let p1TimeValue: String
         let p1usTimeValue: String
         let p2TimeValue: String
@@ -1241,25 +1274,17 @@ class FlightTimeExtractorViewModel: ObservableObject {
             p1usTimeValue = "0.0"
             p2TimeValue = "0.0"
         } else {
-            switch flightTimePosition {
-            case .captain:
+            // Use the explicit selectedTimeCredit instead of flightTimePosition
+            switch selectedTimeCredit {
+            case .p1:
                 p1TimeValue = blockTimeCalculated
                 p1usTimeValue = "0.0"
                 p2TimeValue = "0.0"
-            case .firstOfficer:
-                if isICUS && isPilotFlying {
-                    // First Officer with ICUS and PF gets P1US credit
-                    p1TimeValue = "0.0"
-                    p1usTimeValue = blockTimeCalculated
-                    p2TimeValue = "0.0"
-                } else {
-                    // First Officer without ICUS gets P2 credit
-                    p1TimeValue = "0.0"
-                    p1usTimeValue = "0.0"
-                    p2TimeValue = blockTimeCalculated
-                }
-            case .secondOfficer:
-                // Second Officer gets P2 credit
+            case .p1us:
+                p1TimeValue = "0.0"
+                p1usTimeValue = blockTimeCalculated
+                p2TimeValue = "0.0"
+            case .p2:
                 p1TimeValue = "0.0"
                 p1usTimeValue = "0.0"
                 p2TimeValue = blockTimeCalculated
@@ -1370,6 +1395,28 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let p1usTimeValue = Double(sector.p1usTime) ?? 0.0
         isICUS = (flightTimePosition == .firstOfficer && p1usTimeValue > 0.0)
 
+        // Infer time credit type from actual time values
+        let p1TimeValue = Double(sector.p1Time) ?? 0.0
+        let p2TimeValue = Double(sector.p2Time) ?? 0.0
+
+        if p1TimeValue > 0 {
+            selectedTimeCredit = .p1
+        } else if p1usTimeValue > 0 {
+            selectedTimeCredit = .p1us
+        } else if p2TimeValue > 0 {
+            selectedTimeCredit = .p2
+        } else {
+            // No time logged yet - default based on position
+            switch flightTimePosition {
+            case .captain:
+                selectedTimeCredit = .p1
+            case .firstOfficer:
+                selectedTimeCredit = .p2
+            case .secondOfficer:
+                selectedTimeCredit = .p2
+            }
+        }
+
         // For simulator flights, load simTime into blockTime field (since the UI shows "Sim Time" when isSimulator is true)
         // For regular flights, load blockTime as usual
         if isSimulator {
@@ -1460,7 +1507,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         HapticManager.shared.impact(.medium)
 
-        // Calculate time credits based on position
+        // Calculate time credits based on selected time credit type
         let p1TimeValue: String
         let p1usTimeValue: String
         let p2TimeValue: String
@@ -1471,25 +1518,17 @@ class FlightTimeExtractorViewModel: ObservableObject {
             p1usTimeValue = "0.0"
             p2TimeValue = "0.0"
         } else {
-            switch flightTimePosition {
-            case .captain:
+            // Use the explicit selectedTimeCredit instead of flightTimePosition
+            switch selectedTimeCredit {
+            case .p1:
                 p1TimeValue = blockTime
                 p1usTimeValue = "0.0"
                 p2TimeValue = "0.0"
-            case .firstOfficer:
-                if isICUS && isPilotFlying {
-                    // First Officer with ICUS and PF gets P1US credit
-                    p1TimeValue = "0.0"
-                    p1usTimeValue = blockTime
-                    p2TimeValue = "0.0"
-                } else {
-                    // First Officer without ICUS gets P2 credit
-                    p1TimeValue = "0.0"
-                    p1usTimeValue = "0.0"
-                    p2TimeValue = blockTime
-                }
-            case .secondOfficer:
-                // Second Officer gets P2 credit
+            case .p1us:
+                p1TimeValue = "0.0"
+                p1usTimeValue = blockTime
+                p2TimeValue = "0.0"
+            case .p2:
                 p1TimeValue = "0.0"
                 p1usTimeValue = "0.0"
                 p2TimeValue = blockTime
@@ -2076,6 +2115,16 @@ class FlightTimeExtractorViewModel: ObservableObject {
         blockTime = ""
         isPilotFlying = false
 
+        // Set time credit based on position
+        switch flightTimePosition {
+        case .captain:
+            selectedTimeCredit = .p1
+        case .firstOfficer:
+            selectedTimeCredit = .p2  // Default to P2, can be changed to P1US if ICUS
+        case .secondOfficer:
+            selectedTimeCredit = .p2
+        }
+
         // Clear approach types when PF is off
         selectedApproachType = nil
         isAIII = false
@@ -2258,30 +2307,22 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let blockTimeCalculated = (isSimulator && (outTime.isEmpty || inTime.isEmpty)) ? blockTime : calculateFlightTime()
         if nightTime.isEmpty { updateNightTime() }
 
-        // Calculate time credits based on position
+        // Calculate time credits based on selected time credit type
         let p1TimeValue: String
         let p1usTimeValue: String
         let p2TimeValue: String
 
-        switch flightTimePosition {
-        case .captain:
+        // Use the explicit selectedTimeCredit instead of flightTimePosition
+        switch selectedTimeCredit {
+        case .p1:
             p1TimeValue = blockTimeCalculated
             p1usTimeValue = "0.0"
             p2TimeValue = "0.0"
-        case .firstOfficer:
-            if isICUS && isPilotFlying {
-                // First Officer with ICUS and PF gets P1US credit
-                p1TimeValue = "0.0"
-                p1usTimeValue = blockTimeCalculated
-                p2TimeValue = "0.0"
-            } else {
-                // First Officer without ICUS gets P2 credit
-                p1TimeValue = "0.0"
-                p1usTimeValue = "0.0"
-                p2TimeValue = blockTimeCalculated
-            }
-        case .secondOfficer:
-            // Second Officer gets P2 credit
+        case .p1us:
+            p1TimeValue = "0.0"
+            p1usTimeValue = blockTimeCalculated
+            p2TimeValue = "0.0"
+        case .p2:
             p1TimeValue = "0.0"
             p1usTimeValue = "0.0"
             p2TimeValue = blockTimeCalculated
@@ -2647,6 +2688,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
             isICUS: isICUS,
+            selectedTimeCredit: selectedTimeCredit,
             remarks: remarks,
             dayTakeoffs: dayTakeoffs,
             dayLandings: dayLandings,
@@ -2706,6 +2748,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             scheduledDeparture = draft.scheduledDeparture
             scheduledArrival = draft.scheduledArrival
             isICUS = draft.isICUS
+            selectedTimeCredit = draft.selectedTimeCredit
             remarks = draft.remarks
             dayTakeoffs = draft.dayTakeoffs
             dayLandings = draft.dayLandings

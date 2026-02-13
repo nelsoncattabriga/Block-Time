@@ -1414,7 +1414,7 @@ private struct ModernTogglesSection: View {
 //                Spacer()
 //            }
 
-            VStack(spacing: 8) {
+                VStack(spacing: 8) {
                 // First row: PF, ICUS (when F/O), APP
                 HStack(spacing: 12) {
                     ModernToggle(
@@ -1425,11 +1425,6 @@ private struct ModernTogglesSection: View {
                     )
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .onChange(of: viewModel.isPilotFlying) { oldValue, newValue in
-                        // When PF is turned off, also turn off ICUS
-                        if !newValue && viewModel.flightTimePosition == .firstOfficer {
-                            viewModel.isICUS = false
-                        }
-
                         // When PF is turned back on, restore default approach type if set
                         // BUT only if NOT in editing mode (to preserve loaded flight's approach type)
                         if newValue && !viewModel.isEditingMode && viewModel.logApproaches && viewModel.defaultApproachType != nil {
@@ -1437,15 +1432,7 @@ private struct ModernTogglesSection: View {
                         }
                     }
 
-                    if viewModel.flightTimePosition == .firstOfficer {
-                        ModernToggle(
-                            title: "ICUS",
-                            isOn: $viewModel.isICUS,
-                            color: .blue,
-                            isDisabled: !viewModel.isPilotFlying
-                        )
-                        .frame(minWidth: 0, maxWidth: .infinity)
-                    }
+                    // ICUS toggle removed - now using explicit P1/P1US/P2 radio buttons above
 
                     if viewModel.logApproaches {
                         ModernApproachToggle(
@@ -1469,6 +1456,36 @@ private struct ModernTogglesSection: View {
                 )
             }
 
+            
+            // Time Credits section
+            VStack(spacing: 4) {
+                HStack(spacing: 6) {
+                    ForEach(TimeCreditType.allCases, id: \.self) { creditType in
+                        TimeCreditRadioButton(
+                            title: creditType.shortName,
+                            //subtitle: creditType == .p1 ? "CMD" : (creditType == .p1us ? "ICUS" : "CO-PLT"),
+                            isSelected: viewModel.selectedTimeCredit == creditType,
+                            color: .blue, //creditType == .p1 ? .blue : (creditType == .p1us ? .orange : .purple),
+                            isDisabled: viewModel.isPositioning
+                        ) {
+                            viewModel.selectedTimeCredit = creditType
+                            HapticManager.shared.impact(.light)
+                        }
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                    }
+                }
+                .padding(8)
+                .background(Color(.systemGray6).opacity(0.75))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(.systemGray4), lineWidth: 1)
+                )
+            }
+
+
+            
+            
             // Takeoffs and Landings section - only show when Pilot Flying is selected
             if viewModel.isPilotFlying {
                 HStack {
@@ -2275,6 +2292,49 @@ private struct FlightAwareLookupProgressView: View {
             .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
         }
         .transition(.opacity)
+    }
+}
+
+// MARK: - Time Credit Radio Button
+private struct TimeCreditRadioButton: View {
+    let title: String
+    let isSelected: Bool
+    let color: Color
+    var isDisabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: {
+            if !isDisabled {
+                action()
+            }
+        }) {
+            VStack(spacing: 3) {
+                // Radio circle
+                ZStack {
+                    Circle()
+                        .stroke(isSelected ? color : Color.secondary.opacity(0.5), lineWidth: 1.5)
+                        .frame(width: 15, height: 15)
+
+                    if isSelected {
+                        Circle()
+                            .fill(color)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+
+                // Title
+                Text(title)
+                    .font(.subheadline.bold())
+                    .foregroundColor(isSelected ? color : .secondary)
+
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+            .opacity(isDisabled ? 0.5 : 1.0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(isDisabled)
     }
 }
 
