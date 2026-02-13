@@ -68,28 +68,44 @@ struct BulkEditSheet: View {
                     // Crew Card
                     SectionCard(title: "Crew", icon: "person.2.fill", color: .green) {
                         VStack(spacing: 12) {
-                            BulkEditTextField(
+                            BulkEditCrewField(
                                 label: "Captain",
                                 fieldState: $bulkEditViewModel.captainName,
-                                autocapitalization: .words
+                                savedNames: viewModel.savedCaptainNames,
+                                recentNames: viewModel.recentCaptainNames,
+                                onNameAdded: viewModel.addCaptainName,
+                                onNameRemoved: viewModel.removeCaptainName,
+                                icon: "person.badge.shield.checkmark"
                             )
 
-                            BulkEditTextField(
+                            BulkEditCrewField(
                                 label: "F/O",
                                 fieldState: $bulkEditViewModel.foName,
-                                autocapitalization: .words
+                                savedNames: viewModel.savedCoPilotNames,
+                                recentNames: viewModel.recentCoPilotNames,
+                                onNameAdded: viewModel.addCoPilotName,
+                                onNameRemoved: viewModel.removeCoPilotName,
+                                icon: "person.badge.clock"
                             )
 
-                            BulkEditOptionalTextField(
+                            BulkEditOptionalCrewField(
                                 label: "S/O1",
                                 fieldState: $bulkEditViewModel.so1Name,
-                                autocapitalization: .words
+                                savedNames: viewModel.savedSONames,
+                                recentNames: viewModel.recentSONames,
+                                onNameAdded: viewModel.addSOName,
+                                onNameRemoved: viewModel.removeSOName,
+                                icon: "person.badge.key"
                             )
 
-                            BulkEditOptionalTextField(
+                            BulkEditOptionalCrewField(
                                 label: "S/O2",
                                 fieldState: $bulkEditViewModel.so2Name,
-                                autocapitalization: .words
+                                savedNames: viewModel.savedSONames,
+                                recentNames: viewModel.recentSONames,
+                                onNameAdded: viewModel.addSOName,
+                                onNameRemoved: viewModel.removeSOName,
+                                icon: "person.badge.key.fill"
                             )
                         }
                     }
@@ -1045,6 +1061,152 @@ struct BulkEditApproachPicker: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - BulkEditCrewField
+
+struct BulkEditCrewField: View {
+    let label: String
+    @Binding var fieldState: BulkEditViewModel.FieldState<String>
+    let savedNames: [String]
+    var recentNames: [String] = []
+    let onNameAdded: (String) -> Void
+    let onNameRemoved: ((String) -> Void)?
+    let icon: String
+
+    @State private var textValue: String = ""
+    @State private var showingPicker = false
+    @State private var searchText = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(.green)
+                    .frame(width: 20)
+
+                Button(action: {
+                    searchText = textValue
+                    showingPicker = true
+                }) {
+                    HStack {
+                        Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select crew..." : textValue))
+                            .font(.body)
+                            .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(10)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(8)
+            .sheet(isPresented: $showingPicker) {
+                CrewNamePickerSheet(
+                    title: label,
+                    selectedName: $textValue,
+                    searchText: $searchText,
+                    savedNames: savedNames,
+                    recentNames: recentNames,
+                    onNameAdded: onNameAdded,
+                    onNameRemoved: onNameRemoved,
+                    onDismiss: {
+                        showingPicker = false
+                        searchText = ""
+                        fieldState = .value(textValue)
+                    }
+                )
+            }
+            .onAppear {
+                if case .value(let val) = fieldState {
+                    textValue = val
+                }
+            }
+        }
+    }
+}
+
+// MARK: - BulkEditOptionalCrewField
+
+struct BulkEditOptionalCrewField: View {
+    let label: String
+    @Binding var fieldState: BulkEditViewModel.FieldState<String?>
+    let savedNames: [String]
+    var recentNames: [String] = []
+    let onNameAdded: (String) -> Void
+    let onNameRemoved: ((String) -> Void)?
+    let icon: String
+
+    @State private var textValue: String = ""
+    @State private var showingPicker = false
+    @State private var searchText = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(.green)
+                    .frame(width: 20)
+
+                Button(action: {
+                    searchText = textValue
+                    showingPicker = true
+                }) {
+                    HStack {
+                        Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select crew..." : textValue))
+                            .font(.body)
+                            .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(10)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(8)
+            .sheet(isPresented: $showingPicker) {
+                CrewNamePickerSheet(
+                    title: label,
+                    selectedName: $textValue,
+                    searchText: $searchText,
+                    savedNames: savedNames,
+                    recentNames: recentNames,
+                    onNameAdded: onNameAdded,
+                    onNameRemoved: onNameRemoved,
+                    onDismiss: {
+                        showingPicker = false
+                        searchText = ""
+                        fieldState = .value(textValue.isEmpty ? nil : textValue)
+                    }
+                )
+            }
+            .onAppear {
+                if case .value(let val) = fieldState {
+                    textValue = val ?? ""
+                }
+            }
+        }
     }
 }
 
