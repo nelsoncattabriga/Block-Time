@@ -57,6 +57,11 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.aircraftType,
                                 textCase: .uppercase
                             )
+
+                            BulkEditPrefixManager(
+                                operationState: $bulkEditViewModel.prefixOperation,
+                                prefixState: $bulkEditViewModel.prefixValue
+                            )
                         }
                     }
 
@@ -1040,6 +1045,151 @@ struct BulkEditApproachPicker: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - BulkEditPrefixManager
+
+struct BulkEditPrefixManager: View {
+    @Binding var operationState: BulkEditViewModel.FieldState<BulkEditViewModel.PrefixOperation>
+    @Binding var prefixState: BulkEditViewModel.FieldState<String>
+
+    @State private var selectedOperation: BulkEditViewModel.PrefixOperation = .noChange
+    @State private var prefixValue: String = ""
+    @State private var isIndeterminate: Bool = false
+    @FocusState private var isPrefixFieldFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Flight Number Prefix")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 8) {
+                // Operation Selector
+                if isIndeterminate {
+                    Button {
+                        // First tap on mixed sets to No Change
+                        isIndeterminate = false
+                        selectedOperation = .noChange
+                        operationState = .value(.noChange)
+                        HapticManager.shared.impact(.light)
+                    } label: {
+                        Text("(Mixed)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(.secondarySystemBackground))
+                            )
+                    }
+                } else {
+                    HStack(spacing: 0) {
+                        // No Change Button
+                        Button(action: {
+                            selectedOperation = .noChange
+                            operationState = .value(.noChange)
+                            isPrefixFieldFocused = false
+                            HapticManager.shared.impact(.light)
+                        }) {
+                            Text("No Change")
+                                .font(.subheadline.bold())
+                                .foregroundColor(selectedOperation == .noChange ? .white : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 28)
+                                .background(selectedOperation == .noChange ? Color.gray : Color(.secondarySystemBackground))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        Divider()
+                            .frame(height: 20)
+
+                        // Add Button
+                        Button(action: {
+                            selectedOperation = .add
+                            operationState = .value(.add)
+                            HapticManager.shared.impact(.light)
+                        }) {
+                            Text("Add")
+                                .font(.subheadline.bold())
+                                .foregroundColor(selectedOperation == .add ? .white : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 28)
+                                .background(selectedOperation == .add ? Color.green : Color(.secondarySystemBackground))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        Divider()
+                            .frame(height: 20)
+
+                        // Remove Button
+                        Button(action: {
+                            selectedOperation = .remove
+                            operationState = .value(.remove)
+                            HapticManager.shared.impact(.light)
+                        }) {
+                            Text("Remove")
+                                .font(.subheadline.bold())
+                                .foregroundColor(selectedOperation == .remove ? .white : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 28)
+                                .background(selectedOperation == .remove ? Color.red : Color(.secondarySystemBackground))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
+                }
+
+                // Prefix Text Field (only show when Add or Remove is selected)
+                if selectedOperation != .noChange && !isIndeterminate {
+                    TextField(
+                        selectedOperation == .add ? "Prefix to add (e.g., QF)" : "Prefix to remove (e.g., QF)",
+                        text: $prefixValue
+                    )
+                    .textCase(.uppercase)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .focused($isPrefixFieldFocused)
+                    .font(.body)
+                    .padding(10)
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isPrefixFieldFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+                    )
+                    .onChange(of: prefixValue) { _, newValue in
+                        let uppercased = newValue.uppercased()
+                        prefixValue = uppercased
+                        prefixState = .value(uppercased)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            if case .value(let operation) = operationState {
+                selectedOperation = operation
+                isIndeterminate = false
+            } else if operationState.isMixed {
+                isIndeterminate = true
+            }
+
+            if case .value(let prefix) = prefixState {
+                prefixValue = prefix
+            }
+        }
     }
 }
 

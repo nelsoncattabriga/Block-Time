@@ -32,11 +32,21 @@ class BulkEditViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Prefix Operation Enum
+
+    enum PrefixOperation: String, Equatable, CaseIterable {
+        case noChange = "No Change"
+        case add = "Add"
+        case remove = "Remove"
+    }
+
     // MARK: - Published Properties
 
     // Aircraft Info
     @Published var aircraftReg: FieldState<String> = .notEdited
     @Published var aircraftType: FieldState<String> = .notEdited
+    @Published var prefixOperation: FieldState<PrefixOperation> = .notEdited
+    @Published var prefixValue: FieldState<String> = .notEdited
 
     // Crew
     @Published var captainName: FieldState<String> = .notEdited
@@ -239,6 +249,8 @@ class BulkEditViewModel: ObservableObject {
         initialStates = [
             "aircraftReg": aircraftReg,
             "aircraftType": aircraftType,
+            "prefixOperation": prefixOperation,
+            "prefixValue": prefixValue,
             "captainName": captainName,
             "foName": foName,
             "so1Name": so1Name,
@@ -277,7 +289,15 @@ class BulkEditViewModel: ObservableObject {
     private func setupModificationTracking() {
         // Monitor all published properties for changes
         Publishers.CombineLatest4(
-            $aircraftReg, $aircraftType, $captainName, $foName
+            $aircraftReg, $aircraftType, $prefixOperation, $prefixValue
+        )
+        .sink { [weak self] _ in
+            self?.checkForModifications()
+        }
+        .store(in: &cancellables)
+
+        Publishers.CombineLatest(
+            $captainName, $foName
         )
         .sink { [weak self] _ in
             self?.checkForModifications()
@@ -351,6 +371,8 @@ class BulkEditViewModel: ObservableObject {
         // Check if any field has been changed from its initial state
         hasModifications = hasFieldBeenModified(aircraftReg, key: "aircraftReg") ||
                           hasFieldBeenModified(aircraftType, key: "aircraftType") ||
+                          hasFieldBeenModified(prefixOperation, key: "prefixOperation") ||
+                          hasFieldBeenModified(prefixValue, key: "prefixValue") ||
                           hasFieldBeenModified(captainName, key: "captainName") ||
                           hasFieldBeenModified(foName, key: "foName") ||
                           hasFieldBeenModified(so1Name, key: "so1Name") ||
@@ -407,6 +429,31 @@ class BulkEditViewModel: ObservableObject {
             }
             if case .value(let type) = aircraftType {
                 updated.aircraftType = type
+            }
+
+            // Handle prefix operation
+            if case .value(let operation) = prefixOperation, operation != .noChange,
+               case .value(let prefix) = prefixValue, !prefix.isEmpty {
+                let currentFlightNumber = updated.flightNumber
+
+                switch operation {
+                case .add:
+                    // Add prefix if it doesn't already start with it
+                    let uppercasePrefix = prefix.uppercased()
+                    if !currentFlightNumber.uppercased().hasPrefix(uppercasePrefix) {
+                        updated.flightNumber = uppercasePrefix + currentFlightNumber
+                    }
+
+                case .remove:
+                    // Remove prefix if it starts with it
+                    let uppercasePrefix = prefix.uppercased()
+                    if currentFlightNumber.uppercased().hasPrefix(uppercasePrefix) {
+                        updated.flightNumber = String(currentFlightNumber.dropFirst(uppercasePrefix.count))
+                    }
+
+                case .noChange:
+                    break
+                }
             }
 
             if case .value(let captain) = captainName {
