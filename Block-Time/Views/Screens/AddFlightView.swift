@@ -1518,7 +1518,7 @@ private struct ModernTogglesSection: View {
                             HapticManager.shared.impact(.light)
                         }
                     }) {
-                        Text("P1U/S")
+                        Text("ICUS")
                             .font(.footnote.bold())
                             .foregroundColor(viewModel.selectedTimeCredit == .p1us ? .white : .secondary)
                             .frame(maxWidth: .infinity)
