@@ -1470,7 +1470,7 @@ private struct ModernTogglesSection: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
                     // ICUS toggle removed - now using explicit P1/P1US/P2 radio buttons
-
+                    
                     if viewModel.logApproaches {
                         ModernApproachToggle(
                             selectedApproachType: Binding(
@@ -2086,10 +2086,11 @@ private struct ModernDecimalTimeField: View {
             }
             return input.isEmpty ? "0:00" : input
         } else {
-            // Format as decimal
+            // Format as decimal using the user's rounding mode
             let cleaned = input.replacingOccurrences(of: ",", with: ".")
             if let d = Double(cleaned) {
-                return String(format: "%.1f", d)
+                let rounded = viewModel.decimalRoundingMode.apply(to: d, decimalPlaces: 1)
+                return String(format: "%.1f", rounded)
             }
             return input.isEmpty ? "0.0" : input
         }
@@ -2186,7 +2187,9 @@ private struct ModernDecimalTimeField: View {
         if showAsHHMM {
             return FlightSector.decimalToHHMM(decimalValue)
         } else {
-            return String(format: "%.1f", decimalValue)
+            // Apply the user's rounding mode for consistent display
+            let rounded = viewModel.decimalRoundingMode.apply(to: decimalValue, decimalPlaces: 1)
+            return String(format: "%.1f", rounded)
         }
     }
 }
