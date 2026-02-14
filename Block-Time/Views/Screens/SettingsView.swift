@@ -605,9 +605,6 @@ private struct ModernFormatOptionsCard: View {
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
 
-//                        Text(viewModel.showTimesInHoursMinutes ? "1:30" : "1.5")
-//                            .font(.caption)
-//                            .foregroundColor(.secondary)
                     }
 
                     Spacer()
@@ -638,7 +635,7 @@ private struct ModernFormatOptionsCard: View {
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
 
-                            Text("For Displayed Times")
+                            Text(roundingExampleText)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -775,6 +772,18 @@ private struct ModernFormatOptionsCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.orange.opacity(0.2), lineWidth: 1)
         )
+    }
+
+    // Computed property for rounding mode examples
+    private var roundingExampleText: String {
+        switch viewModel.decimalRoundingMode {
+        case .standard:
+            return "Round to Nearest"
+        case .roundUp:
+            return "Always Ruund Up"
+        case .roundDown:
+            return "Always Round Down"
+        }
     }
 }
 

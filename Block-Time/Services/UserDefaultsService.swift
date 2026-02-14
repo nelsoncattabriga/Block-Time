@@ -41,8 +41,8 @@ enum LogbookDestination: String, CaseIterable {
 }
 
 enum RoundingMode: String, CaseIterable {
-    case roundDown = "Round Down"
-    case roundUp = "Round Up"
+    case roundDown = "Down"
+    case roundUp = "Up"
     case standard = "Standard"
 
     var displayName: String {
