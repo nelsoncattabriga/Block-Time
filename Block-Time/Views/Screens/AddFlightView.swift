@@ -1411,16 +1411,10 @@ private struct ModernTogglesSection: View {
 
     var body: some View {
         VStack(spacing: 12) {
-//            HStack {
-//                Text("Operations")
-//                    .font(.caption.bold())
-//                    .foregroundColor(.secondary)
-//                Spacer()
-//            }
-
-                VStack(spacing: 18) {
+            VStack(spacing: 18) {
+                
                 // First row: PF/PM, APP
-                HStack(spacing: 18) {
+                HStack(spacing: 64) {
                     // PF/PM Segmented Picker
                     HStack(spacing: 0) {
                         // PF Button
@@ -1469,8 +1463,8 @@ private struct ModernTogglesSection: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                    // ICUS toggle removed - now using explicit P1/P1US/P2 radio buttons
                     
+                    // Approach Picker
                     if viewModel.logApproaches {
                         ModernApproachToggle(
                             selectedApproachType: Binding(
@@ -1483,12 +1477,12 @@ private struct ModernTogglesSection: View {
                         )
                     }
 
-                    Spacer()
+                    //Spacer()
                 }
 
                 // Second row: P1/P1US/P2 Time Credits
                 HStack {
-                    HStack(spacing: 0) {
+                    HStack(alignment:.center, spacing: 0) {
                     // P1 Button
                     Button(action: {
                         if !viewModel.isPositioning {
@@ -1558,19 +1552,24 @@ private struct ModernTogglesSection: View {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.blue.opacity(0.2), lineWidth: 1)
                     )
-                    .frame(maxWidth: 400)
+//                    .frame(maxWidth: .infinity)
 
-                    Spacer()
+                   // Spacer()
                 }
+                .frame(maxWidth: 300)
+
             }
+            .frame(maxWidth: .infinity)
+            
             .padding(12)
             .background(Color(.systemGray6).opacity(0.75))
             .cornerRadius(8)
+            
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color(.systemGray4), lineWidth: 1)
             )
-
+            
             // Takeoffs and Landings section - only show when Pilot Flying is selected
             if viewModel.isPilotFlying {
                 HStack {
@@ -1590,7 +1589,7 @@ private struct ModernTogglesSection: View {
                                 viewModel.markTakeoffsLandingsAsManuallyEdited()
                             }
                         )
-
+                        
                         ModernIntegerField(
                             label: "Day LDG",
                             value: $viewModel.dayLandings,
@@ -1600,7 +1599,7 @@ private struct ModernTogglesSection: View {
                             }
                         )
                     }
-
+                    
                     HStack(spacing: 8) {
                         ModernIntegerField(
                             label: "Night T/O",
@@ -1610,7 +1609,7 @@ private struct ModernTogglesSection: View {
                                 viewModel.markTakeoffsLandingsAsManuallyEdited()
                             }
                         )
-
+                        
                         ModernIntegerField(
                             label: "Night LDG",
                             value: $viewModel.nightLandings,
