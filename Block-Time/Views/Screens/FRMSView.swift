@@ -156,7 +156,6 @@ struct FRMSView: View {
                 }
             }
             .navigationTitle("\(viewModel.configuration.fleet.shortName) FRMS")
-//            .navigationTitle("FRMS LIMITS")
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGroupedBackground))
             .onAppear {
@@ -248,11 +247,6 @@ struct FRMSView: View {
         VStack(alignment: .leading, spacing: 16) {
             // Rest Requirements
             VStack(alignment: .leading, spacing: 8) {
-//                Text("Rest Required")
-//                    .font(.headline)
-//                    .fontWeight(.semibold)
-//                    .foregroundStyle(.primary)
-
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Minimum Rest")
@@ -299,10 +293,6 @@ struct FRMSView: View {
                     .pickerStyle(.menu)
                     .font(.caption)
                 }
-
-//                Text("\(displayWindow.timeRange)")
-//                    .font(.caption2)
-//                    .foregroundStyle(.secondary)
 
                 // Sector-based duty limits
                 HStack(spacing: 12) {
@@ -946,89 +936,6 @@ struct FRMSView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-//    private func consecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
-//        VStack(alignment: .leading, spacing: 12) {
-//            Text("Consecutive Duties")
-//                .font(.headline)
-//                .fontWeight(.medium)
-//
-//            // First row - 4 items (only for A320/B737)
-//            HStack(spacing: 16) {
-//                if let maxConsec = totals.maxConsecutiveDuties {
-//                    VStack {
-//                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-//                            Text("\(totals.consecutiveDuties)")
-//                                .font(.title2)
-//                                .fontWeight(.bold)
-//                                .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
-//                            Text("/\(maxConsec)")
-//                                .font(.subheadline)
-//                                .foregroundStyle(.secondary)
-//                        }
-//                        Text("Consec")
-//                            .font(.subheadline)
-//                            .foregroundStyle(.secondary)
-//                    }
-//                }
-//
-//                if let maxDuty11 = totals.maxDutyDaysIn11Days {
-//                    VStack {
-//                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-//                            Text("\(totals.dutyDaysIn11Days)")
-//                                .font(.title2)
-//                                .fontWeight(.bold)
-//                                .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
-//                            Text("/\(maxDuty11)")
-//                                .font(.subheadline)
-//                                .foregroundStyle(.secondary)
-//                        }
-//                        Text("in 11 Days")
-//                            .font(.subheadline)
-//                            .foregroundStyle(.secondary)
-//                    }
-//                }
-//
-//                if let maxEarly = totals.maxConsecutiveEarlyStarts {
-//                    VStack {
-//                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-//                            Text("\(totals.consecutiveEarlyStarts)")
-//                                .font(.title2)
-//                                .fontWeight(.bold)
-//                                .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
-//                            Text("/\(maxEarly)")
-//                                .font(.subheadline)
-//                                .foregroundStyle(.secondary)
-//                        }
-//                        Text("Early Starts")
-//                            .font(.subheadline)
-//                            .foregroundStyle(.secondary)
-//                    }
-//                }
-//
-//                if let maxLate = totals.maxConsecutiveLateNights {
-//                    VStack {
-//                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-//                            Text("\(totals.consecutiveLateNights)")
-//                                .font(.title2)
-//                                .fontWeight(.bold)
-//                                .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
-//                            Text("/\(maxLate)")
-//                                .font(.subheadline)
-//                                .foregroundStyle(.secondary)
-//                        }
-//                        Text("Late Nights")
-//                            .font(.subheadline)
-//                            .foregroundStyle(.secondary)
-//                    }
-//                }
-//            }
-//            .frame(maxWidth: .infinity)
-//        }
-//        .padding()
-//        .background(.thinMaterial)
-//        .clipShape(RoundedRectangle(cornerRadius: 12))
-//    }
-
     private func maxDutyParameterRow(icon: String, title: String, value: String, color: Color) -> some View {
         HStack {
             Label(title, systemImage: icon)
@@ -1246,20 +1153,16 @@ struct FRMSView: View {
                         )
                     }
 
-                    // Row 3: Days Off + Consecutive Duties (A320/B737 only)
+                    // Row 3: Consecutive Duties (A320/B737 only)
                     if viewModel.configuration.fleet == .a320B737 {
                         HStack(spacing: 12) {
-                            buildDaysOffCard(
-                                daysOff: totals.daysOff28Days,
-                                required: 7
-                            )
-
                             if totals.hasConsecutiveDutyLimits {
                                 buildConsecutiveInfoCard(totals: totals)
-                            } else {
-                                Spacer()
-                                    .frame(maxWidth: .infinity)
                             }
+
+                            // Empty space to maintain half-width layout
+                            Spacer()
+                                .frame(maxWidth: .infinity)
                         }
                     }
                 }
@@ -1305,14 +1208,14 @@ struct FRMSView: View {
                 unit: "hrs"
             )
             
-            // ADDED HERE
-            if viewModel.configuration.fleet == .a320B737 {
-                    buildDaysOffCard(
-                    daysOff: totals.daysOff28Days,
-                    required: 7
-                    )
-                
-            }
+//            // ADDED HERE
+//            if viewModel.configuration.fleet == .a320B737 {
+//                    buildDaysOffCard(
+//                    daysOff: totals.daysOff28Days,
+//                    required: 7
+//                    )
+//                
+//            }
             
         }
 

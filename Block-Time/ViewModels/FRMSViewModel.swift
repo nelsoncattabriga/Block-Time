@@ -117,10 +117,27 @@ class FRMSViewModel: ObservableObject {
 
         // Fetch data and process on MainActor
         Task {
-            // Fetch all flight sectors from Core Data
+            // Calculate 365-day date range (maximum lookback period for FRMS)
+            let calendar = Calendar.current
+            let today = Date()
+            // Use -365 days to ensure we fetch enough data (includes boundary cases)
+            let cutoffDate = calendar.date(byAdding: .day, value: -365, to: today) ?? today
+
+            // Format dates for database query (dd/MM/yyyy)
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "dd/MM/yyyy"
+            dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+            let startDateString = dateFormatter.string(from: cutoffDate)
+            let endDateString = dateFormatter.string(from: today)
+
+            // Fetch ONLY last 365 days from Core Data (massive performance optimization)
+            // This eliminates fetching thousands of old flights that FRMS doesn't need
             let flights = await MainActor.run {
-                FlightDatabaseService.shared.fetchAllFlights()
+                FlightDatabaseService.shared.fetchFlights(from: startDateString, to: endDateString)
             }
+
+            LogManager.shared.debug("FRMSViewModel: Fetched \(flights.count) flights from last 365 days")
 
             // Convert FlightSectors to FRMSDuties (on MainActor)
             // Group flights into consolidated duty periods (multiple sectors per duty)
@@ -131,15 +148,12 @@ class FRMSViewModel: ObservableObject {
             let now = Date()
             let completedDuties = duties.filter { $0.signOff <= now }
 
-            // Filter to last 365 days for FRMS calculations (longest lookback period)
-            let calendar = Calendar.current
-            let cutoffDate = calendar.date(byAdding: .day, value: -365, to: Date()) ?? Date()
+            // Filter duties to last 365 days (duty dates can differ from flight dates due to timezone adjustments)
+            // Note: We already fetched flights from last 365 days, but duty grouping can shift dates slightly
             let dutiesLast365 = completedDuties.filter { $0.date >= cutoffDate }
 
             // Also filter flights to last 365 days for flight time calculations
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "dd/MM/yyyy"
-            dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+            // Note: This filter is mostly redundant since we fetched 365 days, but handles edge cases
             let flightsLast365 = flights.filter {
                 guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
                 return flightDate >= cutoffDate
@@ -202,8 +216,24 @@ class FRMSViewModel: ObservableObject {
         let service = self.calculationService
         let config = self.configuration
 
-        // Fetch all flight sectors from Core Data
-        let flights = FlightDatabaseService.shared.fetchAllFlights()
+        // Calculate 365-day date range (maximum lookback period for FRMS)
+        let calendar = Calendar.current
+        let today = Date()
+        // Use -365 days to ensure we fetch enough data (includes boundary cases)
+        let cutoffDate = calendar.date(byAdding: .day, value: -365, to: today) ?? today
+
+        // Format dates for database query (dd/MM/yyyy)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+        let startDateString = dateFormatter.string(from: cutoffDate)
+        let endDateString = dateFormatter.string(from: today)
+
+        // Fetch ONLY last 365 days from Core Data (massive performance optimization)
+        let flights = FlightDatabaseService.shared.fetchFlights(from: startDateString, to: endDateString)
+
+        LogManager.shared.debug("FRMSViewModel: Refreshed \(flights.count) flights from last 365 days")
 
         // Convert FlightSectors to FRMSDuties (on MainActor)
         // Group flights into consolidated duty periods (multiple sectors per duty)
@@ -214,15 +244,12 @@ class FRMSViewModel: ObservableObject {
         let now = Date()
         let completedDuties = duties.filter { $0.signOff <= now }
 
-        // Filter to last 365 days for FRMS calculations (longest lookback period)
-        let calendar = Calendar.current
-        let cutoffDate = calendar.date(byAdding: .day, value: -365, to: Date()) ?? Date()
+        // Filter duties to last 365 days (duty dates can differ from flight dates due to timezone adjustments)
+        // Note: We already fetched flights from last 365 days, but duty grouping can shift dates slightly
         let dutiesLast365 = completedDuties.filter { $0.date >= cutoffDate }
 
         // Also filter flights to last 365 days for flight time calculations
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        // Note: This filter is mostly redundant since we fetched 365 days, but handles edge cases
         let flightsLast365 = flights.filter {
             guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
             return flightDate >= cutoffDate
