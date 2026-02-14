@@ -348,38 +348,32 @@ private struct FlightsListContent: View {
                                         .strokeBorder(Color.primary, lineWidth: 1.5)
                                 )
                         }
-
-                        // Select All / Deselect All button (only in select mode)
-                        if isSelectMode {
-                            Button(action: {
-                                HapticManager.shared.impact(.light)
-                                let allFilteredIds = Set(filteredFlightSectors.map { $0.id })
-                                if selectedFlightsForDeletion == allFilteredIds {
-                                    // All selected, so deselect all
-                                    selectedFlightsForDeletion.removeAll()
-                                } else {
-                                    // Select all filtered flights
-                                    selectedFlightsForDeletion = allFilteredIds
-                                }
-                            }) {
-                                let allSelected = selectedFlightsForDeletion == Set(filteredFlightSectors.map { $0.id })
-                                Text(allSelected ? "Deselect All" : "Select All")
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .strokeBorder(Color.blue, lineWidth: 1.5)
-                                    )
-                                    .foregroundColor(.blue)
-                            }
-                        }
                     }
                 }
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
-                // Hide sort and filter buttons in select mode to prevent toolbar overflow
-                if !isSelectMode {
+                if isSelectMode {
+                    // Show Select All / Deselect All button in select mode
+                    if !filteredFlightSectors.isEmpty {
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            let allFilteredIds = Set(filteredFlightSectors.map { $0.id })
+                            if selectedFlightsForDeletion == allFilteredIds {
+                                // All selected, so deselect all
+                                selectedFlightsForDeletion.removeAll()
+                            } else {
+                                // Select all filtered flights
+                                selectedFlightsForDeletion = allFilteredIds
+                            }
+                        }) {
+                            let allSelected = selectedFlightsForDeletion == Set(filteredFlightSectors.map { $0.id })
+                            Text(allSelected ? "Deselect All" : "Select All")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                } else {
+                    // Show sort and filter buttons in normal mode
                     HStack(spacing: 16) {
                         Button(action: {
                             HapticManager.shared.impact(.light)
