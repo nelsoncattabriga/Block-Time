@@ -754,7 +754,7 @@ private struct ModernManualEntryDataCard: View {
                     .foregroundColor(.purple)
                     .font(.title3)
                 
-                Text("Flight Data")
+                Text("Crew & Ops Data")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
