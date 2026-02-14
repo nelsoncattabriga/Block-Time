@@ -349,12 +349,34 @@ class AirportService {
 
     /// Get display code based on user preference
     /// - Parameters:
-    ///   - icaoCode: The ICAO code stored in database
+    ///   - code: Airport code (can be either IATA or ICAO)
     ///   - useIATA: Whether to display as IATA code
     /// - Returns: IATA code if requested and available, otherwise ICAO code
-    func getDisplayCode(_ icaoCode: String, useIATA: Bool) -> String {
-        guard useIATA else { return icaoCode }
-        return convertToIATA(icaoCode) ?? icaoCode
+    func getDisplayCode(_ code: String, useIATA: Bool) -> String {
+        let upper = code.uppercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !upper.isEmpty else { return code }
+
+        // Determine if this is IATA (3 chars) or ICAO (4 chars) based on length
+        if upper.count == 3 {
+            // Input is IATA format
+            if useIATA {
+                return upper // Already IATA - return as-is
+            } else {
+                // User wants ICAO - convert from IATA to ICAO
+                return convertToICAO(upper)
+            }
+        } else if upper.count == 4 {
+            // Input is ICAO format
+            if useIATA {
+                // User wants IATA - convert from ICAO to IATA
+                return convertToIATA(upper) ?? upper
+            } else {
+                return upper // Already ICAO - return as-is
+            }
+        }
+
+        // Unknown format (not 3 or 4 characters) - return as-is
+        return code
     }
 
     /// Check if an airport code is valid (exists in database)
