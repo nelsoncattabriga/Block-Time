@@ -947,45 +947,64 @@ class FRMSCalculationService {
 
     // MARK: - A320/B737 Duty and Flight Time Helpers
 
-    /// Get maximum duty hours for A320/B737 based on local start time and sectors (FD23.1)
+    /// Get maximum duty hours for A320/B737 based on local start time and sectors
     /// - Parameters:
     ///   - signOn: Sign-on time
     ///   - sectors: Number of sectors
     ///   - crewComplement: Crew complement
+    ///   - limitType: Planning (FD13.1) or Operational (FD23.1) limits
     /// - Returns: Maximum duty hours or nil if not applicable
-    private func getA320B737MaxDutyHours(signOn: Date, sectors: Int, crewComplement: CrewComplement) -> Double? {
+    private func getA320B737MaxDutyHours(signOn: Date, sectors: Int, crewComplement: CrewComplement, limitType: FRMSLimitType) -> Double? {
         guard crewComplement == .twoPilot else {
             return nil  // Use base limits for augmented crews
         }
 
         // Classify local start time using home base timezone
+        // Note: Time window classification is the same for both planning and operational
         let homeTimeZone = getHomeBaseTimeZone()
         let localStartTime = SH_Operational_FltDuty.LocalStartTime.classify(signOn: signOn, homeBaseTimeZone: homeTimeZone)
 
-        // Get max duty from FD23 rules
-        return SH_Operational_FltDuty.maxDutyHours(localStartTime: localStartTime, sectors: sectors)
+        // Get max duty from planning or operational rules
+        if limitType == .planning {
+            // Convert to planning enum (same time ranges)
+            let planningStartTime = SH_Planning_FltDuty.LocalStartTime(rawValue: localStartTime.rawValue) ?? .night
+            return SH_Planning_FltDuty.maxDutyHours(localStartTime: planningStartTime, sectors: sectors)
+        } else {
+            return SH_Operational_FltDuty.maxDutyHours(localStartTime: localStartTime, sectors: sectors)
+        }
     }
 
-    /// Get maximum flight time for A320/B737 based on sectors and darkness (FD23.3)
+    /// Get maximum flight time for A320/B737 based on sectors and darkness
     /// - Parameters:
     ///   - sectors: Number of sectors scheduled
     ///   - nightTime: Hours of flight time in darkness
     ///   - crewComplement: Crew complement
+    ///   - limitType: Planning (FD13.3/13.4) or Operational (FD23.3/23.4) limits
     /// - Returns: Maximum flight time hours
-    private func getA320B737MaxFlightTime(sectors: Int, nightTime: Double, crewComplement: CrewComplement) -> Double {
-        // Augmented crews use different limit (FD23.4)
-        guard crewComplement == .twoPilot else {
-            return SH_Operational_FltDuty.augmentedFlightTimeLimitHours
-        }
-
+    private func getA320B737MaxFlightTime(sectors: Int, nightTime: Double, crewComplement: CrewComplement, limitType: FRMSLimitType) -> Double {
         // Check if more than 7 hours of flight time in darkness
         let darknessExceeds7Hours = nightTime > 7.0
 
-        // Get max flight time from FD23 rules
-        return SH_Operational_FltDuty.maxFlightTimeHours(
-            sectorsScheduled: sectors,
-            darknessFlightTimeExceeds7Hours: darknessExceeds7Hours
-        )
+        // Get max flight time from planning or operational rules
+        // NOTE: For A320/B737, flight time limits are identical in planning (FD13) and operational (FD23)
+        if crewComplement == .twoPilot {
+            if limitType == .planning {
+                return SH_Planning_FltDuty.maxFlightTimeHours(
+                    sectorsScheduled: sectors,
+                    darknessFlightTimeExceeds7Hours: darknessExceeds7Hours
+                )
+            } else {
+                return SH_Operational_FltDuty.maxFlightTimeHours(
+                    sectorsScheduled: sectors,
+                    darknessFlightTimeExceeds7Hours: darknessExceeds7Hours
+                )
+            }
+        } else {
+            // Augmented crews: Same limit for planning (FD13.4) and operational (FD23.4)
+            return limitType == .planning ?
+                SH_Planning_FltDuty.augmentedFlightTimeLimitHours :
+                SH_Operational_FltDuty.augmentedFlightTimeLimitHours
+        }
     }
 
     // MARK: - A320/B737 Specific Limits
@@ -996,22 +1015,24 @@ class FRMSCalculationService {
 
         switch crewComplement {
         case .twoPilot:
-            // A320/B737 2-pilot operational limits (FD23)
-            // NOTE: These are baseline values. Actual limits vary by local start time (see SH_Operational_FltDuty)
+            // A320/B737 2-pilot limits from SH_Planning_FltDuty (FD13) or SH_Operational_FltDuty (FD23)
+            // NOTE: These are baseline values. Actual limits vary by local start time.
             // Use the most restrictive baseline (night operations) for general calculations
             if limitType == .operational {
-                // Operational: Night window baseline (most restrictive)
+                // Operational (FD23): Night window baseline (most restrictive)
                 // Max duty: 12h (1-4 sectors), 12h (5 sectors), 11h (6 sectors)
                 // Max flight: 10h (multi-sector), 10.5h (single sector), 9.5h (>7h darkness)
                 return (maxDuty: 12.0, maxFlight: 10.0, maxSectors: 6)
             } else {
-                // Planning: More conservative baseline
-                // Note: Planning limits not explicitly defined in FD23, using operational -2h as per typical FRMS
-                return (maxDuty: 10.0, maxFlight: 8.0, maxSectors: 6)
+                // Planning (FD13): Night window baseline (most restrictive)
+                // Max duty: 10h (1-4 sectors), 10h (5-6 sectors)
+                // Max flight: 10h (multi-sector), 10.5h (single sector), 9.5h (>7h darkness)
+                return (maxDuty: 10.0, maxFlight: 10.0, maxSectors: 6)
             }
 
         case .threePilot:
             // A320/B737 augmented crew (3-pilot) limits depend on rest facility
+            // NOTE: Planning (FD13.1) and Operational (FD23.1) augmented limits are identical
             // Map RestFacilityClass to AugmentedRestFacility for SH rules
             let shRestFacility: SH_Operational_FltDuty.AugmentedRestFacility
             switch restFacility {
@@ -1021,9 +1042,9 @@ class FRMSCalculationService {
                 shRestFacility = .passengerCompartmentSeat  // Class 2 = passenger compartment seat
             }
 
-            // Get limits from SH_Operational_FltDuty
+            // Get limits from SH_Operational_FltDuty (same values in SH_Planning_FltDuty)
             if let augmentedLimit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == shRestFacility }) {
-                // Flight time limit is 10.5h for augmented operations (FD23.4)
+                // Flight time limit is 10.5h for augmented operations (FD13.4 & FD23.4)
                 return (maxDuty: augmentedLimit.maxDutyHours,
                        maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours,
                        maxSectors: augmentedLimit.maxSectors ?? 6)
@@ -1034,6 +1055,7 @@ class FRMSCalculationService {
 
         case .fourPilot:
             // A320/B737 4-pilot operations are rare but follow similar augmented rules
+            // NOTE: Planning (FD13.1) and Operational (FD23.1) augmented limits are identical
             // Use most generous augmented limit (separate screened seat)
             if let augmentedLimit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == .separateScreenedSeat }) {
                 return (maxDuty: augmentedLimit.maxDutyHours,
@@ -1512,16 +1534,13 @@ class FRMSCalculationService {
 
     private func calculateMinimumRestA320B737(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
 
-        // Base rest
+        // Base rest calculation
         var minimumRest: Double
 
         if duty.dutyTime <= 12 {
-            // FD18.1 & FD28.1: Planning = 22 hours, Operational = 10 hours
-            if limitType == .planning {
-                minimumRest = 22.0
-            } else {
-                minimumRest = 10.0
-            }
+            // FD18.1 (Planning) & FD28.1 (Operational): Same formula for both
+            // Formula: MAX(10 hours, previous duty length)
+            minimumRest = max(duty.dutyTime, 10.0)
         } else {
             // Over 12 hours: 12 + 1.5 * (duty - 12)
             let excess = duty.dutyTime - 12.0

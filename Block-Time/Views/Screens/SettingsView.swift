@@ -778,9 +778,9 @@ private struct ModernFormatOptionsCard: View {
     private var roundingExampleText: String {
         switch viewModel.decimalRoundingMode {
         case .standard:
-            return "03:55 Displays as 4.0"
+            return "03:57 Displays as 4.0"
         case .alternate:
-            return "03:55 Displays as 3.9"
+            return "03:57 Displays as 3.9"
         }
     }
 }
