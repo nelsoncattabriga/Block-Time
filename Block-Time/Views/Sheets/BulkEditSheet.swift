@@ -1127,6 +1127,9 @@ struct BulkEditCrewField: View {
                     }
                 )
             }
+            .onChange(of: textValue) { _, newValue in
+                fieldState = .value(newValue)
+            }
             .onAppear {
                 if case .value(let val) = fieldState {
                     textValue = val
@@ -1199,6 +1202,9 @@ struct BulkEditOptionalCrewField: View {
                         fieldState = .value(textValue.isEmpty ? nil : textValue)
                     }
                 )
+            }
+            .onChange(of: textValue) { _, newValue in
+                fieldState = .value(newValue.isEmpty ? nil : newValue)
             }
             .onAppear {
                 if case .value(let val) = fieldState {
