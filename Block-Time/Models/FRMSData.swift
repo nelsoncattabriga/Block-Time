@@ -596,7 +596,7 @@ struct DailyDutySummary: Identifiable, Codable, Sendable {
 // MARK: - A320/B737 Next Duty Limits
 
 /// Sign-on time window with duty and flight limits
-/// This structure wraps SH_Operational_FltDuty rules for UI display (OPERATIONAL LIMITS ONLY)
+/// This structure wraps SH_Operational_FltDuty and SH_Planning_FltDuty rules for UI display
 struct DutyTimeWindow: Codable {
     let timeRange: String           // e.g., "0500-1459"
     let displayName: String         // e.g., "Early Morning"
@@ -604,20 +604,23 @@ struct DutyTimeWindow: Codable {
     let endHour: Int                // e.g., 14 for 1459 (use 24 for wraparound)
     let localStartTime: String      // Maps to SH_Operational_FltDuty.LocalStartTime rawValue
     let isCurrentlyAvailable: Bool  // Based on earliest sign-on time
+    let limitType: FRMSLimitType    // Planning or Operational
 
-    // Computed property that pulls operational limits from SH_Operational_FltDuty
+    // Computed property that pulls limits from SH_Operational_FltDuty or SH_Planning_FltDuty
     var limits: DutyLimits {
-        DutyLimits(localStartTime: localStartTime)
+        DutyLimits(localStartTime: localStartTime, limitType: limitType)
     }
 }
 
 /// Duty and flight time limits for different sector counts
-/// This dynamically calculates OPERATIONAL limits from SH_Operational_FltDuty based on local start time
+/// Supports both OPERATIONAL and PLANNING limits from SH_Operational_FltDuty and SH_Planning_FltDuty
 struct DutyLimits: Codable {
     let localStartTime: String      // SH_Operational_FltDuty.LocalStartTime rawValue
+    let limitType: FRMSLimitType    // Planning or Operational
 
-    // Computed properties from SH_Operational_FltDuty (OPERATIONAL LIMITS ONLY)
-    var maxDutySectors1to4: Double {
+    // MARK: - Operational Limits (from SH_Operational_FltDuty - FD23)
+
+    private var operationalMaxDutySectors1to4: Double {
         guard let startTime = SH_Operational_FltDuty.LocalStartTime(rawValue: localStartTime),
               let dutyLimit = SH_Operational_FltDuty.twoPilotDutyLimits.first(where: { $0.localStartTime == startTime }) else {
             return 12.0  // Fallback
@@ -625,7 +628,7 @@ struct DutyLimits: Codable {
         return dutyLimit.maxDutySectors1to4
     }
 
-    var maxDutySectors5: Double {
+    private var operationalMaxDutySectors5: Double {
         guard let startTime = SH_Operational_FltDuty.LocalStartTime(rawValue: localStartTime),
               let dutyLimit = SH_Operational_FltDuty.twoPilotDutyLimits.first(where: { $0.localStartTime == startTime }) else {
             return 12.0  // Fallback
@@ -633,7 +636,7 @@ struct DutyLimits: Codable {
         return dutyLimit.maxDutySectors5
     }
 
-    var maxDutySectors6: Double {
+    private var operationalMaxDutySectors6: Double {
         guard let startTime = SH_Operational_FltDuty.LocalStartTime(rawValue: localStartTime),
               let dutyLimit = SH_Operational_FltDuty.twoPilotDutyLimits.first(where: { $0.localStartTime == startTime }) else {
             return 11.0  // Fallback
@@ -641,16 +644,57 @@ struct DutyLimits: Codable {
         return dutyLimit.maxDutySectors6
     }
 
+    // MARK: - Planning Limits (from SH_Planning_FltDuty - FD13)
+
+    private var planningMaxDutySectors1to4: Double {
+        guard let startTime = SH_Planning_FltDuty.LocalStartTime(rawValue: localStartTime),
+              let limit = SH_Planning_FltDuty.twoPilotDutyLimits.first(where: { $0.localStartTime == startTime }) else {
+            return 10.0  // Fallback
+        }
+        return limit.maxDutySectors1to4
+    }
+
+    private var planningMaxDutySectors5or6: Double {
+        guard let startTime = SH_Planning_FltDuty.LocalStartTime(rawValue: localStartTime),
+              let limit = SH_Planning_FltDuty.twoPilotDutyLimits.first(where: { $0.localStartTime == startTime }) else {
+            return 10.0  // Fallback
+        }
+        return limit.maxDutySectors5or6
+    }
+
+    // MARK: - Public Interface (returns appropriate limit based on limitType)
+
+    var maxDutySectors1to4: Double {
+        limitType == .operational ? operationalMaxDutySectors1to4 : planningMaxDutySectors1to4
+    }
+
+    var maxDutySectors5: Double {
+        limitType == .operational ? operationalMaxDutySectors5 : planningMaxDutySectors5or6
+    }
+
+    var maxDutySectors6: Double {
+        limitType == .operational ? operationalMaxDutySectors6 : planningMaxDutySectors5or6
+    }
+
     /// Maximum flight time with darkness conditional
     /// Returns: "10h (9.5h if >7h darkness)" or "10.5h (9.5h if >7h darkness)"
     var maxFlightTimeDescription: String {
-        // FD23.3: Multi-sector: 10h, Single-sector: 10.5h, >7h darkness: 9.5h
-        return "10h (9.5h if >7h darkness)"
+        if limitType == .operational {
+            // FD23.3: Multi-sector: 10h, Single-sector: 10.5h, >7h darkness: 9.5h
+            return "10h (9.5h if >7h darkness)"
+        } else {
+            // FD13.3: Planning limits are more restrictive
+            return "10h (9.5h if >7h darkness)"
+        }
     }
 
     /// Base maximum flight time (without darkness consideration)
     var maxFlightTime: Double {
-        return 10.5  // Single sector max (FD23.3)
+        if limitType == .operational {
+            return 10.5  // Single sector max (FD23.3)
+        } else {
+            return 10.0  // Planning limit (FD13.3)
+        }
     }
 
     func maxDuty(forSectors sectors: Int) -> Double {

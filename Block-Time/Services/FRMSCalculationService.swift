@@ -1172,22 +1172,25 @@ class FRMSCalculationService {
             )
         }
 
-        // Build sign-on time windows using FD23 Operational Limits
-        // Windows now pull limits directly from SH_Operational_FltDuty
+        // Build sign-on time windows using FD23 (Operational) or FD13 (Planning) Limits
+        // Windows now pull limits from SH_Operational_FltDuty or SH_Planning_FltDuty based on limitType
 
         let earlyWindow = buildA320B737DutyWindow(
             localStartTime: .early,
-            earliestSignOn: earliestSignOn
+            earliestSignOn: earliestSignOn,
+            limitType: limitType
         )
 
         let afternoonWindow = buildA320B737DutyWindow(
             localStartTime: .afternoon,
-            earliestSignOn: earliestSignOn
+            earliestSignOn: earliestSignOn,
+            limitType: limitType
         )
 
         let nightWindow = buildA320B737DutyWindow(
             localStartTime: .night,
-            earliestSignOn: earliestSignOn
+            earliestSignOn: earliestSignOn,
+            limitType: limitType
         )
 
         // Check for back-of-clock restriction
@@ -1357,7 +1360,8 @@ class FRMSCalculationService {
     func checkWhatIfScenario(scenario: WhatIfScenario,
                              previousDuty: FRMSDuty?,
                              cumulativeTotals: FRMSCumulativeTotals,
-                             a320B737Limits: A320B737NextDutyLimits) -> WhatIfResult {
+                             a320B737Limits: A320B737NextDutyLimits,
+                             limitType: FRMSLimitType) -> WhatIfResult {
 
         var violations: [String] = []
         var warnings: [String] = []
@@ -1383,7 +1387,7 @@ class FRMSCalculationService {
             violations.append("Sign-on before earliest allowed: \(formatter.string(from: a320B737Limits.earliestSignOn))")
         }
 
-        // Get operational limits (only limit type we use now)
+        // Get limits based on selected limit type
         let limits = applicableWindow.limits
         let maxDuty = limits.maxDuty(forSectors: scenario.estimatedSectors)
 
@@ -1442,13 +1446,15 @@ class FRMSCalculationService {
         )
     }
 
-    /// Helper to build a duty time window from SH_Operational_FltDuty rules
+    /// Helper to build a duty time window from SH_Operational_FltDuty or SH_Planning_FltDuty rules
     /// - Parameters:
     ///   - localStartTime: The local start time classification (early/afternoon/night)
     ///   - earliestSignOn: Earliest sign-on time to determine availability
-    /// - Returns: DutyTimeWindow with limits calculated from FD23 rules
+    ///   - limitType: Planning or Operational limits
+    /// - Returns: DutyTimeWindow with limits calculated from FD23 (operational) or FD13 (planning) rules
     private func buildA320B737DutyWindow(localStartTime: SH_Operational_FltDuty.LocalStartTime,
-                                         earliestSignOn: Date) -> DutyTimeWindow {
+                                         earliestSignOn: Date,
+                                         limitType: FRMSLimitType) -> DutyTimeWindow {
 
         // Check if this window is currently available based on earliest sign-on
         let calendar = Calendar.current
@@ -1474,7 +1480,8 @@ class FRMSCalculationService {
             startHour: startHour,
             endHour: endHour,
             localStartTime: localStartTime.rawValue,
-            isCurrentlyAvailable: isAvailable
+            isCurrentlyAvailable: isAvailable,
+            limitType: limitType
         )
     }
 

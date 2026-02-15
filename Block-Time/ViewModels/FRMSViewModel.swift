@@ -31,6 +31,17 @@ class FRMSViewModel: ObservableObject {
 
     @Published var isLoading = false  // Track loading state for UI
 
+    // Limit type selection for SH fleet (Planning vs Operational)
+    @Published var selectedSHLimitType: FRMSLimitType = .planning {
+        didSet {
+            LogManager.shared.debug("FRMSViewModel: SH limit type changed to \(selectedSHLimitType)")
+            // Recalculate A320/B737 limits when limit type changes
+            if configuration.fleet == .a320B737 {
+                refreshCalculations()
+            }
+        }
+    }
+
     private var calculationService: FRMSCalculationService
     private let userDefaultsKey = "FRMSConfiguration"
     private var dutiesLast365Days: [FRMSDuty] = []  // Store last 365 days of duties for FRMS calculations
@@ -180,7 +191,7 @@ class FRMSViewModel: ObservableObject {
                 a320Limits = service.calculateA320B737NextDutyLimits(
                     previousDuty: lastDuty,
                     cumulativeTotals: cumulativeTotals,
-                    limitType: config.defaultLimitType,
+                    limitType: selectedSHLimitType,
                     duties: duties
                 )
             } else {
@@ -276,7 +287,7 @@ class FRMSViewModel: ObservableObject {
             a320Limits = service.calculateA320B737NextDutyLimits(
                 previousDuty: lastDuty,
                 cumulativeTotals: cumulativeTotals,
-                limitType: config.defaultLimitType,
+                limitType: selectedSHLimitType,
                 duties: duties
             )
         } else {
@@ -328,7 +339,7 @@ class FRMSViewModel: ObservableObject {
                     self.a320B737NextDutyLimits = calculationService.calculateA320B737NextDutyLimits(
                         previousDuty: lastDuty,
                         cumulativeTotals: totals,
-                        limitType: configuration.defaultLimitType,
+                        limitType: selectedSHLimitType,
                         duties: dutiesLast365Days
                     )
                 }

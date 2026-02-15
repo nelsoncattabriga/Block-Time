@@ -136,23 +136,23 @@ struct FRMSView: View {
                     }
                     .opacity(viewModel.isLoading ? 0.3 : 1.0)
 
-                    // Loading overlay
-                    if viewModel.isLoading {
-                        ZStack {
-                            themeService.getGradient()
-                                .ignoresSafeArea()
-
-                            VStack(spacing: 16) {
-                                ProgressView()
-                                    .scaleEffect(1.5)
-                                    .tint(.white)
-                                Text("Updating FRMS Data...")
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
+//                    // Loading overlay
+//                    if viewModel.isLoading {
+//                        ZStack {
+//                            themeService.getGradient()
+//                                .ignoresSafeArea()
+//
+//                            VStack(spacing: 16) {
+//                                ProgressView()
+//                                    .scaleEffect(1.5)
+//                                    .tint(.white)
+//                                Text("Updating FRMS Data...")
+//                                    .font(.headline)
+//                                    .foregroundStyle(.white)
+//                            }
+//                        }
+//                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+//                    }
                 }
             }
             .navigationTitle("\(viewModel.configuration.fleet.shortName) FRMS")
@@ -224,10 +224,55 @@ struct FRMSView: View {
                         activeRestrictionsSection(limits: limits)
                     }
 
-                    // Next Duty Limits Title
-                    Text("Next Duty Limits")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                    // Next Duty Limits Title with Limit Type Toggle
+                    if horizontalSizeClass == .compact {
+                        // iPhone layout - toggle below title
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Next Duty Limits")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+
+                            Picker("Limit Type", selection: $viewModel.selectedSHLimitType) {
+                                Text("Planning").tag(FRMSLimitType.planning)
+                                Text("Operational").tag(FRMSLimitType.operational)
+                            }
+                            .pickerStyle(.segmented)
+
+                            // Time window picker (iPhone only)
+                            HStack{
+                                Text("Sign-On")
+                                    .font(.headline)
+                                    .foregroundStyle(.secondary)
+
+                                Picker("Time Window", selection: $selectedTimeWindow) {
+                                    ForEach(TimeWindowSelection.allCases, id: \.self) { window in
+                                        Text(window.rawValue).tag(window)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .font(.caption)
+
+                                //Spacer()
+                            }
+                            .padding(.horizontal)
+                        }
+                    } else {
+                        // iPad layout - toggle next to title
+                        HStack {
+                            Text("Next Duty Limits")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+
+                            Spacer()
+
+                            Picker("Limit Type", selection: $viewModel.selectedSHLimitType) {
+                                Text("Planning").tag(FRMSLimitType.planning)
+                                Text("Operational").tag(FRMSLimitType.operational)
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 220)
+                        }
+                    }
 
                     // Unified Next Duty Card
                     nextDutyLimitsCard(limits: limits)
@@ -284,14 +329,20 @@ struct FRMSView: View {
                         .foregroundStyle(.primary)
                     Spacer()
 
-                    // Time window picker
-                    Picker("Time Window", selection: $selectedTimeWindow) {
-                        ForEach(TimeWindowSelection.allCases, id: \.self) { window in
-                            Text(window.rawValue).tag(window)
+                    // Time window picker with label (iPad only - iPhone has it above card)
+                    if horizontalSizeClass != .compact {
+                        Text("Sign-On")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+
+                        Picker("Time Window", selection: $selectedTimeWindow) {
+                            ForEach(TimeWindowSelection.allCases, id: \.self) { window in
+                                Text(window.rawValue).tag(window)
+                            }
                         }
+                        .pickerStyle(.menu)
+                        .font(.caption)
                     }
-                    .pickerStyle(.menu)
-                    .font(.caption)
                 }
 
                 // Sector-based duty limits
@@ -348,6 +399,17 @@ struct FRMSView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .onAppear {
             // Set initial selection to the applicable window based on earliest sign-on
+            let applicableWindow = determineApplicableWindow(limits: limits)
+            if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
+                selectedTimeWindow = .early
+            } else if applicableWindow.localStartTime == limits.afternoonWindow.localStartTime {
+                selectedTimeWindow = .afternoon
+            } else {
+                selectedTimeWindow = .night
+            }
+        }
+        .onChange(of: viewModel.selectedSHLimitType) { _, _ in
+            // Update time window selection when limit type changes (Planning <-> Operational)
             let applicableWindow = determineApplicableWindow(limits: limits)
             if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
                 selectedTimeWindow = .early
