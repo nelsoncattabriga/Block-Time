@@ -411,7 +411,8 @@ struct FRMSView: View {
                 // Flight time limit with darkness conditional
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Max Flight Time")
-                        .font(.subheadline)
+                        .font(.headline)
+                        .fontWeight(.semibold)
                         .foregroundStyle(.primary)
                     Text(displayWindow.limits.maxFlightTimeDescription)
                         .font(.subheadline)

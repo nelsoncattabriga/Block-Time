@@ -681,10 +681,10 @@ struct DutyLimits: Codable {
     var maxFlightTimeDescription: String {
         if limitType == .operational {
             // FD23.3: Multi-sector: 10h, Single-sector: 10.5h, >7h darkness: 9.5h
-            return "10.5hrs Single Sector\n10hrs Multi Sector\n9.5hrs if >7 hrs night"
+            return "10.5 hrs (1 Sector) or 10 hrs (Multi Sectors) or 9.5hrs (> 7 hrs night)"
         } else {
             // FD13.3: Planning limits are more restrictive
-            return "10hrs (9.5hrs if >7hrs night)"
+            return "10 hrs (9.5 hrs if >7 hrs night)"
         }
     }
 
