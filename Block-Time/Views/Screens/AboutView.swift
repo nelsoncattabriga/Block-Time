@@ -179,14 +179,10 @@ struct AboutView: View {
                                     if isRecalculating {
                                         ProgressView()
                                             .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
                                     }
                                 }
                                 .padding(12)
-                                .background(Color(.systemGray6).opacity(0.5))
+                                .background(Color(.orange).opacity(0.5))
                                 .cornerRadius(8)
                             }
                             .buttonStyle(PlainButtonStyle())
