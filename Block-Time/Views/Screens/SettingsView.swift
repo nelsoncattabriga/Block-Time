@@ -630,7 +630,7 @@ private struct ModernFormatOptionsCard: View {
                             .frame(width: 20)
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Rounding")
+                            Text("Decimal Rounding")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
@@ -778,11 +778,9 @@ private struct ModernFormatOptionsCard: View {
     private var roundingExampleText: String {
         switch viewModel.decimalRoundingMode {
         case .standard:
-            return "Round to Nearest"
-        case .roundUp:
-            return "Always Ruund Up"
-        case .roundDown:
-            return "Always Round Down"
+            return "03:55 Displays as 4.0"
+        case .alternate:
+            return "03:55 Displays as 3.9"
         }
     }
 }

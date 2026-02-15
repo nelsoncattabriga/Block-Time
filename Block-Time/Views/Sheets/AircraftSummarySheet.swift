@@ -116,7 +116,7 @@ struct AircraftSummarySheet: View {
                     VStack(spacing: 16) {
 
                         // Basic Info Card
-                        SectionCard(title: "Basic Information", icon: "info.circle.fill", color: .blue) {
+                        SectionCard(title: "Summary Info", icon: "info.circle.fill", color: .blue) {
                             VStack(spacing: 12) {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Date")

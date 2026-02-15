@@ -41,10 +41,9 @@ enum LogbookDestination: String, CaseIterable {
 }
 
 enum RoundingMode: String, CaseIterable {
-    
+
     case standard = "Standard"
-    case roundUp = "Up"
-    case roundDown = "Down"
+    case alternate = "Alternate"
 
     var displayName: String {
         return self.rawValue
@@ -54,12 +53,20 @@ enum RoundingMode: String, CaseIterable {
     func apply(to value: Double, decimalPlaces: Int = 1) -> Double {
         let multiplier = pow(10.0, Double(decimalPlaces))
         switch self {
-        case .roundDown:
-            return floor(value * multiplier) / multiplier
-        case .roundUp:
-            return ceil(value * multiplier) / multiplier
         case .standard:
+            // Standard rounding: rounds to nearest, .5 rounds up
             return (value * multiplier).rounded(.toNearestOrAwayFromZero) / multiplier
+        case .alternate:
+            // Alternate rounding: for 1 decimal place, rounds .x1-.x5 DOWN, .x6-.x9 UP
+            // Example: 1.11-1.15 → 1.1, 1.16-1.19 → 1.2
+            let scaled = value * multiplier
+            let fractionalPart = scaled.truncatingRemainder(dividingBy: 1.0)
+
+            if fractionalPart < 0.6 {
+                return floor(scaled) / multiplier
+            } else {
+                return ceil(scaled) / multiplier
+            }
         }
     }
 }
