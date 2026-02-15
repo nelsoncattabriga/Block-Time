@@ -31,14 +31,12 @@ class FRMSViewModel: ObservableObject {
 
     @Published var isLoading = false  // Track loading state for UI
 
-    // Limit type selection for SH fleet (Planning vs Operational)
-    @Published var selectedSHLimitType: FRMSLimitType = .planning {
+    // Limit type selection (Planning vs Operational) - applies to active fleet
+    @Published var selectedLimitType: FRMSLimitType = .planning {
         didSet {
-            LogManager.shared.debug("FRMSViewModel: SH limit type changed to \(selectedSHLimitType)")
-            // Recalculate A320/B737 limits when limit type changes
-            if configuration.fleet == .a320B737 {
-                refreshCalculations()
-            }
+            LogManager.shared.debug("FRMSViewModel: Limit type changed to \(selectedLimitType)")
+            // Recalculate limits when limit type changes
+            refreshCalculations()
         }
     }
 
@@ -180,7 +178,7 @@ class FRMSViewModel: ObservableObject {
             let maximumNextDuty = service.calculateMaximumNextDuty(
                 previousDuty: lastDuty,
                 cumulativeTotals: cumulativeTotals,
-                limitType: config.defaultLimitType,
+                limitType: selectedLimitType,
                 proposedCrewComplement: .twoPilot,
                 proposedRestFacility: .none
             )
@@ -191,7 +189,7 @@ class FRMSViewModel: ObservableObject {
                 a320Limits = service.calculateA320B737NextDutyLimits(
                     previousDuty: lastDuty,
                     cumulativeTotals: cumulativeTotals,
-                    limitType: selectedSHLimitType,
+                    limitType: selectedLimitType,
                     duties: duties
                 )
             } else {
@@ -276,7 +274,7 @@ class FRMSViewModel: ObservableObject {
         let maximumNextDuty = service.calculateMaximumNextDuty(
             previousDuty: lastDuty,
             cumulativeTotals: cumulativeTotals,
-            limitType: config.defaultLimitType,
+            limitType: selectedLimitType,
             proposedCrewComplement: .twoPilot,
             proposedRestFacility: .none
         )
@@ -287,7 +285,7 @@ class FRMSViewModel: ObservableObject {
             a320Limits = service.calculateA320B737NextDutyLimits(
                 previousDuty: lastDuty,
                 cumulativeTotals: cumulativeTotals,
-                limitType: selectedSHLimitType,
+                limitType: selectedLimitType,
                 duties: duties
             )
         } else {
@@ -329,7 +327,7 @@ class FRMSViewModel: ObservableObject {
                 self.maximumNextDuty = calculationService.calculateMaximumNextDuty(
                     previousDuty: lastDuty,
                     cumulativeTotals: totals,
-                    limitType: configuration.defaultLimitType,
+                    limitType: selectedLimitType,
                     proposedCrewComplement: .twoPilot,
                     proposedRestFacility: .none
                 )
@@ -339,7 +337,7 @@ class FRMSViewModel: ObservableObject {
                     self.a320B737NextDutyLimits = calculationService.calculateA320B737NextDutyLimits(
                         previousDuty: lastDuty,
                         cumulativeTotals: totals,
-                        limitType: selectedSHLimitType,
+                        limitType: selectedLimitType,
                         duties: dutiesLast365Days
                     )
                 }

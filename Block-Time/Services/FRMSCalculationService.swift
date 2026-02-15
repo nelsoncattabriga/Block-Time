@@ -580,52 +580,63 @@ class FRMSCalculationService {
     // MARK: - A380/A330/B787 Sign-On Time Based Limits (2-Pilot)
 
     /// Get all sign-on time based limits for 2-pilot A380/A330/B787 operations
+    /// Pulls from LH_Planning_FltDuty (FD3) for planning limits and LH_Operational_FltDuty (FD10) for operational limits
     private func getSignOnBasedLimits2PilotA380A330B787(limitType: FRMSLimitType) -> [SignOnTimeRange] {
         var ranges: [SignOnTimeRange] = []
 
         // 0500-0759 LT
+        // Planning: FD3.1 (0500-0759 window)
+        let planning0500 = LH_Planning_FltDuty.twoPilotLimits.first { $0.signOnWindow == .w0500_0759 }
         ranges.append(SignOnTimeRange(
             timeRange: "0500-0759 LT",
-            maxDutyPeriod: 11.0,
+            maxDutyPeriod: planning0500?.dutyPeriodLimit ?? 11.0,
             maxDutyPeriodOperational: nil,  // Can be extended with pilot discretion
-            maxFlightTime: 8.0,
-            maxFlightTimeOperational: limitType == .operational ? 10.5 : nil,
+            maxFlightTime: planning0500?.flightTimeLimit ?? 8.0,
+            maxFlightTimeOperational: 10.5, // FD10.1 operational
             preRestRequired: 11.0,
             postRestRequired: 11.0,
             notes: nil
         ))
 
         // 0800-1359 LT
+        // Planning: FD3.1 (0800-1359 window) - has standard and day pattern variants
+        let planning0800 = LH_Planning_FltDuty.twoPilotLimits.filter { $0.signOnWindow == .w0800_1359 }
+        let planning0800Standard = planning0800.first { !$0.sectorLimit.contains("DAY PATTERN") }
+        let planning0800DayPattern = planning0800.first { $0.sectorLimit.contains("DAY PATTERN") }
         ranges.append(SignOnTimeRange(
             timeRange: "0800-1359 LT",
-            maxDutyPeriod: 11.0,           // Standard
-            maxDutyPeriodOperational: 12.0, // Day pattern only
-            maxFlightTime: 8.5,            // Standard
-            maxFlightTimeOperational: limitType == .operational ? 10.5 : 9.5, // 9.5 day pattern only
+            maxDutyPeriod: planning0800Standard?.dutyPeriodLimit ?? 11.0,
+            maxDutyPeriodOperational: planning0800DayPattern?.dutyPeriodLimit ?? 12.0, // Day pattern
+            maxFlightTime: planning0800Standard?.flightTimeLimit ?? 8.5,
+            maxFlightTimeOperational: 10.5, // FD10.1 operational (can extend to 10.5)
             preRestRequired: 11.0,
             postRestRequired: 11.0,
-            notes: "Day pattern: 12 hrs duty / 9.5 hrs flight"
+            notes: "Day pattern: 12 hrs duty / 9.5 hrs flight (planning)"
         ))
 
         // 1400-1559 LT
+        // Planning: FD3.1 (1400-1559 window)
+        let planning1400 = LH_Planning_FltDuty.twoPilotLimits.first { $0.signOnWindow == .w1400_1559 }
         ranges.append(SignOnTimeRange(
             timeRange: "1400-1559 LT",
-            maxDutyPeriod: 11.0,
+            maxDutyPeriod: planning1400?.dutyPeriodLimit ?? 11.0,
             maxDutyPeriodOperational: nil,
-            maxFlightTime: 8.5,
-            maxFlightTimeOperational: limitType == .operational ? 10.5 : nil,
+            maxFlightTime: planning1400?.flightTimeLimit ?? 8.5,
+            maxFlightTimeOperational: 10.5, // FD10.1 operational
             preRestRequired: 11.0,
             postRestRequired: 11.0,
             notes: nil
         ))
 
-        // 1600-0459 LT
+        // 1600-0459 LT (Night operations)
+        // Planning: FD3.1 (1600-0459 window)
+        let planning1600 = LH_Planning_FltDuty.twoPilotLimits.first { $0.signOnWindow == .w1600_0459 }
         ranges.append(SignOnTimeRange(
             timeRange: "1600-0459 LT",
-            maxDutyPeriod: 10.0,
+            maxDutyPeriod: planning1600?.dutyPeriodLimit ?? 10.0,
             maxDutyPeriodOperational: nil,
-            maxFlightTime: 8.0,
-            maxFlightTimeOperational: limitType == .operational ? 10.5 : nil,
+            maxFlightTime: planning1600?.flightTimeLimit ?? 8.0,
+            maxFlightTimeOperational: 10.5, // FD10.1 operational
             preRestRequired: 22.0,  // Late night operation requires more rest
             postRestRequired: 22.0,
             notes: "Night operation"
@@ -635,33 +646,38 @@ class FRMSCalculationService {
     }
 
     /// Get all sign-on time based limits for 3-pilot A380/A330/B787 operations
+    /// Pulls from LH_Planning_FltDuty (FD3) for planning limits and LH_Operational_FltDuty (FD10) for operational limits
     private func getSignOnBasedLimits3PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
         var ranges: [SignOnTimeRange] = []
 
         switch restFacility {
         case .class2:
             // CLASS 2 REST (Seat in cabin with full screen)
+            // Planning: FD3.1 (3 Pilot, Class 2)
+            let planning = LH_Planning_FltDuty.threePilotLimits.first { $0.restFacility == .class2 }
             ranges.append(SignOnTimeRange(
                 timeRange: "All sign-on times",
-                maxDutyPeriod: 12.0,
-                maxDutyPeriodOperational: 16.0,
-                maxFlightTime: 8.5,
+                maxDutyPeriod: planning?.dutyPeriodLimit ?? 12.0,
+                maxDutyPeriodOperational: 16.0, // FD10.1 operational
+                maxFlightTime: planning?.flightTimeLimit ?? 8.5,
                 maxFlightTimeOperational: 14.0, // Max 8 consecutive hours active, 14 total
-                preRestRequired: 10.0,
+                preRestRequired: 12.0,
                 postRestRequired: 12.0,
                 notes: "Max 8 consecutive hrs active duty in flight deck, 14 hrs total"
             ))
 
         case .class1:
             // CLASS 1 REST (Bunk or berth)
+            // Planning: FD3.1 (3 Pilot, Class 1)
+            let planning = LH_Planning_FltDuty.threePilotLimits.first { $0.restFacility == .class1 }
             ranges.append(SignOnTimeRange(
                 timeRange: "All sign-on times",
-                maxDutyPeriod: 14.0,
-                maxDutyPeriodOperational: 18.0,
-                maxFlightTime: 12.5,
-                maxFlightTimeOperational: 14.0,
+                maxDutyPeriod: planning?.dutyPeriodLimit ?? 14.0,
+                maxDutyPeriodOperational: 18.0, // FD10.1 operational
+                maxFlightTime: planning?.flightTimeLimit ?? 12.5,
+                maxFlightTimeOperational: 14.0, // FD10.1 operational
                 preRestRequired: 12.0,
-                postRestRequired: limitType == .operational ? 12.0 : 22.0, // 22-32 hrs depending on duty length
+                postRestRequired: 22.0, // Varies by duty length - showing planning default
                 notes: "Max 8 consecutive hrs active, 14 hrs total. Post-duty rest varies by duty length and acclimation"
             ))
 
@@ -683,46 +699,53 @@ class FRMSCalculationService {
     }
 
     /// Get all sign-on time based limits for 4-pilot A380/A330/B787 operations
+    /// Pulls from LH_Planning_FltDuty (FD3) for planning limits and LH_Operational_FltDuty (FD10) for operational limits
     private func getSignOnBasedLimits4PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
         var ranges: [SignOnTimeRange] = []
 
         switch restFacility {
         case .class2:
             // 2x CLASS 2 REST
+            // Planning: FD3.1 (4 Pilot, 2x Class 2)
+            let planning = LH_Planning_FltDuty.fourPilotLimits.first { $0.restFacility == .twoClass2 }
             ranges.append(SignOnTimeRange(
                 timeRange: "All sign-on times",
-                maxDutyPeriod: 16.0,
-                maxDutyPeriodOperational: 16.0,
-                maxFlightTime: 14.0,
+                maxDutyPeriod: planning?.dutyPeriodLimit ?? 16.0,
+                maxDutyPeriodOperational: 16.0, // FD10.1 operational
+                maxFlightTime: 14.0, // No simple flight time limit - use duty in flight deck
                 maxFlightTimeOperational: 14.0,
                 preRestRequired: 12.0,
                 postRestRequired: 22.0,
-                notes: "2x Class 2 Rest. Max 8 consecutive hrs active, 14 hrs total. <2 sectors if >14hrs"
+                notes: "2x Class 2 Rest. Max 8 consecutive hrs active, 14 hrs total. ≤2 sectors if >14hrs"
             ))
 
         case .mixed:
             // 1x CLASS 1 & 1x CLASS 2 REST
+            // Planning: FD3.1 (4 Pilot, 1x Class 1 + 1x Class 2)
+            let planning = LH_Planning_FltDuty.fourPilotLimits.first { $0.restFacility == .oneClass1OneClass2 }
             ranges.append(SignOnTimeRange(
                 timeRange: "All sign-on times",
-                maxDutyPeriod: 17.5,
-                maxDutyPeriodOperational: 20.0,
+                maxDutyPeriod: planning?.dutyPeriodLimit ?? 17.5,
+                maxDutyPeriodOperational: 20.0, // FD10.1 operational
                 maxFlightTime: 14.0,
                 maxFlightTimeOperational: 14.0,
                 preRestRequired: 12.0,
-                postRestRequired: limitType == .operational ? 24.0 : 32.0,
+                postRestRequired: 32.0, // Planning default, varies by duty length
                 notes: "1x Class 1 + 1x Class 2 Rest. Max 8 consecutive hrs active, 14 hrs total"
             ))
 
         case .class1:
             // 2x CLASS 1 REST
+            // Planning: FD3.1 (4 Pilot, 2x Class 1)
+            let planning = LH_Planning_FltDuty.fourPilotLimits.first { $0.restFacility == .twoClass1 }
             ranges.append(SignOnTimeRange(
                 timeRange: "All sign-on times",
-                maxDutyPeriod: 20.0,
+                maxDutyPeriod: planning?.dutyPeriodLimit ?? 20.0,
                 maxDutyPeriodOperational: 21.0, // For >18 hour duties (relevant sectors)
                 maxFlightTime: 14.0,
                 maxFlightTimeOperational: 14.0,
-                preRestRequired: limitType == .operational ? 12.0 : 48.0, // Varies by duty length
-                postRestRequired: limitType == .operational ? 32.0 : 48.0, // Varies by duty length and crew
+                preRestRequired: 48.0, // Planning requires more rest for long duties
+                postRestRequired: 48.0, // Planning default, varies by duty length and crew
                 notes: "2x Class 1 Rest. Max 8 consecutive hrs active, 14 hrs total. Special rules for >18hr duties"
             ))
 

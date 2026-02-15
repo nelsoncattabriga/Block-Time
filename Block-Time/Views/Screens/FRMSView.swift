@@ -23,8 +23,8 @@ struct FRMSView: View {
     @EnvironmentObject var appViewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
-    @State private var selectedCrewComplement: CrewComplement = .twoPilot
-    @State private var selectedRestFacility: RestFacilityClass = .none
+    @State private var selectedCrewComplement: CrewComplement = .fourPilot
+    @State private var selectedRestFacility: RestFacilityClass = .class1
 
     // Time window selection for SH duty limits display
     enum TimeWindowSelection: String, CaseIterable {
@@ -48,8 +48,8 @@ struct FRMSView: View {
     @State private var expandDeadheading = false
 
     // LH section expansion state
-    @State private var expandNextDutyLimits = false
-    @State private var expandMinimumBaseTurnaround = false
+    @State private var expandNextDutyLimits = true
+    @State private var expandMinimumBaseTurnaround = true
     @State private var expandRecentDuties = false
 
     var body: some View {
@@ -72,13 +72,38 @@ struct FRMSView: View {
                                     DisclosureGroup(
                                         isExpanded: $expandNextDutyLimits,
                                         content: {
-                                            maximumNextDutySection
-                                                .padding(.top, 8)
+                                            VStack(spacing: 16) {
+                                                // iPhone: Show toggle at top when expanded
+                                                if horizontalSizeClass == .compact {
+                                                    Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                                                        Text("Planning").tag(FRMSLimitType.planning)
+                                                        Text("Operational").tag(FRMSLimitType.operational)
+                                                    }
+                                                    .pickerStyle(.segmented)
+                                                }
+
+                                                maximumNextDutySection
+                                            }
+                                            .padding(.top, 8)
                                         },
                                         label: {
-                                            Text("Next Duty Limits")
-                                                .font(.title2)
-                                                .fontWeight(.semibold)
+                                            HStack {
+                                                Text("Next Duty Limits")
+                                                    .font(.title2)
+                                                    .fontWeight(.semibold)
+
+                                                Spacer()
+
+                                                // iPad: Show toggle in header
+                                                if horizontalSizeClass != .compact {
+                                                    Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                                                        Text("Planning").tag(FRMSLimitType.planning)
+                                                        Text("Operational").tag(FRMSLimitType.operational)
+                                                    }
+                                                    .pickerStyle(.segmented)
+                                                    .frame(width: 220)
+                                                }
+                                            }
                                         }
                                     )
                                     .foregroundStyle(.primary)
@@ -136,7 +161,7 @@ struct FRMSView: View {
                     }
                     .opacity(viewModel.isLoading ? 0.3 : 1.0)
 
-//                    // Loading overlay
+                    // Loading overlay
 //                    if viewModel.isLoading {
 //                        ZStack {
 //                            themeService.getGradient()
@@ -232,7 +257,7 @@ struct FRMSView: View {
                                 .font(.title2)
                                 .fontWeight(.semibold)
 
-                            Picker("Limit Type", selection: $viewModel.selectedSHLimitType) {
+                            Picker("Limit Type", selection: $viewModel.selectedLimitType) {
                                 Text("Planning").tag(FRMSLimitType.planning)
                                 Text("Operational").tag(FRMSLimitType.operational)
                             }
@@ -265,7 +290,7 @@ struct FRMSView: View {
 
                             Spacer()
 
-                            Picker("Limit Type", selection: $viewModel.selectedSHLimitType) {
+                            Picker("Limit Type", selection: $viewModel.selectedLimitType) {
                                 Text("Planning").tag(FRMSLimitType.planning)
                                 Text("Operational").tag(FRMSLimitType.operational)
                             }
@@ -408,7 +433,7 @@ struct FRMSView: View {
                 selectedTimeWindow = .night
             }
         }
-        .onChange(of: viewModel.selectedSHLimitType) { _, _ in
+        .onChange(of: viewModel.selectedLimitType) { _, _ in
             // Update time window selection when limit type changes (Planning <-> Operational)
             let applicableWindow = determineApplicableWindow(limits: limits)
             if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
@@ -749,7 +774,7 @@ struct FRMSView: View {
 
                     if selectedCrewComplement != .twoPilot {
                         Picker("Rest Facility", selection: $selectedRestFacility) {
-                            ForEach([RestFacilityClass.none, .class2, .class1, .mixed], id: \.self) { facility in
+                            ForEach([RestFacilityClass.class1, .class2, .mixed, .none], id: \.self) { facility in
                                 Text(facility.description).tag(facility)
                             }
                         }

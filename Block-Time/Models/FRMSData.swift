@@ -93,10 +93,10 @@ enum RestFacilityClass: String, Codable, Sendable {
 
     var description: String {
         switch self {
-        case .none: return "No Rest Facility"
-        case .class2: return "Class 2 Rest"
         case .class1: return "Class 1 Rest"
+        case .class2: return "Class 2 Rest"
         case .mixed: return "Mixed (Class 1 & 2)"
+        case .none: return "No Rest Facility"
         }
     }
 }
