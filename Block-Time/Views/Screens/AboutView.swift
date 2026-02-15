@@ -13,6 +13,9 @@ struct AboutView: View {
     @State private var showingLogViewer = false
     @State private var devToolsExpanded = false
     @State private var versionTapCount = 0
+    @State private var showingRecalculateConfirm = false
+    @State private var isRecalculating = false
+    @State private var recalculateResult: String?
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
@@ -149,6 +152,54 @@ struct AboutView: View {
                                     .foregroundColor(.orange)
                                     .multilineTextAlignment(.center)
                             }
+
+                            // Recalculate Block Times Button
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                showingRecalculateConfirm = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: isRecalculating ? "hourglass" : "arrow.triangle.2.circlepath")
+                                        .foregroundColor(.blue)
+                                        .frame(width: 20)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Recalculate All Block Times")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+
+                                        Text("Fix inconsistent block times from OUT/IN")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    if isRecalculating {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .padding(12)
+                                .background(Color(.systemGray6).opacity(0.5))
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .disabled(isRecalculating)
+
+                            // Show result if available
+                            if let result = recalculateResult {
+                                Text(result)
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 4)
+                            }
                         }
                         .padding(.top, 8)
                     },
@@ -173,6 +224,14 @@ struct AboutView: View {
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.orange.opacity(0.2), lineWidth: 1)
                     )
+                    .alert("Recalculate Block Times?", isPresented: $showingRecalculateConfirm) {
+                        Button("Cancel", role: .cancel) { }
+                        Button("Recalculate", role: .destructive) {
+                            performRecalculation()
+                        }
+                    } message: {
+                        Text("This will recalculate block times from OUT and IN times for all regular flights. Use this to fix data imported from other sources or ensure consistency. SIM and PAX flights will be skipped. This operation cannot be undone.")
+                    }
                 }
 
                 Spacer(minLength: 20)
@@ -191,6 +250,32 @@ struct AboutView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showingLogViewer) {
             LogViewerView()
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func performRecalculation() {
+        isRecalculating = true
+        recalculateResult = nil
+        HapticManager.shared.impact(.medium)
+
+        // Perform recalculation in background
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = FlightDatabaseService.shared.recalculateAllBlockTimes()
+
+            DispatchQueue.main.async {
+                isRecalculating = false
+                recalculateResult = "✅ Updated: \(result.success) | Skipped: \(result.skipped) | Errors: \(result.errors)"
+                HapticManager.shared.notification(.success)
+
+                // Clear result after 10 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                    withAnimation {
+                        recalculateResult = nil
+                    }
+                }
+            }
         }
     }
 }

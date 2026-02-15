@@ -2529,6 +2529,84 @@ class FlightDatabaseService: ObservableObject {
         // LogManager: Test simulation - print("Errors cleared")
     }
 
+    /// Recalculate all block times from OUT and IN times (stores raw 2-decimal precision)
+    /// This recalculates the precise block time from OUT/IN. Rounding is applied at display time only.
+    /// Skips simulator flights (simTime > 0) and positioning flights (isPositioning = true)
+    /// - Returns: Tuple of (successCount, skippedCount, errorCount)
+    func recalculateAllBlockTimes() -> (success: Int, skipped: Int, errors: Int) {
+        LogManager.shared.info("🔄 Starting recalculation of all block times")
+
+        let context = persistentContainer.viewContext
+        let fetchRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+
+        // Only fetch flights that:
+        // - Have both OUT and IN times
+        // - Are NOT simulator flights (simTime == 0 or nil)
+        // - Are NOT positioning flights (isPositioning == false or nil)
+        fetchRequest.predicate = NSPredicate(
+            format: "outTime != nil AND outTime != %@ AND inTime != nil AND inTime != %@ AND (simTime == nil OR simTime == %@ OR simTime == %@) AND (isPositioning == nil OR isPositioning == NO)",
+            "", "", "0", "0.0"
+        )
+
+        var successCount = 0
+        var skippedCount = 0
+        var errorCount = 0
+
+        do {
+            let flights = try context.fetch(fetchRequest)
+            LogManager.shared.info("📊 Found \(flights.count) regular flights with OUT/IN times to recalculate (excluding SIM and PAX)")
+
+            let timeCalculationManager = TimeCalculationManager()
+
+            for flight in flights {
+                guard let outTime = flight.outTime,
+                      let inTime = flight.inTime,
+                      !outTime.isEmpty,
+                      !inTime.isEmpty else {
+                    skippedCount += 1
+                    continue
+                }
+
+                // Calculate block time with 2 decimal precision (e.g., "4.53")
+                // Rounding is NOT applied here - it's applied at display time based on user preference
+                let newBlockTime = timeCalculationManager.calculateFlightTime(
+                    outTime: outTime,
+                    inTime: inTime
+                )
+
+                // Only update if the calculation was successful
+                if newBlockTime != "0.0" {
+                    let oldBlockTime = flight.blockTime ?? "0.0"
+                    flight.blockTime = newBlockTime
+
+                    // Log if value changed
+                    if oldBlockTime != newBlockTime {
+                        LogManager.shared.debug("✏️ Updated flight \(flight.flightNumber ?? "?"): \(oldBlockTime) → \(newBlockTime)")
+                    }
+
+                    successCount += 1
+                } else {
+                    LogManager.shared.warning("⚠️ Failed to calculate block time for flight \(flight.flightNumber ?? "?")")
+                    errorCount += 1
+                }
+            }
+
+            // Save all changes
+            if context.hasChanges {
+                try context.save()
+                LogManager.shared.info("✅ Block time recalculation complete: \(successCount) updated, \(skippedCount) skipped, \(errorCount) errors")
+            } else {
+                LogManager.shared.info("ℹ️ No changes needed - all block times already correct")
+            }
+
+        } catch {
+            LogManager.shared.error("❌ Failed to recalculate block times: \(error.localizedDescription)")
+            errorCount += 1
+        }
+
+        return (success: successCount, skipped: skippedCount, errors: errorCount)
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }

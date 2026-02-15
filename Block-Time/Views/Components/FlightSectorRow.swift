@@ -6,6 +6,7 @@ struct FlightSectorRow: View, Equatable {
     var useLocalTime: Bool = false
     var useIATACodes: Bool = false
     var showTimesInHoursMinutes: Bool = false
+    var roundingMode: RoundingMode = .standard
     var includeAirlinePrefixInFlightNumber: Bool = UserDefaults.standard.bool(forKey: "includeAirlinePrefixInFlightNumber")
     var isCustomAirlinePrefix: Bool = UserDefaults.standard.bool(forKey: "isCustomAirlinePrefix")
     @Environment(\.colorScheme) var colorScheme
@@ -45,6 +46,7 @@ struct FlightSectorRow: View, Equatable {
                lhs.useLocalTime == rhs.useLocalTime &&
                lhs.useIATACodes == rhs.useIATACodes &&
                lhs.showTimesInHoursMinutes == rhs.showTimesInHoursMinutes &&
+               lhs.roundingMode == rhs.roundingMode &&
                lhs.includeAirlinePrefixInFlightNumber == rhs.includeAirlinePrefixInFlightNumber &&
                lhs.isCustomAirlinePrefix == rhs.isCustomAirlinePrefix
     }
@@ -305,7 +307,7 @@ struct FlightSectorRow: View, Equatable {
                                     .font(.headline.bold())
                                     .foregroundColor(.purple.opacity(0.8))
                         } else {
-                            Text("\(sector.getFormattedBlockTime(asHoursMinutes: showTimesInHoursMinutes))")
+                            Text("\(sector.getFormattedBlockTime(asHoursMinutes: showTimesInHoursMinutes, roundingMode: roundingMode))")
                                     .font(.headline.bold())
                                     .foregroundColor(.orange.opacity(0.8))
                         }
