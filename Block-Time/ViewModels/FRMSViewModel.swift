@@ -146,16 +146,41 @@ class FRMSViewModel: ObservableObject {
                 FlightDatabaseService.shared.fetchFlights(from: startDateString, to: endDateString)
             }
 
-            LogManager.shared.debug("FRMSViewModel: Fetched \(flights.count) flights from last 365 days")
+            // LogManager.shared.debug("FRMSViewModel: Fetched \(flights.count) flights from last 365 days")
 
             // Convert FlightSectors to FRMSDuties (on MainActor)
             // Group flights into consolidated duty periods (multiple sectors per duty)
             let duties = self.groupFlightsIntoDuties(flights: flights, crewPosition: crewPosition, calculationService: service)
+            // LogManager.shared.debug("FRMSViewModel: Converted \(flights.count) flights to \(duties.count) duties")
+
+            // Debug: Show last 5 duty groupings (most recent first)
+            let recentDuties = duties.sorted { $0.signOn > $1.signOn }.prefix(5)
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "dd/MM HHmm"
+            timeFormatter.timeZone = TimeZone.current
+
+            for duty in recentDuties {
+                LogManager.shared.debug("  Recent duty: signOn=\(timeFormatter.string(from: duty.signOn)), signOff=\(timeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
+            }
 
             // Filter to only completed flights (past dates only, not future)
-            // Use sign-off time to determine if a duty is complete
+            // Use IN time (actual landing) to determine if a duty is complete for display purposes
+            // This allows flights to appear immediately after landing, not after sign-off buffer
             let now = Date()
-            let completedDuties = duties.filter { $0.signOff <= now }
+            let signOffBufferSeconds = TimeInterval(config.signOffMinutesAfterIN * 60)
+            let completedDuties = duties.filter { duty in
+                // Calculate effective IN time by subtracting sign-off buffer from sign-off
+                let effectiveInTime = duty.signOff.addingTimeInterval(-signOffBufferSeconds)
+                let isComplete = effectiveInTime <= now
+
+                // Debug logging for recent duties
+                // let formatter = DateFormatter()
+                // formatter.dateFormat = "dd/MM HHmm"
+                // formatter.timeZone = TimeZone.current
+                // LogManager.shared.debug("FRMS Duty: signOff=\(formatter.string(from: duty.signOff)), effectiveIN=\(formatter.string(from: effectiveInTime)), now=\(formatter.string(from: now)), included=\(isComplete)")
+
+                return isComplete
+            }
 
             // Filter duties to last 365 days (duty dates can differ from flight dates due to timezone adjustments)
             // Note: We already fetched flights from last 365 days, but duty grouping can shift dates slightly
@@ -242,16 +267,40 @@ class FRMSViewModel: ObservableObject {
         // Fetch ONLY last 365 days from Core Data (massive performance optimization)
         let flights = FlightDatabaseService.shared.fetchFlights(from: startDateString, to: endDateString)
 
-        LogManager.shared.debug("FRMSViewModel: Refreshed \(flights.count) flights from last 365 days")
+        // LogManager.shared.debug("FRMSViewModel: Refreshed \(flights.count) flights from last 365 days")
 
         // Convert FlightSectors to FRMSDuties (on MainActor)
         // Group flights into consolidated duty periods (multiple sectors per duty)
         let duties = self.groupFlightsIntoDuties(flights: flights, crewPosition: crewPosition, calculationService: service)
 
+        // Debug: Show last 5 duty groupings (most recent first)
+        let recentDuties = duties.sorted { $0.signOn > $1.signOn }.prefix(5)
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "dd/MM HHmm"
+        timeFormatter.timeZone = TimeZone.current
+
+        for duty in recentDuties {
+            LogManager.shared.debug("  Recent duty: signOn=\(timeFormatter.string(from: duty.signOn)), signOff=\(timeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
+        }
+
         // Filter to only completed flights (past dates only, not future)
-        // Use sign-off time to determine if a duty is complete
+        // Use IN time (actual landing) to determine if a duty is complete for display purposes
+        // This allows flights to appear immediately after landing, not after sign-off buffer
         let now = Date()
-        let completedDuties = duties.filter { $0.signOff <= now }
+        let signOffBufferSeconds = TimeInterval(config.signOffMinutesAfterIN * 60)
+        let completedDuties = duties.filter { duty in
+            // Calculate effective IN time by subtracting sign-off buffer from sign-off
+            let effectiveInTime = duty.signOff.addingTimeInterval(-signOffBufferSeconds)
+            let isComplete = effectiveInTime <= now
+
+            // Debug logging for recent duties
+            // let formatter = DateFormatter()
+            // formatter.dateFormat = "dd/MM HHmm"
+            // formatter.timeZone = TimeZone.current
+            // LogManager.shared.debug("FRMS Duty: signOff=\(formatter.string(from: duty.signOff)), effectiveIN=\(formatter.string(from: effectiveInTime)), now=\(formatter.string(from: now)), included=\(isComplete)")
+
+            return isComplete
+        }
 
         // Filter duties to last 365 days (duty dates can differ from flight dates due to timezone adjustments)
         // Note: We already fetched flights from last 365 days, but duty grouping can shift dates slightly
@@ -438,11 +487,16 @@ class FRMSViewModel: ObservableObject {
 
     /// Group duties by local date at home base
     private func groupDutiesByLocalDate(duties: [FRMSDuty]) -> [DailyDutySummary] {
-        // Group duties by the date component (ignoring time)
+        // Get home base timezone for proper local date grouping
+        let homeTimeZone = calculationService.getHomeBaseTimeZone()
+        var localCalendar = Calendar.current
+        localCalendar.timeZone = homeTimeZone
+
+        // Group duties by the LOCAL calendar day of their sign-on time
+        // This ensures duties are grouped by the actual local date, not UTC date
         let grouped = Dictionary(grouping: duties) { duty -> Date in
-            // duty.date is already the start of day in home base timezone
-            // No need to apply startOfDay again as it would use device timezone
-            return duty.date
+            // Convert sign-on time to local calendar day (start of day in home base timezone)
+            return localCalendar.startOfDay(for: duty.signOn)
         }
 
         // Convert to DailyDutySummary and sort by date (newest first)

@@ -805,7 +805,8 @@ class FlightDatabaseService: ObservableObject {
             let calendar = Calendar.current
             // Normalize to start of day for consistent comparison
             let startOfPeriod = calendar.startOfDay(for: startDate)
-            let endOfPeriod = calendar.startOfDay(for: endDate)
+            // Use end of day (23:59:59) for the end date to include ALL flights on that day
+            let endOfPeriod = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
 
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
             // Use inclusive end date (<=) to match FRMS calculation approach
