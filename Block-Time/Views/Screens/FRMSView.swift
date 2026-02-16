@@ -323,7 +323,7 @@ struct FRMSView: View {
                             .font(.headline)
                             .foregroundStyle(.primary)
                         Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
-                            .font(.headline)
+                            .font(.subheadline)
                             .fontWeight(.semibold)
                     }
 
@@ -334,7 +334,7 @@ struct FRMSView: View {
                             .font(.headline)
                             .foregroundStyle(.primary)
                         Text(formatDateTime(limits.earliestSignOn))
-                            .font(.headline)
+                            .font(.subheadline)
                             .fontWeight(.semibold)
                     }
                 }
