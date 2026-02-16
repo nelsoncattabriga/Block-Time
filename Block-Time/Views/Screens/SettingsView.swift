@@ -568,12 +568,12 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Dates & Times")
+                        Text("Logbook Displays")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
 
-                        Text(viewModel.displayFlightsInLocalTime ? "Local Time" : "UTC")
+                        Text(viewModel.displayFlightsInLocalTime ? "Date & Times in Local Time" : "Date & Times in UTC")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

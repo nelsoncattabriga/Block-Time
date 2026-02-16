@@ -554,7 +554,7 @@ private struct ModernCapturedDataCard: View {
                         placeholder: flightNumberPlaceholder,
                         icon: "airplane.ticket",
                         isUppercase: true,
-                        keyboardType: (UIDevice.current.userInterfaceIdiom == .pad || viewModel.isSimulator) ? .numbersAndPunctuation : .numberPad,
+                        keyboardType: (UIDevice.current.userInterfaceIdiom == .pad || viewModel.isSimulator) ? .numbersAndPunctuation : .numbersAndPunctuation,
                         canSearch: canSearchFlight,
                         onSearch: {
                             viewModel.fetchFlightAwareData()
@@ -1804,7 +1804,7 @@ private struct ModernFlightNumberField: View {
             ToolbarItemGroup(placement: .keyboard) {
                 if textFieldFocused {
                     // Keyboard switcher button - only show on iPhone when number pad is the base keyboard
-                    if UIDevice.current.userInterfaceIdiom == .phone && keyboardType == .numberPad {
+                    if UIDevice.current.userInterfaceIdiom == .phone && keyboardType == .numbersAndPunctuation {
                         Button(action: {
                             useAlphanumericKeyboard.toggle()
                             HapticManager.shared.impact(.light)
@@ -1988,7 +1988,7 @@ private struct ModernTimeField: View {
                 } else {
                     TextField("HH:MM", text: $value)
                         .font(.subheadline.bold())
-                        .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad)
+                        .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numbersAndPunctuation)
                         .focused($timeFieldFocused)
                         .onChange(of: value) { _, newValue in
                             value = applyFormatting(newValue)
@@ -2214,7 +2214,7 @@ private struct ModernIntegerField: View {
 
                 TextField("0", text: $editingText)
                     .font(.subheadline.bold())
-                    .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad)
+                    .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numbersAndPunctuation)
                     .focused($integerFieldFocused)
                     .onChange(of: editingText) { _, newValue in
                         // Only allow digits
