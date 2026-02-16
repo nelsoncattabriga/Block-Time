@@ -61,10 +61,9 @@ struct FRMSView: View {
                 ZStack {
                     ScrollView {
                         VStack(spacing: 20) {
-
+                            
                             // Cumulative Limits Section
                             cumulativeLimitsSection
-
 
                             // Maximum Next Duty Calculator
                             if viewModel.configuration.fleet == .a380A330B787 {
@@ -81,7 +80,6 @@ struct FRMSView: View {
                                                     }
                                                     .pickerStyle(.segmented)
                                                 }
-
                                                 maximumNextDutySection
                                             }
                                             .padding(.top, 8)
@@ -160,24 +158,6 @@ struct FRMSView: View {
                         updateMBTT()
                     }
                     .opacity(viewModel.isLoading ? 0.3 : 1.0)
-
-                    // Loading overlay
-//                    if viewModel.isLoading {
-//                        ZStack {
-//                            themeService.getGradient()
-//                                .ignoresSafeArea()
-//
-//                            VStack(spacing: 16) {
-//                                ProgressView()
-//                                    .scaleEffect(1.5)
-//                                    .tint(.white)
-//                                Text("Updating FRMS Data...")
-//                                    .font(.headline)
-//                                    .foregroundStyle(.white)
-//                            }
-//                        }
-//                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-//                    }
                 }
             }
             .navigationTitle("\(viewModel.configuration.fleet.shortName) FRMS")
@@ -249,58 +229,16 @@ struct FRMSView: View {
                         activeRestrictionsSection(limits: limits)
                     }
 
-                    // Next Duty Limits Title with Limit Type Toggle
-                    if horizontalSizeClass == .compact {
-                        // iPhone layout - toggle below title
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Next Duty Limits")
-                                .font(.title2)
-                                .fontWeight(.semibold)
+                    // Next Duty Limits Title
+                    Text("Next Duty Limits")
+                        .font(.title2)
+                        .fontWeight(.semibold)
 
-                            Picker("Limit Type", selection: $viewModel.selectedLimitType) {
-                                Text("Planning").tag(FRMSLimitType.planning)
-                                Text("Operational").tag(FRMSLimitType.operational)
-                            }
-                            .pickerStyle(.segmented)
+                    // Rest Requirements Card
+                    restRequirementsCard(limits: limits)
 
-                            // Time window picker (iPhone only)
-                            HStack{
-                                Text("Sign-On")
-                                    .font(.headline)
-                                    .foregroundStyle(.secondary)
-
-                                Picker("Time Window", selection: $selectedTimeWindow) {
-                                    ForEach(TimeWindowSelection.allCases, id: \.self) { window in
-                                        Text(window.rawValue).tag(window)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .font(.caption)
-
-                                //Spacer()
-                            }
-                            .padding(.horizontal)
-                        }
-                    } else {
-                        // iPad layout - toggle next to title
-                        HStack {
-                            Text("Next Duty Limits")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-
-                            Spacer()
-
-                            Picker("Limit Type", selection: $viewModel.selectedLimitType) {
-                                Text("Planning").tag(FRMSLimitType.planning)
-                                Text("Operational").tag(FRMSLimitType.operational)
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(width: 220)
-                        }
-                    }
-
-                    // Unified Next Duty Card
-                    nextDutyLimitsCard(limits: limits)
+                    // Max Duty Card (with controls inside)
+                    maxDutyCard(limits: limits)
                 }
             } else {
                 Text("No duty data available")
@@ -313,111 +251,125 @@ struct FRMSView: View {
 
     // MARK: - A320/B737 Sub-Views
 
-    private func nextDutyLimitsCard(limits: A320B737NextDutyLimits) -> some View {
+    private func restRequirementsCard(limits: A320B737NextDutyLimits) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Rest Requirements
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Minimum Rest")
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                        Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Minimum Rest")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
 
-                    Spacer()
+                Spacer()
 
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("Earliest Sign-On")
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                        Text(formatDateTime(limits.earliestSignOn))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Earliest Sign-On")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(formatDateTime(limits.earliestSignOn))
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .padding()
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func maxDutyCard(limits: A320B737NextDutyLimits) -> some View {
+        // Get the window to display based on user selection
+        let displayWindow = getSelectedWindow(limits: limits, selection: selectedTimeWindow)
+
+        return VStack(alignment: .leading, spacing: 16) {
+            // Header with Planning|Operational toggle
+            HStack {
+                Text("Max Duty")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                    Text("Planning").tag(FRMSLimitType.planning)
+                    Text("Operational").tag(FRMSLimitType.operational)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: horizontalSizeClass == .compact ? 200 : 220)
+            }
+
+            // Sign-On Window picker
+            HStack {
+                Text("Sign-On Window")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+
+                Picker("Time Window", selection: $selectedTimeWindow) {
+                    ForEach(TimeWindowSelection.allCases, id: \.self) { window in
+                        Text(window.rawValue).tag(window)
                     }
                 }
+                .pickerStyle(.menu)
+                .font(.caption)
+
+                Spacer()
             }
 
             Divider()
 
-            // Get the window to display based on user selection
-            let displayWindow = getSelectedWindow(limits: limits, selection: selectedTimeWindow)
-
-            // Duty Limits for selected window
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Max Duty")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
-                    Spacer()
-
-                    // Time window picker with label (iPad only - iPhone has it above card)
-                    if horizontalSizeClass != .compact {
-                        Text("Sign-On")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-
-                        Picker("Time Window", selection: $selectedTimeWindow) {
-                            ForEach(TimeWindowSelection.allCases, id: \.self) { window in
-                                Text(window.rawValue).tag(window)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .font(.caption)
-                    }
-                }
-
-                // Sector-based duty limits
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("1-4 Sectors")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)) hrs")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-
-                    Divider()
-                        .frame(height: 35)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("5 Sectors")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors5)) hrs")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-
-                    Divider()
-                        .frame(height: 35)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("6 Sectors")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors6)) hrs")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-                }
-                
-                Spacer()
-                
-                // Flight time limit with darkness conditional
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Max Flight Time")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
-                    Text(displayWindow.limits.maxFlightTimeDescription)
+            // Sector-based duty limits
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("1-4 Sectors")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)) hrs")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                 }
+                
+                Divider()
+                    .frame(height: 35)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("5 Sectors")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors5)) hrs")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+                
+                Divider()
+                    .frame(height: 35)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("6 Sectors")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors6)) hrs")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+            Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            
+            Divider()
+
+            // Flight time limit with darkness conditional
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Max Flight Time")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+                Text(displayWindow.limits.maxFlightTimeDescription)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
             }
         }
         .padding()
