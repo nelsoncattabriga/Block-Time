@@ -586,7 +586,11 @@ class FRMSViewModel: ObservableObject {
                 let sameDayOrEarlyNextDay = (newSignOnDay == firstSignOnDay) ||
                                            (newSignOnDay == nextLocalDay && flightDuty.duty.signOn < sixHoursAfterNextMidnight)
 
-                if gapBetweenFlights >= 0 && gapBetweenFlights <= maxGapBetweenSectors && sameDayOrEarlyNextDay {
+                // Allow negative gaps (overlapping flights due to STD/OUT differences) or small positive gaps
+                // Flights on the same day with gaps < 3 hours should be consolidated into one duty
+                let shouldConsolidate = sameDayOrEarlyNextDay && (gapBetweenFlights <= maxGapBetweenSectors)
+
+                if shouldConsolidate {
                     // Add to current duty period
                     currentDutyFlights.append(flightDuty)
                 } else {
