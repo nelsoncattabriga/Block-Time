@@ -1137,7 +1137,7 @@ private struct ModernDatePickerField: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.primary.opacity(0.8))
+                    .foregroundColor(.secondary)
 
                 DatePicker("", selection: $selectedDate, displayedComponents: .date)
                     .labelsHidden()
@@ -1151,19 +1151,19 @@ private struct ModernDatePickerField: View {
             Spacer()
 
             // Local Date (side by side) - read-only display
-            if let localDateValue = localDate {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Local Date")
-                        .font(.caption.bold())
-                        .foregroundColor(.secondary)
-
-                    DatePicker("", selection: .constant(localDateValue), displayedComponents: .date)
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
-                        .environment(\.locale, Locale(identifier: "en_AU"))
-                        .disabled(true)
-                }
-            }
+//            if let localDateValue = localDate {
+//                VStack(alignment: .leading, spacing: 2) {
+//                    Text("Local Date")
+//                        .font(.caption.bold())
+//                        .foregroundColor(.secondary)
+//
+//                    DatePicker("", selection: .constant(localDateValue), displayedComponents: .date)
+//                        .labelsHidden()
+//                        .datePickerStyle(.compact)
+//                        .environment(\.locale, Locale(identifier: "en_AU"))
+//                        .disabled(true)
+//                }
+//            }
         }
         .padding(12)
         //.background(Color(.systemGray6).opacity(0.7))
