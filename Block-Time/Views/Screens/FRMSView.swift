@@ -280,93 +280,182 @@ struct FRMSView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+//    private func maxDutyCard(limits: A320B737NextDutyLimits) -> some View {
+//        // Get the window to display based on user selection
+//        let displayWindow = getSelectedWindow(limits: limits, selection: selectedTimeWindow)
+//
+//        return VStack(alignment: .leading, spacing: 16) {
+//            // Header with Planning|Operational toggle
+//            HStack {
+//                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+//                    Text("Planning").tag(FRMSLimitType.planning)
+//                    Text("Operational").tag(FRMSLimitType.operational)
+//                }
+//                .pickerStyle(.segmented)
+//                .frame(width: horizontalSizeClass == .compact ? 200 : 220)
+//                
+//                Spacer()
+//                
+//                HStack {
+//                    Text("Sign-On Window")
+//                        .font(.headline)
+//                        .foregroundStyle(.secondary)
+//
+//                    Picker("Time Window", selection: $selectedTimeWindow) {
+//                        ForEach(TimeWindowSelection.allCases, id: \.self) { window in
+//                            Text(window.rawValue).tag(window)
+//                        }
+//                    }
+//                    .pickerStyle(.menu)
+//                    .font(.caption)
+//                }
+//            }
+//
+//            Divider()
+//
+//            // Sector-based duty limits
+//            
+//            Text("Max Duty")
+//                .font(.headline)
+//                .fontWeight(.semibold)
+//                .foregroundStyle(.primary)
+//            
+//            HStack(spacing: 12) {
+//                VStack(alignment: .leading, spacing: 4) {
+//                    Text("1-4 Sectors")
+//                        .font(.subheadline)
+//                        .foregroundStyle(.secondary)
+//                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)) hrs")
+//                        .font(.subheadline)
+//                        .fontWeight(.semibold)
+//                }
+//                
+//                Divider()
+//                    .frame(height: 35)
+//                
+//                VStack(alignment: .leading, spacing: 4) {
+//                    Text("5 Sectors")
+//                        .font(.subheadline)
+//                        .foregroundStyle(.secondary)
+//                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors5)) hrs")
+//                        .font(.subheadline)
+//                        .fontWeight(.semibold)
+//                }
+//                
+//                Divider()
+//                    .frame(height: 35)
+//                
+//                VStack(alignment: .leading, spacing: 4) {
+//                    Text("6 Sectors")
+//                        .font(.subheadline)
+//                        .foregroundStyle(.secondary)
+//                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors6)) hrs")
+//                        .font(.subheadline)
+//                        .fontWeight(.semibold)
+//                }
+//            Spacer()
+//            }
+//            .frame(maxWidth: .infinity)
+//            
+//            Divider()
+//
+//            // Flight time limit with darkness conditional
+//            VStack(alignment: .leading, spacing: 8) {
+//                Text("Max Flight Time")
+//                    .font(.headline)
+//                    .fontWeight(.semibold)
+//                    .foregroundStyle(.primary)
+//                Text(displayWindow.limits.maxFlightTimeDescription)
+//                    .font(.subheadline)
+//                    .fontWeight(.semibold)
+//            }
+//        }
+//        .padding()
+//        .background(.thinMaterial)
+//        .clipShape(RoundedRectangle(cornerRadius: 12))
+//        .onAppear {
+//            // Set initial selection to the applicable window based on earliest sign-on
+//            let applicableWindow = determineApplicableWindow(limits: limits)
+//            if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
+//                selectedTimeWindow = .early
+//            } else if applicableWindow.localStartTime == limits.afternoonWindow.localStartTime {
+//                selectedTimeWindow = .afternoon
+//            } else {
+//                selectedTimeWindow = .night
+//            }
+//        }
+//        .onChange(of: viewModel.selectedLimitType) { _, _ in
+//            // Update time window selection when limit type changes (Planning <-> Operational)
+//            let applicableWindow = determineApplicableWindow(limits: limits)
+//            if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
+//                selectedTimeWindow = .early
+//            } else if applicableWindow.localStartTime == limits.afternoonWindow.localStartTime {
+//                selectedTimeWindow = .afternoon
+//            } else {
+//                selectedTimeWindow = .night
+//            }
+//        }
+//    }
+
+    
+    ///***********************************************************
+
+
+    
     private func maxDutyCard(limits: A320B737NextDutyLimits) -> some View {
-        // Get the window to display based on user selection
+        
         let displayWindow = getSelectedWindow(limits: limits, selection: selectedTimeWindow)
 
         return VStack(alignment: .leading, spacing: 16) {
-            // Header with Planning|Operational toggle
-            HStack {
-                Text("Max Duty")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
-                    Text("Planning").tag(FRMSLimitType.planning)
-                    Text("Operational").tag(FRMSLimitType.operational)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: horizontalSizeClass == .compact ? 200 : 220)
-            }
-
-            // Sign-On Window picker
-            HStack {
-                Text("Sign-On Window")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-
-                Picker("Time Window", selection: $selectedTimeWindow) {
-                    ForEach(TimeWindowSelection.allCases, id: \.self) { window in
-                        Text(window.rawValue).tag(window)
-                    }
-                }
-                .pickerStyle(.menu)
-                .font(.caption)
-
-                Spacer()
-            }
-
+            
+            // Adaptive Header
+            headerSection
+            
             Divider()
-
-            // Sector-based duty limits
+            
+            // MARK: - Sector-based duty limits
+            
+            Text("Max Duty")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+            
             HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("1-4 Sectors")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)) hrs")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
+                dutyColumn(
+                    title: "1-4 Sectors",
+                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)
+                )
                 
                 Divider()
                     .frame(height: 35)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("5 Sectors")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors5)) hrs")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
+                dutyColumn(
+                    title: "5 Sectors",
+                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors5)
+                )
                 
                 Divider()
                     .frame(height: 35)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("6 Sectors")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors6)) hrs")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-            Spacer()
+                dutyColumn(
+                    title: "6 Sectors",
+                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors6)
+                )
+                
+                Spacer()
             }
             .frame(maxWidth: .infinity)
             
             Divider()
-
-            // Flight time limit with darkness conditional
+            
+            // MARK: - Flight Time Limit
+            
             VStack(alignment: .leading, spacing: 8) {
                 Text("Max Flight Time")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
+                
                 Text(displayWindow.limits.maxFlightTimeDescription)
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -376,29 +465,90 @@ struct FRMSView: View {
         .background(.thinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .onAppear {
-            // Set initial selection to the applicable window based on earliest sign-on
-            let applicableWindow = determineApplicableWindow(limits: limits)
-            if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
-                selectedTimeWindow = .early
-            } else if applicableWindow.localStartTime == limits.afternoonWindow.localStartTime {
-                selectedTimeWindow = .afternoon
-            } else {
-                selectedTimeWindow = .night
-            }
+            updateTimeWindowSelection(limits: limits)
         }
         .onChange(of: viewModel.selectedLimitType) { _, _ in
-            // Update time window selection when limit type changes (Planning <-> Operational)
-            let applicableWindow = determineApplicableWindow(limits: limits)
-            if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
-                selectedTimeWindow = .early
-            } else if applicableWindow.localStartTime == limits.afternoonWindow.localStartTime {
-                selectedTimeWindow = .afternoon
+            updateTimeWindowSelection(limits: limits)
+        }
+    }
+    
+    private var headerSection: some View {
+        Group {
+            if horizontalSizeClass == .compact {
+                // iPhone layout
+                VStack(alignment: .leading, spacing: 12) {
+                    limitTypePicker
+                    signOnWindowSection
+                }
             } else {
-                selectedTimeWindow = .night
+                // iPad layout
+                HStack {
+                    limitTypePicker
+                        .frame(width: 220)
+                    
+                    Spacer()
+                    
+                    signOnWindowSection
+                }
             }
         }
     }
-
+    
+    private var limitTypePicker: some View {
+        Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+            Text("Planning").tag(FRMSLimitType.planning)
+            Text("Operational").tag(FRMSLimitType.operational)
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: horizontalSizeClass == .compact ? .infinity : nil)
+    }
+    
+    private var signOnWindowSection: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Sign-On Window")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            
+            Picker("Time Window", selection: $selectedTimeWindow) {
+                ForEach(TimeWindowSelection.allCases, id: \.self) { window in
+                    Text(window.rawValue).tag(window)
+                }
+            }
+            .pickerStyle(.menu)
+            .font(.caption)
+        }
+    }
+    
+    private func dutyColumn(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            Text("\(value) hrs")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        }
+    }
+    
+    private func updateTimeWindowSelection(limits: A320B737NextDutyLimits) {
+        let applicableWindow = determineApplicableWindow(limits: limits)
+        
+        switch applicableWindow.localStartTime {
+        case limits.earlyWindow.localStartTime:
+            selectedTimeWindow = .early
+        case limits.afternoonWindow.localStartTime:
+            selectedTimeWindow = .afternoon
+        default:
+            selectedTimeWindow = .night
+        }
+    }
+    
+    
+    
+    
+    ///***********************************************************
+    ///
     /// Determine which time window applies based on earliest sign-on
     private func determineApplicableWindow(limits: A320B737NextDutyLimits) -> DutyTimeWindow {
         // Check which window is currently available
