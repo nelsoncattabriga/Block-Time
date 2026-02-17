@@ -61,7 +61,13 @@ struct FRMSView: View {
                 ZStack {
                     ScrollView {
                         VStack(spacing: 20) {
-                            
+
+                            // Minimum Rest / Earliest Sign-On Section (A320/B737 only)
+                            if viewModel.configuration.fleet == .a320B737,
+                               let limits = viewModel.a320B737NextDutyLimits {
+                                minimumRestSection(limits: limits)
+                            }
+
                             // Cumulative Limits Section
                             cumulativeLimitsSection
 
@@ -178,6 +184,41 @@ struct FRMSView: View {
         }
     }
 
+    // MARK: - Minimum Rest Section
+
+    private func minimumRestSection(limits: A320B737NextDutyLimits) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Earliest Sign-On")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Minimum Rest")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Earliest Sign-On")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(formatDateTime(limits.earliestSignOn))
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+            }
+            .padding()
+            .background(.thinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
     // MARK: - Cumulative Limits Section
 
     private var cumulativeLimitsSection: some View {
@@ -234,9 +275,6 @@ struct FRMSView: View {
                         .font(.title2)
                         .fontWeight(.semibold)
 
-                    // Rest Requirements Card
-                    restRequirementsCard(limits: limits)
-
                     // Max Duty Card (with controls inside)
                     maxDutyCard(limits: limits)
                 }
@@ -250,35 +288,6 @@ struct FRMSView: View {
     }
 
     // MARK: - A320/B737 Sub-Views
-
-    private func restRequirementsCard(limits: A320B737NextDutyLimits) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Minimum Rest")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("Earliest Sign-On")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text(formatDateTime(limits.earliestSignOn))
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                }
-            }
-        }
-        .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
 
 //    private func maxDutyCard(limits: A320B737NextDutyLimits) -> some View {
 //        // Get the window to display based on user selection
@@ -412,53 +421,26 @@ struct FRMSView: View {
             headerSection
             
             Divider()
-            
-            // MARK: - Sector-based duty limits
-            
-            Text("Max Duty")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundStyle(.primary)
-            
-            HStack(spacing: 12) {
-                dutyColumn(
-                    title: "1-4 Sectors",
-                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)
-                )
-                
-                Divider()
-                    .frame(height: 35)
-                
-                dutyColumn(
-                    title: "5 Sectors",
-                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors5)
-                )
-                
-                Divider()
-                    .frame(height: 35)
-                
-                dutyColumn(
-                    title: "6 Sectors",
-                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors6)
-                )
-                
-                Spacer()
-            }
-            .frame(maxWidth: .infinity)
-            
-            Divider()
-            
-            // MARK: - Flight Time Limit
-            
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Max Flight Time")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-                
-                Text(displayWindow.limits.maxFlightTimeDescription)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+
+            // MARK: - Max Duty and Flight Time Limits (Adaptive Layout)
+
+            if horizontalSizeClass == .compact {
+                // iPhone: Vertical stack
+                VStack(alignment: .leading, spacing: 16) {
+                    maxDutySection(displayWindow: displayWindow)
+                    Divider()
+                    maxFlightTimeSection(displayWindow: displayWindow)
+                }
+            } else {
+                // iPad: Horizontal layout
+                HStack(alignment: .top, spacing: 20) {
+                    maxDutySection(displayWindow: displayWindow)
+
+                    Divider()
+                        .frame(maxHeight: .infinity)
+
+                    maxFlightTimeSection(displayWindow: displayWindow)
+                }
             }
         }
         .padding()
@@ -524,13 +506,105 @@ struct FRMSView: View {
             Text(title)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            
+
             Text("\(value) hrs")
                 .font(.subheadline)
                 .fontWeight(.semibold)
         }
     }
-    
+
+    private func maxDutySection(displayWindow: DutyTimeWindow) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Max Duty")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+
+            HStack(spacing: 12) {
+                dutyColumn(
+                    title: "1-4 Sectors",
+                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)
+                )
+
+                Divider()
+                    .frame(height: 35)
+
+                dutyColumn(
+                    title: "5 Sectors",
+                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors5)
+                )
+
+                Divider()
+                    .frame(height: 35)
+
+                dutyColumn(
+                    title: "6 Sectors",
+                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors6)
+                )
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func maxFlightTimeSection(displayWindow: DutyTimeWindow) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Max Flight Time")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+
+            if displayWindow.limitType == .operational {
+                // Operational limits: 3 columns (1 Sector | 2+ Sectors | >7 hrs night)
+                HStack(spacing: 12) {
+                    dutyColumn(
+                        title: "1 Sector",
+                        value: "10.5"
+                    )
+
+                    Divider()
+                        .frame(height: 35)
+
+                    dutyColumn(
+                        title: "2+ Sectors",
+                        value: "10"
+                    )
+
+                    Divider()
+                        .frame(height: 35)
+
+                    dutyColumn(
+                        title: ">7 hrs Night",
+                        value: "9.5"
+                    )
+
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                // Planning limits: 2 columns (Standard | >7 hrs night)
+                HStack(spacing: 12) {
+                    dutyColumn(
+                        title: "Standard",
+                        value: "10"
+                    )
+
+                    Divider()
+                        .frame(height: 35)
+
+                    dutyColumn(
+                        title: ">7 hrs Night",
+                        value: "9.5"
+                    )
+
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
     private func updateTimeWindowSelection(limits: A320B737NextDutyLimits) {
         let applicableWindow = determineApplicableWindow(limits: limits)
         
