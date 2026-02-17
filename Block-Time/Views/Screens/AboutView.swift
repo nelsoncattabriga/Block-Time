@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct AboutView: View {
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     @AppStorage("debugModeEnabled") private var debugModeEnabled = false
     @State private var showingLogViewer = false
     @State private var devToolsExpanded = false

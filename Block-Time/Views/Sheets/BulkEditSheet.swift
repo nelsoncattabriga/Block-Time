@@ -13,7 +13,7 @@ struct BulkEditSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     // MARK: - Properties
 

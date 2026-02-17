@@ -15,7 +15,7 @@ struct ShareableLogFile: Identifiable {
 }
 
 struct LogViewerView: View {
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     @Environment(\.dismiss) private var dismiss
 
     @State private var logContent: String = ""

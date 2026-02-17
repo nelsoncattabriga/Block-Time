@@ -132,7 +132,7 @@ private struct SettingsCategoriesListContent: View {
 
 // MARK: - Empty Settings Detail View
 private struct EmptySettingsDetailView: View {
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     var body: some View {
         VStack(spacing: 20) {

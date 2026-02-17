@@ -55,7 +55,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 struct SettingsView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
     @ObservedObject var frmsViewModel: FRMSViewModel
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     var body: some View {
         ZStack {
@@ -134,7 +134,7 @@ struct SettingsView: View {
 
 // MARK: - Appearance Settings Detail View
 struct AppearanceSettingsView: View {
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     var body: some View {
         ScrollView {
@@ -252,7 +252,7 @@ struct AppearanceSettingsView: View {
 // MARK: - Personal & Crew Settings Detail View
 struct PersonalCrewSettingsView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     var body: some View {
         ScrollView {
@@ -280,7 +280,7 @@ struct PersonalCrewSettingsView: View {
 // MARK: - Flight Information Settings Detail View
 struct FlightInformationSettingsView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     var body: some View {
         ScrollView {
@@ -309,7 +309,7 @@ struct FlightInformationSettingsView: View {
 struct FRMSSettingsDetailView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
     @ObservedObject var frmsViewModel: FRMSViewModel
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     var body: some View {
         ScrollView {
@@ -1616,7 +1616,7 @@ private struct ModernFRMSCard: View {
 // MARK: - CloudKit Sync Card
 struct ModernCloudKitSyncCard: View {
     @ObservedObject var databaseService = FlightDatabaseService.shared
-    @ObservedObject var settingsService = CloudKitSettingsSyncService.shared
+    @Environment(CloudKitSettingsSyncService.self) var settingsService
     @AppStorage("debugModeEnabled") private var debugModeEnabled = false
 
     @State private var showUUIDRegenerationAlert = false

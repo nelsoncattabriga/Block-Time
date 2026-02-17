@@ -15,7 +15,7 @@ extension Notification.Name {
 
 struct DashboardView: View {
     private let databaseService = FlightDatabaseService.shared
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     @State private var flightStatistics = FlightStatistics.empty
     @State private var isLoading = true
     @State private var showingSettings = false

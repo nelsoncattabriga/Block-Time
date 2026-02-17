@@ -7,7 +7,7 @@
 import SwiftUI
 
 struct SplashScreenView: View {
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     @State private var isActive = false
     @State private var scale: CGFloat = 0.7
     @State private var opacity: Double = 0.3

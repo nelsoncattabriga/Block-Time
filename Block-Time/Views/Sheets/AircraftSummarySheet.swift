@@ -12,7 +12,7 @@ struct AircraftSummarySheet: View {
     // MARK: - Environment
 
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     // MARK: - Properties
 

@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 
 struct ImportExportView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     @Environment(\.scenePhase) private var scenePhase
 
     // Import/Export state

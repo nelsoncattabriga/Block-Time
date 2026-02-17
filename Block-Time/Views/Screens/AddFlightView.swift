@@ -6,10 +6,9 @@ import SwiftUI
 import PhotosUI
 
 struct AddFlightView: View {
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var showingSuccessAlert = false
     @State private var showSuccessNotification = false
     @State private var successMessage = ""
 
@@ -23,10 +22,10 @@ struct AddFlightView: View {
                 ScrollViewReader { scrollProxy in
                     ScrollView {
                         if useWideLayout {
-                            WideLayoutView(viewModel: viewModel, showingSuccessAlert: $showingSuccessAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                            WideLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
                                 .id("top")
                         } else {
-                            CompactLayoutView(viewModel: viewModel, showingSuccessAlert: $showingSuccessAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                            CompactLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
                                 .id("top")
                         }
                     }
@@ -94,7 +93,6 @@ struct AddFlightView: View {
 // MARK: - Modern Compact Layout
 private struct CompactLayoutView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @Binding var showingSuccessAlert: Bool
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     @Environment(\.dismiss) private var dismiss
@@ -120,9 +118,9 @@ private struct CompactLayoutView: View {
                 
                 // Manual Entry Card
                 ModernManualEntryDataCard(viewModel: viewModel)
-                
+
                 // Action Buttons Card
-                ModernActionButtonsCard(viewModel: viewModel, showingSuccessAlert: $showingSuccessAlert, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
                 
                 // Bottom spacer
                 Spacer(minLength: 20)
@@ -183,7 +181,6 @@ private struct CompactLayoutView: View {
 // MARK: Wide Layout View
 private struct WideLayoutView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @Binding var showingSuccessAlert: Bool
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     @Environment(\.dismiss) private var dismiss
@@ -219,7 +216,7 @@ private struct WideLayoutView: View {
                         ModernManualEntryDataCard(viewModel: viewModel)
 
                         // Action Buttons Card
-                        ModernActionButtonsCard(viewModel: viewModel, showingSuccessAlert: $showingSuccessAlert, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                        ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -415,7 +412,7 @@ extension String {
 // MARK: - Modern Captured Data Card
 private struct ModernCapturedDataCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject private var cloudKitService = CloudKitSettingsSyncService.shared
+    @Environment(CloudKitSettingsSyncService.self) private var cloudKitService
 
     private var flightNumberPlaceholder: String {
         let baseNumber = "123"
@@ -859,7 +856,6 @@ private struct ModernManualEntryDataCard: View {
 // MARK: - Modern Action Buttons Card
 private struct ModernActionButtonsCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @Binding var showingSuccessAlert: Bool
     @Binding var showingDeleteAlert: Bool
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
@@ -904,7 +900,8 @@ private struct ModernActionButtonsCard: View {
                                     showSuccessNotification = true
                                 }
 
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                Task { @MainActor in
+                                    try await Task.sleep(for: .seconds(2.0))
                                     withAnimation {
                                         showSuccessNotification = false
                                     }
@@ -913,7 +910,8 @@ private struct ModernActionButtonsCard: View {
                                 // Only exit editing mode and dismiss on iPhone
                                 // On iPad split view, stay in edit mode to continue viewing/editing
                                 if !isInSplitView {
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    Task { @MainActor in
+                                        try await Task.sleep(for: .seconds(0.5))
                                         viewModel.exitEditingMode()
                                         dismiss()
                                     }
@@ -966,10 +964,12 @@ private struct ModernActionButtonsCard: View {
                                 showSuccessNotification = true
                             }
                             // Reset fields after showing notification
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            Task { @MainActor in
+                                try await Task.sleep(for: .seconds(0.5))
                                 viewModel.resetAllFields()
                             }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            Task { @MainActor in
+                                try await Task.sleep(for: .seconds(2.0))
                                 withAnimation {
                                     showSuccessNotification = false
                                 }
@@ -1143,6 +1143,7 @@ private struct ModernDatePickerField: View {
                     .labelsHidden()
                     .datePickerStyle(.compact)
                     .environment(\.locale, Locale(identifier: "en_AU"))
+                    .environment(\.timeZone, .gmt)
                     .onChange(of: selectedDate) { _, newDate in
                         dateString = dateFormatter.string(from: newDate)
                     }
@@ -1151,19 +1152,19 @@ private struct ModernDatePickerField: View {
             Spacer()
 
             // Local Date (side by side) - read-only display
-//            if let localDateValue = localDate {
-//                VStack(alignment: .leading, spacing: 2) {
-//                    Text("Local Date")
-//                        .font(.caption.bold())
-//                        .foregroundColor(.secondary)
-//
-//                    DatePicker("", selection: .constant(localDateValue), displayedComponents: .date)
-//                        .labelsHidden()
-//                        .datePickerStyle(.compact)
-//                        .environment(\.locale, Locale(identifier: "en_AU"))
-//                        .disabled(true)
-//                }
-//            }
+            if let localDateValue = localDate {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Local Date")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+
+                    DatePicker("", selection: .constant(localDateValue), displayedComponents: .date)
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .environment(\.locale, Locale(identifier: "en_AU"))
+                        .disabled(true)
+                }
+            }
         }
         .padding(12)
         //.background(Color(.systemGray6).opacity(0.7))
@@ -1760,8 +1761,6 @@ private struct ModernFlightNumberField: View {
                     .onChange(of: textFieldFocused) { _, isFocused in
                         if isFocused {
                             onFocus?()
-                        } else {
-                            onCommit?()
                         }
                     }
                     .submitLabel(.done)
@@ -1810,7 +1809,8 @@ private struct ModernFlightNumberField: View {
                             HapticManager.shared.impact(.light)
                             // Refocus to apply keyboard change
                             textFieldFocused = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            Task { @MainActor in
+                                try await Task.sleep(for: .seconds(0.1))
                                 textFieldFocused = true
                             }
                         }) {
@@ -1870,8 +1870,6 @@ private struct ModernEditableField: View {
                     .onChange(of: textFieldFocused) { _, isFocused in
                         if isFocused {
                             onFocus?()
-                        } else {
-                            onCommit?()
                         }
                     }
                     .submitLabel(.done)
@@ -2430,11 +2428,3 @@ private struct TimeCreditRadioButton: View {
         .disabled(isDisabled)
     }
 }
-
-// MARK: - Previews
-#Preview {
-    //AddFlightView()
-      //  .environmentObject(FlightTimeExtractorViewModel())
-    MainTabView()
-}
-

@@ -7,7 +7,6 @@
 
 import Foundation
 import SwiftUI
-import Combine
 
 // MARK: - Appearance Mode Enum
 enum AppearanceMode: String, CaseIterable, Identifiable {
@@ -87,16 +86,17 @@ enum AppTheme: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Theme Service
-class ThemeService: ObservableObject {
+@Observable
+class ThemeService {
     static let shared = ThemeService()
 
-    @Published var currentTheme: AppTheme {
+    var currentTheme: AppTheme {
         didSet {
             UserDefaults.standard.set(currentTheme.rawValue, forKey: "selectedTheme")
         }
     }
 
-    @Published var appearanceMode: AppearanceMode {
+    var appearanceMode: AppearanceMode {
         didSet {
             UserDefaults.standard.set(appearanceMode.rawValue, forKey: "appearanceMode")
         }

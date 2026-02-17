@@ -6,22 +6,22 @@
 //
 
 import Foundation
-import Combine
 import Network
 
 /// Service for syncing app settings across devices using NSUbiquitousKeyValueStore
 /// This is Apple's recommended approach for syncing small amounts of data like preferences
-class CloudKitSettingsSyncService: ObservableObject {
+@Observable
+class CloudKitSettingsSyncService {
 
     // MARK: - Singleton
     static let shared = CloudKitSettingsSyncService()
 
     // MARK: - Published Properties
-    @Published var isSyncing: Bool = false
-    @Published var lastSyncError: Error?
-    @Published var lastSyncDate: Date?
-    @Published var lastChangeDate: Date?
-    @Published var isNetworkAvailable: Bool = true
+    var isSyncing: Bool = false
+    var lastSyncError: Error?
+    var lastSyncDate: Date?
+    var lastChangeDate: Date?
+    var isNetworkAvailable: Bool = true
 
     // MARK: - Private Properties
     private let ubiquitousStore = NSUbiquitousKeyValueStore.default

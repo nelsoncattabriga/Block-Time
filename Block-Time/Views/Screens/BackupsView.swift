@@ -11,7 +11,7 @@ import UniformTypeIdentifiers
 struct BackupsView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
     @ObservedObject var backupService = AutomaticBackupService.shared
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
 
     // State
     @State private var showingResult = false
@@ -561,7 +561,7 @@ private struct DocumentPicker: UIViewControllerRepresentable {
 // MARK: - Manage Backups View
 struct ManageBackupsView: View {
     @ObservedObject var backupService: AutomaticBackupService
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     @Environment(\.dismiss) var dismiss
     @State private var showingBackupDetails: BackupFileInfo?
     @State private var showingFilePicker = false

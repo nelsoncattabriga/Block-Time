@@ -19,7 +19,7 @@ struct FRMSView: View {
 
     @ObservedObject var viewModel: FRMSViewModel
     let flightTimePosition: FlightTimePosition
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     @EnvironmentObject var appViewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 

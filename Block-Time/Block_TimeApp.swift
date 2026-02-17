@@ -11,7 +11,8 @@ import SwiftUI
 struct Block_TimeApp: App {
     @State private var incomingRosterURL: URL?
     @State private var incomingMigrationURL: URL?
-    @ObservedObject private var themeService = ThemeService.shared
+    @State private var themeService = ThemeService.shared
+    @State private var cloudKitService = CloudKitSettingsSyncService.shared
     @ObservedObject private var appState = AppState.shared
 
     init() {
@@ -50,6 +51,8 @@ struct Block_TimeApp: App {
         WindowGroup {
             SplashScreenView()
                 .preferredColorScheme(colorSchemeForAppearanceMode(themeService.appearanceMode))
+                .environment(themeService)
+                .environment(cloudKitService)
                 .environment(\.managedObjectContext, FlightDatabaseService.shared.viewContext)
                 .onOpenURL { url in
                     handleIncomingURL(url)

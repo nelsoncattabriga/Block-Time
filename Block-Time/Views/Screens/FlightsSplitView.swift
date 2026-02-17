@@ -1171,7 +1171,7 @@ private struct FlightsListContent: View {
 
 // MARK: - Empty Detail View
 private struct EmptyDetailView: View {
-    @ObservedObject private var themeService = ThemeService.shared
+    @Environment(ThemeService.self) private var themeService
     let isSelectMode: Bool
     let onAddFlight: () -> Void
 
