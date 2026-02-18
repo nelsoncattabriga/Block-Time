@@ -93,7 +93,7 @@ struct FRMSView: View {
                                         label: {
                                             HStack {
                                                 Text("Next Duty Limits")
-                                                    .font(.title2)
+                                                    .font(.headline)
                                                     .fontWeight(.semibold)
 
                                                 Spacer()
@@ -128,7 +128,7 @@ struct FRMSView: View {
                                         },
                                         label: {
                                             Text("Minimum Base Turnaround Time")
-                                                .font(.title2)
+                                                .font(.headline)
                                                 .fontWeight(.semibold)
                                         }
                                     )
@@ -147,7 +147,7 @@ struct FRMSView: View {
                                         },
                                         label: {
                                             Text("Recent Duties")
-                                                .font(.title2)
+                                                .font(.headline)
                                                 .fontWeight(.semibold)
                                         }
                                     )
@@ -191,7 +191,7 @@ struct FRMSView: View {
     private func minimumRestSection(limits: A320B737NextDutyLimits) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Earliest Sign-On")
-                .font(.title2)
+                .font(.headline)
                 .fontWeight(.semibold)
 
             HStack {
@@ -226,7 +226,7 @@ struct FRMSView: View {
     private var cumulativeLimitsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Cumulative Limits")
-                .font(.title2)
+                .font(.headline)
                 .fontWeight(.semibold)
 
             if let totals = viewModel.cumulativeTotals {
@@ -274,7 +274,7 @@ struct FRMSView: View {
 
                     // Next Duty Limits Title
                     Text("Next Duty Limits")
-                        .font(.title2)
+                        .font(.headline)
                         .fontWeight(.semibold)
 
                     // Max Duty Card (with controls inside)
@@ -1113,7 +1113,7 @@ struct FRMSView: View {
             // Title only shown for SH fleet (LH has it in DisclosureGroup)
             if viewModel.configuration.fleet == .a320B737 {
                 Text("Recent Duties") // - \(viewModel.configuration.homeBase)")
-                    .font(.title2)
+                    .font(.headline)
                     .fontWeight(.semibold)
             }
 
