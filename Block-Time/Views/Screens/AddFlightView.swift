@@ -1432,7 +1432,7 @@ private struct ModernTogglesSection: View {
                             Text("PF")
                                 .font(.subheadline.bold())
                                 .foregroundColor(viewModel.isPilotFlying ? .white : .secondary)
-                                .frame(width: 55, height: 28)
+                                .frame(width: 55, height: 30)
                                 .background(viewModel.isPilotFlying ? Color.green : Color.clear)
                                 .contentShape(Rectangle())
                         }
@@ -1450,7 +1450,7 @@ private struct ModernTogglesSection: View {
                             Text("PM")
                                 .font(.subheadline.bold())
                                 .foregroundColor(!viewModel.isPilotFlying ? .white : .secondary)
-                                .frame(width: 55, height: 28)
+                                .frame(width: 55, height: 30)
                                 .background(!viewModel.isPilotFlying ? Color.gray : Color.clear)
                                 .contentShape(Rectangle())
                         }
