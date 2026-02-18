@@ -93,7 +93,7 @@ struct FRMSView: View {
                                         label: {
                                             HStack {
                                                 Text("Next Duty Limits")
-                                                    .font(.headline)
+                                                    .font(.title3)
                                                     .fontWeight(.semibold)
 
                                                 Spacer()
@@ -128,7 +128,7 @@ struct FRMSView: View {
                                         },
                                         label: {
                                             Text("Minimum Base Turnaround Time")
-                                                .font(.headline)
+                                                .font(.title3)
                                                 .fontWeight(.semibold)
                                         }
                                     )
@@ -147,7 +147,7 @@ struct FRMSView: View {
                                         },
                                         label: {
                                             Text("Recent Duties")
-                                                .font(.headline)
+                                                .font(.title3)
                                                 .fontWeight(.semibold)
                                         }
                                     )
@@ -190,17 +190,17 @@ struct FRMSView: View {
 
     private func minimumRestSection(limits: A320B737NextDutyLimits) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Earliest Sign-On")
-                .font(.headline)
+            Text("Minimum Rest & Sign-On")
+                .font(.title3)
                 .fontWeight(.semibold)
 
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Minimum Rest")
-                        .font(.subheadline)
+                        .font(.subheadline.bold())
                         .foregroundStyle(.secondary)
                     Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
-                        .font(.title2)
+                        .font(.headline)
                         .fontWeight(.semibold)
                 }
 
@@ -208,16 +208,23 @@ struct FRMSView: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Earliest Sign-On")
-                        .font(.subheadline)
+                        .font(.subheadline.bold())
                         .foregroundStyle(.secondary)
                     Text(formatDateTime(limits.earliestSignOn))
-                        .font(.title2)
+                        .font(.headline)
                         .fontWeight(.semibold)
                 }
             }
-            .padding()
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.regularMaterial)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+            )
         }
     }
 
@@ -226,7 +233,7 @@ struct FRMSView: View {
     private var cumulativeLimitsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Cumulative Limits")
-                .font(.headline)
+                .font(.title3)
                 .fontWeight(.semibold)
 
             if let totals = viewModel.cumulativeTotals {
@@ -274,7 +281,7 @@ struct FRMSView: View {
 
                     // Next Duty Limits Title
                     Text("Next Duty Limits")
-                        .font(.headline)
+                        .font(.title3)
                         .fontWeight(.semibold)
 
                     // Max Duty Card (with controls inside)
@@ -510,7 +517,7 @@ struct FRMSView: View {
                 .foregroundStyle(.secondary)
 
             Text(formatTime(hours))
-                .font(.subheadline)
+                .font(.body)
                 .fontWeight(.semibold)
         }
     }
@@ -1113,7 +1120,7 @@ struct FRMSView: View {
             // Title only shown for SH fleet (LH has it in DisclosureGroup)
             if viewModel.configuration.fleet == .a320B737 {
                 Text("Recent Duties (\(viewModel.configuration.homeBase))")
-                    .font(.headline)
+                    .font(.title3)
                     .fontWeight(.semibold)
             }
 
@@ -1500,82 +1507,100 @@ struct FRMSView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .iPadScaledFont(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
 
                     Spacer()
 
                     Image(systemName: status.icon)
                         .foregroundStyle(statusColor(status))
+                        .iPadScaledFont(.headline)
                 }
 
                 HStack(alignment: .lastTextBaseline, spacing: 4) {
                     Text(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(current) : String(format: "%.1f", current))
-                        .font(.title)
+                        .iPadScaledFont(.subheadline)
                         .fontWeight(.bold)
+                        .foregroundColor(.primary)
 
                     Text("/ \(Int(limit)) \(unit)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .iPadScaledFont(.caption)
+                        .foregroundColor(.secondary)
                 }
 
                 ProgressView(value: current, total: limit)
                     .tint(progressColor(status))
-
-//                Text(String(format: "%.0f%% used", percentageOfLimit(used: current, limit: limit)))
-//                    .font(.caption)
-//                    .foregroundStyle(.secondary)
             }
-            .padding()
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.regularMaterial)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(statusColor(status).opacity(0.3), lineWidth: 1)
+            )
         }
 
         private func buildDaysOffCard(daysOff: Int, required: Int) -> some View {
             let periodDays = viewModel.configuration.fleet.flightTimePeriodDays
+            let statusColor: Color = daysOff >= required ? .green : .orange
             return VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Days Off (\(periodDays) Days)")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .iPadScaledFont(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
 
                     Spacer()
 
                     Image(systemName: daysOff >= required ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                        .foregroundStyle(daysOff >= required ? .green : .orange)
+                        .foregroundStyle(statusColor)
+                        .iPadScaledFont(.headline)
                 }
 
                 HStack(alignment: .lastTextBaseline, spacing: 4) {
                     Text("\(daysOff)")
-                        .font(.title)
+                        .iPadScaledFont(.subheadline)
                         .fontWeight(.bold)
+                        .foregroundColor(.primary)
 
                     Text("/ \(required) days")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .iPadScaledFont(.caption)
+                        .foregroundColor(.secondary)
                 }
 
                 // Spacer to match the height of ProgressView in buildLimitCard
                 Spacer()
                     .frame(height: 6)
             }
-            .padding()
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.regularMaterial)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(statusColor.opacity(0.3), lineWidth: 1)
+            )
         }
 
         private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Consecutive Duties")
-                    .font(.headline)
-                    .fontWeight(.medium)
+                    .iPadScaledFont(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.secondary)
 
                 HStack(spacing: 16) {
                     if let maxConsec = totals.maxConsecutiveDuties {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveDuties)")
-                                    .font(.title2)
+                                    .font(.headline)
                                     .fontWeight(.bold)
                                     .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
                                 Text("/\(maxConsec)")
@@ -1592,7 +1617,7 @@ struct FRMSView: View {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.dutyDaysIn11Days)")
-                                    .font(.title2)
+                                    .font(.headline)
                                     .fontWeight(.bold)
                                     .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
                                 Text("/\(maxDuty11)")
@@ -1609,7 +1634,7 @@ struct FRMSView: View {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveEarlyStarts)")
-                                    .font(.title2)
+                                    .font(.headline)
                                     .fontWeight(.bold)
                                     .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
                                 Text("/\(maxEarly)")
@@ -1626,7 +1651,7 @@ struct FRMSView: View {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveLateNights)")
-                                    .font(.title2)
+                                    .font(.headline)
                                     .fontWeight(.bold)
                                     .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
                                 Text("/\(maxLate)")
@@ -1641,9 +1666,16 @@ struct FRMSView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .padding()
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.regularMaterial)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+            )
         }
 
         // MARK: - Helper Methods
@@ -1684,7 +1716,7 @@ struct FRMSView: View {
                     VStack {
                         HStack(alignment: .lastTextBaseline, spacing: 2) {
                             Text("\(totals.consecutiveDuties)")
-                                .font(.title2)
+                                .font(.headline)
                                 .fontWeight(.bold)
                                 .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
                             Text("/\(maxConsec)")
@@ -1701,7 +1733,7 @@ struct FRMSView: View {
                     VStack {
                         HStack(alignment: .lastTextBaseline, spacing: 2) {
                             Text("\(totals.dutyDaysIn11Days)")
-                                .font(.title2)
+                                .font(.headline)
                                 .fontWeight(.bold)
                                 .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
                             Text("/\(maxDuty11)")
@@ -1718,7 +1750,7 @@ struct FRMSView: View {
                     VStack {
                         HStack(alignment: .lastTextBaseline, spacing: 2) {
                             Text("\(totals.consecutiveEarlyStarts)")
-                                .font(.title2)
+                                .font(.headline)
                                 .fontWeight(.bold)
                                 .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
                             Text("/\(maxEarly)")
@@ -1735,7 +1767,7 @@ struct FRMSView: View {
                     VStack {
                         HStack(alignment: .lastTextBaseline, spacing: 2) {
                             Text("\(totals.consecutiveLateNights)")
-                                .font(.title2)
+                                .font(.headline)
                                 .fontWeight(.bold)
                                 .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
                             Text("/\(maxLate)")
