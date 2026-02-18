@@ -1112,14 +1112,14 @@ struct FRMSView: View {
         VStack(alignment: .leading, spacing: 16) {
             // Title only shown for SH fleet (LH has it in DisclosureGroup)
             if viewModel.configuration.fleet == .a320B737 {
-                Text("Recent Duties") // - \(viewModel.configuration.homeBase)")
+                Text("Recent Duties (\(viewModel.configuration.homeBase))")
                     .font(.headline)
                     .fontWeight(.semibold)
             }
 
-            Text("Home Base: \(viewModel.configuration.homeBase)")
-                .font(.subheadline)
-                .fontWeight(.semibold)
+//            Text("Home Base: \(viewModel.configuration.homeBase)")
+//                .font(.subheadline)
+//                .fontWeight(.semibold)
 
             if !viewModel.recentDutiesByDay.isEmpty {
                 VStack(spacing: 8) {
