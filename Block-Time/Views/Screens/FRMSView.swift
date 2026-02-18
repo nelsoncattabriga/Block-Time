@@ -576,7 +576,7 @@ struct FRMSView: View {
                         .frame(height: 35)
 
                     dutyColumn(
-                        title: ">7 hrs Night",
+                        title: "> 7 hrs Night",
                         value: "9.5"
                     )
 
@@ -595,7 +595,7 @@ struct FRMSView: View {
                         .frame(height: 35)
 
                     dutyColumn(
-                        title: ">7 hrs Night",
+                        title: "> 7 hrs Night",
                         value: "9.5"
                     )
 

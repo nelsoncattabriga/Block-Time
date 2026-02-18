@@ -152,7 +152,7 @@ private struct CompactLayoutView: View {
                             }
                         }) {
                             HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
+                                Image(systemName: "chevron.left").imageScale(.medium)
                                 Text("Flights")
                             }
                         }
