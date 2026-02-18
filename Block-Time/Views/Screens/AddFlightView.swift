@@ -1816,7 +1816,7 @@ private struct ModernFlightNumberField: View {
                         }) {
                             HStack(spacing: 4) {
                                 //Image(systemName: useAlphanumericKeyboard ? "textformat.123" : "textformat.abc")
-                                Text(useAlphanumericKeyboard ? "123" : "ABC")
+                                Text(useAlphanumericKeyboard ? "123" : "abc")
                             }
                             .fontWeight(.semibold)
                         }
@@ -1827,7 +1827,8 @@ private struct ModernFlightNumberField: View {
                     Button("Done") {
                         textFieldFocused = false
                     }
-                    .fontWeight(.semibold)
+                    .font(.subheadline.bold())
+//                    .fontWeight(.semibold)
                 }
             }
         }
@@ -1892,7 +1893,8 @@ private struct ModernEditableField: View {
                     Button("Done") {
                         textFieldFocused = false
                     }
-                    .fontWeight(.semibold)
+                    .font(.subheadline.bold())
+//                    .fontWeight(.semibold)
                 }
             }
         }
@@ -1986,7 +1988,7 @@ private struct ModernTimeField: View {
                 } else {
                     TextField("HH:MM", text: $value)
                         .font(.subheadline.bold())
-                        .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numbersAndPunctuation)
+                        .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad)
                         .focused($timeFieldFocused)
                         .onChange(of: value) { _, newValue in
                             value = applyFormatting(newValue)
@@ -2022,10 +2024,11 @@ private struct ModernTimeField: View {
             ToolbarItemGroup(placement: .keyboard) {
                 if timeFieldFocused {
                     Spacer()
-                    Button("Done") {
+                    Button("Done"){
                         timeFieldFocused = false
                     }
-                    .fontWeight(.semibold)
+                    .font(.subheadline.bold())
+//                    .fontWeight(.semibold)
                 }
             }
         }
@@ -2167,10 +2170,11 @@ private struct ModernDecimalTimeField: View {
             ToolbarItemGroup(placement: .keyboard) {
                 if decimalFieldFocused {
                     Spacer()
-                    Button("Done") {
+                    Button("Done"){
                         decimalFieldFocused = false
                     }
-                    .fontWeight(.semibold)
+                    .font(.subheadline.bold())
+//                    .fontWeight(.semibold)
                 }
             }
         }
@@ -2212,7 +2216,7 @@ private struct ModernIntegerField: View {
 
                 TextField("0", text: $editingText)
                     .font(.subheadline.bold())
-                    .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numbersAndPunctuation)
+                    .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad)
                     .focused($integerFieldFocused)
                     .onChange(of: editingText) { _, newValue in
                         // Only allow digits
@@ -2252,10 +2256,11 @@ private struct ModernIntegerField: View {
             ToolbarItemGroup(placement: .keyboard) {
                 if integerFieldFocused {
                     Spacer()
-                    Button("Done") {
+                    Button("Done"){
                         integerFieldFocused = false
                     }
-                    .fontWeight(.semibold)
+                    .font(.subheadline.bold())
+//                    .fontWeight(.semibold)
                 }
             }
         }
@@ -2308,10 +2313,11 @@ private struct ModernRemarksField: View {
             ToolbarItemGroup(placement: .keyboard) {
                 if editorFocused {
                     Spacer()
-                    Button("Done") {
+                    Button("Done"){
                         editorFocused = false
                     }
-                    .fontWeight(.semibold)
+                    .font(.subheadline.bold())
+//                    .fontWeight(.semibold)
                 }
             }
         }

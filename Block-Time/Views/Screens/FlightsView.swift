@@ -237,6 +237,19 @@ struct FlightsView: View {
                         selectedFlight = nil
                     }
             }
+            .navigationDestination(isPresented: $isAddingNewFlight) {
+                AddFlightView()
+                    .environmentObject(viewModel)
+                    .onAppear {
+                        viewModel.exitEditingMode() // Ensure we're not in edit mode
+                    }
+                    .onDisappear {
+                        // Reload flights and reset fields when returning from add
+                        loadFlights()
+                        viewModel.resetAllFields()
+                        isAddingNewFlight = false
+                    }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 16) {
@@ -435,24 +448,6 @@ struct FlightsView: View {
                         deleteSummary(summaryToDelete)
                     }
                 )
-            }
-            .sheet(isPresented: $isAddingNewFlight) {
-                NavigationStack {
-                    AddFlightView()
-                        .environmentObject(viewModel)
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Cancel") {
-                                    isAddingNewFlight = false
-                                    viewModel.resetAllFields()
-                                }
-                            }
-                        }
-                        .onAppear {
-                            viewModel.exitEditingMode() // Ensure we're not in edit mode
-                        }
-                }
             }
     }
 
