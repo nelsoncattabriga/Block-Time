@@ -167,7 +167,8 @@ struct FRMSView: View {
                     .opacity(viewModel.isLoading ? 0.3 : 1.0)
                 }
             }
-            .navigationTitle("\(viewModel.configuration.fleet.shortName) FRMS")
+            .navigationTitle(Text("FRMS"))
+//            .navigationTitle("\(viewModel.configuration.fleet.shortName) FRMS")
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGroupedBackground))
             .onAppear {
