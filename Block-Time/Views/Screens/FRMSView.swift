@@ -503,13 +503,13 @@ struct FRMSView: View {
         }
     }
     
-    private func dutyColumn(title: String, value: String) -> some View {
+    private func dutyColumn(title: String, hours: Double) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Text("\(value) hrs")
+            Text(formatTime(hours))
                 .font(.subheadline)
                 .fontWeight(.semibold)
         }
@@ -525,7 +525,7 @@ struct FRMSView: View {
             HStack(spacing: 12) {
                 dutyColumn(
                     title: "1-4 Sectors",
-                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)
+                    hours: displayWindow.limits.maxDutySectors1to4
                 )
 
                 Divider()
@@ -533,7 +533,7 @@ struct FRMSView: View {
 
                 dutyColumn(
                     title: "5 Sectors",
-                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors5)
+                    hours: displayWindow.limits.maxDutySectors5
                 )
 
                 Divider()
@@ -541,7 +541,7 @@ struct FRMSView: View {
 
                 dutyColumn(
                     title: "6 Sectors",
-                    value: formatHoursMinutes(displayWindow.limits.maxDutySectors6)
+                    hours: displayWindow.limits.maxDutySectors6
                 )
 
                 Spacer()
@@ -562,7 +562,7 @@ struct FRMSView: View {
                 HStack(spacing: 12) {
                     dutyColumn(
                         title: "1 Sector",
-                        value: "10.5"
+                        hours: 10.5
                     )
 
                     Divider()
@@ -570,7 +570,7 @@ struct FRMSView: View {
 
                     dutyColumn(
                         title: "2+ Sectors",
-                        value: "10"
+                        hours: 10.0
                     )
 
                     Divider()
@@ -578,7 +578,7 @@ struct FRMSView: View {
 
                     dutyColumn(
                         title: "> 7 hrs Night",
-                        value: "9.5"
+                        hours: 9.5
                     )
 
                     Spacer()
@@ -589,7 +589,7 @@ struct FRMSView: View {
                 HStack(spacing: 12) {
                     dutyColumn(
                         title: "Standard",
-                        value: "10"
+                        hours: 10.0
                     )
 
                     Divider()
@@ -597,7 +597,7 @@ struct FRMSView: View {
 
                     dutyColumn(
                         title: "> 7 hrs Night",
-                        value: "9.5"
+                        hours: 9.5
                     )
 
                     Spacer()
@@ -1226,7 +1226,7 @@ struct FRMSView: View {
                 .foregroundStyle(.primary)
             
             // Duty and flight time limits - adaptive layout
-            AdaptiveLimitLayout(range: range, limitType: limitType)
+            AdaptiveLimitLayout(range: range, limitType: limitType, showTimesInHoursMinutes: appViewModel.showTimesInHoursMinutes)
             
             if let notes = range.notes {
                 Text(notes)
@@ -1248,9 +1248,18 @@ struct FRMSView: View {
     private struct AdaptiveLimitLayout: View {
         let range: SignOnTimeRange
         let limitType: FRMSLimitType
-        
+        let showTimesInHoursMinutes: Bool
+
         @Environment(\.horizontalSizeClass) var horizontalSizeClass
-        
+
+        private func formatTime(_ hours: Double) -> String {
+            if showTimesInHoursMinutes {
+                return hours.toHoursMinutesString
+            } else {
+                return String(format: "%.1f hrs", hours)
+            }
+        }
+
         var body: some View {
             if horizontalSizeClass == .compact {
                 // iPhone layout (2x2 grid)
@@ -1259,13 +1268,13 @@ struct FRMSView: View {
                         LimitInfoView(
                             icon: "clock",
                             label: "Max Duty Hours",
-                            value: "\(formatHoursMinutes(range.getMaxDuty(for: limitType))) hrs"
+                            value: formatTime(range.getMaxDuty(for: limitType))
                         )
 
                         LimitInfoView(
                             icon: "airplane",
                             label: "Max Flight Hours",
-                            value: "\(formatHoursMinutes(range.getMaxFlight(for: limitType))) hrs"
+                            value: formatTime(range.getMaxFlight(for: limitType))
                         )
                     }
 
@@ -1273,13 +1282,13 @@ struct FRMSView: View {
                         LimitInfoView(
                             icon: "bed.double",
                             label: "Pre Duty Rest",
-                            value: "\(formatHoursMinutes(range.preRestRequired)) hrs"
+                            value: formatTime(range.preRestRequired)
                         )
 
                         LimitInfoView(
                             icon: "bed.double.fill",
                             label: "Post Duty Rest",
-                            value: "\(formatHoursMinutes(range.postRestRequired)) hrs"
+                            value: formatTime(range.postRestRequired)
                         )
                     }
                 }
@@ -1291,7 +1300,7 @@ struct FRMSView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("\(formatHoursMinutes(range.getMaxDuty(for: limitType))) hrs")
+                        Text(formatTime(range.getMaxDuty(for: limitType)))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundStyle(.primary)
@@ -1304,7 +1313,7 @@ struct FRMSView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("\(formatHoursMinutes(range.getMaxFlight(for: limitType))) hrs")
+                        Text(formatTime(range.getMaxFlight(for: limitType)))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundStyle(.primary)
@@ -1317,7 +1326,7 @@ struct FRMSView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("\(formatHoursMinutes(range.preRestRequired)) hrs")
+                        Text(formatTime(range.preRestRequired))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundStyle(.primary)
@@ -1330,7 +1339,7 @@ struct FRMSView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("\(formatHoursMinutes(range.postRestRequired)) hrs")
+                        Text(formatTime(range.postRestRequired))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundStyle(.primary)
@@ -1783,6 +1792,16 @@ struct FRMSView: View {
     }
 
     // MARK: - Helper Methods
+
+    /// Formats decimal hours respecting the Flight Times display setting.
+    /// Returns "H:MM" in hrs:min mode, or "X.X hrs" in decimal mode.
+    private func formatTime(_ decimalHours: Double) -> String {
+        if appViewModel.showTimesInHoursMinutes {
+            return decimalHours.toHoursMinutesString
+        } else {
+            return String(format: "%.1f hrs", decimalHours)
+        }
+    }
 
     private func updateMaxNextDuty() {
         viewModel.maximumNextDuty = viewModel.calculateMaxNextDuty(
