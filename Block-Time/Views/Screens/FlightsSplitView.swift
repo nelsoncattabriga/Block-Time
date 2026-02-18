@@ -326,7 +326,7 @@ private struct FlightsListContent: View {
                             isAddingNewFlight = true
                         }) {
                             Image(systemName: "plus.circle")
-                                .font(.title3)
+                                .font(.title2)
                         }
                     }
 
