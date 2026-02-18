@@ -106,6 +106,7 @@ struct FRMSView: View {
                                                     }
                                                     .pickerStyle(.segmented)
                                                     .frame(width: 220)
+                                                    .padding(.trailing, 16)
                                                 }
                                             }
                                         }
