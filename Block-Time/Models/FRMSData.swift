@@ -518,14 +518,15 @@ struct FRMSMaximumNextDuty: Codable, Sendable {
 
 /// Represents duty and flight time limits for a specific sign-on time range
 struct SignOnTimeRange: Codable {
-    let timeRange: String               // e.g., "0500-0759"
+    let timeRange: String               // e.g., "0500-0759" or rest facility name for augmented ops
     let maxDutyPeriod: Double           // Hours (planning)
     let maxDutyPeriodOperational: Double? // Hours (operational, if different)
     let maxFlightTime: Double           // Hours (planning)
     let maxFlightTimeOperational: Double? // Hours (operational, if different)
-    let preRestRequired: Double         // Hours
-    let postRestRequired: Double        // Hours
-    let notes: String?                  // e.g., "Day pattern only"
+    let preRestRequired: Double         // Hours (minimum/baseline)
+    let postRestRequired: Double        // Hours (minimum/baseline)
+    let notes: String?                  // e.g., "Max 8 continuous / 14 hrs total in flight deck"
+    let sectorLimit: String?            // e.g., "≤2 sectors if DP > 14 hrs"
 
     func getMaxDuty(for limitType: FRMSLimitType) -> Double {
         if limitType == .operational, let operational = maxDutyPeriodOperational {

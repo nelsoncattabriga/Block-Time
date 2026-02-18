@@ -943,89 +943,566 @@ struct FRMSView: View {
 
     private var maximumNextDutyContent: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Input Parameters and Limits
-            VStack(spacing: 16) {
-                // Crew Complement Picker
-                VStack(spacing: 12) {
-                    Picker("Crew Complement", selection: $selectedCrewComplement) {
-                        ForEach([CrewComplement.twoPilot, .threePilot, .fourPilot], id: \.self) { complement in
-                            Text(complement.description).tag(complement)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: selectedCrewComplement) { _, newValue in
-                        LogManager.shared.debug("FRMSView: Crew complement changed to \(newValue)")
-                        updateMaxNextDuty()
-                    }
 
-                    if selectedCrewComplement != .twoPilot {
-                        Picker("Rest Facility", selection: $selectedRestFacility) {
-                            ForEach([RestFacilityClass.class1, .class2, .mixed, .none], id: \.self) { facility in
-                                Text(facility.description).tag(facility)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .onChange(of: selectedRestFacility) { _, newValue in
-                            LogManager.shared.debug("FRMSView: Rest facility changed to \(newValue)")
-                            updateMaxNextDuty()
-                        }
-                    } else {
-                        // Reset to none for 2-pilot
-                        Text("No rest facility (2-pilot operation)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .onAppear {
-                                selectedRestFacility = .none
-                            }
+            // Crew Complement Picker
+            VStack(spacing: 12) {
+                Picker("Crew Complement", selection: $selectedCrewComplement) {
+                    ForEach([CrewComplement.twoPilot, .threePilot, .fourPilot], id: \.self) { complement in
+                        Text(complement.description).tag(complement)
                     }
                 }
-
-                // Sign-On Time Based Limits (for A380/A330/B787)
-                if let maxDuty = viewModel.maximumNextDuty,
-                   let signOnLimits = maxDuty.signOnBasedLimits,
-                   !signOnLimits.isEmpty {
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Limits by Sign-On Time")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-
-                        VStack(spacing: 12) {
-                            ForEach(signOnLimits.indices, id: \.self) { index in
-                                signOnTimeRangeCard(range: signOnLimits[index], limitType: maxDuty.limitType)
-                            }
-                        }
-                    }
+                .pickerStyle(.segmented)
+                .onChange(of: selectedCrewComplement) { _, newValue in
+                    LogManager.shared.debug("FRMSView: Crew complement changed to \(newValue)")
+                    updateMaxNextDuty()
                 }
             }
             .padding()
             .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            // Maximum Next Duty Display
-           if let maxDuty = viewModel.maximumNextDuty {
+            // Duty & Flight Time Limits
+            if let maxDuty = viewModel.maximumNextDuty,
+               let signOnLimits = maxDuty.signOnBasedLimits,
+               !signOnLimits.isEmpty {
 
-                    if !maxDuty.restrictions.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("Restrictions", systemImage: "exclamationmark.triangle")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Duty & Flight Time Limits")
+                        .font(.headline)
+                        .fontWeight(.semibold)
 
-                            ForEach(maxDuty.restrictions, id: \.self) { restriction in
-                                Text("• \(restriction)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
+                    VStack(spacing: 10) {
+                        ForEach(signOnLimits.indices, id: \.self) { index in
+                            signOnTimeRangeCard(range: signOnLimits[index], limitType: viewModel.selectedLimitType)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(.orange.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
+                }
+                .padding()
+                .background(.thinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            // Rest Requirements
+            lhRestRequirementsSection
+
+            // Deadheading (planning only)
+            if viewModel.selectedLimitType == .planning {
+                lhDeadheadingSection
+            }
+
+            // Relevant Sectors (A380 & B787 only)
+            lhRelevantSectorsSection
+
+            // Cumulative restriction warnings
+            if let maxDuty = viewModel.maximumNextDuty, !maxDuty.restrictions.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Restrictions", systemImage: "exclamationmark.triangle")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.orange)
+
+                    ForEach(maxDuty.restrictions, id: \.self) { restriction in
+                        Text("• \(restriction)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
+        .onAppear {
+            if !viewModel.isLoading, viewModel.cumulativeTotals != nil {
+                updateMaxNextDuty()
+            }
+        }
+        .onChange(of: viewModel.isLoading) { _, isLoading in
+            if !isLoading {
+                updateMaxNextDuty()
+            }
+        }
+        .onChange(of: viewModel.selectedLimitType) { _, _ in
+            updateMaxNextDuty()
+        }
+    }
+
+    // MARK: - LH Rest Requirements Section
+
+    private var lhRestRequirementsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Rest Requirements")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            // Pre-Duty Rest
+            lhRestCard(
+                title: "Minimum Pre-Duty Rest",
+                rows: lhPreDutyRestRows,
+                footnote: lhPreDutyRestFootnote
+            )
+
+            // Post-Duty Rest
+            lhRestCard(
+                title: "Minimum Post-Duty Rest",
+                rows: lhPostDutyRestRows,
+                footnote: lhPostDutyRestFootnote
+            )
+        }
+        .padding()
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    // Row data: (threshold, minRest, condition)
+    private typealias LHRestRow = (threshold: String, minRest: String, condition: String?)
+
+    private var lhPreDutyRestRows: [LHRestRow] {
+        switch (selectedCrewComplement, viewModel.selectedLimitType) {
+        case (.twoPilot, .operational):
+            return LH_Operational_FltDuty.twoPilotPreDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: $0.minimumRestHours.map { "\(Int($0)) hrs" } ?? ($0.minimumRestFormula ?? "—"),
+                 condition: $0.requirements)
+            }
+        case (.twoPilot, .planning):
+            return LH_Planning_FltDuty.twoPilotPreDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: "\(Int($0.minimumRestHours)) hrs",
+                 condition: $0.requirements)
+            }
+        case (.threePilot, .operational):
+            return LH_Operational_FltDuty.threePilotPreDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: $0.minimumRestHours.map { "\(Int($0)) hrs" } ?? "—",
+                 condition: $0.requirements)
+            }
+        case (.threePilot, .planning):
+            return LH_Planning_FltDuty.threePilotPreDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: "\(Int($0.minimumRestHours)) hrs",
+                 condition: $0.requirements)
+            }
+        case (.fourPilot, .operational):
+            return LH_Operational_FltDuty.fourPilotPreDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: $0.minimumRestHours.map { "\(Int($0)) hrs" } ?? "—",
+                 condition: $0.requirements)
+            }
+        case (.fourPilot, .planning):
+            return LH_Planning_FltDuty.fourPilotPreDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: "\(Int($0.minimumRestHours)) hrs",
+                 condition: $0.requirements)
+            }
+        }
+    }
+
+    private var lhPostDutyRestRows: [LHRestRow] {
+        switch (selectedCrewComplement, viewModel.selectedLimitType) {
+        case (.twoPilot, .operational):
+            return LH_Operational_FltDuty.twoPilotPostDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: $0.minimumRestHours.map { "\(Int($0)) hrs" } ?? ($0.minimumRestFormula ?? "—"),
+                 condition: $0.requirements)
+            }
+        case (.twoPilot, .planning):
+            return LH_Planning_FltDuty.twoPilotPostDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: "\(Int($0.minimumRestHours)) hrs",
+                 condition: $0.requirements)
+            }
+        case (.threePilot, .operational):
+            return LH_Operational_FltDuty.threePilotPostDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: $0.minimumRestHours.map { "\(Int($0)) hrs" } ?? "—",
+                 condition: $0.requirements)
+            }
+        case (.threePilot, .planning):
+            return LH_Planning_FltDuty.threePilotPostDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: "\(Int($0.minimumRestHours)) hrs",
+                 condition: $0.requirements)
+            }
+        case (.fourPilot, .operational):
+            return LH_Operational_FltDuty.fourPilotPostDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: $0.minimumRestHours.map { "\(Int($0)) hrs" } ?? "—",
+                 condition: $0.requirements)
+            }
+        case (.fourPilot, .planning):
+            return LH_Planning_FltDuty.fourPilotPostDutyRest.map {
+                (threshold: $0.dutyPeriodThreshold,
+                 minRest: "\(Int($0.minimumRestHours)) hrs",
+                 condition: $0.requirements)
+            }
+        }
+    }
+
+    private var lhPreDutyRestFootnote: String? {
+        switch selectedCrewComplement {
+        case .twoPilot:
+            return viewModel.selectedLimitType == .operational
+                ? LH_Operational_FltDuty.twoPilotConsecutiveDutyNote.text
+                : nil
+        case .threePilot, .fourPilot:
+            return nil
+        }
+    }
+
+    private var lhPostDutyRestFootnote: String? {
+        switch selectedCrewComplement {
+        case .twoPilot:
+            return viewModel.selectedLimitType == .planning
+                ? LH_Planning_FltDuty.twoPilotPostDutyDeadheadNote
+                : nil
+        case .threePilot:
+            return viewModel.selectedLimitType == .operational
+                ? LH_Operational_FltDuty.augmentedPostDutyDeadheadNote
+                : LH_Planning_FltDuty.threePilotPostDutyDeadheadNote
+        case .fourPilot:
+            return viewModel.selectedLimitType == .operational
+                ? LH_Operational_FltDuty.augmentedPostDutyDeadheadNote
+                : LH_Planning_FltDuty.fourPilotPostDutyDeadheadNote
+        }
+    }
+
+    private func lhRestCard(title: String, rows: [LHRestRow], footnote: String?) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.secondary.opacity(0.08))
+
+            ForEach(rows.indices, id: \.self) { i in
+                let row = rows[i]
+                HStack(alignment: .top, spacing: 8) {
+                    Text(row.threshold)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 80, alignment: .leading)
+
+                    Text(row.minRest)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .frame(width: 70, alignment: .leading)
+
+                    if let condition = row.condition {
+                        Text(condition)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+
+                if i < rows.count - 1 {
+                    Divider().padding(.leading, 12)
+                }
+            }
+
+            if let note = footnote, !note.isEmpty {
+                Divider()
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.04))
+            }
+        }
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+    }
+
+    // MARK: - LH Deadheading Section (Planning Only)
+
+    private var lhDeadheadingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Deadheading Limits")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            // Duty Limits
+            VStack(alignment: .leading, spacing: 0) {
+                lhTableHeader(columns: ["Duty Type", "Duty Limit", "Sectors"])
+
+                ForEach(LH_Planning_FltDuty.deadheadLimits.indices, id: \.self) { i in
+                    let limit = LH_Planning_FltDuty.deadheadLimits[i]
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(limit.dutyType.rawValue)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text("\(formatDecimalHours(limit.dutyPeriodLimit)) hrs")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .frame(width: 65, alignment: .center)
+
+                        Text(limit.sectorLimit)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+
+                    if i < LH_Planning_FltDuty.deadheadLimits.count - 1 {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+
+                Divider()
+                Text(LH_Planning_FltDuty.deadheadPreDutyRestNote)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.04))
+            }
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+
+            // Pre-Duty Rest
+            lhRestCard(
+                title: "Deadhead — Min Pre-Duty Rest",
+                rows: LH_Planning_FltDuty.deadheadPreDutyRest.map {
+                    (threshold: $0.dutyPeriodThreshold,
+                     minRest: "\(Int($0.minimumRestHours)) hrs",
+                     condition: $0.requirements)
+                },
+                footnote: nil
+            )
+
+            // Post-Duty Rest
+            lhRestCard(
+                title: "Deadhead — Min Post-Duty Rest",
+                rows: LH_Planning_FltDuty.deadheadPostDutyRest.map {
+                    (threshold: $0.dutyPeriodThreshold,
+                     minRest: "\(Int($0.minimumRestHours)) hrs",
+                     condition: $0.requirements)
+                },
+                footnote: LH_Planning_FltDuty.deadheadPostDutyRestNote
+            )
+        }
+        .padding()
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - LH Relevant Sectors Section
+
+    private var lhRelevantSectorsSection: some View {
+        let sectors = LH_Operational_FltDuty.relevantSectors
+        let postDutyRest = LH_Operational_FltDuty.relevantSectorPostDutyRest
+        let inboundRest = LH_Operational_FltDuty.relevantSectorInboundAUNZRest
+        let preRest = LH_Operational_FltDuty.relevantSectorPreDutyRestHours
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Relevant Sectors — Patterns > 18 hrs")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            Text("A380 & B787 only")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            // Named sectors list
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Relevant Sectors")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.08))
+
+                ForEach(sectors.indices, id: \.self) { i in
+                    HStack(spacing: 8) {
+                        Text(sectors[i])
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+
+                    if i < sectors.count - 1 {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+            }
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+
+            // Disruption Rest table
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Disruption Rest Limits")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.08))
+
+                // Pre-duty
+                HStack(alignment: .top) {
+                    Text("Prior to operating")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("\(Int(preRest)) hrs")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+
+                Divider().padding(.leading, 12)
+
+                Text("After operating a Relevant Sector:")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                ForEach(postDutyRest.indices, id: \.self) { i in
+                    let row = postDutyRest[i]
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(row.condition)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if let hrs = row.minimumRestHours {
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("\(Int(hrs)) hrs")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                if let note = row.note {
+                                    Text(note)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                }
+                            }
+                        } else if let note = row.note {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+
+                    if i < postDutyRest.count - 1 {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+
+                Divider().padding(.leading, 12)
+
+                Text("After Relevant Sector inbound to AU or NZ:")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                ForEach(inboundRest.indices, id: \.self) { i in
+                    let row = inboundRest[i]
+                    HStack {
+                        Text(row.context.rawValue)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text("\(Int(row.minimumRestHours)) hrs")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+
+                    if i < inboundRest.count - 1 {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+            }
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+
+            if viewModel.selectedLimitType == .planning {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("FD3.4.1")
+                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                    Text("Minimum 4 pilot crew for patterns > 18 hrs.")
+                        .font(.caption).foregroundStyle(.secondary)
+
+                    Text("FD3.4.2")
+                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                    Text(LH_Planning_FltDuty.relevantSectorMBTTIncrease)
+                        .font(.caption).foregroundStyle(.secondary)
+
+                    Text("FD3.4.3")
+                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                    Text(LH_Planning_FltDuty.relevantSectorHomeTransport)
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(10)
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .padding()
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - LH Table Helper Views
+
+    private func lhTableHeader(columns: [String]) -> some View {
+        HStack(spacing: 8) {
+            ForEach(columns, id: \.self) { col in
+                Text(col)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.secondary.opacity(0.08))
+    }
+
+    private func formatDecimalHours(_ hours: Double) -> String {
+        if hours == Double(Int(hours)) {
+            return String(Int(hours))
+        }
+        return String(format: "%.1f", hours)
     }
 
     // MARK: - Minimum Base Turnaround Time Section
@@ -1269,87 +1746,66 @@ struct FRMSView: View {
 
         var body: some View {
             if horizontalSizeClass == .compact {
-                // iPhone layout (2x2 grid)
-                VStack(spacing: 12) {
+                // iPhone layout
+                VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 16) {
                         LimitInfoView(
                             icon: "clock",
-                            label: "Max Duty Hours",
+                            label: "Max Duty",
                             value: formatTime(range.getMaxDuty(for: limitType))
                         )
 
                         LimitInfoView(
                             icon: "airplane",
-                            label: "Max Flight Hours",
+                            label: "Max Flight",
                             value: formatTime(range.getMaxFlight(for: limitType))
                         )
                     }
 
-                    HStack(spacing: 16) {
-                        LimitInfoView(
-                            icon: "bed.double",
-                            label: "Pre Duty Rest",
-                            value: formatTime(range.preRestRequired)
-                        )
-
-                        LimitInfoView(
-                            icon: "bed.double.fill",
-                            label: "Post Duty Rest",
-                            value: formatTime(range.postRestRequired)
-                        )
+                    if let sectorLimit = range.sectorLimit {
+                        Label(sectorLimit, systemImage: "arrow.triangle.swap")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
             } else {
-                // iPad layout (original horizontal layout)
-                HStack(spacing: 16) {
+                // iPad layout
+                HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Label("Max Duty Hours", systemImage: "clock")
+                        Label("Max Duty", systemImage: "clock")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
                         Text(formatTime(range.getMaxDuty(for: limitType)))
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
                     }
 
                     Divider()
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Label("Max Flight Hours", systemImage: "airplane")
+                        Label("Max Flight", systemImage: "airplane")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
                         Text(formatTime(range.getMaxFlight(for: limitType)))
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
                     }
 
-                    Divider()
+                    if let sectorLimit = range.sectorLimit {
+                        Divider()
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("Pre Duty Rest", systemImage: "bed.double")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Sectors", systemImage: "arrow.triangle.swap")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
 
-                        Text(formatTime(range.preRestRequired))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
-                    }
-
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("Post Duty Rest", systemImage: "bed.double.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        Text(formatTime(range.postRestRequired))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.primary)
+                            Text(sectorLimit)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -1846,10 +2302,13 @@ struct FRMSView: View {
     }
 
     private func updateMaxNextDuty() {
+        // Use Class 1 as the default rest facility for augmented ops
+        // (rest facility picker removed; all options shown in the duty limits table)
+        let restFacility: RestFacilityClass = selectedCrewComplement == .twoPilot ? .none : .class1
         viewModel.maximumNextDuty = viewModel.calculateMaxNextDuty(
             crewComplement: selectedCrewComplement,
-            restFacility: selectedRestFacility,
-            limitType: .operational  // Always use operational limits
+            restFacility: restFacility,
+            limitType: viewModel.selectedLimitType
         )
     }
 
