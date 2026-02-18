@@ -1529,8 +1529,18 @@ struct FRMSView: View {
                         .foregroundColor(.secondary)
                 }
 
-                ProgressView(value: current, total: limit)
-                    .tint(progressColor(status))
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(progressColor(status).opacity(0.3))
+                            .frame(height: 6)
+
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(progressColor(status))
+                            .frame(width: min(CGFloat(current / limit) * geometry.size.width, geometry.size.width), height: 6)
+                    }
+                }
+                .frame(height: 6)
             }
             .padding(16)
             .background(
