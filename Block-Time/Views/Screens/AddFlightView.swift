@@ -9,6 +9,7 @@ struct AddFlightView: View {
     @Environment(ThemeService.self) private var themeService
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dismiss) private var dismiss
     @State private var showSuccessNotification = false
     @State private var successMessage = ""
 
@@ -46,6 +47,15 @@ struct AddFlightView: View {
             .navigationTitle(viewModel.isEditingMode ? "Edit Flight" : "Add Flight")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
+            .toolbar {
+                if !viewModel.isEditingMode {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Cancel") {
+                            dismiss()
+                        }
+                    }
+                }
+            }
             .sheet(isPresented: $viewModel.showingCamera) {
                 CameraView(onImageSelected: viewModel.handleCameraImage)
             }
