@@ -174,6 +174,8 @@ struct FRMSView: View {
                             }
                         }
                         .padding()
+                        .frame(maxWidth: horizontalSizeClass == .regular ? 800 : .infinity)
+                        .frame(maxWidth: .infinity)
                     }
                     .refreshable {
                         LogManager.shared.debug("FRMSView: Pull-to-refresh triggered")
