@@ -1562,30 +1562,47 @@ struct FRMSView: View {
                 .font(.headline)
                 .fontWeight(.semibold)
 
-            // Duty Limits
+            // Duty Limits — one block per duty type
             VStack(alignment: .leading, spacing: 0) {
-                lhTableHeader(columns: ["Duty Type", "Duty Limit", "Sectors"])
-
                 ForEach(LH_Planning_FltDuty.deadheadLimits.indices, id: \.self) { i in
                     let limit = LH_Planning_FltDuty.deadheadLimits[i]
-                    HStack(alignment: .top, spacing: 8) {
+
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(limit.dutyType.rawValue)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        Text("\(formatDecimalHours(limit.dutyPeriodLimit)) hrs")
-                            .font(.subheadline)
                             .fontWeight(.semibold)
-                            .frame(width: 65, alignment: .center)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                        Text(limit.sectorLimit)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack(alignment: .top, spacing: 24) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Duty Limit")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(formatHoursMinutes(limit.dutyPeriodLimit) + " hrs")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .monospacedDigit()
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Sectors")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(limit.sectorLimit)
+                                    .font(.subheadline)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+
+                        if let req = limit.requirements {
+                            Text(req)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
+                    .padding(.vertical, 10)
 
                     if i < LH_Planning_FltDuty.deadheadLimits.count - 1 {
                         Divider().padding(.leading, 12)
@@ -2073,6 +2090,10 @@ struct FRMSView: View {
             }
         }
 
+        private var flightTimeDisplay: String {
+            range.notes != nil ? "See Note" : formatTime(range.getMaxFlight(for: limitType))
+        }
+
         var body: some View {
             if horizontalSizeClass == .compact {
                 // iPhone layout
@@ -2087,7 +2108,7 @@ struct FRMSView: View {
                         LimitInfoView(
                             icon: "airplane",
                             label: "Max Flight",
-                            value: formatTime(range.getMaxFlight(for: limitType))
+                            value: flightTimeDisplay
                         )
                     }
 
@@ -2117,7 +2138,7 @@ struct FRMSView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text(formatTime(range.getMaxFlight(for: limitType)))
+                        Text(flightTimeDisplay)
                             .font(.subheadline)
                             .fontWeight(.semibold)
                     }
