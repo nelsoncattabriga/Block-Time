@@ -1180,8 +1180,8 @@ struct FRMSView: View {
                 .padding(.top, 6)
             },
             label: {
-                Text("Crew Rest Classification — FD10.2")
-                    .font(.caption)
+                Text("Crew Rest Classification")
+                    .font(.footnote)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
             }
