@@ -90,6 +90,12 @@ struct TwoPilotConsecutiveDutyNote: Codable {
     let text: String
 }
 
+/// An aircraft type with its crew rest classification and optional configuration note (FD10.2.2).
+struct CrewRestAircraftDefinition {
+    let aircraft: String
+    let configuration: String?
+}
+
 // MARK: - LH_Operational_FltDuty
 
 /// All Chapter 1B (FD10) Operational limits for A380/A330/B787.
@@ -411,7 +417,7 @@ enum LH_Operational_FltDuty {
 
     /// Named sectors that qualify as Relevant Sectors.
     static let relevantSectors: [String] = [
-        "Any planned duty period greater than 18 hours",
+        "Any planned duty period > 18 hours",
         "Sydney to Dallas and vice versa",
         "Melbourne to Dallas and vice versa",
         "Perth to London and vice versa",
@@ -461,4 +467,25 @@ enum LH_Operational_FltDuty {
             minimumRestHours: 22
         ),
     ]
+
+    // =========================================================================
+    // MARK: - Crew Rest Facility Definitions (FD10.2.2)
+    // =========================================================================
+
+    /// Aircraft types deemed to meet Class 1 crew rest requirements.
+    static let class1Aircraft: [CrewRestAircraftDefinition] = [
+        CrewRestAircraftDefinition(aircraft: "A380-800",  configuration: nil),
+        CrewRestAircraftDefinition(aircraft: "B787-9",    configuration: nil),
+        CrewRestAircraftDefinition(aircraft: "A330-300",  configuration: "International configuration, dedicated crew rest facility"),
+        CrewRestAircraftDefinition(aircraft: "A330-200L", configuration: "International configuration, dedicated crew rest facility mid cabin"),
+    ]
+
+    /// Aircraft types deemed to meet Class 2 crew rest requirements.
+    static let class2Aircraft: [CrewRestAircraftDefinition] = [
+        CrewRestAircraftDefinition(aircraft: "A330-200L", configuration: "International configuration, dedicated crew rest area at seat 5A"),
+    ]
+
+    /// Statutory note from FD10.2.2.
+    static let crewRestFacilityStatutoryNote =
+        "Aviation Regulatory Authority requirements with respect to adequate rest facilities on board will apply in all relevant situations."
 }
