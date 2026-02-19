@@ -31,7 +31,7 @@ struct FRMSView: View {
 
     @State private var selectedCrewComplement: CrewComplement = .fourPilot
     @State private var selectedRestFacility: CrewRestFacility = .twoClass1
-    @State private var expectedDutyHours: Double = 14.0
+    @State private var expectedDutyHours: Double = 10.0
     @State private var nextDutyIsDeadhead: Bool = false
 
     // Time window selection for SH duty limits display
@@ -1004,7 +1004,7 @@ struct FRMSView: View {
                     }
 
                     VStack(spacing: 10) {
-                        ForEach(filteredSignOnLimits(from: signOnLimits), id: \.timeRange) { range in
+                        ForEach(Array(filteredSignOnLimits(from: signOnLimits).enumerated()), id: \.offset) { _, range in
                             signOnTimeRangeCard(range: range, limitType: viewModel.selectedLimitType)
                         }
                     }

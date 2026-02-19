@@ -371,17 +371,8 @@ class FRMSViewModel: ObservableObject {
             // Pass individual flights for flight time calculations
             self.cumulativeTotals = calculationService.calculateCumulativeTotals(duties: dutiesLast365Days, flights: flightsLast365Days)
 
-            // Recalculate maximum next duty
+            // Recalculate A320/B737 specific limits if applicable
             if let totals = cumulativeTotals {
-                self.maximumNextDuty = calculationService.calculateMaximumNextDuty(
-                    previousDuty: lastDuty,
-                    cumulativeTotals: totals,
-                    limitType: selectedLimitType,
-                    proposedCrewComplement: .twoPilot,
-                    proposedRestFacility: .none
-                )
-
-                // Recalculate A320/B737 specific limits if applicable
                 if configuration.fleet == .a320B737 {
                     self.a320B737NextDutyLimits = calculationService.calculateA320B737NextDutyLimits(
                         previousDuty: lastDuty,
