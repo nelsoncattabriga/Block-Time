@@ -64,7 +64,7 @@ struct FRMSView: View {
     @State private var expandDisruptionRest = false
 
     // Disruption Rest — FD10.2.1
-    @State private var disruptionPreviousDutyHours: Double = 14.0
+    @State private var disruptionPreviousDutyHours: Double = 12.0
     @State private var disruptionTZDifference: Int = 0
     @State private var disruptionNextDutyOver16: Bool = false
 
@@ -1241,7 +1241,7 @@ struct FRMSView: View {
                 HStack {
                     Text("Expected Duty")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.8))
                     Spacer()
                     Picker("Expected Duty", selection: $expectedDutyHours) {
                         ForEach(dutyBandOptions) { band in
@@ -1542,7 +1542,7 @@ struct FRMSView: View {
             ForEach(rows.indices, id: \.self) { i in
                 let row = rows[i]
                 HStack(alignment: .top, spacing: 8) {
-                    Text(row.threshold)
+                    Text(row.threshold == "—" ? row.threshold : "\(row.threshold) hrs")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .frame(minWidth: 80, alignment: .leading)
@@ -2867,7 +2867,7 @@ private struct DisruptionRestSection: View {
                         .frame(height: 20)
                         .padding(.horizontal, 8)
                     Button {
-                        if previousDutyHours > 0.25 { previousDutyHours -= 0.25 }
+                        if previousDutyHours > 12.0 { previousDutyHours -= 0.25 }
                     } label: {
                         Image(systemName: "minus")
                             .font(.subheadline)
