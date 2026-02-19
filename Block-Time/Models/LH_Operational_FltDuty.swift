@@ -159,7 +159,7 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 16,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "≤ 2 sectors if duty period was scheduled to exceed 14"
         ),
         DutyLimit(
@@ -168,7 +168,7 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 18,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "≤ 2 sectors if duty period was scheduled to exceed 14"
         ),
     ]
@@ -190,7 +190,7 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 16,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
         ),
         DutyLimit(
@@ -199,7 +199,7 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 20,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
         ),
         DutyLimit(
@@ -208,7 +208,7 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 20,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
         ),
         DutyLimit(
@@ -217,7 +217,7 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 21,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "A380 & B787 only. >18 hours as per FD3.4"
         ),
     ]

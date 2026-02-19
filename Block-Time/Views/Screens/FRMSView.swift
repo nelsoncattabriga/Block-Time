@@ -1070,9 +1070,13 @@ struct FRMSView: View {
                 updateMaxNextDuty()
             }
         }
-        .onChange(of: viewModel.selectedLimitType) { _, _ in
+        .onChange(of: viewModel.selectedLimitType) { _, newLimitType in
             updateMaxNextDuty()
             expectedDutyHours = dutyBandOptions.first?.value ?? 10.0
+            // Seats in Passenger Compartment is operational-only; reset when switching to planning
+            if newLimitType == .planning && selectedRestFacility == .seatInPassengerCompartment {
+                selectedRestFacility = .twoClass1
+            }
         }
     }
 
@@ -1182,7 +1186,19 @@ struct FRMSView: View {
         case .threePilot:
             return [(.class1, "Class 1"), (.class2, "Class 2")]
         case .fourPilot:
-            return [(.twoClass1, "2× Class 1"), (.oneClass1OneClass2, "Mixed"), (.twoClass2, "2× Class 2")]
+            if viewModel.selectedLimitType == .operational {
+                return [
+                    (.twoClass1, "2× Class 1"),
+                    (.oneClass1OneClass2, "Mixed"),
+                    (.twoClass2, "2× Class 2"),
+                    (.seatInPassengerCompartment, "PAX Seat"),
+                    
+                    
+                    
+                ]
+            } else {
+                return [(.twoClass1, "2× Class 1"), (.oneClass1OneClass2, "Mixed"), (.twoClass2, "2× Class 2")]
+            }
         }
     }
 

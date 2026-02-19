@@ -653,7 +653,7 @@ class FRMSCalculationService {
                     maxFlightTimeOperational: nil,
                     preRestRequired: 12.0,
                     postRestRequired: 12.0,
-                    notes: "Max 8 continuous / 14 hrs total duty in flight deck",
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
                     sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
                     restFacility: .class2
                 ),
@@ -665,7 +665,7 @@ class FRMSCalculationService {
                     maxFlightTimeOperational: nil,
                     preRestRequired: 12.0,
                     postRestRequired: 24.0,
-                    notes: "Max 8 continuous / 14 hrs total duty in flight deck",
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
                     sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
                     restFacility: .class1
                 ),
@@ -682,7 +682,7 @@ class FRMSCalculationService {
                     maxFlightTimeOperational: nil,
                     preRestRequired: 12.0,
                     postRestRequired: postRest,
-                    notes: "Max 8 continuous / 14 hrs total duty in flight deck",
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
                     sectorLimit: limit.sectorLimit,
                     restFacility: limit.restFacility
                 )
@@ -719,7 +719,7 @@ class FRMSCalculationService {
                     maxFlightTimeOperational: nil,
                     preRestRequired: 12.0,
                     postRestRequired: 12.0,
-                    notes: "Max 8 continuous / 14 hrs total duty in flight deck",
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
                     sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
                     restFacility: .twoClass2
                 ),
@@ -731,7 +731,7 @@ class FRMSCalculationService {
                     maxFlightTimeOperational: nil,
                     preRestRequired: 12.0,
                     postRestRequired: 24.0,
-                    notes: "Max 8 continuous / 14 hrs total duty in flight deck. Priority higher class for landing crew.",
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck. Priority higher class for landing crew.",
                     sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
                     restFacility: .oneClass1OneClass2
                 ),
@@ -743,7 +743,7 @@ class FRMSCalculationService {
                     maxFlightTimeOperational: nil,
                     preRestRequired: 12.0,
                     postRestRequired: 24.0,
-                    notes: "Max 8 continuous / 14 hrs total duty in flight deck",
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
                     sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
                     restFacility: .twoClass1
                 ),
