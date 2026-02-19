@@ -31,6 +31,7 @@ struct FRMSView: View {
 
     @State private var selectedCrewComplement: CrewComplement = .fourPilot
     @State private var selectedRestFacility: CrewRestFacility = .twoClass1
+    @State private var selectedSignOnWindow: SignOnWindow = .w0800_1359
     @State private var expectedDutyHours: Double = 10.0
     @State private var nextDutyIsDeadhead: Bool = false
 
@@ -1009,6 +1010,16 @@ struct FRMSView: View {
                         crewRestFacilityNoteView
                     }
 
+                    // Sign-on time picker (2-pilot planning only)
+                    if selectedCrewComplement == .twoPilot && viewModel.selectedLimitType == .planning {
+                        Picker("Sign-On Time", selection: $selectedSignOnWindow) {
+                            ForEach(SignOnWindow.allCases, id: \.self) { window in
+                                Text(window.rawValue).tag(window)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+
                     VStack(spacing: 10) {
                         ForEach(Array(filteredSignOnLimits(from: signOnLimits).enumerated()), id: \.offset) { _, range in
                             signOnTimeRangeCard(range: range, limitType: viewModel.selectedLimitType)
@@ -1204,6 +1215,11 @@ struct FRMSView: View {
 
     private func filteredSignOnLimits(from limits: [SignOnTimeRange]) -> [SignOnTimeRange] {
         if selectedCrewComplement == .twoPilot {
+            // Planning: filter to the selected sign-on window (may return 1 or 2 rows for 0800–1359)
+            if viewModel.selectedLimitType == .planning {
+                return limits.filter { $0.timeRange == selectedSignOnWindow.rawValue }
+            }
+            // Operational: single "All sign-on times" row, show as-is
             return limits
         }
         // For 4-pilot with 2×Class 1 selected, also show the FD3.4 extension row
