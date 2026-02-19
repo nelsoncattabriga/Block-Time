@@ -57,8 +57,8 @@ struct FRMSView: View {
     @State private var expandDeadheading = false
 
     // LH section expansion state
-    @State private var expandNextDutyLimits = true
-    @State private var expandMinimumBaseTurnaround = true
+    @State private var expandNextDutyLimits = false
+    @State private var expandMinimumBaseTurnaround = false
     @State private var expandRecentDuties = false
     @State private var expandCrewRestClassification = false
     @State private var expandDisruptionRest = false
