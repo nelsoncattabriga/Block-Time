@@ -92,35 +92,35 @@ enum LH_Planning_FltDuty {
             signOnWindow: .w0500_0759,
             dutyPeriodLimit: 11,
             flightTimeLimit: 8,
-            sectorLimit: "1 if any sector flight time > 6, otherwise 4"
+            sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
         ),
         // 0800–1359 (standard)
         TwoPilotPlanningLimit(
             signOnWindow: .w0800_1359,
             dutyPeriodLimit: 11,
             flightTimeLimit: 8.5,
-            sectorLimit: "1 if any sector flight time > 6, otherwise 4"
+            sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
         ),
         // 0800–1359 (1 day pattern only)
         TwoPilotPlanningLimit(
             signOnWindow: .w0800_1359,
             dutyPeriodLimit: 12,
             flightTimeLimit: 9.5,
-            sectorLimit: "1 DAY PATTERN ONLY, maximum 4 sectors"
+            sectorLimit: "Day Pattern ONLY, maximum 4 sectors"
         ),
         // 1400–1559
         TwoPilotPlanningLimit(
             signOnWindow: .w1400_1559,
             dutyPeriodLimit: 11,
             flightTimeLimit: 8.5,
-            sectorLimit: "1 if any sector flight time > 6, otherwise 4"
+            sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
         ),
         // 1600–0459
         TwoPilotPlanningLimit(
             signOnWindow: .w1600_0459,
             dutyPeriodLimit: 10,
             flightTimeLimit: 8,
-            sectorLimit: "1 if any sector flight time > 6; 2 if sign-on 2100–0300 LT; 2 if any sector flight time > 2, otherwise 3"
+            sectorLimit: "1 Sector if Flight Time > 6 hrs; 2 Sectors if sign-on 2100–0300 LT; 2 Sectors if Flight Time > 2 hrs, otherwise 3 Sectors"
         ),
     ]
 

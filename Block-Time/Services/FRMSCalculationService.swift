@@ -616,7 +616,7 @@ class FRMSCalculationService {
                     maxFlightTimeOperational: nil,
                     preRestRequired: limit.flightTimeLimit < 8.5 ? 11.0 : 22.0,
                     postRestRequired: limit.flightTimeLimit < 8.5 ? 11.0 : 22.0,
-                    notes: isDayPattern ? "1 day pattern only" : nil,
+                    notes: isDayPattern ? "Day Pattern Only" : nil,
                     sectorLimit: limit.sectorLimit,
                     restFacility: nil
                 )
