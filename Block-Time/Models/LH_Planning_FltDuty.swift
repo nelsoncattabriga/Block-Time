@@ -254,7 +254,7 @@ enum LH_Planning_FltDuty {
     // =========================================================================
 
     static let fourPilotFlightTimeLimitNote =
-        "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck."
+        "Max 8 hrs continuous & 14 hrs total on flight deck."
 
     static let fourPilotMixedRestNote =
         "*1: Consideration to be given to the management of mixed crew rest facilities with priority of the higher class of rest facility for the landing crew."
@@ -263,19 +263,19 @@ enum LH_Planning_FltDuty {
         FourPilotPlanningLimit(
             restFacility: .twoClass2,
             dutyPeriodLimit: 16,
-            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
             sectorLimit: "≤ 2 rostered sectors if duty period was scheduled to exceed 14 hrs"
         ),
         FourPilotPlanningLimit(
             restFacility: .oneClass1OneClass2,
             dutyPeriodLimit: 17.5,
-            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
             sectorLimit: "≤ 2 rostered sectors if duty period was scheduled to exceed 14 hrs"
         ),
         FourPilotPlanningLimit(
             restFacility: .twoClass1,
             dutyPeriodLimit: 20,
-            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
             sectorLimit: "1 rostered sector if duty period was scheduled to exceed 16 hours"
         ),
     ]

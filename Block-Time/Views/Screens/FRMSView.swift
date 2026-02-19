@@ -2144,7 +2144,7 @@ struct FRMSView: View {
                     }
 
                     if let sectorLimit = range.sectorLimit {
-                        Label(sectorLimit, systemImage: "arrow.triangle.swap")
+                        Label(sectorLimit, systemImage: "airplane")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -2178,7 +2178,7 @@ struct FRMSView: View {
                         Divider()
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Label("Sectors", systemImage: "arrow.triangle.swap")
+                            Label("Sectors", systemImage: "airplane")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
 
