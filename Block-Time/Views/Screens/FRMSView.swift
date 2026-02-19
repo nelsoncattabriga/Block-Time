@@ -1888,60 +1888,122 @@ struct FRMSView: View {
 
     private var minimumBaseTurnaroundSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Input Parameters and Result
             VStack(spacing: 16) {
-                // Previous Trip Length Picker
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Trip Length")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Days Away", selection: $mbttDaysAwayCategory) {
-                        Text("1 day").tag("1")
-                        Text("2-4 days").tag("2-4")
-                        Text("5-8 days").tag("5-8")
-                        Text("9-12 days").tag("9-12")
-                        Text(">12 days").tag(">12")
+                if horizontalSizeClass == .compact {
+                    // iPhone: stacked layout
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Trip Length")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Picker("Days Away", selection: $mbttDaysAwayCategory) {
+                            Text("1 day").tag("1")
+                            Text("2-4 days").tag("2-4")
+                            Text("5-8 days").tag("5-8")
+                            Text("9-12 days").tag("9-12")
+                            Text(">12 days").tag(">12")
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: mbttDaysAwayCategory) { _, newValue in
+                            LogManager.shared.debug("FRMSView: MBTT days away changed to \(newValue)")
+                            updateMBTT()
+                        }
                     }
-                    .pickerStyle(.segmented)
-                    .onChange(of: mbttDaysAwayCategory) { _, newValue in
-                        LogManager.shared.debug("FRMSView: MBTT days away changed to \(newValue)")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Trip Credit Hours")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Picker("Credited Hours", selection: $mbttCreditedHoursCategory) {
+                            Text("≤20 hrs").tag("≤20")
+                            Text(">20 hrs").tag(">20")
+                            Text(">40 hrs").tag(">40")
+                            Text(">60 hrs").tag(">60")
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: mbttCreditedHoursCategory) { _, newValue in
+                            LogManager.shared.debug("FRMSView: MBTT credited hours changed to \(newValue)")
+                            updateMBTT()
+                        }
+                    }
+                    Toggle(isOn: $mbttHadDutyOver18Hours) {
+                        Text("Planned duty >18 hrs")
+                            .font(.subheadline)
+                    }
+                    .onChange(of: mbttHadDutyOver18Hours) { _, newValue in
+                        LogManager.shared.debug("FRMSView: MBTT duty over 18 hours changed to \(newValue)")
                         updateMBTT()
                     }
-                }
-
-                // Credited Hours Picker
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Trip Credit Hours")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Credited Hours", selection: $mbttCreditedHoursCategory) {
-                        Text("≤20 hrs").tag("≤20")
-                        Text(">20 hrs").tag(">20")
-                        Text(">40 hrs").tag(">40")
-                        Text(">60 hrs").tag(">60")
+                } else {
+                    // iPad: two-column layout — pickers on left, toggle on right
+                    HStack(alignment: .top, spacing: 24) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Trip Length")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Picker("Days Away", selection: $mbttDaysAwayCategory) {
+                                    Text("1 day").tag("1")
+                                    Text("2-4 days").tag("2-4")
+                                    Text("5-8 days").tag("5-8")
+                                    Text("9-12 days").tag("9-12")
+                                    Text(">12 days").tag(">12")
+                                }
+                                .pickerStyle(.segmented)
+                                .onChange(of: mbttDaysAwayCategory) { _, newValue in
+                                    LogManager.shared.debug("FRMSView: MBTT days away changed to \(newValue)")
+                                    updateMBTT()
+                                }
+                            }
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Trip Credit Hours")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Picker("Credited Hours", selection: $mbttCreditedHoursCategory) {
+                                    Text("≤20 hrs").tag("≤20")
+                                    Text(">20 hrs").tag(">20")
+                                    Text(">40 hrs").tag(">40")
+                                    Text(">60 hrs").tag(">60")
+                                }
+                                .pickerStyle(.segmented)
+                                .onChange(of: mbttCreditedHoursCategory) { _, newValue in
+                                    LogManager.shared.debug("FRMSView: MBTT credited hours changed to \(newValue)")
+                                    updateMBTT()
+                                }
+                            }
+                        }
+                        Divider()
+                        VStack(alignment: .leading, spacing: 16) {
+                            Toggle(isOn: $mbttHadDutyOver18Hours) {
+                                Text("Planned duty >18 hrs")
+                                    .font(.subheadline)
+                            }
+                            .onChange(of: mbttHadDutyOver18Hours) { _, newValue in
+                                LogManager.shared.debug("FRMSView: MBTT duty over 18 hours changed to \(newValue)")
+                                updateMBTT()
+                            }
+                            if let mbtt = calculatedMBTT {
+                                Divider()
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Label("Rest Required:", systemImage: "house.fill")
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                        Text(mbtt.description)
+                                            .font(.headline)
+                                            .fontWeight(.semibold)
+                                            .foregroundStyle(.blue)
+                                    }
+                                }
+                                .padding()
+                                .background(.blue.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+                        .frame(maxWidth: 240)
                     }
-                    .pickerStyle(.segmented)
-                    .onChange(of: mbttCreditedHoursCategory) { _, newValue in
-                        LogManager.shared.debug("FRMSView: MBTT credited hours changed to \(newValue)")
-                        updateMBTT()
-                    }
                 }
 
-
-                // >18 hour duty toggle
-                Toggle(isOn: $mbttHadDutyOver18Hours) {
-                    Text("Planned duty >18 hrs")
-                        .font(.subheadline)
-                }
-                .onChange(of: mbttHadDutyOver18Hours) { _, newValue in
-                    LogManager.shared.debug("FRMSView: MBTT duty over 18 hours changed to \(newValue)")
-                    updateMBTT()
-                }
-
-                // MBTT Result Display
-                if let mbtt = calculatedMBTT {
+                // MBTT Result Display — iPhone only (iPad shows it in the right column above)
+                if horizontalSizeClass == .compact, let mbtt = calculatedMBTT {
                     Divider()
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -2789,6 +2851,8 @@ private struct DisruptionRestSection: View {
     @Binding var nextDutyOver16: Bool
     let crewComplement: CrewComplement
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     // MARK: Clause calculations
 
     private var clauseI: Double {
@@ -2831,12 +2895,25 @@ private struct DisruptionRestSection: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 16)
 
-                inputRows
-                    .padding(.bottom, 12)
-
-                clauseRows
-
-                effectiveRestRow
+                if horizontalSizeClass == .compact {
+                    // iPhone: stacked layout
+                    inputRows
+                        .padding(.bottom, 12)
+                    clauseRows
+                    effectiveRestRow
+                } else {
+                    // iPad: inputs on left, clause results on right
+                    HStack(alignment: .top, spacing: 24) {
+                        inputRows
+                            .frame(maxWidth: .infinity)
+                        Divider()
+                        VStack(alignment: .leading, spacing: 0) {
+                            clauseRows
+                            effectiveRestRow
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
             }
             .padding(.top, 12)
         } label: {
