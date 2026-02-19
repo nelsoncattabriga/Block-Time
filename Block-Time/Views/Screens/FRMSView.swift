@@ -973,14 +973,13 @@ struct FRMSView: View {
                     switch newValue {
                     case .twoPilot:
                         selectedRestFacility = .class1
-                        expectedDutyHours = 10.0
                     case .threePilot:
                         selectedRestFacility = .class1
-                        expectedDutyHours = 14.0
                     case .fourPilot:
                         selectedRestFacility = .twoClass1
-                        expectedDutyHours = 14.0
                     }
+                    // Reset to first valid option for the new complement + current limit type
+                    expectedDutyHours = dutyBandOptions.first?.value ?? 10.0
                     updateMaxNextDuty()
                 }
             }
