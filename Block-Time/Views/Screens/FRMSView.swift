@@ -24,7 +24,7 @@ struct FRMSView: View {
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
     @State private var selectedCrewComplement: CrewComplement = .fourPilot
-    @State private var selectedRestFacility: RestFacilityClass = .class1
+    @State private var selectedRestFacility: CrewRestFacility = .twoClass1
 
     // Time window selection for SH duty limits display
     enum TimeWindowSelection: String, CaseIterable {
@@ -954,6 +954,11 @@ struct FRMSView: View {
                 .pickerStyle(.segmented)
                 .onChange(of: selectedCrewComplement) { _, newValue in
                     LogManager.shared.debug("FRMSView: Crew complement changed to \(newValue)")
+                    switch newValue {
+                    case .twoPilot: break
+                    case .threePilot: selectedRestFacility = .class1
+                    case .fourPilot: selectedRestFacility = .twoClass1
+                    }
                     updateMaxNextDuty()
                 }
             }
@@ -971,9 +976,19 @@ struct FRMSView: View {
                         .font(.headline)
                         .fontWeight(.semibold)
 
+                    // Rest facility picker (3/4-pilot only)
+                    if !restFacilityPickerOptions.isEmpty {
+                        Picker("Rest Facility", selection: $selectedRestFacility) {
+                            ForEach(restFacilityPickerOptions, id: \.facility) { option in
+                                Text(option.label).tag(option.facility)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+
                     VStack(spacing: 10) {
-                        ForEach(signOnLimits.indices, id: \.self) { index in
-                            signOnTimeRangeCard(range: signOnLimits[index], limitType: viewModel.selectedLimitType)
+                        ForEach(filteredSignOnLimits(from: signOnLimits), id: \.timeRange) { range in
+                            signOnTimeRangeCard(range: range, limitType: viewModel.selectedLimitType)
                         }
                     }
                 }
@@ -1026,6 +1041,30 @@ struct FRMSView: View {
         .onChange(of: viewModel.selectedLimitType) { _, _ in
             updateMaxNextDuty()
         }
+    }
+
+    // MARK: - Rest Facility Picker Helpers
+
+    private var restFacilityPickerOptions: [(facility: CrewRestFacility, label: String)] {
+        switch selectedCrewComplement {
+        case .twoPilot:
+            return []
+        case .threePilot:
+            return [(.class1, "Class 1"), (.class2, "Class 2")]
+        case .fourPilot:
+            return [(.twoClass1, "2× Class 1"), (.oneClass1OneClass2, "Mixed"), (.twoClass2, "2× Class 2")]
+        }
+    }
+
+    private func filteredSignOnLimits(from limits: [SignOnTimeRange]) -> [SignOnTimeRange] {
+        if selectedCrewComplement == .twoPilot {
+            return limits
+        }
+        // For 4-pilot with 2×Class 1 selected, also show the FD3.4 extension row
+        if selectedCrewComplement == .fourPilot && selectedRestFacility == .twoClass1 {
+            return limits.filter { $0.restFacility == .twoClass1 || $0.restFacility == .twoClass1FD34 }
+        }
+        return limits.filter { $0.restFacility == selectedRestFacility }
     }
 
     // MARK: - LH Rest Requirements Section

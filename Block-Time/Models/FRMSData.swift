@@ -527,6 +527,7 @@ struct SignOnTimeRange: Codable {
     let postRestRequired: Double        // Hours (minimum/baseline)
     let notes: String?                  // e.g., "Max 8 continuous / 14 hrs total in flight deck"
     let sectorLimit: String?            // e.g., "≤2 sectors if DP > 14 hrs"
+    let restFacility: CrewRestFacility? // nil for 2-pilot (sign-on window rows)
 
     func getMaxDuty(for limitType: FRMSLimitType) -> Double {
         if limitType == .operational, let operational = maxDutyPeriodOperational {
