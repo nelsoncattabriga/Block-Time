@@ -65,7 +65,7 @@ struct FRMSView: View {
 
     // Disruption Rest — FD10.2.1
     @State private var disruptionPreviousDutyHours: Double = 12.0
-    @State private var disruptionTZDifference: Int = 0
+    @State private var disruptionTZDifference: Double = 0.0
     @State private var disruptionNextDutyOver16: Bool = false
 
     var body: some View {
@@ -2830,7 +2830,7 @@ struct FRMSView: View {
 private struct DisruptionRestSection: View {
     @Binding var isExpanded: Bool
     @Binding var previousDutyHours: Double
-    @Binding var tzDifference: Int
+    @Binding var tzDifference: Double
     @Binding var nextDutyOver16: Bool
     let crewComplement: CrewComplement
 
@@ -2863,7 +2863,7 @@ private struct DisruptionRestSection: View {
 
     private var effectiveRest: Double {
         let base = max(clauseI, clauseII ?? 0.0, clauseIII ?? 0.0)
-        return base + Double(tzDifference)
+        return base + max(0, tzDifference - 3)
     }
 
     // MARK: Body
@@ -2960,7 +2960,7 @@ private struct DisruptionRestSection: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 HStack(spacing: 0) {
-                    Text(tzDifference == 0 ? "None" : "+\(tzDifference) hr\(tzDifference == 1 ? "" : "s")")
+                    Text(tzDifference == 0 ? "None" : formatHoursMinutes(tzDifference))
                         .font(.subheadline)
                         .monospacedDigit()
                         .frame(minWidth: 64, alignment: .trailing)
@@ -2968,7 +2968,7 @@ private struct DisruptionRestSection: View {
                         .frame(height: 20)
                         .padding(.horizontal, 8)
                     Button {
-                        if tzDifference > 0 { tzDifference -= 1 }
+                        if tzDifference > 0 { tzDifference -= 0.5 }
                     } label: {
                         Image(systemName: "minus")
                             .font(.subheadline)
@@ -2977,7 +2977,7 @@ private struct DisruptionRestSection: View {
                     Divider()
                         .frame(height: 20)
                     Button {
-                        if tzDifference < 12 { tzDifference += 1 }
+                        if tzDifference < 12 { tzDifference += 0.5 }
                     } label: {
                         Image(systemName: "plus")
                             .font(.subheadline)
