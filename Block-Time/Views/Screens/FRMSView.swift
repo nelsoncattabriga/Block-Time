@@ -2192,7 +2192,7 @@ struct FRMSView: View {
 
                     if let sectorLimit = range.sectorLimit {
                         Label(sectorLimit, systemImage: "airplane")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }

@@ -1,197 +1,199 @@
-                                                                                                                                                    
-  What selectedFleetID Controls Throughout the App                                                                                                   
-                                                                                                                                                     
-  The selectedFleetID setting acts as a global filter and configuration switch that affects multiple aspects of your Logger app:                     
-                                                                                                                                                     
-  1. Photo Capture Feature Availability                                                                                                              
-                                                                                                                                                     
-  AddFlightView.swift:129-130, 222-223                                                                                                               
-  - The ModernPhotoCaptureCard only appears when selectedFleetID == "B737" or selectedFleetID == "B787"                                              
-  - Hidden for A321, All Aircraft, or custom fleets                                                                                                  
-  - This makes sense since you only have OCR templates for Boeing aircraft                                                                           
-                                                                                                                                                     
-  2. OCR Processing Algorithm                                                                                                                        
-                                                                                                                                                     
-  FlightTimeExtractorViewModel.swift:868-873                                                                                                         
-  - Determines which FleetType enum is passed to TextRecognitionService                                                                              
-  - B787 gets .b787 processing, everything else gets .b737 processing                                                                                
-  - Different fleet types have different document layouts requiring specialized text recognition                                                     
-                                                                                                                                                     
-  3. FRMS Configuration Auto-Switching                                                                                                               
-                                                                                                                                                     
-  FlightTimeExtractorViewModel.swift:619-648                                                                                                         
-  - B737 or A321 → Shorthaul FRMS fleet configuration                                                                                                
-  - Other fleets → Longhaul FRMS fleet configuration                                                                                                 
-  - Automatically adjusts fatigue risk management settings based on typical operations                                                               
-                                                                                                                                                     
-  4. Aircraft Registration Filtering                                                                                                                 
-                                                                                                                                                     
-  AircraftRegPickerField.swift:73, 86-87                                                                                                             
-  - Filters which aircraft registrations appear in pickers                                                                                           
-  - Helps users quickly find aircraft from their selected fleet                                                                                      
-                                                                                                                                                     
-  ---                                                                                                                                                
-  How UserDefaultsService and @Published var Interact                                                                                                
-                                                                                                                                                     
-  This is where your architecture gets interesting! You're using three different state management patterns that work together:                       
-                                                                                                                                                     
-  Pattern 1: UserDefaultsService (Centralized Persistence)                                                                                           
-                                                                                                                                                     
-  UserDefaultsService.swift:171, 224, 256, 396-400                                                                                                   
-                                                                                                                                                     
-  // Key definition                                                                                                                                  
-  static let selectedFleetID = "selectedFleetID"                                                                                                     
-                                                                                                                                                     
-  // Loading from disk                                                                                                                               
-  selectedFleetID = UserDefaults.standard.string(forKey: Keys.selectedFleetID) ?? defaults.selectedFleetID                                           
-                                                                                                                                                     
-  // Saving to disk                                                                                                                                  
-  UserDefaults.standard.set(settings.selectedFleetID, forKey: Keys.selectedFleetID)                                                                  
-                                                                                                                                                     
-  // Individual setter with cloud sync                                                                                                               
-  func setSelectedFleetID(_ fleetID: String) {                                                                                                       
-      settings.selectedFleetID = fleetID                                                                                                             
-      UserDefaults.standard.set(fleetID, forKey: Keys.selectedFleetID)                                                                               
-      CloudKitSettingsSyncService.shared.syncSettings()                                                                                              
-  }                                                                                                                                                  
-                                                                                                                                                     
-  Pattern 2: @Published Property (Reactive ViewModel)                                                                                                
-                                                                                                                                                     
-  FlightTimeExtractorViewModel.swift:143, 609-617                                                                                                    
-                                                                                                                                                     
-  @Published var selectedFleetID = "All Aircraft"                                                                                                    
-                                                                                                                                                     
-  func updateSelectedFleetID(_ newFleetID: String) {                                                                                                 
-      selectedFleetID = newFleetID                                                                                                                   
-      UserDefaultsService.shared.setSelectedFleetID(newFleetID)                                                                                      
-      updateFRMSFleetBasedOnSelectedFleet()                                                                                                          
-  }                                                                                                                                                  
-                                                                                                                                                     
-  Pattern 3: @AppStorage (Direct View Binding)                                                                                                       
-                                                                                                                                                     
-  AddFlightView.swift:119, 208                                                                                                                       
-                                                                                                                                                     
-  @AppStorage("selectedFleetID") private var selectedFleetID: String = "All Aircraft"                                                                
-                                                                                                                                                     
-  ---                                                                                                                                                
-  ★ Insight ─────────────────────────────────────                                                                                                    
-                                                                                                                                                     
-  Why Three Patterns for One Value?                                                                                                                  
-                                                                                                                                                     
-  1. @AppStorage provides automatic SwiftUI view updates when UserDefaults changes - perfect for simple UI bindings that don't need business logic   
-  2. @Published in ViewModel allows you to trigger side effects (like updateFRMSFleetBasedOnSelectedFleet()) and maintain reactive state across the  
-  app                                                                                                                                                
-  3. UserDefaultsService centralizes persistence logic, cloud sync, and provides a single source of truth for default values                         
-                                                                                                                                                     
-  The Synchronization Flow:                                                                                                                          
-  - User changes picker in SettingsView → calls viewModel.updateSelectedFleetID()                                                                    
-  - ViewModel updates its @Published property → triggers SwiftUI view refresh                                                                        
-  - ViewModel calls UserDefaultsService.setSelectedFleetID() → persists to disk                                                                      
-  - UserDefaults change automatically propagates to all @AppStorage bindings                                                                         
-  - CloudKitSettingsSyncService syncs the change to iCloud                                                                                           
-                                                                                                                                                     
-  This creates a bidirectional synchronization loop where all three patterns stay in sync automatically!                                             
-                                                                                                                                                     
-  ─────────────────────────────────────────────────                                                                                                  
-                                                                                                                                                     
-  ---                                                                                                                                                
-  The Complete Data Flow                                                                                                                             
-                                                                                                                                                     
-  Here's how everything connects:                                                                                                                    
-                                                                                                                                                     
-  ┌─────────────────────────────────────────────────────┐                                                                                            
-  │ SettingsView (User Interface)                       │                                                                                            
-  │ Picker with custom Binding:                         │                                                                                            
-  │   get: { viewModel.selectedFleetID }               │                                                                                             
-  │   set: { viewModel.updateSelectedFleetID($0) }     │                                                                                             
-  └────────────────────┬────────────────────────────────┘                                                                                            
-                       │                                                                                                                             
-                       ▼                                                                                                                             
-  ┌─────────────────────────────────────────────────────┐                                                                                            
-  │ FlightTimeExtractorViewModel                        │                                                                                            
-  │ @Published var selectedFleetID                      │                                                                                            
-  │                                                      │                                                                                           
-  │ updateSelectedFleetID() {                           │                                                                                            
-  │   1. Update @Published property                     │                                                                                            
-  │   2. Call UserDefaultsService.setSelectedFleetID()  │                                                                                            
-  │   3. Update FRMS configuration automatically        │                                                                                            
-  │ }                                                    │                                                                                           
-  └────────────────────┬────────────────────────────────┘                                                                                            
-                       │                                                                                                                             
-                       ▼                                                                                                                             
-  ┌─────────────────────────────────────────────────────┐                                                                                            
-  │ UserDefaultsService                                  │                                                                                           
-  │ setSelectedFleetID() {                              │                                                                                            
-  │   1. Update settings struct                         │                                                                                            
-  │   2. Write to UserDefaults                          │                                                                                            
-  │   3. Trigger CloudKit sync                          │                                                                                            
-  │ }                                                    │                                                                                           
-  └────────────────────┬────────────────────────────────┘                                                                                            
-                       │                                                                                                                             
-                       ▼                                                                                                                             
-  ┌─────────────────────────────────────────────────────┐                                                                                            
-  │ UserDefaults.standard                                │                                                                                           
-  │ Key: "selectedFleetID"                              │                                                                                            
-  │ Value: "B737" / "B787" / "A321" / "All Aircraft"   │                                                                                             
-  └──────┬──────────────────────────────────────────────┘                                                                                            
-         │                                                                                                                                           
-         │ (Automatic propagation to all @AppStorage)                                                                                                
-         │                                                                                                                                           
-         ├──────────────────────────────────────────────┐                                                                                            
-         ▼                                              ▼                                                                                            
-  ┌─────────────────┐                    ┌──────────────────────┐                                                                                    
-  │ AddFlightView   │                    │ AircraftRegPicker    │                                                                                    
-  │ @AppStorage     │                    │ @AppStorage          │                                                                                    
-  │                 │                    │                      │                                                                                    
-  │ Controls:       │                    │ Controls:            │                                                                                    
-  │ - Photo Capture │                    │ - Fleet filtering    │                                                                                    
-  │   Card visibility│                   └──────────────────────┘                                                                                    
-  └─────────────────┘                                                                                                                                
-                                                                                                                                                     
-  ---                                                                                                                                                
-  ★ Insight ─────────────────────────────────────                                                                                                    
-                                                                                                                                                     
-  Cascade Effects in Action:                                                                                                                         
-                                                                                                                                                     
-  Your architecture includes a clever cascade effect in FlightTimeExtractorViewModel.swift:619-648:                                                  
-                                                                                                                                                     
-  private func updateFRMSFleetBasedOnSelectedFleet() {                                                                                               
-      let newFRMSFleet: String                                                                                                                       
-                                                                                                                                                     
-      switch selectedFleetID {                                                                                                                       
-      case "B737", "A321":                                                                                                                           
-          newFRMSFleet = "Shorthaul (A320/B737)"                                                                                                     
-      default:                                                                                                                                       
-          newFRMSFleet = "Longhaul (A380/A330/B787)"                                                                                                 
-      }                                                                                                                                              
-                                                                                                                                                     
-      if frmsFleet != newFRMSFleet {                                                                                                                 
-          frmsFleet = newFRMSFleet                                                                                                                   
-          NotificationCenter.default.post(name: .frmsFleetDidChange, object: nil)                                                                    
-      }                                                                                                                                              
-  }                                                                                                                                                  
-                                                                                                                                                     
-  This means one user action (changing fleet) automatically triggers multiple system updates:                                                        
-  1. Photo capture availability changes                                                                                                              
-  2. OCR algorithm switches                                                                                                                          
-  3. FRMS configuration updates                                                                                                                      
-  4. Notification broadcasts to other parts of the app                                                                                               
-                                                                                                                                                     
-  This is a great example of implicit event-driven architecture - the user doesn't need to manually configure FRMS settings when switching fleets!   
-                                                                                                                                                     
-  ─────────────────────────────────────────────────                                                                                                  
-                                                                                                                                                     
-  ---                                                                                                                                                
-  Key Locations Reference                                                                                                                            
-                                                                                                                                                     
-  - UserDefaultsService: UserDefaultsService.swift:171, 224, 256, 396-400                                                                            
-  - ViewModel @Published: FlightTimeExtractorViewModel.swift:143                                                                                     
-  - ViewModel Update Logic: FlightTimeExtractorViewModel.swift:609-617                                                                               
-  - FRMS Auto-Config: FlightTimeExtractorViewModel.swift:619-648                                                                                     
-  - Photo Capture Control: AddFlightView.swift:129-130 (Compact), 222-223 (Wide)                                                                     
-  - OCR Fleet Type: FlightTimeExtractorViewModel.swift:868-873                                                                                       
-  - Settings Picker: SettingsView.swift:1524-1539                                                                                                    
-  - Cloud Sync: CloudKitSettingsSyncService.swift:64, 285, 497-500                                                                                   
-                                                                                                                                                     
-  The beauty of this design is that it provides consistency across the app while allowing different parts to interact with the setting in the most   
-  natural way for their context! 
+
+ What selectedFleetID Controls Throughout the App
+
+ The selectedFleetID setting acts as a global filter and configuration switch that affects multiple aspects of your Logger app:
+
+ 1. Photo Capture Feature Availability
+
+ AddFlightView.swift:125-128 (Compact), 217-220 (Wide)
+ - The ModernPhotoCaptureCard appears when selectedFleetID == "B737", "A330", or "B787"
+ - Hidden for A321, A380, All Aircraft, or custom fleets
+ - A330 was added (Feb 2026) — its ACARS format is identical to the B737, so it reuses B737 OCR parsing
+ - Card title is fleet-specific: B737 → "Capture 737 ACARS Data", A330 → "Capture A330 ACARS Data", B787 → "Capture 787 Print Out"
+
+ 2. OCR Processing Algorithm
+
+ FlightTimeExtractorViewModel.swift:948-949
+ - Determines which FleetType enum is passed to TextRecognitionService
+ - B787 gets .b787 processing; B737 and A330 both use .b737 processing (same ACARS layout)
+ - Different fleet types have different document layouts requiring specialized text recognition
+
+ 3. FRMS Configuration Auto-Switching
+
+ FlightTimeExtractorViewModel.swift:619-648
+ - B737 or A321 → Shorthaul FRMS fleet configuration
+ - Other fleets (including A330, B787, A380) → Longhaul FRMS fleet configuration
+ - Automatically adjusts fatigue risk management settings based on typical operations
+
+ 4. Aircraft Registration Filtering
+
+ AircraftRegPickerField.swift:73, 86-87
+ - Filters which aircraft registrations appear in pickers
+ - Helps users quickly find aircraft from their selected fleet
+
+ ---
+ How UserDefaultsService and @Published var Interact
+
+ This is where your architecture gets interesting! You're using three different state management patterns that work together:
+
+ Pattern 1: UserDefaultsService (Centralized Persistence)
+
+ UserDefaultsService.swift:171, 224, 256, 396-400
+
+ // Key definition
+ static let selectedFleetID = "selectedFleetID"
+
+ // Loading from disk
+ selectedFleetID = UserDefaults.standard.string(forKey: Keys.selectedFleetID) ?? defaults.selectedFleetID
+
+ // Saving to disk
+ UserDefaults.standard.set(settings.selectedFleetID, forKey: Keys.selectedFleetID)
+
+ // Individual setter with cloud sync
+ func setSelectedFleetID(_ fleetID: String) {
+     settings.selectedFleetID = fleetID
+     UserDefaults.standard.set(fleetID, forKey: Keys.selectedFleetID)
+     CloudKitSettingsSyncService.shared.syncSettings()
+ }
+
+ Pattern 2: @Published Property (Reactive ViewModel)
+
+ FlightTimeExtractorViewModel.swift:143, 609-617
+
+ @Published var selectedFleetID = "All Aircraft"
+
+ func updateSelectedFleetID(_ newFleetID: String) {
+     selectedFleetID = newFleetID
+     UserDefaultsService.shared.setSelectedFleetID(newFleetID)
+     updateFRMSFleetBasedOnSelectedFleet()
+ }
+
+ Pattern 3: @AppStorage (Direct View Binding)
+
+ AddFlightView.swift:116, 204
+
+ @AppStorage("selectedFleetID") private var selectedFleetID: String = "B737"
+
+ ---
+ ★ Insight ─────────────────────────────────────
+
+ Why Three Patterns for One Value?
+
+ 1. @AppStorage provides automatic SwiftUI view updates when UserDefaults changes - perfect for simple UI bindings that don't need business logic
+ 2. @Published in ViewModel allows you to trigger side effects (like updateFRMSFleetBasedOnSelectedFleet()) and maintain reactive state across the app
+ 3. UserDefaultsService centralizes persistence logic, cloud sync, and provides a single source of truth for default values
+
+ The Synchronization Flow:
+ - User changes picker in SettingsView → calls viewModel.updateSelectedFleetID()
+ - ViewModel updates its @Published property → triggers SwiftUI view refresh
+ - ViewModel calls UserDefaultsService.setSelectedFleetID() → persists to disk
+ - UserDefaults change automatically propagates to all @AppStorage bindings
+ - CloudKitSettingsSyncService syncs the change to iCloud
+
+ This creates a bidirectional synchronization loop where all three patterns stay in sync automatically!
+
+ ─────────────────────────────────────────────────
+
+ ---
+ The Complete Data Flow
+
+ Here's how everything connects:
+
+ ┌─────────────────────────────────────────────────────┐
+ │ SettingsView (User Interface)                       │
+ │ Picker with custom Binding:                         │
+ │   get: { viewModel.selectedFleetID }               │
+ │   set: { viewModel.updateSelectedFleetID($0) }     │
+ └────────────────────┬────────────────────────────────┘
+                      │
+                      ▼
+ ┌─────────────────────────────────────────────────────┐
+ │ FlightTimeExtractorViewModel                        │
+ │ @Published var selectedFleetID                      │
+ │                                                     │
+ │ updateSelectedFleetID() {                           │
+ │   1. Update @Published property                     │
+ │   2. Call UserDefaultsService.setSelectedFleetID()  │
+ │   3. Update FRMS configuration automatically        │
+ │ }                                                   │
+ └────────────────────┬────────────────────────────────┘
+                      │
+                      ▼
+ ┌─────────────────────────────────────────────────────┐
+ │ UserDefaultsService                                 │
+ │ setSelectedFleetID() {                              │
+ │   1. Update settings struct                         │
+ │   2. Write to UserDefaults                          │
+ │   3. Trigger CloudKit sync                          │
+ │ }                                                   │
+ └────────────────────┬────────────────────────────────┘
+                      │
+                      ▼
+ ┌─────────────────────────────────────────────────────┐
+ │ UserDefaults.standard                               │
+ │ Key: "selectedFleetID"                              │
+ │ Value: "B737" / "A330" / "B787" / "A321" / "A380"  │
+ └──────┬──────────────────────────────────────────────┘
+        │
+        │ (Automatic propagation to all @AppStorage)
+        │
+        ├──────────────────────────────────────────────┐
+        ▼                                              ▼
+ ┌─────────────────┐                    ┌──────────────────────┐
+ │ AddFlightView   │                    │ AircraftRegPicker    │
+ │ @AppStorage     │                    │ @AppStorage          │
+ │                 │                    │                      │
+ │ Controls:       │                    │ Controls:            │
+ │ - Photo Capture │                    │ - Fleet filtering    │
+ │   Card visible  │                    └──────────────────────┘
+ │   for B737,     │
+ │   A330, B787    │
+ └─────────────────┘
+
+ ---
+ ★ Insight ─────────────────────────────────────
+
+ Cascade Effects in Action:
+
+ Your architecture includes a clever cascade effect in FlightTimeExtractorViewModel.swift:619-648:
+
+ private func updateFRMSFleetBasedOnSelectedFleet() {
+     let newFRMSFleet: String
+
+     switch selectedFleetID {
+     case "B737", "A321":
+         newFRMSFleet = "Shorthaul (A320/B737)"
+     default:
+         newFRMSFleet = "Longhaul (A380/A330/B787)"
+     }
+
+     if frmsFleet != newFRMSFleet {
+         frmsFleet = newFRMSFleet
+         NotificationCenter.default.post(name: .frmsFleetDidChange, object: nil)
+     }
+ }
+
+ This means one user action (changing fleet) automatically triggers multiple system updates:
+ 1. Photo capture availability changes
+ 2. OCR algorithm switches
+ 3. FRMS configuration updates
+ 4. Notification broadcasts to other parts of the app
+
+ This is a great example of implicit event-driven architecture - the user doesn't need to manually configure FRMS settings when switching fleets!
+
+ ─────────────────────────────────────────────────
+
+ ---
+ Key Locations Reference
+
+ - UserDefaultsService: UserDefaultsService.swift:171, 224, 256, 396-400
+ - ViewModel @Published: FlightTimeExtractorViewModel.swift:143
+ - ViewModel Update Logic: FlightTimeExtractorViewModel.swift:609-617
+ - FRMS Auto-Config: FlightTimeExtractorViewModel.swift:619-648
+ - Photo Capture Control: AddFlightView.swift:125-128 (Compact), 217-220 (Wide)
+ - OCR Fleet Type: FlightTimeExtractorViewModel.swift:948-949  [A330 reuses .b737]
+ - Card Title Logic: AddFlightView.swift:298-305 (ModernPhotoCaptureCard.cardTitle)
+ - Settings Picker: SettingsView.swift:1524-1539
+ - Cloud Sync: CloudKitSettingsSyncService.swift:64, 285, 497-500
+
+ The beauty of this design is that it provides consistency across the app while allowing different parts to interact with the setting in the most natural way for their context!

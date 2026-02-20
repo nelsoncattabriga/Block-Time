@@ -598,7 +598,7 @@ class FRMSCalculationService {
                     maxFlightTimeOperational: 10.5,
                     preRestRequired: 10.0,
                     postRestRequired: 10.0,
-                    notes: "Flight time: 9.5 if >7 hrs darkness  ·  10.0 if >1 sector  ·  10.5 standard",
+                    notes: "Max Flight Time: 10.5 hrs\n9.5hrs if  > 7 hrs darkness\n10 hrs if >1 sector",
                     sectorLimit: nil,
                     restFacility: nil
                 )
@@ -654,7 +654,7 @@ class FRMSCalculationService {
                     preRestRequired: 12.0,
                     postRestRequired: 12.0,
                     notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
-                    sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
                     restFacility: .class2
                 ),
                 SignOnTimeRange(
@@ -666,7 +666,7 @@ class FRMSCalculationService {
                     preRestRequired: 12.0,
                     postRestRequired: 24.0,
                     notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
-                    sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
                     restFacility: .class1
                 ),
             ]
@@ -720,7 +720,7 @@ class FRMSCalculationService {
                     preRestRequired: 12.0,
                     postRestRequired: 12.0,
                     notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
-                    sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
                     restFacility: .twoClass2
                 ),
                 SignOnTimeRange(
@@ -732,7 +732,7 @@ class FRMSCalculationService {
                     preRestRequired: 12.0,
                     postRestRequired: 24.0,
                     notes: "Max 8 hrs continuous & 14 hrs total on flight deck. Priority higher class for landing crew.",
-                    sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
                     restFacility: .oneClass1OneClass2
                 ),
                 SignOnTimeRange(
@@ -744,7 +744,7 @@ class FRMSCalculationService {
                     preRestRequired: 12.0,
                     postRestRequired: 24.0,
                     notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
-                    sectorLimit: "≤2 sectors if DP scheduled > 14 hrs",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
                     restFacility: .twoClass1
                 ),
                 SignOnTimeRange(
