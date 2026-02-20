@@ -13,6 +13,10 @@ struct AddFlightView: View {
     @State private var showSuccessNotification = false
     @State private var successMessage = ""
 
+    private var isInSplitView: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
+    }
+
     var body: some View {
 
 
@@ -48,7 +52,7 @@ struct AddFlightView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                if !viewModel.isEditingMode {
+                if !viewModel.isEditingMode && !isInSplitView {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Cancel") {
                             dismiss()
