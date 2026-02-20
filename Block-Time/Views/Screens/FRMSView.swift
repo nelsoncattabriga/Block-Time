@@ -2136,7 +2136,7 @@ struct FRMSView: View {
             // Duty and flight time limits - adaptive layout
             AdaptiveLimitLayout(range: range, limitType: limitType, showTimesInHoursMinutes: appViewModel.showTimesInHoursMinutes)
             
-            if let notes = range.notes {
+            if let notes = range.notes, horizontalSizeClass != .compact {
                 Text(notes)
                     .font(.footnote)
                     .foregroundStyle(.primary)
@@ -2145,7 +2145,6 @@ struct FRMSView: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(.orange.opacity(0.2))
-                    //.clipShape(Capsule())
             }
         }
         .padding()
@@ -2169,31 +2168,34 @@ struct FRMSView: View {
         }
 
         private var flightTimeDisplay: String {
-            range.notes != nil ? "See Note" : formatTime(range.getMaxFlight(for: limitType))
+            if let notes = range.notes {
+                return horizontalSizeClass == .compact ? notes : "See Note"
+            }
+            return formatTime(range.getMaxFlight(for: limitType))
         }
 
         var body: some View {
             if horizontalSizeClass == .compact {
                 // iPhone layout
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 16) {
-                        LimitInfoView(
-                            icon: "clock",
-                            label: "Max Duty",
-                            value: formatTime(range.getMaxDuty(for: limitType))
-                        )
+                    LimitInfoView(
+                        icon: "clock",
+                        label: "Max Duty",
+                        value: formatTime(range.getMaxDuty(for: limitType))
+                    )
 
-                        LimitInfoView(
-                            icon: "airplane",
-                            label: "Max Flight",
-                            value: flightTimeDisplay
-                        )
-                    }
+                    LimitInfoView(
+                        icon: "airplane",
+                        label: "Max Flight Time",
+                        value: flightTimeDisplay
+                    )
 
                     if let sectorLimit = range.sectorLimit {
-                        Label(sectorLimit, systemImage: "airplane")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                        LimitInfoView(
+                            icon: "airplane",
+                            label: "Sectors",
+                            value: sectorLimit
+                        )
                     }
                 }
             } else {
@@ -2212,7 +2214,7 @@ struct FRMSView: View {
                     Divider()
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Label("Max Flight", systemImage: "airplane")
+                        Label("Max Flight Time", systemImage: "airplane")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
