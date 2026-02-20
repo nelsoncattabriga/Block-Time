@@ -1,0 +1,153 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Plan to implement                                                                                                                                        │
+│                                                                                                                                                          │
+│ Plan: FRMS Duty & Flight Time Limits — UX Restructure                                                                                                    │
+│                                                                                                                                                          │
+│ Context                                                                                                                                                  │
+│                                                                                                                                                          │
+│ The LH (A380/A330/B787) "Next Duty Limits" section stacks a crew complement segmented picker, a rest facility picker, a "Crew Rest Classification"       │
+│ disclosure group, and a sign-on window picker before the user reaches the actual data. The Rest Requirements section has two loosely related controls    │
+│ (Expected Duty menu + Operating/Deadheading segmented picker) with no visual grouping label. These five targeted changes reduce cognitive load, improve  │
+│ visual hierarchy, and clean up card content.                                                                                                             │
+│                                                                                                                                                          │
+│ File to Modify                                                                                                                                           │
+│                                                                                                                                                          │
+│ Block-Time/Views/Screens/FRMSView.swift                                                                                                                  │
+│                                                                                                                                                          │
+│ ---                                                                                                                                                      │
+│ Change 1 & 2: Crew Complement picker → toolbar Menu; body leads with rest classification                                                                 │
+│                                                                                                                                                          │
+│ Add state var (alongside existing @State vars, ~line 63):                                                                                                │
+│ @State private var showRestClassificationSheet = false                                                                                                   │
+│                                                                                                                                                          │
+│ Remove the crew complement picker card from maximumNextDutyContent (lines 963–988 — the VStack(spacing: 12) { Picker(...) }.padding().appCardStyle()     │
+│ block). The Picker is deleted; the .onChange logic must move to the outer VStack in maximumNextDutyContent:                                              │
+│ private var maximumNextDutyContent: some View {                                                                                                          │
+│     VStack(alignment: .leading, spacing: 16) {                                                                                                           │
+│         // ... (no picker card here)                                                                                                                     │
+│     }                                                                                                                                                    │
+│     .onChange(of: selectedCrewComplement) { _, newValue in                                                                                               │
+│         switch newValue {                                                                                                                                │
+│         case .twoPilot: selectedRestFacility = .class1                                                                                                   │
+│         case .threePilot: selectedRestFacility = .class1                                                                                                 │
+│         case .fourPilot: selectedRestFacility = .twoClass1                                                                                               │
+│         }                                                                                                                                                │
+│         expectedDutyHours = dutyBandOptions.first?.value ?? 10.0                                                                                         │
+│         updateMaxNextDuty()                                                                                                                              │
+│     }                                                                                                                                                    │
+│     .onAppear { ... }                                                                                                                                    │
+│     .onChange(of: viewModel.isLoading) { ... }                                                                                                           │
+│     .onChange(of: viewModel.selectedLimitType) { ... }                                                                                                   │
+│ }                                                                                                                                                        │
+│                                                                                                                                                          │
+│ Add .toolbar and .sheet on the outer ZStack (after navigationBarTitleDisplayMode, alongside .navigationTitle):                                           │
+│ .toolbar {                                                                                                                                               │
+│     if viewModel.configuration.fleet == .a380A330B787 {                                                                                                  │
+│         ToolbarItemGroup(placement: .topBarTrailing) {                                                                                                   │
+│             Button {                                                                                                                                     │
+│                 showRestClassificationSheet = true                                                                                                       │
+│             } label: {                                                                                                                                   │
+│                 Image(systemName: "questionmark.circle")                                                                                                 │
+│             }                                                                                                                                            │
+│                                                                                                                                                          │
+│             Menu {                                                                                                                                       │
+│                 Picker("Crew Complement", selection: $selectedCrewComplement) {                                                                          │
+│                     ForEach([CrewComplement.twoPilot, .threePilot, .fourPilot], id: \.self) { c in                                                       │
+│                         Text(c.description).tag(c)                                                                                                       │
+│                     }                                                                                                                                    │
+│                 }                                                                                                                                        │
+│             } label: {                                                                                                                                   │
+│                 Label(selectedCrewComplement.description, systemImage: "person.3")                                                                       │
+│             }                                                                                                                                            │
+│         }                                                                                                                                                │
+│     }                                                                                                                                                    │
+│ }                                                                                                                                                        │
+│ .sheet(isPresented: $showRestClassificationSheet) {                                                                                                      │
+│     crewRestClassificationSheet                                                                                                                          │
+│ }                                                                                                                                                        │
+│                                                                                                                                                          │
+│ ---                                                                                                                                                      │
+│ Change 3: Dividers between data rows in the iPhone detail card                                                                                           │
+│                                                                                                                                                          │
+│ In AdaptiveLimitLayout.body, the if horizontalSizeClass == .compact branch — change VStack(alignment: .leading, spacing: 10) to VStack(alignment:        │
+│ .leading, spacing: 0) and insert Divider().padding(.vertical, 8) between each LimitInfoView:                                                             │
+│                                                                                                                                                          │
+│ VStack(alignment: .leading, spacing: 0) {                                                                                                                │
+│     LimitInfoView(icon: "clock", label: "Max Duty", value: ...)                                                                                          │
+│     Divider().padding(.vertical, 8)                                                                                                                      │
+│     LimitInfoView(icon: "airplane", label: "Max Flight Time", value: flightTimeDisplay)                                                                  │
+│     if let sectorLimit = range.sectorLimit {                                                                                                             │
+│         Divider().padding(.vertical, 8)                                                                                                                  │
+│         LimitInfoView(icon: "airplane.circle", label: "Sectors", value: sectorLimit)                                                                     │
+│     }                                                                                                                                                    │
+│ }                                                                                                                                                        │
+│                                                                                                                                                          │
+│ ---                                                                                                                                                      │
+│ Change 4: "Crew Rest Classification" → sheet (remove from card body)                                                                                     │
+│                                                                                                                                                          │
+│ Remove crewRestFacilityNoteView call from inside the if !restFacilityPickerOptions.isEmpty { } block in maximumNextDutyContent (line 1008).              │
+│                                                                                                                                                          │
+│ Extract the classification content from crewRestFacilityNoteView into a new private var crewRestClassificationSheet:                                     │
+│ private var crewRestClassificationSheet: some View {                                                                                                     │
+│     NavigationStack {                                                                                                                                    │
+│         List {                                                                                                                                           │
+│             ForEach([("Class 1", LH_Operational_FltDuty.class1Aircraft),                                                                                 │
+│                      ("Class 2", LH_Operational_FltDuty.class2Aircraft)], id: \.0) { label, aircraft in                                                  │
+│                 Section(label) {                                                                                                                         │
+│                     ForEach(aircraft, id: \.aircraft) { def in                                                                                           │
+│                         if let config = def.configuration {                                                                                              │
+│                             Text("\(def.aircraft) — \(config)").font(.subheadline)                                                                       │
+│                         } else {                                                                                                                         │
+│                             Text(def.aircraft).font(.subheadline)                                                                                        │
+│                         }                                                                                                                                │
+│                     }                                                                                                                                    │
+│                 }                                                                                                                                        │
+│             }                                                                                                                                            │
+│         }                                                                                                                                                │
+│         .navigationTitle("Crew Rest Classification")                                                                                                     │
+│         .navigationBarTitleDisplayMode(.inline)                                                                                                          │
+│         .toolbar {                                                                                                                                       │
+│             ToolbarItem(placement: .confirmationAction) {                                                                                                │
+│                 Button("Done") { showRestClassificationSheet = false }                                                                                   │
+│             }                                                                                                                                            │
+│         }                                                                                                                                                │
+│     }                                                                                                                                                    │
+│ }                                                                                                                                                        │
+│                                                                                                                                                          │
+│ The old crewRestFacilityNoteView computed var and expandCrewRestClassification state can then be deleted.                                                │
+│                                                                                                                                                          │
+│ ---                                                                                                                                                      │
+│ Change 5: Rest Requirements controls — add "Duty Parameters" header                                                                                      │
+│                                                                                                                                                          │
+│ In lhRestRequirementsSection, inside the inner VStack(spacing: 10) that contains Expected Duty + Operating/Deadheading controls, add a label as the      │
+│ first element:                                                                                                                                           │
+│                                                                                                                                                          │
+│ VStack(alignment: .leading, spacing: 10) {                                                                                                               │
+│     Label("Duty Parameters", systemImage: "slider.horizontal.3")                                                                                         │
+│         .font(.footnote)                                                                                                                                 │
+│         .fontWeight(.semibold)                                                                                                                           │
+│         .foregroundStyle(.secondary)                                                                                                                     │
+│                                                                                                                                                          │
+│     HStack {                                                                                                                                             │
+│         Text("Expected Duty")...                                                                                                                         │
+│         Picker("Expected Duty", ...)...                                                                                                                  │
+│     }                                                                                                                                                    │
+│                                                                                                                                                          │
+│     Picker("Next Duty", selection: $nextDutyIsDeadhead) { ... }                                                                                          │
+│         .pickerStyle(.segmented)                                                                                                                         │
+│ }                                                                                                                                                        │
+│ .padding()                                                                                                                                               │
+│ .background(.ultraThinMaterial)                                                                                                                          │
+│ .clipShape(RoundedRectangle(cornerRadius: 10))                                                                                                           │
+│                                                                                                                                                          │
+│ ---                                                                                                                                                      │
+│ Verification                                                                                                                                             │
+│                                                                                                                                                          │
+│ - Build the app and navigate to the FRMS tab with A380/A330/B787 fleet selected                                                                          │
+│ - Confirm toolbar shows crew complement menu (person.3 icon + label) and info button (questionmark.circle)                                               │
+│ - Tap crew complement menu and switch between 2/3/4 pilot — verify rest facility picker appears/disappears and limits update correctly                   │
+│ - Tap ? button — verify sheet opens with Class 1 / Class 2 aircraft lists                                                                                │
+│ - Expand "Next Duty Limits" — verify body leads with rest facility picker (for 3/4 pilot) or sign-on window picker (for 2 pilot)                         │
+│ - Verify iPhone detail card shows Divider() lines between Max Duty, Max Flight Time, and Sectors rows                                                    │
+│ - Verify Rest Requirements section shows "Duty Parameters" header in the controls group                                                                  │
+│ - Confirm no regressions for A320/B737 fleet (toolbar stays empty, no pilot picker shown)  

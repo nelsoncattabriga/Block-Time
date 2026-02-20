@@ -2046,9 +2046,9 @@ private struct SyncDetailRowView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
-                            .font(.caption2)
+                            .font(.footnote)
                         Text("Last synced \(date.formatted(.relative(presentation: .named)))")
-                            .font(.caption2)
+                            .font(.footnote)
                             .foregroundColor(.secondary)
                     }
 
@@ -2056,9 +2056,9 @@ private struct SyncDetailRowView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "pencil.circle.fill")
                                 .foregroundColor(.blue)
-                                .font(.caption2)
+                                .font(.footnote)
                             Text("Last changed \(changeDate.formatted(.relative(presentation: .named)))")
-                                .font(.caption2)
+                                .font(.footnote)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -2067,9 +2067,9 @@ private struct SyncDetailRowView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "clock")
                         .foregroundColor(.secondary)
-                        .font(.caption2)
+                        .font(.footnote)
                     Text("Not yet synced")
-                        .font(.caption2)
+                        .font(.footnote)
                         .foregroundColor(.secondary)
                 }
             }
