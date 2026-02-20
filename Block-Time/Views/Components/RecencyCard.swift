@@ -81,15 +81,7 @@ struct RecencyCard: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.regularMaterial)
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(recencyStatus.color.opacity(0.3), lineWidth: 1)
-        )
+        .appCardStyle()
         .onAppear {
             updateRecencyStatus()
         }

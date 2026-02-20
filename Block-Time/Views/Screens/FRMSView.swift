@@ -242,16 +242,7 @@ struct FRMSView: View {
                 }
                 .padding(16)
             }
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: AppColors.cardShadow, radius: 8, x: 0, y: 2)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            )
+            .appCardStyle()
         }
     }
 
@@ -2445,16 +2436,7 @@ struct FRMSView: View {
                 }
                 .padding(16)
             }
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: AppColors.cardShadow, radius: 8, x: 0, y: 2)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            )
+            .appCardStyle()
         }
 
         private func buildDaysOffCard(daysOff: Int, required: Int) -> some View {

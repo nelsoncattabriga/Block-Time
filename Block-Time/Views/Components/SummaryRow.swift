@@ -178,14 +178,7 @@ struct SummaryRow: View, Equatable {
             Spacer()
         }
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.regularMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.teal.opacity(0.3), lineWidth: 1.5)
-        )
+        .appCardStyle()
     }
 }
 
