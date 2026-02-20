@@ -946,7 +946,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         statusColor = .blue
 
         // Determine fleet type based on selected fleet
-        let fleetType: FleetType = selectedFleetID == "B787" ? .b787 : .b737
+        let fleetType: FleetType = selectedFleetID == "B787" ? .b787 : .b737  // A330 reuses B737 parsing logic
 
         Task {
             do {

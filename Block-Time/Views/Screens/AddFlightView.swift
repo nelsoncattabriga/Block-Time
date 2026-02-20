@@ -122,11 +122,11 @@ private struct CompactLayoutView: View {
     
     var body: some View {
             LazyVStack(spacing: 16) {
-                // Photo Capture Card - only show when not editing and B737 or B787 fleet is selected
-                if !viewModel.isEditingMode && (selectedFleetID == "B737" || selectedFleetID == "B787") {
+                // Photo Capture Card - only show when not editing and B737, A330, or B787 fleet is selected
+                if !viewModel.isEditingMode && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787") {
                     ModernPhotoCaptureCard(viewModel: viewModel, fleetType: selectedFleetID)
                 }
-                
+
                 // Captured Data Card
                 ModernCapturedDataCard(viewModel: viewModel)
                 
@@ -214,8 +214,8 @@ private struct WideLayoutView: View {
                 HStack(alignment: .top, spacing: 16) {
                     VStack(spacing: 16) {
 
-                        // Photo Capture Card - only show when not editing and B737 or B787 fleet is selected
-                        if !viewModel.isEditingMode && (selectedFleetID == "B737" || selectedFleetID == "B787") {
+                        // Photo Capture Card - only show when not editing and B737, A330, or B787 fleet is selected
+                        if !viewModel.isEditingMode && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787") {
                             ModernPhotoCaptureCard(viewModel: viewModel, fleetType: selectedFleetID)
                         }
 
@@ -296,7 +296,11 @@ private struct ModernPhotoCaptureCard: View {
     var fleetType: String = "B737"
 
     private var cardTitle: String {
-        fleetType == "B787" ? "Capture 787 Print Out" : "Capture 737 ACARS Data"
+        switch fleetType {
+        case "B787": return "Capture 787 Print Out"
+        case "A330": return "Capture A330 ACARS Data"
+        default: return "Capture 737 ACARS Data"
+        }
     }
 
     private var cameraButtonTitle: String {
