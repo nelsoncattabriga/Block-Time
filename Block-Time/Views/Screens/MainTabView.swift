@@ -57,7 +57,7 @@ struct MainTabView: View {
             .tag(1)
 
             // FRMS tab
-            FRMSViewWrapper(flightTimeVM: viewModel, frmsViewModel: frmsViewModel)
+            FRMSSplitView(flightTimeVM: viewModel, frmsViewModel: frmsViewModel)
                 .tabItem {
                     Image(systemName: "clock.badge.checkmark")
                     Text("FRMS")
@@ -128,16 +128,6 @@ struct MainTabView: View {
     }
 }
 
-// Lazy wrapper to prevent FRMS from being created until tab is first visited
-struct FRMSViewWrapper: View {
-    @ObservedObject var flightTimeVM: FlightTimeExtractorViewModel
-    @ObservedObject var frmsViewModel: FRMSViewModel
-
-    var body: some View {
-        FRMSView(viewModel: frmsViewModel, flightTimePosition: flightTimeVM.flightTimePosition)
-            .environmentObject(flightTimeVM)
-    }
-}
 
 #Preview {
     MainTabView()

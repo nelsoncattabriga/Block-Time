@@ -1,0 +1,187 @@
+FRMS iPad Split View Plan                                                                                                                  
+                                                                                                                                            
+ Context                                                                                                                                    
+                                                                                                                                            
+ The FRMS tab is the only remaining tab (besides Dashboard) that doesn't use the left-pane sidebar pattern                                  
+ already established by Logbook and Settings. On iPad this results in a single centred column capped at 800pt                               
+ with wasted space on either side. The goal is to add a sidebar that lists FRMS sections, matching the visual                               
+ language of SettingsSplitView and FlightsSplitView, while keeping the iPhone layout completely unchanged.                                  
+
+ ---
+ Approach
+
+ Core idea
+
+ FRMSView becomes a persistent detail pane. When a new sidebar section is tapped, a @Binding updates
+ what FRMSView renders — it is never recreated, so all calculator @State (crew complement, rest facility,
+ sign-on window, disruption rest inputs, MBTT inputs) is preserved across section switches.
+
+ This is the key advantage over the Settings pattern, where each category is a fresh view. Here, the content
+ is a single stateful calculator that just shows different faces.
+
+ ---
+ Files
+
+ New: FRMSSplitView.swift
+
+ - FRMSSection enum (Hashable, CaseIterable) with fleet-conditional filtering
+ - FRMSSplitView — the wrapper replacing FRMSViewWrapper in MainTabView
+ - FRMSSidebarContent — private struct, modelled exactly on SettingsCategoriesListContent
+ - FRMSEmptyDetailView — shown on first launch before section is selected (matches style of existing empty views)
+
+ FRMSSection enum
+
+ enum FRMSSection: String, Hashable, CaseIterable {
+     case cumulativeLimits   = "Cumulative Limits"
+     case nextDuty           = "Next Duty Limits"
+     case minBaseTurnaround  = "Min. Base Turnaround"  // A380/A330/B787 only
+     case recentDuties       = "Recent Duties"
+
+     var icon: String { ... }     // SF Symbols
+     var color: Color { ... }     // tint for icon badge
+     var subtitle: String { ... } // caption beneath title, like Settings
+ }
+
+ FRMSSplitView filters FRMSSection.allCases based on frmsViewModel.configuration.fleet to hide
+ minBaseTurnaround for A320/B737 users.
+
+ FRMSSplitView structure (iPad path)
+
+ NavigationSplitView(columnVisibility: $columnVisibility) {
+     FRMSSidebarContent(selectedSection: $selectedSection, viewModel: frmsViewModel)
+         .navigationSplitViewColumnWidth(min: 260, ideal: 280, max: 320)
+ } detail: {
+     // Persistent — never recreated when selectedSection changes
+     FRMSView(
+         viewModel: frmsViewModel,
+         flightTimePosition: flightTimeVM.flightTimePosition,
+         selectedSection: $selectedSection
+     )
+     .environmentObject(flightTimeVM)
+ }
+ .navigationSplitViewStyle(.balanced)
+ .onChange(of: scenePhase) { _, newPhase in
+     if newPhase == .active && shouldUseSplitView { columnVisibility = .doubleColumn }
+ }
+
+ iPhone path (unchanged behaviour):
+ FRMSView(viewModel: frmsViewModel, flightTimePosition: flightTimeVM.flightTimePosition)
+     .environmentObject(flightTimeVM)
+
+ FRMSSidebarContent design
+
+ - .listStyle(.sidebar) — matches Settings exactly
+ - Row layout: coloured icon badge + title (bold) + subtitle (caption) — matches SettingsCategoriesListContent
+ - Cumulative Limits row gets a compliance badge: green checkmark, orange warning, or red exclamation
+ derived from viewModel.cumulativeTotals percentage-to-limit values. This gives at-a-glance status
+ without opening the section.
+ - Haptic on selection (.impact(.light)) — matches existing pattern
+ - Default selection: .cumulativeLimits
+
+ ---
+ Modified: FRMSView.swift
+
+ 1. New parameter
+
+ var selectedSection: Binding<FRMSSection>?  // nil = iPhone (show all)
+ Default remains nil so all existing call sites compile unchanged during transition.
+
+ 2. New @ViewBuilder function
+
+ @ViewBuilder
+ private func sectionContent(for section: FRMSSection) -> some View {
+     switch section {
+     case .cumulativeLimits:
+         cumulativeLimitsSection
+     case .nextDuty:
+         // includes minimumRestSection for A320/B737, maximumNextDutySection, DisruptionRestSection
+         nextDutySectionContent
+     case .minBaseTurnaround:
+         minimumBaseTurnaroundSection
+     case .recentDuties:
+         recentDutiesSection
+     }
+ }
+
+ 3. Body changes
+
+ The existing body is wrapped in an if let section = selectedSection:
+
+ ScrollView {
+     VStack(spacing: 20) {
+         if let section = selectedSection {
+             // iPad split view — show one section, no DisclosureGroups
+             sectionContent(for: section.wrappedValue)
+         } else {
+             // iPhone — all sections, existing layout unchanged
+             allSectionsContent   // renamed from inline body content
+         }
+     }
+     .padding()
+     // Remove the .frame(maxWidth: 800) cap — not needed in split view;
+     // keep it only in the iPhone path
+ }
+
+ Navigation title updates to reflect the selected section:
+ .navigationTitle(selectedSection?.wrappedValue.rawValue ?? "FRMS")
+
+ On iPad, the DisclosureGroup wrappers around Next Duty Limits, MBTT, and Recent Duties are removed
+ (they are replaced by the sidebar navigation). The section content is shown expanded by default.
+
+ 4. No changes to @State properties
+
+ All calculator state stays in FRMSView. Because it is a persistent detail pane, state persists when
+ the user switches sidebar sections and returns.
+
+ ---
+ Modified: MainTabView.swift
+
+ Replace in tabLayout:
+ // Before:
+ FRMSViewWrapper(flightTimeVM: viewModel, frmsViewModel: frmsViewModel)
+
+ // After:
+ FRMSSplitView(flightTimeVM: viewModel, frmsViewModel: frmsViewModel)
+     .environmentObject(viewModel)
+
+ Remove the FRMSViewWrapper struct (it becomes unnecessary — FRMSSplitView handles both iPhone and iPad).
+
+ ---
+ Section mapping
+
+ ┌──────────────────────┬──────────────────────────────────────────────────────────────────────────────────────┐
+ │     Sidebar Item     │                             Content shown in detail pane                             │
+ ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┤
+ │ Cumulative Limits    │ cumulativeLimitsSection (existing computed var)                                      │
+ ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┤
+ │ Next Duty Limits     │ minimumRestSection (A320/B737 only) + maximumNextDutySection + DisruptionRestSection │
+ ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┤
+ │ Min. Base Turnaround │ minimumBaseTurnaroundSection (A380/A330/B787 only, hidden from sidebar otherwise)    │
+ ├──────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┤
+ │ Recent Duties        │ recentDutiesSection                                                                  │
+ └──────────────────────┴──────────────────────────────────────────────────────────────────────────────────────┘
+
+ ---
+ What does NOT change
+
+ - iPhone layout — selectedSection is nil, body renders allSectionsContent exactly as today
+ - All @State calculator properties in FRMSView
+ - FRMSViewModel, FRMSCalculationService, all data models
+ - The AdaptiveCumulativeLimitsLayout and AdaptiveLimitLayout nested structs
+ - Logbook, Dashboard, Settings tabs
+
+ ---
+ Sidebar column width rationale
+
+ Settings uses 350-450pt (7 categories with icons + two lines of text). FRMS needs only 4 rows with
+ shorter labels → 260-300pt is appropriate, giving more room to the detail pane.
+
+ ---
+ Verification
+
+ 1. Run on iPad in landscape — sidebar shows 3 rows (A320/B737) or 4 rows (A380/A330/B787)
+ 2. Tap each sidebar row — correct content appears in detail pane without any calculator state resetting
+ 3. Set crew complement to 4-pilot in Next Duty, switch to Cumulative Limits, switch back — complement is still 4-pilot
+ 4. Rotate iPad to portrait — falls back to iPhone-style single column with all sections
+ 5. Run on iPhone — no visible change to layout or behaviour
+ 6. Compliance badge on Cumulative Limits row reflects actual limit status from cumulativeTotals

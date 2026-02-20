@@ -25,6 +25,9 @@ struct FRMSView: View {
 
     @ObservedObject var viewModel: FRMSViewModel
     let flightTimePosition: FlightTimePosition
+    /// Non-nil on iPad split view — indicates which section to show.
+    /// Nil on iPhone (or iPad portrait) — all sections rendered as before.
+    var selectedSection: FRMSSection? = nil
     @Environment(ThemeService.self) private var themeService
     @EnvironmentObject var appViewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
@@ -77,104 +80,16 @@ struct FRMSView: View {
                 ZStack {
                     ScrollView {
                         VStack(spacing: 20) {
-
-                            // Minimum Rest / Earliest Sign-On Section (A320/B737 only)
-                            if viewModel.configuration.fleet == .a320B737,
-                               let limits = viewModel.a320B737NextDutyLimits {
-                                minimumRestSection(limits: limits)
-                            }
-
-                            // Cumulative Limits Section
-                            cumulativeLimitsSection
-
-                            // Maximum Next Duty Calculator
-                            if viewModel.configuration.fleet == .a380A330B787 {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    DisclosureGroup(
-                                        isExpanded: $expandNextDutyLimits,
-                                        content: {
-                                            VStack(spacing: 16) {
-                                                // iPhone: Show toggle at top when expanded
-                                                if horizontalSizeClass == .compact {
-                                                    Picker("Limit Type", selection: $viewModel.selectedLimitType) {
-                                                        Text("Planning").tag(FRMSLimitType.planning)
-                                                        Text("Operational").tag(FRMSLimitType.operational)
-                                                    }
-                                                    .pickerStyle(.segmented)
-                                                }
-                                                maximumNextDutySection
-                                            }
-                                            .padding(.top, 8)
-                                        },
-                                        label: {
-                                            HStack {
-                                                Text("Next Duty Limits")
-                                                    .font(.title3)
-                                                    .fontWeight(.semibold)
-
-                                                Spacer()
-
-                                                // iPad: Show toggle in header
-                                                if horizontalSizeClass != .compact {
-                                                    Picker("Limit Type", selection: $viewModel.selectedLimitType) {
-                                                        Text("Planning").tag(FRMSLimitType.planning)
-                                                        Text("Operational").tag(FRMSLimitType.operational)
-                                                    }
-                                                    .pickerStyle(.segmented)
-                                                    .frame(width: 220)
-                                                    .padding(.trailing, 16)
-                                                }
-                                            }
-                                        }
-                                    )
-                                    .foregroundStyle(.primary)
-                                }
+                            if let section = selectedSection {
+                                // iPad split view — show the selected section only (no DisclosureGroups)
+                                sectionContent(for: section)
                             } else {
-                                maximumNextDutySection
-                            }
-
-                            // MBTT Calculator Section (for A380/A330/B787)
-                            if viewModel.configuration.fleet == .a380A330B787 {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    DisclosureGroup(
-                                        isExpanded: $expandMinimumBaseTurnaround,
-                                        content: {
-                                            minimumBaseTurnaroundSection
-                                                .padding(.top, 8)
-                                        },
-                                        label: {
-                                            Text("Minimum Base Turnaround Time")
-                                                .font(.title3)
-                                                .fontWeight(.semibold)
-                                        }
-                                    )
-                                    .foregroundStyle(.primary)
-                                }
-                            }
-
-                            // Recent Duties
-                            if viewModel.configuration.fleet == .a380A330B787 {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    DisclosureGroup(
-                                        isExpanded: $expandRecentDuties,
-                                        content: {
-                                            recentDutiesSection
-                                                .padding(.top, 8)
-                                        },
-                                        label: {
-                                            Text("Recent Duties")
-                                                .font(.title3)
-                                                .fontWeight(.semibold)
-                                        }
-                                    )
-                                    .foregroundStyle(.primary)
-                                }
-                            } else {
-                                recentDutiesSection
+                                // iPhone (or iPad portrait) — all sections, unchanged layout
+                                allSectionsContent
                             }
                         }
                         .padding()
-                        .frame(maxWidth: horizontalSizeClass == .regular ? 800 : .infinity)
+                        .frame(maxWidth: selectedSection == nil && horizontalSizeClass == .regular ? 800 : .infinity)
                         .frame(maxWidth: .infinity)
                     }
                     .refreshable {
@@ -185,8 +100,7 @@ struct FRMSView: View {
                     .opacity(viewModel.isLoading ? 0.3 : 1.0)
                 }
             }
-            .navigationTitle(Text("FRMS"))
-//            .navigationTitle("\(viewModel.configuration.fleet.shortName) FRMS")
+            .navigationTitle(selectedSection?.rawValue ?? "FRMS")
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGroupedBackground))
             .onAppear {
@@ -202,6 +116,146 @@ struct FRMSView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Split View Section Content
+
+    /// All sections rendered sequentially — used on iPhone and iPad portrait (selectedSection == nil).
+    /// This is the exact layout that existed before split-view was introduced.
+    @ViewBuilder
+    private var allSectionsContent: some View {
+        // Minimum Rest / Earliest Sign-On Section (A320/B737 only)
+        if viewModel.configuration.fleet == .a320B737,
+           let limits = viewModel.a320B737NextDutyLimits {
+            minimumRestSection(limits: limits)
+        }
+
+        // Cumulative Limits Section
+        cumulativeLimitsSection
+
+        // Maximum Next Duty Calculator
+        if viewModel.configuration.fleet == .a380A330B787 {
+            VStack(alignment: .leading, spacing: 16) {
+                DisclosureGroup(
+                    isExpanded: $expandNextDutyLimits,
+                    content: {
+                        VStack(spacing: 16) {
+                            // iPhone: Show toggle at top when expanded
+                            if horizontalSizeClass == .compact {
+                                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                                    Text("Planning").tag(FRMSLimitType.planning)
+                                    Text("Operational").tag(FRMSLimitType.operational)
+                                }
+                                .pickerStyle(.segmented)
+                            }
+                            maximumNextDutySection
+                        }
+                        .padding(.top, 8)
+                    },
+                    label: {
+                        HStack {
+                            Text("Next Duty Limits")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+
+                            Spacer()
+
+                            // iPad: Show toggle in header
+                            if horizontalSizeClass != .compact {
+                                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                                    Text("Planning").tag(FRMSLimitType.planning)
+                                    Text("Operational").tag(FRMSLimitType.operational)
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 220)
+                                .padding(.trailing, 16)
+                            }
+                        }
+                    }
+                )
+                .foregroundStyle(.primary)
+            }
+        } else {
+            maximumNextDutySection
+        }
+
+        // MBTT Calculator Section (for A380/A330/B787)
+        if viewModel.configuration.fleet == .a380A330B787 {
+            VStack(alignment: .leading, spacing: 16) {
+                DisclosureGroup(
+                    isExpanded: $expandMinimumBaseTurnaround,
+                    content: {
+                        minimumBaseTurnaroundSection
+                            .padding(.top, 8)
+                    },
+                    label: {
+                        Text("Minimum Base Turnaround Time")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                    }
+                )
+                .foregroundStyle(.primary)
+            }
+        }
+
+        // Recent Duties
+        if viewModel.configuration.fleet == .a380A330B787 {
+            VStack(alignment: .leading, spacing: 16) {
+                DisclosureGroup(
+                    isExpanded: $expandRecentDuties,
+                    content: {
+                        recentDutiesSection
+                            .padding(.top, 8)
+                    },
+                    label: {
+                        Text("Recent Duties")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                    }
+                )
+                .foregroundStyle(.primary)
+            }
+        } else {
+            recentDutiesSection
+        }
+    }
+
+    /// Content for the selected sidebar section (iPad split-view path).
+    /// DisclosureGroups are omitted — each section fills the detail pane directly.
+    @ViewBuilder
+    private func sectionContent(for section: FRMSSection) -> some View {
+        switch section {
+        case .cumulativeLimits:
+            cumulativeLimitsSection
+        case .nextDuty:
+            nextDutySectionContent
+        case .minBaseTurnaround:
+            minimumBaseTurnaroundSection
+        case .recentDuties:
+            recentDutiesSection
+        }
+    }
+
+    /// Next Duty section content for the split-view detail pane.
+    /// Includes the Planning/Operational picker that was previously in the DisclosureGroup label.
+    @ViewBuilder
+    private var nextDutySectionContent: some View {
+        // Minimum Rest (A320/B737 only)
+        if viewModel.configuration.fleet == .a320B737,
+           let limits = viewModel.a320B737NextDutyLimits {
+            minimumRestSection(limits: limits)
+        }
+
+        // Planning / Operational toggle (replaces the DisclosureGroup label for A380)
+        if viewModel.configuration.fleet == .a380A330B787 {
+            Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                Text("Planning").tag(FRMSLimitType.planning)
+                Text("Operational").tag(FRMSLimitType.operational)
+            }
+            .pickerStyle(.segmented)
+        }
+
+        maximumNextDutySection
     }
 
     // MARK: - Minimum Rest Section
@@ -1235,23 +1289,21 @@ struct FRMSView: View {
                 .fontWeight(.semibold)
 
             // Calculator controls
-            VStack(spacing: 10) {
-                HStack {
-                    Text("Expected Duty")
-                        .font(.subheadline)
-                        .foregroundStyle(.primary.opacity(0.8))
-                    Spacer()
-                    Picker("Expected Duty", selection: $expectedDutyHours) {
-                        ForEach(dutyBandOptions) { band in
-                            Text(band.label).tag(band.value)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Expected Next Duty")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary.opacity(0.8))
 
                 Picker("Next Duty", selection: $nextDutyIsDeadhead) {
                     Text("Operating").tag(false)
                     Text("Deadheading").tag(true)
+                }
+                .pickerStyle(.segmented)
+
+                Picker("Expected Duty", selection: $expectedDutyHours) {
+                    ForEach(dutyBandOptions) { band in
+                        Text(band.label).tag(band.value)
+                    }
                 }
                 .pickerStyle(.segmented)
             }
