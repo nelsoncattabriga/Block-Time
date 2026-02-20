@@ -2136,16 +2136,6 @@ struct FRMSView: View {
             // Duty and flight time limits - adaptive layout
             AdaptiveLimitLayout(range: range, limitType: limitType, showTimesInHoursMinutes: appViewModel.showTimesInHoursMinutes)
             
-            if let notes = range.notes, horizontalSizeClass != .compact {
-                Text(notes)
-                    .font(.footnote)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.orange.opacity(0.2))
-            }
         }
         .padding()
         .background(.ultraThinMaterial)
@@ -2168,10 +2158,7 @@ struct FRMSView: View {
         }
 
         private var flightTimeDisplay: String {
-            if let notes = range.notes {
-                return horizontalSizeClass == .compact ? notes : "See Note"
-            }
-            return formatTime(range.getMaxFlight(for: limitType))
+            return range.notes ?? formatTime(range.getMaxFlight(for: limitType))
         }
 
         var body: some View {
