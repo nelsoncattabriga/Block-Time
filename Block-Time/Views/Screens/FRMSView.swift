@@ -1154,7 +1154,7 @@ struct FRMSView: View {
                     ], id: \.0) { label, aircraft in
                         HStack(alignment: .top, spacing: 6) {
                             Text(label)
-                                .font(.caption)
+                                .font(.footnote)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.primary)
                                 .frame(width: 48, alignment: .leading)
@@ -1167,8 +1167,8 @@ struct FRMSView: View {
                                     }
                                 }
                             }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.footnote)
+                            .foregroundStyle(.primary)
                         }
                     }
 
@@ -1181,7 +1181,7 @@ struct FRMSView: View {
             },
             label: {
                 Text("Crew Rest Classification")
-                    .font(.footnote)
+                    .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
             }
