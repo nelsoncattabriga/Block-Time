@@ -977,15 +977,23 @@ private struct ModernActionButtonsCard: View {
                             withAnimation {
                                 showSuccessNotification = true
                             }
-                            // Reset fields after showing notification
-                            Task { @MainActor in
-                                try await Task.sleep(for: .seconds(0.5))
-                                viewModel.resetAllFields()
-                            }
-                            Task { @MainActor in
-                                try await Task.sleep(for: .seconds(2.0))
-                                withAnimation {
-                                    showSuccessNotification = false
+                            if isInSplitView {
+                                // iPad split view: clear form ready for next entry
+                                Task { @MainActor in
+                                    try await Task.sleep(for: .seconds(0.5))
+                                    viewModel.resetAllFields()
+                                }
+                                Task { @MainActor in
+                                    try await Task.sleep(for: .seconds(2.0))
+                                    withAnimation {
+                                        showSuccessNotification = false
+                                    }
+                                }
+                            } else {
+                                // iPhone: return to FlightsView after brief success display
+                                Task { @MainActor in
+                                    try await Task.sleep(for: .seconds(1.0))
+                                    dismiss()
                                 }
                             }
                         }
