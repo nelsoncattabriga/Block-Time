@@ -212,36 +212,45 @@ struct FRMSView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
 
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Minimum Rest")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.secondary)
-                    Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                }
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.orange)
+                    .frame(width: 3)
 
-                Spacer()
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Minimum Rest")
+                            .font(.headline.bold())
+                            .foregroundStyle(.secondary)
+                        Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppColors.accentOrange)
+                    }
 
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("Earliest Sign-On")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.secondary)
-                    Text(formatDateTime(limits.earliestSignOn))
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("Earliest Sign-On")
+                            .font(.headline.bold())
+                            .foregroundStyle(.secondary)
+                        Text(formatDateTime(limits.earliestSignOn))
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppColors.accentOrange)
+                    }
                 }
+                .padding(16)
             }
-            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(.regularMaterial)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: AppColors.cardShadow, radius: 8, x: 0, y: 2)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             )
         }
     }
@@ -471,8 +480,7 @@ struct FRMSView: View {
             }
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
         .onAppear {
             updateTimeWindowSelection(limits: limits)
         }
@@ -537,6 +545,7 @@ struct FRMSView: View {
             Text(formatTime(hours))
                 .font(.body)
                 .fontWeight(.semibold)
+                .foregroundStyle(AppColors.accentOrange)
         }
     }
 
@@ -792,8 +801,7 @@ struct FRMSView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     private func specialScenariosSection(scenarios: SpecialScenarios) -> some View {
@@ -944,8 +952,7 @@ struct FRMSView: View {
             }
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     private func bulletPoint(text: String) -> some View {
@@ -986,8 +993,7 @@ struct FRMSView: View {
                 }
             }
             .padding()
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .appCardStyle()
 
             // Duty & Flight Time Limits
             if let maxDuty = viewModel.maximumNextDuty,
@@ -1028,8 +1034,7 @@ struct FRMSView: View {
                     }
                 }
                 .padding()
-                .background(.thinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .appCardStyle()
             }
 
             // Rest Requirements
@@ -1284,8 +1289,7 @@ struct FRMSView: View {
             )
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     // MARK: - (Disruption Rest moved to DisruptionRestSection struct below)
@@ -1678,8 +1682,7 @@ struct FRMSView: View {
             )
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     // MARK: - LH Relevant Sectors Section
@@ -1856,8 +1859,7 @@ struct FRMSView: View {
             }
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     // MARK: - LH Table Helper Views
@@ -2009,8 +2011,7 @@ struct FRMSView: View {
                 }
             }
             .padding()
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .appCardStyle()
         }
     }
 
@@ -2077,8 +2078,7 @@ struct FRMSView: View {
                 .foregroundStyle(.secondary)
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     private func daysOffCard(daysOff: Int, required: Int) -> some View {
@@ -2106,8 +2106,7 @@ struct FRMSView: View {
             }
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     private func maxDutyParameterRow(icon: String, title: String, value: String, color: Color) -> some View {
@@ -2269,7 +2268,8 @@ struct FRMSView: View {
             } else {
                 // iPad layout - 2 column grid
                 VStack(spacing: 12) {
-                    // Row 1: Flight Time (28 Days) + Flight Time (365 Days)
+                    // Flight Time section
+                    sectionHeader("Flight Time")
                     let periodDays = viewModel.configuration.fleet.flightTimePeriodDays
                     HStack(spacing: 12) {
                         buildLimitCard(
@@ -2277,7 +2277,8 @@ struct FRMSView: View {
                             current: totals.flightTime28Or30Days,
                             limit: viewModel.configuration.fleet.maxFlightTime28Days,
                             status: totals.status28Days,
-                            unit: "hrs"
+                            unit: "hrs",
+                            accentColor: .blue
                         )
 
                         buildLimitCard(
@@ -2285,18 +2286,21 @@ struct FRMSView: View {
                             current: totals.flightTime365Days,
                             limit: viewModel.configuration.fleet.maxFlightTime365Days,
                             status: totals.status365Days,
-                            unit: "hrs"
+                            unit: "hrs",
+                            accentColor: .blue
                         )
                     }
 
-                    // Row 2: Duty Time (7 Days) + Duty Time (14 Days)
+                    // Duty Time section
+                    sectionHeader("Duty Time")
                     HStack(spacing: 12) {
                         buildLimitCard(
                             title: "Duty Time (7 Days)",
                             current: totals.dutyTime7Days,
                             limit: viewModel.configuration.fleet.maxDutyTime7Days,
                             status: totals.dutyStatus7Days,
-                            unit: "hrs"
+                            unit: "hrs",
+                            accentColor: .orange
                         )
 
                         buildLimitCard(
@@ -2304,7 +2308,8 @@ struct FRMSView: View {
                             current: totals.dutyTime14Days,
                             limit: viewModel.configuration.fleet.maxDutyTime14Days,
                             status: totals.dutyStatus14Days,
-                            unit: "hrs"
+                            unit: "hrs",
+                            accentColor: .orange
                         )
                     }
 
@@ -2326,41 +2331,48 @@ struct FRMSView: View {
 
         @ViewBuilder
         private func createAllCards() -> some View {
-            // Flight Time - 28/30 Days (fleet-specific)
             let periodDays = viewModel.configuration.fleet.flightTimePeriodDays
+
+            // Flight Time section
+            sectionHeader("Flight Time")
+
             buildLimitCard(
                 title: "Flight Time (\(periodDays) Days)",
                 current: totals.flightTime28Or30Days,
                 limit: viewModel.configuration.fleet.maxFlightTime28Days,
                 status: totals.status28Days,
-                unit: "hrs"
+                unit: "hrs",
+                accentColor: .blue
             )
-            
-            // Flight Time - 365 Days
+
             buildLimitCard(
                 title: "Flight Time (365 Days)",
                 current: totals.flightTime365Days,
                 limit: viewModel.configuration.fleet.maxFlightTime365Days,
                 status: totals.status365Days,
-                unit: "hrs"
+                unit: "hrs",
+                accentColor: .blue
             )
-            
-            // Duty Time - 7 Days
+
+            // Duty Time section
+            sectionHeader("Duty Time")
+
             buildLimitCard(
                 title: "Duty Time (7 Days)",
                 current: totals.dutyTime7Days,
                 limit: viewModel.configuration.fleet.maxDutyTime7Days,
                 status: totals.dutyStatus7Days,
-                unit: "hrs"
+                unit: "hrs",
+                accentColor: .orange
             )
-            
-            // Duty Time - 14 Days
+
             buildLimitCard(
                 title: "Duty Time (14 Days)",
                 current: totals.dutyTime14Days,
                 limit: viewModel.configuration.fleet.maxDutyTime14Days,
                 status: totals.dutyStatus14Days,
-                unit: "hrs"
+                unit: "hrs",
+                accentColor: .orange
             )
             
 //            // ADDED HERE
@@ -2374,56 +2386,74 @@ struct FRMSView: View {
             
         }
 
+        // MARK: - Section Header Helper
+
+        private func sectionHeader(_ title: String) -> some View {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 4)
+        }
+
         // MARK: - Card Building Functions
 
-        private func buildLimitCard(title: String, current: Double, limit: Double, status: FRMSComplianceStatus, unit: String) -> some View {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(title)
-                        .iPadScaledFont(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
+        private func buildLimitCard(title: String, current: Double, limit: Double, status: FRMSComplianceStatus, unit: String, accentColor: Color) -> some View {
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(accentColor)
+                    .frame(width: 3)
 
-                    Spacer()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(title)
+                            .iPadScaledFont(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.secondary)
 
-                    Image(systemName: status.icon)
-                        .foregroundStyle(statusColor(status))
-                        .iPadScaledFont(.headline)
-                }
+                        Spacer()
 
-                HStack(alignment: .lastTextBaseline, spacing: 4) {
-                    Text(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(current) : String(format: "%.1f", current))
-                        .iPadScaledFont(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-
-                    Text("/ \(Int(limit)) \(unit)")
-                        .iPadScaledFont(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(progressColor(status).opacity(0.3))
-                            .frame(height: 6)
-
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(progressColor(status))
-                            .frame(width: min(CGFloat(current / limit) * geometry.size.width, geometry.size.width), height: 6)
+                        Image(systemName: status.icon)
+                            .foregroundStyle(statusColor(status))
+                            .iPadScaledFont(.headline)
                     }
+
+                    HStack(alignment: .lastTextBaseline, spacing: 4) {
+                        Text(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(current) : String(format: "%.1f", current))
+                            .iPadScaledFont(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+
+                        Text("/ \(Int(limit)) \(unit)")
+                            .iPadScaledFont(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color(.systemGray5))
+                                .frame(height: 6)
+
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(progressColor(status))
+                                .frame(width: min(CGFloat(current / limit) * geometry.size.width, geometry.size.width), height: 6)
+                        }
+                    }
+                    .frame(height: 6)
                 }
-                .frame(height: 6)
+                .padding(16)
             }
-            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(.regularMaterial)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: AppColors.cardShadow, radius: 8, x: 0, y: 2)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(statusColor(status).opacity(0.3), lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             )
         }
 
@@ -2460,15 +2490,7 @@ struct FRMSView: View {
                     .frame(height: 6)
             }
             .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.regularMaterial)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(statusColor.opacity(0.3), lineWidth: 1)
-            )
+            .appCardStyle()
         }
 
         private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
@@ -2550,15 +2572,7 @@ struct FRMSView: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.regularMaterial)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-            )
+            .appCardStyle()
         }
 
         // MARK: - Helper Methods
@@ -2666,8 +2680,7 @@ struct FRMSView: View {
             .frame(maxWidth: .infinity)
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     private func dailyDutyRow(dailySummary: DailyDutySummary) -> some View {
@@ -2702,8 +2715,7 @@ struct FRMSView: View {
 
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .appCardStyle()
     }
 
     // MARK: - Helper Methods
@@ -2894,8 +2906,7 @@ private struct DisruptionRestSection: View {
                 .fontWeight(.semibold)
         }
         .padding()
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .appCardStyle()
     }
 
     // MARK: Sub-views
