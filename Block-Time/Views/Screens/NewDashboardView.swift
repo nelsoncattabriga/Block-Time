@@ -58,6 +58,13 @@ struct NewDashboardView: View {
             .navigationSplitViewColumnWidth(min: 350, ideal: 400, max: 450)
             .navigationTitle("Insights")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { showingEditSheet = true } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                }
+            }
 
         } detail: {
 
@@ -74,15 +81,6 @@ struct NewDashboardView: View {
                             .padding(.top, 8)
                     }
                     .refreshable { await viewModel.load() }
-                }
-            }
-            .navigationTitle("Insights")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showingEditSheet = true } label: {
-                        Image(systemName: "slider.horizontal.3")
-                    }
                 }
             }
         }
