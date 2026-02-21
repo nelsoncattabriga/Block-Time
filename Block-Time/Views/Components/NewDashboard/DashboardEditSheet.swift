@@ -1,5 +1,5 @@
 //
-//  InsightsEditSheet.swift
+//  DashboardEditSheet.swift
 //  Block-Time
 //
 //  Full-screen sheet for customising the Insights dashboard layout.
@@ -9,16 +9,16 @@
 
 import SwiftUI
 
-struct InsightsEditSheet: View {
-    @Bindable var config: InsightsConfiguration
+struct DashboardEditSheet: View {
+    @Bindable var config: DashboardConfiguration
     @Environment(\.dismiss) private var dismiss
 
-    @State private var cardToAdd: InsightsCardID? = nil
+    @State private var cardToAdd: DashboardCardID? = nil
     @State private var editMode: EditMode = .active
 
     private var isIPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
-    private var availablePool: [InsightsCardID] {
+    private var availablePool: [DashboardCardID] {
         isIPad ? config.availableCards : config.availableForPhone
     }
 
@@ -98,7 +98,7 @@ struct InsightsEditSheet: View {
 
     // MARK: - Row Builders
 
-    private func cardRow(_ card: InsightsCardID, location: String?) -> some View {
+    private func cardRow(_ card: DashboardCardID, location: String?) -> some View {
         HStack(spacing: 12) {
             Image(systemName: card.icon)
                 .foregroundStyle(card.accentColor)
@@ -120,7 +120,7 @@ struct InsightsEditSheet: View {
         Task { @MainActor in editMode = .active }
     }
 
-    private func availableRow(_ card: InsightsCardID) -> some View {
+    private func availableRow(_ card: DashboardCardID) -> some View {
         Button {
             if isIPad {
                 cardToAdd = card

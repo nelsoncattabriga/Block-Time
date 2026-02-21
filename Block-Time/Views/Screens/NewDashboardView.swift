@@ -13,7 +13,7 @@ struct NewDashboardView: View {
     @ObservedObject var frmsViewModel: FRMSViewModel
 
     @State private var viewModel = NewDashboardViewModel()
-    @State private var config = InsightsConfiguration()
+    @State private var config = DashboardConfiguration()
     @State private var showingEditSheet = false
     @Environment(ThemeService.self) private var themeService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -50,7 +50,7 @@ struct NewDashboardView: View {
     private var ipadLayout: some View {
         NavigationSplitView(columnVisibility: .constant(.all)) {
 
-            InsightsSidebarView(
+            DashboardSidebarView(
                 config: config,
                 viewModel: viewModel,
                 frmsViewModel: frmsViewModel
@@ -85,7 +85,7 @@ struct NewDashboardView: View {
             .toolbarVisibility(.hidden, for: .navigationBar)
         }
         .sheet(isPresented: $showingEditSheet) {
-            InsightsEditSheet(config: config)
+            DashboardEditSheet(config: config)
         }
         .task { await loadAll() }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
@@ -125,7 +125,7 @@ struct NewDashboardView: View {
                 }
             }
             .sheet(isPresented: $showingEditSheet) {
-                InsightsEditSheet(config: config)
+                DashboardEditSheet(config: config)
             }
         }
         .task { await loadAll() }
@@ -140,7 +140,7 @@ struct NewDashboardView: View {
     private var detailCards: some View {
         VStack(spacing: 16) {
             ForEach(config.detailCards, id: \.self) { card in
-                InsightsCardView(
+                DashboardCardView(
                     cardID: card,
                     frmsViewModel: frmsViewModel,
                     viewModel: viewModel

@@ -1,5 +1,5 @@
 //
-//  InsightsConfiguration.swift
+//  DashboardConfiguration.swift
 //  Block-Time
 //
 //  Observable class holding which cards appear in the sidebar and detail pane
@@ -9,10 +9,10 @@
 import SwiftUI
 
 @Observable
-final class InsightsConfiguration {
+final class DashboardConfiguration {
 
-    var sidebarCards: [InsightsCardID]
-    var detailCards: [InsightsCardID]
+    var sidebarCards: [DashboardCardID]
+    var detailCards: [DashboardCardID]
 
     private let sidebarKey = "insightsSidebarCards"
     private let detailKey  = "insightsDetailCards"
@@ -26,27 +26,27 @@ final class InsightsConfiguration {
     // MARK: - Computed
 
     /// Cards not yet assigned to sidebar or detail (iPad).
-    var availableCards: [InsightsCardID] {
+    var availableCards: [DashboardCardID] {
         let used = Set(sidebarCards + detailCards)
-        return InsightsCardID.allCases.filter { !used.contains($0) }
+        return DashboardCardID.allCases.filter { !used.contains($0) }
     }
 
     /// Cards not in the detail list — used on iPhone where there is no sidebar.
     /// Sidebar-only cards appear here so iPhone users can still add them.
-    var availableForPhone: [InsightsCardID] {
+    var availableForPhone: [DashboardCardID] {
         let used = Set(detailCards)
-        return InsightsCardID.allCases.filter { !used.contains($0) }
+        return DashboardCardID.allCases.filter { !used.contains($0) }
     }
 
     // MARK: - Add
 
-    func addToSidebar(_ card: InsightsCardID) {
+    func addToSidebar(_ card: DashboardCardID) {
         guard !sidebarCards.contains(card), !detailCards.contains(card) else { return }
         sidebarCards.append(card)
         save()
     }
 
-    func addToDetail(_ card: InsightsCardID) {
+    func addToDetail(_ card: DashboardCardID) {
         guard !sidebarCards.contains(card), !detailCards.contains(card) else { return }
         detailCards.append(card)
         save()
@@ -54,7 +54,7 @@ final class InsightsConfiguration {
 
     /// Adds a card to the detail list regardless of sidebar membership.
     /// Used on iPhone where there is no sidebar and all cards should be accessible.
-    func addToDetailFromPhone(_ card: InsightsCardID) {
+    func addToDetailFromPhone(_ card: DashboardCardID) {
         guard !detailCards.contains(card) else { return }
         detailCards.append(card)
         save()
@@ -97,22 +97,25 @@ final class InsightsConfiguration {
 
     private func load() {
         if let data = UserDefaults.standard.data(forKey: sidebarKey),
-           let cards = try? JSONDecoder().decode([InsightsCardID].self, from: data) {
+           let cards = try? JSONDecoder().decode([DashboardCardID].self, from: data) {
             sidebarCards = cards
         } else {
-            sidebarCards = [.frmsFlightTime, .frmsDutyTime, .totalTime]
+            sidebarCards = [.totalTime, .frmsFlightTime, .frmsDutyTime]
         }
 
         if let data = UserDefaults.standard.data(forKey: detailKey),
-           let cards = try? JSONDecoder().decode([InsightsCardID].self, from: data) {
+           let cards = try? JSONDecoder().decode([DashboardCardID].self, from: data) {
             detailCards = cards
         } else {
             let isIPad = UIDevice.current.userInterfaceIdiom == .pad
+            let analyticsCards: [DashboardCardID] = [
+                .activityChart, .fleetDonut, .roleDistribution, .pfRatioChart,
+                .takeoffLanding, .approachTypes, .topRoutes, .topRegistrations,
+                .nightHeatmap, .careerMilestones
+            ]
             detailCards = isIPad
-                ? [.activityChart, .fleetDonut, .roleDistribution, .pfRatioChart,
-                   .takeoffLanding, .approachTypes, .topRoutes, .topRegistrations]
-                : [.frmsFlightTime, .activityChart, .fleetDonut, .roleDistribution, .pfRatioChart,
-                   .takeoffLanding, .approachTypes, .topRoutes, .topRegistrations]
+                ? analyticsCards
+                : [.totalTime, .frmsFlightTime, .frmsDutyTime] + analyticsCards
         }
     }
 }

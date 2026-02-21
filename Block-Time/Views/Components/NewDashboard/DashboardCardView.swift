@@ -1,8 +1,8 @@
 //
-//  InsightsCardView.swift
+//  DashboardCardView.swift
 //  Block-Time
 //
-//  Factory view: given an InsightsCardID, renders the correct card with
+//  Factory view: given an DashboardCardID, renders the correct card with
 //  the correct data from NewDashboardViewModel / FRMSViewModel.
 //
 //  Pass isCompact: true to force .compact horizontalSizeClass (sidebar use).
@@ -10,8 +10,8 @@
 
 import SwiftUI
 
-struct InsightsCardView: View {
-    let cardID: InsightsCardID
+struct DashboardCardView: View {
+    let cardID: DashboardCardID
     @ObservedObject var frmsViewModel: FRMSViewModel
     let viewModel: NewDashboardViewModel
     var isCompact: Bool = false
@@ -39,7 +39,7 @@ struct InsightsCardView: View {
         }
     }
 
-    private func isInsightsCard(_ id: InsightsCardID) -> Bool {
+    private func isInsightsCard(_ id: DashboardCardID) -> Bool {
         switch id {
         case .frmsFlightTime, .frmsDutyTime, .activityChart, .fleetDonut, .roleDistribution,
              .pfRatioChart, .takeoffLanding, .approachTypes, .topRoutes,

@@ -1,16 +1,16 @@
 //
-//  InsightsSidebarView.swift
+//  DashboardSidebarView.swift
 //  Block-Time
 //
 //  iPad-only sidebar: renders whichever cards the user has assigned to the
-//  sidebar slot via InsightsConfiguration. Each card is injected with
+//  sidebar slot via DashboardConfiguration. Each card is injected with
 //  isCompact: true so stat cards render at narrow (iPhone) widths.
 //
 
 import SwiftUI
 
-struct InsightsSidebarView: View {
-    let config: InsightsConfiguration
+struct DashboardSidebarView: View {
+    let config: DashboardConfiguration
     let viewModel: NewDashboardViewModel
     @ObservedObject var frmsViewModel: FRMSViewModel
 
@@ -18,7 +18,7 @@ struct InsightsSidebarView: View {
         ScrollView {
             VStack(spacing: 16) {
                 ForEach(config.sidebarCards, id: \.self) { card in
-                    InsightsCardView(
+                    DashboardCardView(
                         cardID: card,
                         frmsViewModel: frmsViewModel,
                         viewModel: viewModel,

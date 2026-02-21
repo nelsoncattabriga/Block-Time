@@ -1,14 +1,14 @@
 //
-//  InsightsCardID.swift
+//  DashboardCardID.swift
 //  Block-Time
 //
 //  Unified identifier for every card available in the Insights dashboard.
-//  Used by InsightsConfiguration to persist sidebar/detail layouts.
+//  Used by DashboardConfiguration to persist sidebar/detail layouts.
 //
 
 import SwiftUI
 
-enum InsightsCardID: String, Codable, CaseIterable, Hashable {
+enum DashboardCardID: String, Codable, CaseIterable, Hashable {
 
     // ── Insights-specific cards ─────────────────────────────────────────────
     case frmsFlightTime    // 2-ring flight time gauge (28d/365d)
