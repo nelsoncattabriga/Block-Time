@@ -10,13 +10,20 @@ import SwiftUI
 
 struct InsightsSidebarView: View {
     let flightStrip: NDFRMSStripData
+    let careerStats: NDCareerStats
+    let flightStatistics: FlightStatistics
     @ObservedObject var frmsViewModel: FRMSViewModel
+
+    @State private var showTimesInHoursMinutes: Bool =
+        UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
 
     private var totals: FRMSCumulativeTotals? { frmsViewModel.cumulativeTotals }
     private let fleet: FRMSFleet
 
-    init(flightStrip: NDFRMSStripData, frmsViewModel: FRMSViewModel) {
+    init(flightStrip: NDFRMSStripData, careerStats: NDCareerStats, flightStatistics: FlightStatistics, frmsViewModel: FRMSViewModel) {
         self.flightStrip = flightStrip
+        self.careerStats = careerStats
+        self.flightStatistics = flightStatistics
         self.frmsViewModel = frmsViewModel
         self.fleet = flightStrip.fleet
     }
@@ -27,11 +34,11 @@ struct InsightsSidebarView: View {
 
                 // ── Header ─────────────────────────────────────────
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("FRMS LIMITS")
-                        .font(.system(size: 10, weight: .bold))
+                    Text("FRMS Limits")
+                        .font(.footnote.bold())
                         .foregroundStyle(.secondary)
                         .kerning(1.2)
-                    Text(fleet.rawValue)
+                    Text(fleet.shortName)
                         .font(.headline).fontWeight(.bold)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -39,19 +46,19 @@ struct InsightsSidebarView: View {
 
                 // ── Flight Time ────────────────────────────────────
                 sectionRings(
-                    heading: "Flight Time",
+                    heading: "Flight Time Hours",
                     icon: "airplane",
                     rings: [
                         RingData(
-                            label: "\(flightStrip.periodDays)d",
-                            sublabel: "/ \(Int(flightStrip.max28d)) max",
+                            label: "\(flightStrip.periodDays) Days",
+                            sublabel: "/ \(Int(flightStrip.max28d))",
                             hours: flightStrip.hours28d,
                             max: flightStrip.max28d,
                             color: flightStrip.limitColor(hours: flightStrip.hours28d, max: flightStrip.max28d)
                         ),
                         RingData(
-                            label: "365d",
-                            sublabel: "/ \(Int(flightStrip.max365d)) max",
+                            label: "365 Days",
+                            sublabel: "/ \(Int(flightStrip.max365d))",
                             hours: flightStrip.hours365d,
                             max: flightStrip.max365d,
                             color: flightStrip.limitColor(hours: flightStrip.hours365d, max: flightStrip.max365d)
@@ -66,19 +73,19 @@ struct InsightsSidebarView: View {
                 let max14d  = fleet.maxDutyTime14Days
 
                 sectionRings(
-                    heading: "Duty Time",
+                    heading: "Duty Time Hours",
                     icon: "briefcase.fill",
                     rings: [
                         RingData(
-                            label: "7d",
-                            sublabel: "/ \(Int(max7d)) max",
+                            label: "7 Days",
+                            sublabel: "/ \(Int(max7d))",
                             hours: duty7d,
                             max: max7d,
                             color: gaugeColor(hours: duty7d, max: max7d)
                         ),
                         RingData(
-                            label: "14d",
-                            sublabel: "/ \(Int(max14d)) max",
+                            label: "14 Days",
+                            sublabel: "/ \(Int(max14d))",
                             hours: duty14d,
                             max: max14d,
                             color: gaugeColor(hours: duty14d, max: max14d)
@@ -95,6 +102,20 @@ struct InsightsSidebarView: View {
                 } else if totals == nil {
                     Text("Duty data will appear after FRMS loads.")
                         .font(.system(size: 10)).foregroundStyle(.secondary).italic()
+                }
+
+                // ── Total Time ─────────────────────────────────────
+                Divider()
+
+                StatCard(
+                    title: "Total Time",
+                    value: flightStatistics.formattedTotalFlightTime(asHoursMinutes: showTimesInHoursMinutes),
+                    subtitle: "\(flightStatistics.totalSectors) sectors",
+                    color: .blue,
+                    icon: "clock.fill"
+                )
+                .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+                    showTimesInHoursMinutes = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
                 }
 
                 Spacer(minLength: 0)
@@ -118,7 +139,7 @@ struct InsightsSidebarView: View {
     private func sectionRings(heading: String, icon: String, rings: [RingData]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Label(heading, systemImage: icon)
-                .font(.caption).fontWeight(.semibold)
+                .font(.footnote).fontWeight(.semibold)
                 .foregroundStyle(.secondary)
 
             LazyVGrid(
@@ -148,11 +169,15 @@ struct InsightsSidebarView: View {
 
                 VStack(spacing: 1) {
                     Text(String(format: "%.1f", data.hours))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.headline.bold())
                         .foregroundStyle(.primary)
-                    Text("hrs")
-                        .font(.system(size: 9, weight: .medium))
+                    Text(data.sublabel)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
+//                    
+//                    Text("hrs")
+//                        .font(.subheadline)
+//                        .foregroundStyle(.secondary)
                 }
             }
             .frame(width: 90, height: 90)
@@ -161,9 +186,9 @@ struct InsightsSidebarView: View {
                 Text(data.label)
                     .font(.caption2).fontWeight(.semibold)
                     .foregroundStyle(.secondary)
-                Text(data.sublabel)
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+//                Text(data.sublabel)
+//                    .font(.system(size: 9))
+//                    .foregroundStyle(.secondary)
             }
         }
     }

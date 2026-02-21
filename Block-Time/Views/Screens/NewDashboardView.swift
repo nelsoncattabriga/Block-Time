@@ -35,10 +35,12 @@ struct NewDashboardView: View {
 
             InsightsSidebarView(
                 flightStrip: viewModel.frmsStrip,
+                careerStats: viewModel.careerStats,
+                flightStatistics: viewModel.flightStatistics,
                 frmsViewModel: frmsViewModel
             )
             .navigationSplitViewColumnWidth(min: 350, ideal: 400, max: 450)
-            .navigationTitle("FRMS Limits")
+            .navigationTitle("Insights")
             .navigationBarTitleDisplayMode(.inline)
 
         } detail: {
