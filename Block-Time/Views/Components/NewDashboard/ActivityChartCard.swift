@@ -49,7 +49,7 @@ struct ActivityChartCard: View {
                 Spacer()
                 Picker("", selection: $selectedMonths) {
                     Text("12M").tag(12)
-                    Text("2Y").tag(24)
+                    Text("6M").tag(6)
                     Text("All").tag(0)
                 }
                 .pickerStyle(.segmented)
@@ -103,7 +103,7 @@ struct ActivityChartCard: View {
                 HStack {
                     summaryChip(label: "Total", value: String(format: "%.0f hrs", totalBlock), color: .blue)
                     Spacer()
-                    summaryChip(label: "Monthly avg", value: String(format: "%.1f hrs", avg), color: .secondary)
+                    summaryChip(label: "Monthly Avg", value: String(format: "%.1f hrs", avg), color: .secondary)
                 }
             }
         }
