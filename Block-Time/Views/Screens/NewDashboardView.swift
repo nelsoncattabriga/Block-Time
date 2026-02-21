@@ -82,6 +82,7 @@ struct NewDashboardView: View {
                     .refreshable { await viewModel.load() }
                 }
             }
+            .toolbarVisibility(.hidden, for: .navigationBar)
         }
         .sheet(isPresented: $showingEditSheet) {
             InsightsEditSheet(config: config)
