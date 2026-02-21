@@ -1,0 +1,356 @@
+│ Plan: Insights Dashboard Card Customisation                                                                                              │
+│                                                                                                                                          │
+│ Context                                                                                                                                  │
+│                                                                                                                                          │
+│ The Insights dashboard (new 5th tab) currently has a fixed layout — hardcoded cards in both the iPad sidebar and the detail pane. The    │
+│ user wants a unified "Customise" sheet where all available cards (from both the old Dashboard and new Insights) can be freely assigned   │
+│ to the sidebar or detail pane, reordered, and hidden.                                                                                    │
+│                                                                                                                                          │
+│ Key findings from exploration:                                                                                                           │
+│ - All 16 old Dashboard StatCardType cards take only FlightStatistics — already in NewDashboardViewModel.flightStatistics                 │
+│ - No need to inject FlightTimeExtractorViewModel; all old card data flows from FlightStatistics + LogbookSettings.shared                 │
+│ - Old cards already adapt to narrow widths via horizontalSizeClass — injecting .compact makes them render narrow automatically           │
+│ - The sidebar is 350–450pt, essentially iPhone width, so compact injection is correct                                                    │
+│ - FRMSLimitsCard (the 4-ring 2×2 grid) currently lives inline in InsightsSidebarView — must be extracted                                 │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ Architecture                                                                                                                             │
+│                                                                                                                                          │
+│ 1. InsightsCardID.swift (new — Models/)                                                                                                  │
+│                                                                                                                                          │
+│ Unified enum for every card available in Insights:                                                                                       │
+│                                                                                                                                          │
+│ enum InsightsCardID: String, Codable, CaseIterable {                                                                                     │
+│     // ── Insights cards ──                                                                                                              │
+│     case frmsLimits        // 4-ring FRMS grid (sidebar-originated, works anywhere)                                                      │
+│     case activityChart                                                                                                                   │
+│     case fleetDonut                                                                                                                      │
+│     case roleDistribution                                                                                                                │
+│     case pfRatioChart                                                                                                                    │
+│     case takeoffLanding                                                                                                                  │
+│     case approachTypes                                                                                                                   │
+│     case topRoutes                                                                                                                       │
+│     case topRegistrations                                                                                                                │
+│     case nightHeatmap                                                                                                                    │
+│     case careerMilestones                                                                                                                │
+│                                                                                                                                          │
+│     // ── Dashboard stat cards ──                                                                                                        │
+│     case totalTime, picTime, icusTime, nightTime, simTime, pfRatioStat                                                                   │
+│     case recentActivity7, recentActivity28, recentActivity30, recentActivity365                                                          │
+│     case pfRecency, aiiiRecency, takeoffRecency, landingRecency                                                                          │
+│     case aircraftTypeTime, averageMetric                                                                                                 │
+│                                                                                                                                          │
+│     var displayName: String { ... }                                                                                                      │
+│     var icon: String { ... }                                                                                                             │
+│     var accentColor: Color { ... }                                                                                                       │
+│     var sidebarHint: Bool { ... }   // advisory — "works well in sidebar"                                                                │
+│ }                                                                                                                                        │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ 2. InsightsConfiguration.swift (new — Models/)                                                                                           │
+│                                                                                                                                          │
+│ @Observable class holding sidebar/detail card arrays, persisted to UserDefaults.                                                         │
+│                                                                                                                                          │
+│ @Observable                                                                                                                              │
+│ final class InsightsConfiguration {                                                                                                      │
+│     var sidebarCards: [InsightsCardID]   // default: [.frmsLimits, .totalTime]                                                           │
+│     var detailCards: [InsightsCardID]    // default: current 8 analytics cards                                                           │
+│                                                                                                                                          │
+│     var availableCards: [InsightsCardID] {                                                                                               │
+│         let used = Set(sidebarCards + detailCards)                                                                                       │
+│         return InsightsCardID.allCases.filter { !used.contains($0) }                                                                     │
+│     }                                                                                                                                    │
+│                                                                                                                                          │
+│     // Persistence — two separate UserDefaults keys                                                                                      │
+│     private let sidebarKey = "insightsSidebarCards"                                                                                      │
+│     private let detailKey  = "insightsDetailCards"                                                                                       │
+│                                                                                                                                          │
+│     init() { load() }                                                                                                                    │
+│                                                                                                                                          │
+│     func addToSidebar(_ card: InsightsCardID)                                                                                            │
+│     func addToDetail(_ card: InsightsCardID)                                                                                             │
+│     func moveSidebarCard(from: IndexSet, to: Int)                                                                                        │
+│     func moveDetailCard(from: IndexSet, to: Int)                                                                                         │
+│     func removeSidebarCard(at: IndexSet)    // returns card to Available                                                                 │
+│     func removeDetailCard(at: IndexSet)     // returns card to Available                                                                 │
+│                                                                                                                                          │
+│     private func save() { ... }   // JSON encode → UserDefaults                                                                          │
+│     private func load() { ... }   // JSON decode ← UserDefaults, falls back to defaults                                                  │
+│ }                                                                                                                                        │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ 3. FRMSLimitsCard.swift (new — Views/Components/NewDashboard/)                                                                           │
+│                                                                                                                                          │
+│ Extracted from InsightsSidebarView. Takes the same data the sidebar already has.                                                         │
+│                                                                                                                                          │
+│ struct FRMSLimitsCard: View {                                                                                                            │
+│     let flightStrip: NDFRMSStripData                                                                                                     │
+│     @ObservedObject var frmsViewModel: FRMSViewModel                                                                                     │
+│ }                                                                                                                                        │
+│                                                                                                                                          │
+│ Contains the exact ring-gauge layout currently inside InsightsSidebarView (2×2 grid for Flight + Duty time). Works at any width — the    │
+│ 2×2 ring grid is self-contained.                                                                                                         │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ 4. InsightsCardView.swift (new — Views/Components/NewDashboard/)                                                                         │
+│                                                                                                                                          │
+│ Factory view. Given a card ID, renders the right card with the right data.                                                               │
+│                                                                                                                                          │
+│ struct InsightsCardView: View {                                                                                                          │
+│     let cardID: InsightsCardID                                                                                                           │
+│     @ObservedObject var frmsViewModel: FRMSViewModel                                                                                     │
+│     let viewModel: NewDashboardViewModel                                                                                                 │
+│     var isCompact: Bool = false                                                                                                          │
+│                                                                                                                                          │
+│     var body: some View {                                                                                                                │
+│         cardContent                                                                                                                      │
+│             .environment(\.horizontalSizeClass, isCompact ? .compact : .regular)                                                         │
+│     }                                                                                                                                    │
+│                                                                                                                                          │
+│     @ViewBuilder                                                                                                                         │
+│     private var cardContent: some View {                                                                                                 │
+│         switch cardID {                                                                                                                  │
+│         // Insights                                                                                                                      │
+│         case .frmsLimits:      FRMSLimitsCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel)                            │
+│         case .activityChart:   ActivityChartCard(data: viewModel.monthlyActivity)                                                        │
+│         case .fleetDonut:      FleetDonutCard(data: viewModel.fleetHours)                                                                │
+│         case .roleDistribution: RoleDistributionCard(data: viewModel.monthlyRoles)                                                       │
+│         case .pfRatioChart:    PFRatioCard(data: viewModel.pfRatioByMonth)                                                               │
+│         case .takeoffLanding:  TakeoffLandingCard(stats: viewModel.tlStats)                                                              │
+│         case .approachTypes:   ApproachTypesCard(data: viewModel.approachTypes)                                                          │
+│         case .topRoutes:       TopRoutesCard(routes: viewModel.topRoutes)                                                                │
+│         case .topRegistrations: TopRegistrationsCard(registrations: viewModel.topRegistrations)                                          │
+│         case .nightHeatmap:    NightHeatmapCard(...)                                                                                     │
+│         case .careerMilestones: CareerMilestonesCard(...)                                                                                │
+│                                                                                                                                          │
+│         // Dashboard stat cards — all driven by viewModel.flightStatistics                                                               │
+│         case .totalTime:    StatCard(title: "Total Time", value: stats.formattedTotalFlightTime(...), ...)                               │
+│         case .picTime:      StatCard(...)                                                                                                │
+│         case .icusTime:     StatCard(...)                                                                                                │
+│         case .nightTime:    StatCard(...)                                                                                                │
+│         case .simTime:      StatCard(...)                                                                                                │
+│         case .pfRatioStat:  StatCard(...)                                                                                                │
+│         case .recentActivity7:   RecentActivityCard(statistics: stats, days: 7)                                                          │
+│         case .recentActivity28:  RecentActivityCard(statistics: stats, days: 28)                                                         │
+│         case .recentActivity30:  RecentActivityCard(statistics: stats, days: 30)                                                         │
+│         case .recentActivity365: RecentActivityCard(statistics: stats, days: 365)                                                        │
+│         case .pfRecency:         RecencyCard(statistics: stats, recencyType: .pf)                                                        │
+│         case .aiiiRecency:       RecencyCard(statistics: stats, recencyType: .aiii)                                                      │
+│         case .takeoffRecency:    RecencyCard(statistics: stats, recencyType: .takeoff)                                                   │
+│         case .landingRecency:    RecencyCard(statistics: stats, recencyType: .landing)                                                   │
+│         case .aircraftTypeTime:  AircraftTypeTimeCard(statistics: stats, isEditMode: false)                                              │
+│         case .averageMetric:     AverageMetricCard(statistics: stats, isEditMode: false)                                                 │
+│         }                                                                                                                                │
+│     }                                                                                                                                    │
+│                                                                                                                                          │
+│     private var stats: FlightStatistics { viewModel.flightStatistics }                                                                   │
+│ }                                                                                                                                        │
+│                                                                                                                                          │
+│ Note on showTimesInHoursMinutes: The dashboard stat cards that need this flag already self-read from UserDefaults internally — no extra  │
+│ wiring needed.                                                                                                                           │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ 5. InsightsEditSheet.swift (new — Views/Components/NewDashboard/)                                                                        │
+│                                                                                                                                          │
+│ Full-screen edit sheet. One List always in edit mode (drag handles visible). Three sections.                                             │
+│                                                                                                                                          │
+│ struct InsightsEditSheet: View {                                                                                                         │
+│     @Bindable var config: InsightsConfiguration                                                                                          │
+│     @Environment(\.dismiss) private var dismiss                                                                                          │
+│     @Environment(\.horizontalSizeClass) private var horizontalSizeClass                                                                  │
+│     @State private var cardToAdd: InsightsCardID? = nil                                                                                  │
+│                                                                                                                                          │
+│     private var isIPad: Bool { horizontalSizeClass == .regular }                                                                         │
+│                                                                                                                                          │
+│     var body: some View {                                                                                                                │
+│         NavigationStack {                                                                                                                │
+│             List {                                                                                                                       │
+│                 // Sidebar section — iPad only                                                                                           │
+│                 if isIPad {                                                                                                              │
+│                     Section {                                                                                                            │
+│                         ForEach(config.sidebarCards, id: \.self) { card in                                                               │
+│                             cardRow(card, hint: "Sidebar")                                                                               │
+│                         }                                                                                                                │
+│                         .onMove { config.moveSidebarCard(from: $0, to: $1) }                                                             │
+│                         .onDelete { config.removeSidebarCard(at: $0) }                                                                   │
+│                     } header: {                                                                                                          │
+│                         Label("Sidebar", systemImage: "sidebar.left")                                                                    │
+│                     } footer: {                                                                                                          │
+│                         Text("Narrow cards shown in the left panel.")                                                                    │
+│                     }                                                                                                                    │
+│                 }                                                                                                                        │
+│                                                                                                                                          │
+│                 // Detail pane section                                                                                                   │
+│                 Section {                                                                                                                │
+│                     ForEach(config.detailCards, id: \.self) { card in                                                                    │
+│                         cardRow(card, hint: isIPad ? "Detail Pane" : nil)                                                                │
+│                     }                                                                                                                    │
+│                     .onMove { config.moveDetailCard(from: $0, to: $1) }                                                                  │
+│                     .onDelete { config.removeDetailCard(at: $0) }                                                                        │
+│                 } header: {                                                                                                              │
+│                     Label(isIPad ? "Detail Pane" : "Cards", systemImage: isIPad ? "rectangle.righthalf.inset.filled" :                   │
+│ "square.grid.2x2")                                                                                                                       │
+│                 }                                                                                                                        │
+│                                                                                                                                          │
+│                 // Available pool                                                                                                        │
+│                 if !config.availableCards.isEmpty {                                                                                      │
+│                     Section("Available") {                                                                                               │
+│                         ForEach(config.availableCards, id: \.self) { card in                                                             │
+│                             availableRow(card)                                                                                           │
+│                         }                                                                                                                │
+│                     }                                                                                                                    │
+│                 }                                                                                                                        │
+│             }                                                                                                                            │
+│             .environment(\.editMode, .constant(.active))                                                                                 │
+│             .navigationTitle("Customise Insights")                                                                                       │
+│             .navigationBarTitleDisplayMode(.inline)                                                                                      │
+│             .toolbar {                                                                                                                   │
+│                 ToolbarItem(placement: .confirmationAction) {                                                                            │
+│                     Button("Done") { dismiss() }                                                                                         │
+│                 }                                                                                                                        │
+│             }                                                                                                                            │
+│             // Confirmation dialog when tapping + on an Available card (iPad only)                                                       │
+│             .confirmationDialog(                                                                                                         │
+│                 "Add to…",                                                                                                               │
+│                 isPresented: Binding(get: { cardToAdd != nil }, set: { if !$0 { cardToAdd = nil } }),                                    │
+│                 titleVisibility: .visible                                                                                                │
+│             ) {                                                                                                                          │
+│                 if let card = cardToAdd {                                                                                                │
+│                     Button("Sidebar") { config.addToSidebar(card); cardToAdd = nil }                                                     │
+│                     Button("Detail Pane") { config.addToDetail(card); cardToAdd = nil }                                                  │
+│                     Button("Cancel", role: .cancel) { cardToAdd = nil }                                                                  │
+│                 }                                                                                                                        │
+│             }                                                                                                                            │
+│         }                                                                                                                                │
+│     }                                                                                                                                    │
+│                                                                                                                                          │
+│     private func cardRow(_ card: InsightsCardID, hint: String?) -> some View {                                                           │
+│         HStack(spacing: 12) {                                                                                                            │
+│             Image(systemName: card.icon)                                                                                                 │
+│                 .foregroundStyle(card.accentColor)                                                                                       │
+│                 .frame(width: 28)                                                                                                        │
+│             VStack(alignment: .leading, spacing: 2) {                                                                                    │
+│                 Text(card.displayName)                                                                                                   │
+│                 if let hint { Text(hint).font(.caption2).foregroundStyle(.tertiary) }                                                    │
+│             }                                                                                                                            │
+│         }                                                                                                                                │
+│     }                                                                                                                                    │
+│                                                                                                                                          │
+│     private func availableRow(_ card: InsightsCardID) -> some View {                                                                     │
+│         Button {                                                                                                                         │
+│             if isIPad {                                                                                                                  │
+│                 cardToAdd = card   // show sidebar vs detail choice                                                                      │
+│             } else {                                                                                                                     │
+│                 config.addToDetail(card)                                                                                                 │
+│             }                                                                                                                            │
+│         } label: {                                                                                                                       │
+│             HStack(spacing: 12) {                                                                                                        │
+│                 Image(systemName: card.icon)                                                                                             │
+│                     .foregroundStyle(card.accentColor)                                                                                   │
+│                     .frame(width: 28)                                                                                                    │
+│                 Text(card.displayName)                                                                                                   │
+│                     .foregroundStyle(.primary)                                                                                           │
+│                 Spacer()                                                                                                                 │
+│                 Image(systemName: "plus.circle.fill")                                                                                    │
+│                     .foregroundStyle(.green)                                                                                             │
+│                     .imageScale(.large)                                                                                                  │
+│             }                                                                                                                            │
+│         }                                                                                                                                │
+│     }                                                                                                                                    │
+│ }                                                                                                                                        │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ 6. Modified InsightsSidebarView.swift                                                                                                    │
+│                                                                                                                                          │
+│ - Remove all hardcoded ring/stat content                                                                                                 │
+│ - Accept config: InsightsConfiguration parameter                                                                                         │
+│ - Render config.sidebarCards as a ForEach of InsightsCardView(isCompact: true)                                                           │
+│ - Keep the triggerFRMSLoadIfNeeded logic                                                                                                 │
+│                                                                                                                                          │
+│ struct InsightsSidebarView: View {                                                                                                       │
+│     let config: InsightsConfiguration                                                                                                    │
+│     let viewModel: NewDashboardViewModel                                                                                                 │
+│     @ObservedObject var frmsViewModel: FRMSViewModel                                                                                     │
+│                                                                                                                                          │
+│     var body: some View {                                                                                                                │
+│         ScrollView {                                                                                                                     │
+│             VStack(spacing: 16) {                                                                                                        │
+│                 ForEach(config.sidebarCards, id: \.self) { card in                                                                       │
+│                     InsightsCardView(                                                                                                    │
+│                         cardID: card,                                                                                                    │
+│                         frmsViewModel: frmsViewModel,                                                                                    │
+│                         viewModel: viewModel,                                                                                            │
+│                         isCompact: true                                                                                                  │
+│                     )                                                                                                                    │
+│                 }                                                                                                                        │
+│             }                                                                                                                            │
+│             .padding(16)                                                                                                                 │
+│         }                                                                                                                                │
+│         .task { await triggerFRMSLoadIfNeeded() }                                                                                        │
+│     }                                                                                                                                    │
+│ }                                                                                                                                        │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ 7. Modified NewDashboardView.swift                                                                                                       │
+│                                                                                                                                          │
+│ - Add @State private var config = InsightsConfiguration()                                                                                │
+│ - Add @State private var showingEditSheet = false                                                                                        │
+│ - Replace analyticsCards ViewBuilder with a ForEach over config.detailCards                                                              │
+│ - Replace InsightsSidebarView init to pass config                                                                                        │
+│ - Add Edit toolbar button to both iPad detail pane and iPhone NavigationStack                                                            │
+│                                                                                                                                          │
+│ // Toolbar in both layouts:                                                                                                              │
+│ .toolbar {                                                                                                                               │
+│     ToolbarItem(placement: .navigationBarTrailing) {                                                                                     │
+│         Button { showingEditSheet = true } label: {                                                                                      │
+│             Image(systemName: "slider.horizontal.3")                                                                                     │
+│         }                                                                                                                                │
+│     }                                                                                                                                    │
+│ }                                                                                                                                        │
+│ .sheet(isPresented: $showingEditSheet) {                                                                                                 │
+│     InsightsEditSheet(config: config)                                                                                                    │
+│ }                                                                                                                                        │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ Files Summary                                                                                                                            │
+│                                                                                                                                          │
+│ ┌────────┬────────────────────────────────────────────────────────────────────┐                                                          │
+│ │ Action │                                File                                │                                                          │
+│ ├────────┼────────────────────────────────────────────────────────────────────┤                                                          │
+│ │ Create │ Block-Time/Models/InsightsCardID.swift                             │                                                          │
+│ ├────────┼────────────────────────────────────────────────────────────────────┤                                                          │
+│ │ Create │ Block-Time/Models/InsightsConfiguration.swift                      │                                                          │
+│ ├────────┼────────────────────────────────────────────────────────────────────┤                                                          │
+│ │ Create │ Block-Time/Views/Components/NewDashboard/FRMSLimitsCard.swift      │                                                          │
+│ ├────────┼────────────────────────────────────────────────────────────────────┤                                                          │
+│ │ Create │ Block-Time/Views/Components/NewDashboard/InsightsCardView.swift    │                                                          │
+│ ├────────┼────────────────────────────────────────────────────────────────────┤                                                          │
+│ │ Create │ Block-Time/Views/Components/NewDashboard/InsightsEditSheet.swift   │                                                          │
+│ ├────────┼────────────────────────────────────────────────────────────────────┤                                                          │
+│ │ Modify │ Block-Time/Views/Components/NewDashboard/InsightsSidebarView.swift │                                                          │
+│ ├────────┼────────────────────────────────────────────────────────────────────┤                                                          │
+│ │ Modify │ Block-Time/Views/Screens/NewDashboardView.swift                    │                                                          │
+│ └────────┴────────────────────────────────────────────────────────────────────┘                                                          │
+│                                                                                                                                          │
+│ MainTabView.swift — no changes needed.                                                                                                   │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ Default Layout                                                                                                                           │
+│                                                                                                                                          │
+│ Sidebar default:  [.frmsLimits, .totalTime]                                                                                              │
+│ Detail default:   [.activityChart, .fleetDonut, .roleDistribution, .pfRatioChart,                                                        │
+│                    .takeoffLanding, .approachTypes, .topRoutes, .topRegistrations]                                                       │
+│ These reproduce the current hardcoded behaviour exactly on first launch.                                                                 │
+│                                                                                                                                          │
+│ ---                                                                                                                                      │
+│ Verification                                                                                                                             │
+│                                                                                                                                          │
+│ 1. Build → BUILD SUCCEEDED                                                                                                               │
+│ 2. Run on iPad simulator → Edit button in detail toolbar → sheet shows Sidebar + Detail sections with drag handles                       │
+│ 3. Remove a card → it appears in Available                                                                                               │
+│ 4. Tap + on an Available card → confirmation dialog "Sidebar" / "Detail Pane"                                                            │
+│ 5. Reorder cards → new order persists after closing/reopening sheet                                                                      │
+│ 6. Kill and relaunch app → card configuration survives (UserDefaults persistence)                                                        │
+│ 7. Run on iPhone → sheet shows only Detail section; + tap immediately adds to detail                                                     │
+│ 8. Old Dashboard cards (e.g., .totalTime, .pfRecency) render correctly in sidebar (compact) and detail (regular)                         │
+│ 9. FRMS Limits card renders the 4-ring grid when in sidebar, same when placed in detail 

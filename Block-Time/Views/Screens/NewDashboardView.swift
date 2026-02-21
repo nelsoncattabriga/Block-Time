@@ -3,7 +3,7 @@
 //  Block-Time
 //
 //  New Insights dashboard.
-//  iPad: NavigationSplitView with FRMS limits sidebar + analytics detail pane.
+//  iPad: NavigationSplitView with configurable sidebar + analytics detail pane.
 //  iPhone: Single ScrollView with compact FRMS strip at top.
 //
 
@@ -13,6 +13,8 @@ struct NewDashboardView: View {
     @ObservedObject var frmsViewModel: FRMSViewModel
 
     @State private var viewModel = NewDashboardViewModel()
+    @State private var config = InsightsConfiguration()
+    @State private var showingEditSheet = false
     @Environment(ThemeService.self) private var themeService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -34,9 +36,8 @@ struct NewDashboardView: View {
         NavigationSplitView(columnVisibility: .constant(.all)) {
 
             InsightsSidebarView(
-                flightStrip: viewModel.frmsStrip,
-                careerStats: viewModel.careerStats,
-                flightStatistics: viewModel.flightStatistics,
+                config: config,
+                viewModel: viewModel,
                 frmsViewModel: frmsViewModel
             )
             .navigationSplitViewColumnWidth(min: 350, ideal: 400, max: 450)
@@ -53,7 +54,7 @@ struct NewDashboardView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
-                        analyticsCards
+                        detailCards
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
                     }
@@ -62,6 +63,16 @@ struct NewDashboardView: View {
             }
             .navigationTitle("Insights")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { showingEditSheet = true } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            InsightsEditSheet(config: config)
         }
         .task { await viewModel.load() }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
@@ -83,7 +94,7 @@ struct NewDashboardView: View {
                     ScrollView {
                         VStack(spacing: 16) {
                             FRMSStatusStripCard(data: viewModel.frmsStrip)
-                            analyticsCards
+                            detailCards
                             Spacer(minLength: 24)
                         }
                         .padding(.horizontal, 16)
@@ -94,6 +105,16 @@ struct NewDashboardView: View {
             }
             .navigationTitle("Insights")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { showingEditSheet = true } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingEditSheet) {
+                InsightsEditSheet(config: config)
+            }
         }
         .task { await viewModel.load() }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
@@ -101,19 +122,18 @@ struct NewDashboardView: View {
         }
     }
 
-    // MARK: - Shared analytics cards (no Night heatmap, no Career milestones)
+    // MARK: - Detail / main card list
 
     @ViewBuilder
-    private var analyticsCards: some View {
+    private var detailCards: some View {
         VStack(spacing: 16) {
-            ActivityChartCard(data: viewModel.monthlyActivity)
-            FleetDonutCard(data: viewModel.fleetHours)
-            RoleDistributionCard(data: viewModel.monthlyRoles)
-            PFRatioCard(data: viewModel.pfRatioByMonth)
-            TakeoffLandingCard(stats: viewModel.tlStats)
-            ApproachTypesCard(data: viewModel.approachTypes)
-            TopRoutesCard(routes: viewModel.topRoutes)
-            TopRegistrationsCard(registrations: viewModel.topRegistrations)
+            ForEach(config.detailCards, id: \.self) { card in
+                InsightsCardView(
+                    cardID: card,
+                    frmsViewModel: frmsViewModel,
+                    viewModel: viewModel
+                )
+            }
         }
     }
 }
