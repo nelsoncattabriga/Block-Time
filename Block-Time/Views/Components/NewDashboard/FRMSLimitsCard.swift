@@ -12,16 +12,26 @@ import SwiftUI
 struct FRMSLimitsCard: View {
     let flightStrip: NDFRMSStripData
     @ObservedObject var frmsViewModel: FRMSViewModel
+    var showFlight: Bool = true
+    var showDuty: Bool = true
 
     private var totals: FRMSCumulativeTotals? { frmsViewModel.cumulativeTotals }
     private var fleet: FRMSFleet { flightStrip.fleet }
+
+    private var headerTitle: String {
+        switch (showFlight, showDuty) {
+        case (true, false): return "Flight Time Limits"
+        case (false, true): return "Duty Time Limits"
+        default:            return "FRMS Limits"
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
 
             // ── Header ─────────────────────────────────────────────────────
             VStack(alignment: .leading, spacing: 4) {
-                Text("FRMS Limits")
+                Text(headerTitle)
                     .font(.footnote.bold())
                     .foregroundStyle(.secondary)
                     .kerning(1.2)
@@ -32,28 +42,34 @@ struct FRMSLimitsCard: View {
             .padding(.top, 4)
 
             // ── Flight Time ────────────────────────────────────────────────
-            sectionRings(
-                heading: "Flight Time Hours",
-                icon: "airplane",
-                rings: flightRings
-            )
+            if showFlight {
+                sectionRings(
+                    heading: "Flight Time Hours",
+                    icon: "airplane",
+                    rings: flightRings
+                )
+            }
 
             // ── Duty Time ─────────────────────────────────────────────────
-            sectionRings(
-                heading: "Duty Time Hours",
-                icon: "briefcase.fill",
-                rings: dutyRings
-            )
+            if showDuty {
+                sectionRings(
+                    heading: "Duty Time Hours",
+                    icon: "briefcase.fill",
+                    rings: dutyRings
+                )
+            }
 
-            if frmsViewModel.isLoading {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.mini)
-                    Text("Loading FRMS…")
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
+            if showDuty {
+                if frmsViewModel.isLoading {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.mini)
+                        Text("Loading FRMS…")
+                            .font(.system(size: 10)).foregroundStyle(.secondary)
+                    }
+                } else if totals == nil {
+                    Text("Duty data will appear after FRMS loads.")
+                        .font(.system(size: 10)).foregroundStyle(.secondary).italic()
                 }
-            } else if totals == nil {
-                Text("Duty data will appear after FRMS loads.")
-                    .font(.system(size: 10)).foregroundStyle(.secondary).italic()
             }
         }
         .padding(16)

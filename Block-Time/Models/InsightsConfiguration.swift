@@ -25,9 +25,16 @@ final class InsightsConfiguration {
 
     // MARK: - Computed
 
-    /// Cards not yet assigned to sidebar or detail.
+    /// Cards not yet assigned to sidebar or detail (iPad).
     var availableCards: [InsightsCardID] {
         let used = Set(sidebarCards + detailCards)
+        return InsightsCardID.allCases.filter { !used.contains($0) }
+    }
+
+    /// Cards not in the detail list — used on iPhone where there is no sidebar.
+    /// Sidebar-only cards appear here so iPhone users can still add them.
+    var availableForPhone: [InsightsCardID] {
+        let used = Set(detailCards)
         return InsightsCardID.allCases.filter { !used.contains($0) }
     }
 
@@ -41,6 +48,14 @@ final class InsightsConfiguration {
 
     func addToDetail(_ card: InsightsCardID) {
         guard !sidebarCards.contains(card), !detailCards.contains(card) else { return }
+        detailCards.append(card)
+        save()
+    }
+
+    /// Adds a card to the detail list regardless of sidebar membership.
+    /// Used on iPhone where there is no sidebar and all cards should be accessible.
+    func addToDetailFromPhone(_ card: InsightsCardID) {
+        guard !detailCards.contains(card) else { return }
         detailCards.append(card)
         save()
     }
@@ -85,17 +100,19 @@ final class InsightsConfiguration {
            let cards = try? JSONDecoder().decode([InsightsCardID].self, from: data) {
             sidebarCards = cards
         } else {
-            sidebarCards = [.frmsLimits, .totalTime]
+            sidebarCards = [.frmsFlightTime, .frmsDutyTime, .totalTime]
         }
 
         if let data = UserDefaults.standard.data(forKey: detailKey),
            let cards = try? JSONDecoder().decode([InsightsCardID].self, from: data) {
             detailCards = cards
         } else {
-            detailCards = [
-                .activityChart, .fleetDonut, .roleDistribution, .pfRatioChart,
-                .takeoffLanding, .approachTypes, .topRoutes, .topRegistrations
-            ]
+            let isIPad = UIDevice.current.userInterfaceIdiom == .pad
+            detailCards = isIPad
+                ? [.activityChart, .fleetDonut, .roleDistribution, .pfRatioChart,
+                   .takeoffLanding, .approachTypes, .topRoutes, .topRegistrations]
+                : [.frmsFlightTime, .activityChart, .fleetDonut, .roleDistribution, .pfRatioChart,
+                   .takeoffLanding, .approachTypes, .topRoutes, .topRegistrations]
         }
     }
 }

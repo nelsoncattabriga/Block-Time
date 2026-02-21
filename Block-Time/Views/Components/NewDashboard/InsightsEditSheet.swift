@@ -17,6 +17,10 @@ struct InsightsEditSheet: View {
 
     private var isIPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
+    private var availablePool: [InsightsCardID] {
+        isIPad ? config.availableCards : config.availableForPhone
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -50,9 +54,9 @@ struct InsightsEditSheet: View {
                 }
 
                 // ── Available pool ─────────────────────────────────────────
-                if !config.availableCards.isEmpty {
+                if !availablePool.isEmpty {
                     Section("Available") {
-                        ForEach(config.availableCards, id: \.self) { card in
+                        ForEach(availablePool, id: \.self) { card in
                             availableRow(card)
                         }
                     }
@@ -113,7 +117,7 @@ struct InsightsEditSheet: View {
             if isIPad {
                 cardToAdd = card
             } else {
-                config.addToDetail(card)
+                config.addToDetailFromPhone(card)
             }
         } label: {
             HStack(spacing: 12) {

@@ -41,7 +41,7 @@ struct InsightsCardView: View {
 
     private func isInsightsCard(_ id: InsightsCardID) -> Bool {
         switch id {
-        case .frmsLimits, .activityChart, .fleetDonut, .roleDistribution,
+        case .frmsFlightTime, .frmsDutyTime, .activityChart, .fleetDonut, .roleDistribution,
              .pfRatioChart, .takeoffLanding, .approachTypes, .topRoutes,
              .topRegistrations, .nightHeatmap, .careerMilestones:
             return true
@@ -55,8 +55,18 @@ struct InsightsCardView: View {
     @ViewBuilder
     private var insightsContent: some View {
         switch cardID {
-        case .frmsLimits:
-            FRMSLimitsCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel)
+        case .frmsFlightTime:
+            if !isCompact && UIDevice.current.userInterfaceIdiom != .pad {
+                FRMSStatusStripCard(data: viewModel.frmsStrip)
+            } else {
+                FRMSLimitsCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel, showFlight: true, showDuty: false)
+            }
+        case .frmsDutyTime:
+            if !isCompact && UIDevice.current.userInterfaceIdiom != .pad {
+                FRMSDutyStripCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel)
+            } else {
+                FRMSLimitsCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel, showFlight: false, showDuty: true)
+            }
         case .activityChart:
             ActivityChartCard(data: viewModel.monthlyActivity)
         case .fleetDonut:

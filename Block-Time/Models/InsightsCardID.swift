@@ -11,7 +11,8 @@ import SwiftUI
 enum InsightsCardID: String, Codable, CaseIterable, Hashable {
 
     // ── Insights-specific cards ─────────────────────────────────────────────
-    case frmsLimits        // 4-ring FRMS gauge grid
+    case frmsFlightTime    // 2-ring flight time gauge (28d/365d)
+    case frmsDutyTime      // 2-ring duty time gauge (7d/14d)
     case activityChart     // Monthly block hours bar chart
     case fleetDonut        // Fleet distribution pie chart
     case roleDistribution  // PF/PNF role breakdown
@@ -45,7 +46,8 @@ enum InsightsCardID: String, Codable, CaseIterable, Hashable {
 
     var displayName: String {
         switch self {
-        case .frmsLimits:        return "FRMS Limits"
+        case .frmsFlightTime:    return "FRMS Flight Time"
+        case .frmsDutyTime:      return "FRMS Duty Time"
         case .activityChart:     return "Activity Chart"
         case .fleetDonut:        return "Fleet Distribution"
         case .roleDistribution:  return "Role Distribution"
@@ -77,7 +79,8 @@ enum InsightsCardID: String, Codable, CaseIterable, Hashable {
 
     var icon: String {
         switch self {
-        case .frmsLimits:        return "dial.medium.fill"
+        case .frmsFlightTime:    return "airplane.circle.fill"
+        case .frmsDutyTime:      return "briefcase.fill"
         case .activityChart:     return "chart.bar.fill"
         case .fleetDonut:        return "chart.pie.fill"
         case .roleDistribution:  return "person.2.fill"
@@ -109,7 +112,8 @@ enum InsightsCardID: String, Codable, CaseIterable, Hashable {
 
     var accentColor: Color {
         switch self {
-        case .frmsLimits:        return .orange
+        case .frmsFlightTime:    return .orange
+        case .frmsDutyTime:      return .teal
         case .activityChart:     return .blue
         case .fleetDonut:        return .purple
         case .roleDistribution:  return .teal
@@ -142,7 +146,7 @@ enum InsightsCardID: String, Codable, CaseIterable, Hashable {
     /// Advisory hint: this card was designed to look good at sidebar (narrow) widths.
     var sidebarHint: Bool {
         switch self {
-        case .frmsLimits, .totalTime, .picTime, .icusTime, .nightTime, .simTime,
+        case .frmsFlightTime, .frmsDutyTime, .totalTime, .picTime, .icusTime, .nightTime, .simTime,
              .pfRatioStat, .recentActivity7, .recentActivity28, .recentActivity30,
              .recentActivity365, .pfRecency, .aiiiRecency, .takeoffRecency,
              .landingRecency, .aircraftTypeTime, .averageMetric, .careerMilestones:

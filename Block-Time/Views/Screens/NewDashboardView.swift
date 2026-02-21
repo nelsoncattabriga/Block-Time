@@ -22,6 +22,21 @@ struct NewDashboardView: View {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
     }
 
+    /// Loads dashboard data and FRMS cumulative totals concurrently.
+    private func loadAll() async {
+        async let dashboardLoad: () = viewModel.load()
+        async let frmsLoad: () = triggerFRMSLoadIfNeeded()
+        _ = await (dashboardLoad, frmsLoad)
+    }
+
+    @MainActor
+    private func triggerFRMSLoadIfNeeded() async {
+        guard frmsViewModel.cumulativeTotals == nil, !frmsViewModel.isLoading else { return }
+        let raw      = UserDefaults.standard.string(forKey: "flightTimePosition") ?? ""
+        let position = FlightTimePosition(rawValue: raw) ?? .captain
+        frmsViewModel.loadFlightData(crewPosition: position)
+    }
+
     var body: some View {
         if isIPad {
             ipadLayout
@@ -74,9 +89,9 @@ struct NewDashboardView: View {
         .sheet(isPresented: $showingEditSheet) {
             InsightsEditSheet(config: config)
         }
-        .task { await viewModel.load() }
+        .task { await loadAll() }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
-            Task { await viewModel.load() }
+            Task { await loadAll() }
         }
     }
 
@@ -93,7 +108,6 @@ struct NewDashboardView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 16) {
-                            FRMSStatusStripCard(data: viewModel.frmsStrip)
                             detailCards
                             Spacer(minLength: 24)
                         }
@@ -116,9 +130,9 @@ struct NewDashboardView: View {
                 InsightsEditSheet(config: config)
             }
         }
-        .task { await viewModel.load() }
+        .task { await loadAll() }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
-            Task { await viewModel.load() }
+            Task { await loadAll() }
         }
     }
 
