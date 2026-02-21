@@ -14,6 +14,7 @@ struct InsightsEditSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var cardToAdd: InsightsCardID? = nil
+    @State private var editMode: EditMode = .active
 
     private var isIPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
@@ -62,7 +63,7 @@ struct InsightsEditSheet: View {
                     }
                 }
             }
-            .environment(\.editMode, .constant(.active))
+            .environment(\.editMode, $editMode)
             .navigationTitle("Customise Insights")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -82,10 +83,12 @@ struct InsightsEditSheet: View {
                     Button("Sidebar") {
                         config.addToSidebar(card)
                         cardToAdd = nil
+                        refreshEditMode()
                     }
                     Button("Detail Pane") {
                         config.addToDetail(card)
                         cardToAdd = nil
+                        refreshEditMode()
                     }
                     Button("Cancel", role: .cancel) { cardToAdd = nil }
                 }
@@ -112,12 +115,18 @@ struct InsightsEditSheet: View {
         }
     }
 
+    private func refreshEditMode() {
+        editMode = .inactive
+        Task { @MainActor in editMode = .active }
+    }
+
     private func availableRow(_ card: InsightsCardID) -> some View {
         Button {
             if isIPad {
                 cardToAdd = card
             } else {
                 config.addToDetailFromPhone(card)
+                refreshEditMode()
             }
         } label: {
             HStack(spacing: 12) {
