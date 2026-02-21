@@ -118,8 +118,8 @@ struct AircraftTypeTimeCard: View {
             entries.append(("Total", aircraftStats.totalHours))
         }
 
-        // Show detailed breakdowns on iPad landscape or in iPhone single-column mode
-        let showFullDetails = (isIPad && isLandscape) || (!isIPad && settings.isCompactView)
+        // Show detailed breakdowns on iPad (any orientation) or iPhone single-column mode
+        let showFullDetails = isIPad || settings.isCompactView
         if showFullDetails {
             if aircraftStats.p1Time > 0 {
                 entries.append(("P1", aircraftStats.p1Time))
@@ -168,8 +168,8 @@ struct AircraftTypeTimeCard: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                if isIPad && isLandscape {
-                    // iPad landscape: show time entries in a single row
+                if isIPad {
+                    // iPad (any orientation): show time entries in a single row
                     if !timeEntries.isEmpty {
                         HStack(spacing: 12) {
                             ForEach(timeEntries, id: \.label) { entry in
@@ -185,7 +185,7 @@ struct AircraftTypeTimeCard: View {
                             }
                         }
                     }
-                } else if !isIPad && settings.isCompactView {
+                } else if settings.isCompactView {
                     // iPhone single-column mode: show all time entries in 2-column grid
                     if !timeEntries.isEmpty {
                         LazyVGrid(columns: [
