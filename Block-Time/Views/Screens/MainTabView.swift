@@ -72,6 +72,16 @@ struct MainTabView: View {
                 }
                 .tag(3)
 
+            // ── Temporary tab: remove once Insights replaces Dashboard ──
+            NavigationStack {
+                NewDashboardView()
+            }
+            .tabItem {
+                Image(systemName: "chart.xyaxis.line")
+                Text("Insights")
+            }
+            .tag(4)
+
         }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingWelcomeView(
