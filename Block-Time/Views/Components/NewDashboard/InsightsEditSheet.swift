@@ -64,7 +64,7 @@ struct InsightsEditSheet: View {
                 }
             }
             .environment(\.editMode, $editMode)
-            .navigationTitle("Customise Insights")
+            .navigationTitle("Customise Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

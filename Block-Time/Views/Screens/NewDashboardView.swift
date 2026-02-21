@@ -56,7 +56,7 @@ struct NewDashboardView: View {
                 frmsViewModel: frmsViewModel
             )
             .navigationSplitViewColumnWidth(min: 350, ideal: 400, max: 450)
-            .navigationTitle("Insights")
+            .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -115,7 +115,7 @@ struct NewDashboardView: View {
                     .refreshable { await viewModel.load() }
                 }
             }
-            .navigationTitle("Insights")
+            .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

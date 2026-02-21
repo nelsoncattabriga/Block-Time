@@ -49,7 +49,7 @@ struct MainTabView: View {
             NewDashboardView(frmsViewModel: frmsViewModel)
                 .tabItem {
                     Image(systemName: "chart.xyaxis.line")
-                    Text("Insights")
+                    Text("Dashboard")
                 }
                 .tag(1)
 
