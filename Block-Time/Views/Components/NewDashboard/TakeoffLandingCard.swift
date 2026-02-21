@@ -12,9 +12,7 @@ struct TakeoffLandingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Takeoffs & Landings", systemImage: "airplane.departure")
-                .font(.headline).fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            CardHeader(title: "Takeoffs & Landings", icon: "airplane.departure")
 
             HStack(spacing: 16) {
                 tlColumn(

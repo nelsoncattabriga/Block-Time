@@ -148,23 +148,12 @@ struct AircraftTypeTimeCard: View {
     }
 
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(selectedAircraftType.isEmpty ? "Select Type" : selectedAircraftType)
-                    .iPadScaledFont(.headline)
-                    .foregroundColor(.secondary)
-                    .fontWeight(.bold)
-                    .lineLimit(1)
-
+        VStack(alignment: .leading, spacing: 14) {
+            CardHeader(title: selectedAircraftType.isEmpty ? "Select Type" : selectedAircraftType,
+                       icon: "airplane", iconColor: .mint) {
                 Image(systemName: "chevron.down")
                     .imageScale(.small)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Image(systemName: "airplane")
-                    .foregroundColor(.mint)
-                    .iPadScaledFont(.headline)
+                    .foregroundStyle(.secondary)
             }
 
             VStack(alignment: .leading, spacing: 4) {

@@ -42,11 +42,7 @@ struct ActivityChartCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label("Flying Activity", systemImage: "chart.bar.fill")
-                    .font(.headline).fontWeight(.bold)
-                    .foregroundStyle(.secondary)
-                Spacer()
+            CardHeader(title: "Flying Activity", icon: "chart.bar.fill") {
                 Picker("", selection: $selectedMonths) {
                     Text("12M").tag(12)
                     Text("6M").tag(6)

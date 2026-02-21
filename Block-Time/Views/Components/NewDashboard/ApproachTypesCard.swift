@@ -15,9 +15,7 @@ struct ApproachTypesCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Approach Types", systemImage: "scope")
-                .font(.headline).fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            CardHeader(title: "Approach Types", icon: "scope")
 
             if data.isEmpty {
                 ContentUnavailableView(

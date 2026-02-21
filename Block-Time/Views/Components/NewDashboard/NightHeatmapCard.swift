@@ -38,12 +38,7 @@ struct NightHeatmapCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label("Night Flying", systemImage: "moon.stars.fill")
-                    .font(.headline).fontWeight(.bold)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                // Legend
+            CardHeader(title: "Night Flying", icon: "moon.stars.fill", iconColor: .indigo) {
                 HStack(spacing: 4) {
                     Text("Less")
                         .font(.system(size: 9)).foregroundStyle(.secondary)

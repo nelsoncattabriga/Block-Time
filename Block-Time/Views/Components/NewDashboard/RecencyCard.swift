@@ -37,19 +37,11 @@ struct RecencyCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-
-                Text(displayTitle)
-                    .iPadScaledFont(.headline)
-                    .foregroundColor(.secondary)
-                    .fontWeight(.bold)
-
-                Spacer()
-
+        VStack(alignment: .leading, spacing: 14) {
+            CardHeader(title: displayTitle, icon: "calendar.badge.clock") {
                 Image(systemName: statusIcon)
-                    .foregroundColor(recencyStatus.color)
-                    .iPadScaledFont(.headline)
+                    .foregroundStyle(recencyStatus.color)
+                    .font(.headline)
             }
 
             VStack(alignment: .leading, spacing: 4) {

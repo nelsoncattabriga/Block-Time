@@ -27,11 +27,7 @@ struct RoleDistributionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label("Role Distribution", systemImage: "person.3.fill")
-                    .font(.headline).fontWeight(.bold)
-                    .foregroundStyle(.secondary)
-                Spacer()
+            CardHeader(title: "Role Distribution", icon: "person.3.fill") {
                 Picker("", selection: $selectedMonths) {
                     Text("12M").tag(12)
                     Text("2Y").tag(24)

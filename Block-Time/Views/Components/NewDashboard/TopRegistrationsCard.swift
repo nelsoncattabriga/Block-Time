@@ -14,9 +14,7 @@ struct TopRegistrationsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Most Flown Tails", systemImage: "tag.fill")
-                .font(.headline).fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            CardHeader(title: "Top Registrations", icon: "tag.fill")
 
             if registrations.isEmpty {
                 ContentUnavailableView(

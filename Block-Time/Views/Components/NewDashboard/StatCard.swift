@@ -9,20 +9,8 @@ struct StatCard: View {
     let icon: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-
-                Text(title)
-                    .iPadScaledFont(.headline)
-                    .foregroundColor(.secondary)
-                    .fontWeight(.bold)
-
-                Spacer()
-
-                Image(systemName: icon)
-                    .foregroundColor(color)
-                    .iPadScaledFont(.headline)
-            }
+        VStack(alignment: .leading, spacing: 14) {
+            CardHeader(title: title, icon: icon, iconColor: color)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(value)

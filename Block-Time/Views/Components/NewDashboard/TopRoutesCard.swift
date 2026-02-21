@@ -14,9 +14,7 @@ struct TopRoutesCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Top Routes", systemImage: "point.topleft.down.to.point.bottomright.curvepath.fill")
-                .font(.headline).fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            CardHeader(title: "Top Routes", icon: "point.topleft.down.to.point.bottomright.curvepath.fill")
 
             if routes.isEmpty {
                 ContentUnavailableView(

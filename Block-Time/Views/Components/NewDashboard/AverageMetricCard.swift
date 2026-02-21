@@ -154,25 +154,13 @@ struct AverageMetricCard: View {
     }
 
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(displayTitle)
-                    .iPadScaledFont(.headline)
-                    .foregroundColor(.secondary)
-                    .fontWeight(.bold)
-                    .lineLimit(1)
-
+        VStack(alignment: .leading, spacing: 14) {
+            CardHeader(title: displayTitle, icon: "chart.line.uptrend.xyaxis", iconColor: .purple) {
                 if !shouldStackVertically {
                     Image(systemName: "chevron.down")
                         .imageScale(.small)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
-
-                Spacer()
-
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .foregroundColor(.purple)
-                    .iPadScaledFont(.headline)
             }
 
             VStack(alignment: .leading, spacing: 4) {

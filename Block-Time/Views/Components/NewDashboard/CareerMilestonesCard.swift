@@ -12,9 +12,7 @@ struct CareerMilestonesCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Career Overview", systemImage: "trophy.fill")
-                .font(.headline).fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            CardHeader(title: "Career Overview", icon: "trophy.fill")
 
             // Top stats row
             HStack(spacing: 0) {

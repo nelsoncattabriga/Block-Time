@@ -40,9 +40,7 @@ struct FleetDonutCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Time by Fleet", systemImage: "airplane.circle.fill")
-                .font(.headline).fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            CardHeader(title: "Time by Fleet", icon: "airplane.circle.fill")
 
             if data.isEmpty {
                 ContentUnavailableView("No Data", systemImage: "airplane.slash")

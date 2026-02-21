@@ -41,20 +41,8 @@ struct RecentActivityCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-
-                Text("\(days) Day\(days == 1 ? "" : "s")")
-                    .iPadScaledFont(.headline)
-                    .foregroundColor(.secondary)
-                    .fontWeight(.bold)
-
-                Spacer()
-
-                Image(systemName: "calendar")
-                    .foregroundColor(progressColor)
-                    .iPadScaledFont(.headline)
-            }
+        VStack(alignment: .leading, spacing: 14) {
+            CardHeader(title: "\(days) Day\(days == 1 ? "" : "s")", icon: "calendar", iconColor: progressColor)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {

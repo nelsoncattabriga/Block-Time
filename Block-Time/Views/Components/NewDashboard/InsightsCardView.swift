@@ -56,17 +56,9 @@ struct InsightsCardView: View {
     private var insightsContent: some View {
         switch cardID {
         case .frmsFlightTime:
-            if !isCompact && UIDevice.current.userInterfaceIdiom != .pad {
-                FRMSStatusStripCard(data: viewModel.frmsStrip)
-            } else {
-                FRMSLimitsCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel, showFlight: true, showDuty: false)
-            }
+            FRMSFlightStripCard(data: viewModel.frmsStrip)
         case .frmsDutyTime:
-            if !isCompact && UIDevice.current.userInterfaceIdiom != .pad {
-                FRMSDutyStripCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel)
-            } else {
-                FRMSLimitsCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel, showFlight: false, showDuty: true)
-            }
+            FRMSDutyStripCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel)
         case .activityChart:
             ActivityChartCard(data: viewModel.monthlyActivity)
         case .fleetDonut:

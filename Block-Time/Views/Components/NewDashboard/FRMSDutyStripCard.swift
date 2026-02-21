@@ -3,7 +3,7 @@
 //  Block-Time
 //
 //  Compact horizontal ring-gauge strip for duty time limits (7d / 14d).
-//  Mirrors the layout and styling of FRMSStatusStripCard.
+//  Mirrors the layout and styling of FRMSFlightStripCard.
 //  Used on iPhone where FRMSLimitsCard's vertical grid is not shown.
 //
 
@@ -18,9 +18,7 @@ struct FRMSDutyStripCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Duty Time Limits", systemImage: "briefcase.fill")
-                .font(.headline).fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            CardHeader(title: "Duty Time Limits", icon: "briefcase.fill")
 
             if frmsViewModel.isLoading {
                 HStack(spacing: 6) {

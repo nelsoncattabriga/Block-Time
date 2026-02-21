@@ -1,5 +1,5 @@
 //
-//  FRMSStatusStripCard.swift
+//  FRMSFlightStripCard.swift
 //  Block-Time
 //
 //  Compact ring-gauge strip showing flight time against rolling limits.
@@ -7,14 +7,12 @@
 
 import SwiftUI
 
-struct FRMSStatusStripCard: View {
+struct FRMSFlightStripCard: View {
     let data: NDFRMSStripData
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Flight Time Limits", systemImage: "clock.badge.checkmark")
-                .font(.headline).fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            CardHeader(title: "Flight Time Limits", icon: "clock.badge.checkmark")
 
             HStack(spacing: 0) {
                 if let max7d = data.max7d {
