@@ -46,17 +46,13 @@ struct MainTabView: View {
                 }
                 .tag(0)
 
-            NavigationStack {
-                DashboardView()
-                    .environmentObject(viewModel)
-            }
-            .tabItem {
-                Image(systemName: "chart.bar.fill")
-                Text("Dashboard")
-            }
-            .tag(1)
+            NewDashboardView(frmsViewModel: frmsViewModel)
+                .tabItem {
+                    Image(systemName: "chart.xyaxis.line")
+                    Text("Insights")
+                }
+                .tag(1)
 
-            // FRMS tab
             FRMSSplitView(flightTimeVM: viewModel, frmsViewModel: frmsViewModel)
                 .tabItem {
                     Image(systemName: "clock.badge.checkmark")
@@ -71,14 +67,6 @@ struct MainTabView: View {
                     Text("Settings")
                 }
                 .tag(3)
-
-            // ── Temporary tab: remove once Insights replaces Dashboard ──
-            NewDashboardView(frmsViewModel: frmsViewModel)
-                .tabItem {
-                    Image(systemName: "chart.xyaxis.line")
-                    Text("Insights")
-                }
-                .tag(4)
 
         }
         .sheet(isPresented: $showingOnboarding) {
