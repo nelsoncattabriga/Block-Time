@@ -10,7 +10,7 @@
 - Prefer value types (structs) over reference types (classes)
 
 ### SwiftUI Patterns
-- Extract views when they exceed 100 lines
+- Extract views when they exceed 500 lines
 - Use `@State` for local view state only
 - Use `@Environment` for dependency injection
 - Prefer `NavigationStack` over deprecated `NavigationView`

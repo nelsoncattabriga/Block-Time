@@ -1,0 +1,538 @@
+
+           Claude Code v2.1.39
+▗ ▗   ▖ ▖  Sonnet 4.5 · Claude Pro
+           ~/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time-Refactor
+  ▘▘ ▝▝    Opus 4.6 is here · $50 free extra usage · /extra-usage to enable
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Plan to implement                                                                                                                            │
+│                                                                                                                                              │
+│ FlightTimeExtractorViewModel Refactoring Plan                                                                                                │
+│                                                                                                                                              │
+│ Context                                                                                                                                      │
+│                                                                                                                                              │
+│ The FlightTimeExtractorViewModel has grown into a 2,735-line "god view model" that violates the Single Responsibility Principle. It          │
+│ currently handles 9 distinct domains:                                                                                                        │
+│                                                                                                                                              │
+│ 1. OCR & Image Processing - Camera, photo library, permissions, image extraction                                                             │
+│ 2. Flight Data Extraction - Converting OCR results to form fields                                                                            │
+│ 3. Flight Data Management - CRUD operations, editing mode, change tracking                                                                   │
+│ 4. Time Calculations - Block time, night time, decimal/HH:MM conversions                                                                     │
+│ 5. Crew & Aircraft Data - Crew names, recent lists, aircraft registrations                                                                   │
+│ 6. Settings & Preferences - 20+ user settings with UserDefaults persistence                                                                  │
+│ 7. Takeoffs/Landings - Night/day calculations, approach type management                                                                      │
+│ 8. Logbook Integration - Save flights, CSV import, draft persistence                                                                         │
+│ 9. External Integrations - FlightAware API, airport code normalization                                                                       │
+│                                                                                                                                              │
+│ Statistics:                                                                                                                                  │
+│ - 62 @Published properties                                                                                                                   │
+│ - 100+ public methods                                                                                                                        │
+│ - 14 files depend on it (MainTabView owns it as @StateObject, others consume via @EnvironmentObject)                                         │
+│ - Primary consumers: AddFlightView, FlightsView, SettingsView                                                                                │
+│                                                                                                                                              │
+│ User Requirement: Refactor without breaking the app.                                                                                         │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Recommended Approach: Phased Strangler Pattern                                                                                               │
+│                                                                                                                                              │
+│ Break down the monolith incrementally using the Strangler Pattern - extract responsibilities one at a time while maintaining backward        │
+│ compatibility through forwarding properties.                                                                                                 │
+│                                                                                                                                              │
+│ Strategy Benefits                                                                                                                            │
+│                                                                                                                                              │
+│ - ✅ Zero breaking changes - Existing views work throughout migration                                                                        │
+│ - ✅ Incremental testing - Validate after each extraction                                                                                    │
+│ - ✅ Reversible - Can pause or rollback at any phase                                                                                         │
+│ - ✅ Low risk - No "big bang" rewrite                                                                                                        │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Phase 1: Extract Settings (Highest Priority)                                                                                                 │
+│                                                                                                                                              │
+│ Why First?                                                                                                                                   │
+│                                                                                                                                              │
+│ - Settings account for 26 of 62 properties (42% of the bloat)                                                                                │
+│ - Clearest boundaries with minimal coupling                                                                                                  │
+│ - Immediate reduction in complexity                                                                                                          │
+│ - Low risk - settings are mostly independent of flight logic                                                                                 │
+│                                                                                                                                              │
+│ New Component: FlightSettingsViewModel                                                                                                       │
+│                                                                                                                                              │
+│ File:                                                                                                                                        │
+│ /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time-Refactor/Block-Time/ViewModels/FlightSettingsViewModel.swift    │
+│                                                                                                                                              │
+│ @Observable                                                                                                                                  │
+│ class FlightSettingsViewModel {                                                                                                              │
+│     // Crew defaults                                                                                                                         │
+│     var defaultCaptainName: String = ""                                                                                                      │
+│     var defaultCoPilotName: String = ""                                                                                                      │
+│     var defaultSOName: String = ""                                                                                                           │
+│     var flightTimePosition: FlightTimePosition = .captain                                                                                    │
+│     var showSONameFields: Bool = false                                                                                                       │
+│                                                                                                                                              │
+│     // Flight formatting                                                                                                                     │
+│     var includeLeadingZeroInFlightNumber: Bool = false                                                                                       │
+│     var includeAirlinePrefixInFlightNumber: Bool = false                                                                                     │
+│     var airlinePrefix: String = "QF"                                                                                                         │
+│     var isCustomAirlinePrefix: Bool = false                                                                                                  │
+│     var showFullAircraftReg: Bool = true                                                                                                     │
+│                                                                                                                                              │
+│     // Display preferences                                                                                                                   │
+│     var displayFlightsInLocalTime: Bool = false                                                                                              │
+│     var useIATACodes: Bool = false                                                                                                           │
+│     var showTimesInHoursMinutes: Bool = false                                                                                                │
+│     var selectedFleetID: String = "B737"                                                                                                     │
+│     var decimalRoundingMode: RoundingMode = .standard                                                                                        │
+│                                                                                                                                              │
+│     // Approaches & auto-logging                                                                                                             │
+│     var logApproaches: Bool = false                                                                                                          │
+│     var defaultApproachType: String? = nil                                                                                                   │
+│     var pfAutoInstrumentMinutes: Int = 30                                                                                                    │
+│                                                                                                                                              │
+│     // Photo library                                                                                                                         │
+│     var savePhotosToLibrary: Bool = false                                                                                                    │
+│                                                                                                                                              │
+│     // Recent items                                                                                                                          │
+│     var recentCaptainNames: [String] = []                                                                                                    │
+│     var recentCoPilotNames: [String] = []                                                                                                    │
+│     var recentSONames: [String] = []                                                                                                         │
+│     var recentAircraftRegs: [String] = []                                                                                                    │
+│     var recentAirports: [String] = []                                                                                                        │
+│                                                                                                                                              │
+│     // Saved crew names                                                                                                                      │
+│     var savedCaptainNames: [String] = []                                                                                                     │
+│     var savedCoPilotNames: [String] = []                                                                                                     │
+│     var savedSONames: [String] = []                                                                                                          │
+│                                                                                                                                              │
+│     // Logbook destination                                                                                                                   │
+│     var logbookDestination: LogbookDestination = .internalLogbook                                                                            │
+│                                                                                                                                              │
+│     private let userDefaultsService: UserDefaultsService                                                                                     │
+│                                                                                                                                              │
+│     init(userDefaultsService: UserDefaultsService = UserDefaultsService()) {                                                                 │
+│         self.userDefaultsService = userDefaultsService                                                                                       │
+│         loadAllSettings()                                                                                                                    │
+│     }                                                                                                                                        │
+│                                                                                                                                              │
+│     // All settings load/save methods                                                                                                        │
+│     // All crew management methods (add/remove names)                                                                                        │
+│ }                                                                                                                                            │
+│                                                                                                                                              │
+│ Migration Steps                                                                                                                              │
+│                                                                                                                                              │
+│ 1. Create FlightSettingsViewModel with all 26 settings properties                                                                            │
+│ 2. Update MainTabView.swift - Add new ViewModel alongside existing:                                                                          │
+│ @StateObject private var viewModel = FlightTimeExtractorViewModel()                                                                          │
+│ @State private var settingsVM = FlightSettingsViewModel() // New                                                                             │
+│ 3. Add Temporary Forwarding in FlightTimeExtractorViewModel:                                                                                 │
+│ // Temporary bridge - will be removed in Phase 4                                                                                             │
+│ private var settingsVM: FlightSettingsViewModel?                                                                                             │
+│                                                                                                                                              │
+│ var defaultCaptainName: String {                                                                                                             │
+│     get { settingsVM?.defaultCaptainName ?? "" }                                                                                             │
+│     set { settingsVM?.defaultCaptainName = newValue }                                                                                        │
+│ }                                                                                                                                            │
+│ // ... repeat for all 26 settings properties                                                                                                 │
+│ 4. Inject Settings into Existing ViewModel in MainTabView:                                                                                   │
+│ .onAppear {                                                                                                                                  │
+│     viewModel.settingsVM = settingsVM                                                                                                        │
+│ }                                                                                                                                            │
+│ 5. Update SettingsView to use @Environment(FlightSettingsViewModel.self)                                                                     │
+│ 6. Test thoroughly - All settings should persist, CloudKit sync should work                                                                  │
+│ 7. Keep forwarding properties until Phase 4 cleanup                                                                                          │
+│                                                                                                                                              │
+│ Impact                                                                                                                                       │
+│                                                                                                                                              │
+│ - Files Modified: 3 (FlightSettingsViewModel.swift [new], MainTabView.swift, SettingsView.swift)                                             │
+│ - Breaking Changes: NONE (forwarding maintains compatibility)                                                                                │
+│ - Lines Removed from God VM: ~800 lines (settings methods + properties)                                                                      │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Phase 2: Extract Image Processing                                                                                                            │
+│                                                                                                                                              │
+│ Why Second?                                                                                                                                  │
+│                                                                                                                                              │
+│ - Clear input/output boundary (image → FlightData)                                                                                           │
+│ - Only used by AddFlightView                                                                                                                 │
+│ - Minimal coupling to flight form logic                                                                                                      │
+│ - OCR is a distinct feature that can fail independently                                                                                      │
+│                                                                                                                                              │
+│ New Component: FlightImageExtractorViewModel                                                                                                 │
+│                                                                                                                                              │
+│ File: /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time-Refactor/Block-Time/ViewModels/FlightImageExtractorViewMo │
+│ del.swift                                                                                                                                    │
+│                                                                                                                                              │
+│ @Observable                                                                                                                                  │
+│ class FlightImageExtractorViewModel {                                                                                                        │
+│     var selectedImage: UIImage?                                                                                                              │
+│     var selectedPhotoItem: PhotosPickerItem?                                                                                                 │
+│     var isExtracting: Bool = false                                                                                                           │
+│     var showingCamera: Bool = false                                                                                                          │
+│     var isFetchingFlightAware: Bool = false                                                                                                  │
+│     var flightSegments: [FlightAwareData] = []                                                                                               │
+│     var showingSegmentSelection: Bool = false                                                                                                │
+│                                                                                                                                              │
+│     private let textRecognitionService: TextRecognitionService                                                                               │
+│     private let photoSavingService: PhotoSavingService                                                                                       │
+│     private let flightAwareService: FlightAwareService                                                                                       │
+│                                                                                                                                              │
+│     init(                                                                                                                                    │
+│         textRecognitionService: TextRecognitionService = TextRecognitionService(),                                                           │
+│         photoSavingService: PhotoSavingService = PhotoSavingService(),                                                                       │
+│         flightAwareService: FlightAwareService = .shared                                                                                     │
+│     ) {                                                                                                                                      │
+│         self.textRecognitionService = textRecognitionService                                                                                 │
+│         self.photoSavingService = photoSavingService                                                                                         │
+│         self.flightAwareService = flightAwareService                                                                                         │
+│     }                                                                                                                                        │
+│                                                                                                                                              │
+│     // Returns extracted data that form can populate                                                                                         │
+│     func extractTimes(from image: UIImage, fleetType: String) async throws -> FlightData                                                     │
+│                                                                                                                                              │
+│     func fetchFlightAwareData(flightNumber: String, date: Date) async throws -> [FlightAwareData]                                            │
+│                                                                                                                                              │
+│     func saveCurrentImageToPhotoLibrary() async                                                                                              │
+│                                                                                                                                              │
+│     // Camera/photo handling methods                                                                                                         │
+│ }                                                                                                                                            │
+│                                                                                                                                              │
+│ Migration Steps                                                                                                                              │
+│                                                                                                                                              │
+│ 1. Create FlightImageExtractorViewModel with OCR/camera properties                                                                           │
+│ 2. Add to MainTabView as @State private var imageExtractorVM = FlightImageExtractorViewModel()                                               │
+│ 3. Update AddFlightView to inject both VMs:                                                                                                  │
+│ @Environment(FlightImageExtractorViewModel.self) private var imageVM                                                                         │
+│ @EnvironmentObject var viewModel: FlightTimeExtractorViewModel                                                                               │
+│ 4. Refactor OCR flow in AddFlightView:                                                                                                       │
+│ // Old: viewModel.extractTimes()                                                                                                             │
+│ // New:                                                                                                                                      │
+│ Task {                                                                                                                                       │
+│     if let data = try? await imageVM.extractTimes(from: image, fleetType: settingsVM.selectedFleetID) {                                      │
+│         viewModel.populateForm(with: data)                                                                                                   │
+│     }                                                                                                                                        │
+│ }                                                                                                                                            │
+│ 5. Add temporary forwarding for image properties in FlightTimeExtractorViewModel                                                             │
+│ 6. Test - Camera, OCR, photo saving, FlightAware lookup                                                                                      │
+│                                                                                                                                              │
+│ Impact                                                                                                                                       │
+│                                                                                                                                              │
+│ - Files Modified: 3 (FlightImageExtractorViewModel.swift [new], MainTabView.swift, AddFlightView.swift)                                      │
+│ - Breaking Changes: NONE                                                                                                                     │
+│ - Lines Removed: ~600 lines (OCR + photo + FlightAware methods)                                                                              │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Phase 3: Extract Editing State                                                                                                               │
+│                                                                                                                                              │
+│ Why Third?                                                                                                                                   │
+│                                                                                                                                              │
+│ - Editing mode is a cross-cutting concern between FlightsView and AddFlightView                                                              │
+│ - Small extraction (4 properties + logic)                                                                                                    │
+│ - Improves navigation flow clarity                                                                                                           │
+│ - Independent of form field management                                                                                                       │
+│                                                                                                                                              │
+│ New Component: FlightEditingViewModel                                                                                                        │
+│                                                                                                                                              │
+│ File:                                                                                                                                        │
+│ /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time-Refactor/Block-Time/ViewModels/FlightEditingViewModel.swift     │
+│                                                                                                                                              │
+│ @Observable                                                                                                                                  │
+│ class FlightEditingViewModel {                                                                                                               │
+│     var isEditingMode: Bool = false                                                                                                          │
+│     var editingSectorID: UUID?                                                                                                               │
+│     private var originalFlightData: FlightSector?                                                                                            │
+│     private var originalIsICUS: Bool = false                                                                                                 │
+│                                                                                                                                              │
+│     func beginEditing(_ sector: FlightSector) -> FlightFormData {                                                                            │
+│         isEditingMode = true                                                                                                                 │
+│         editingSectorID = sector.id                                                                                                          │
+│         originalFlightData = sector                                                                                                          │
+│         originalIsICUS = /* extract from remarks or other source */                                                                          │
+│         return FlightFormData(from: sector)                                                                                                  │
+│     }                                                                                                                                        │
+│                                                                                                                                              │
+│     func hasUnsavedChanges(current: FlightFormData) -> Bool {                                                                                │
+│         guard let original = originalFlightData else { return false }                                                                        │
+│         return current != FlightFormData(from: original)                                                                                     │
+│     }                                                                                                                                        │
+│                                                                                                                                              │
+│     func changesSummary(current: FlightFormData) -> String {                                                                                 │
+│         // Generate human-readable change list                                                                                               │
+│     }                                                                                                                                        │
+│                                                                                                                                              │
+│     func exitEditingMode() {                                                                                                                 │
+│         isEditingMode = false                                                                                                                │
+│         editingSectorID = nil                                                                                                                │
+│         originalFlightData = nil                                                                                                             │
+│         originalIsICUS = false                                                                                                               │
+│     }                                                                                                                                        │
+│ }                                                                                                                                            │
+│                                                                                                                                              │
+│ Migration Steps                                                                                                                              │
+│                                                                                                                                              │
+│ 1. Create FlightEditingViewModel                                                                                                             │
+│ 2. Add to MainTabView as @State private var editingVM = FlightEditingViewModel()                                                             │
+│ 3. Update FlightsView to use editing VM:                                                                                                     │
+│ @Environment(FlightEditingViewModel.self) private var editingVM                                                                              │
+│                                                                                                                                              │
+│ // On row tap:                                                                                                                               │
+│ let formData = editingVM.beginEditing(selectedFlight)                                                                                        │
+│ viewModel.loadForm(formData)                                                                                                                 │
+│ 4. Update AddFlightView navigation title:                                                                                                    │
+│ .navigationTitle(editingVM.isEditingMode ? "Edit Flight" : "Add Flight")                                                                     │
+│ 5. Add forwarding for isEditingMode in FlightTimeExtractorViewModel                                                                          │
+│ 6. Test - Edit flight flow, cancel with/without changes, delete flight                                                                       │
+│                                                                                                                                              │
+│ Impact                                                                                                                                       │
+│                                                                                                                                              │
+│ - Files Modified: 4 (FlightEditingViewModel.swift [new], MainTabView.swift, FlightsView.swift, AddFlightView.swift)                          │
+│ - Breaking Changes: NONE                                                                                                                     │
+│ - Lines Removed: ~200 lines (editing state + change detection)                                                                               │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Phase 4: Rename & Cleanup                                                                                                                    │
+│                                                                                                                                              │
+│ Final Refactoring                                                                                                                            │
+│                                                                                                                                              │
+│ 1. Rename FlightTimeExtractorViewModel → FlightFormViewModel                                                                                 │
+│ 2. Remove all forwarding properties added in Phases 1-3                                                                                      │
+│ 3. Update dependency injection - FlightFormViewModel receives settings VM:                                                                   │
+│ class FlightFormViewModel: ObservableObject {                                                                                                │
+│     private let settings: FlightSettingsViewModel                                                                                            │
+│                                                                                                                                              │
+│     init(settings: FlightSettingsViewModel) {                                                                                                │
+│         self.settings = settings                                                                                                             │
+│     }                                                                                                                                        │
+│ }                                                                                                                                            │
+│ 4. Migrate to @Observable (optional - can defer to separate refactor)                                                                        │
+│ 5. Update all references from old name to new name                                                                                           │
+│ 6. Final testing - Full regression suite                                                                                                     │
+│                                                                                                                                              │
+│ Final State: FlightFormViewModel                                                                                                             │
+│                                                                                                                                              │
+│ Remaining Responsibilities:                                                                                                                  │
+│ - Flight form state (22 form fields)                                                                                                         │
+│ - Time calculations (block time, night time, decimal/HH:MM)                                                                                  │
+│ - Takeoffs/landings auto-calculation                                                                                                         │
+│ - Form validation                                                                                                                            │
+│ - Logbook operations (save, import CSV, draft persistence)                                                                                   │
+│ - Crew name management (delegates to settings for persistence)                                                                               │
+│                                                                                                                                              │
+│ Remaining Size: ~900-1,000 lines (down from 2,735)                                                                                           │
+│                                                                                                                                              │
+│ Impact                                                                                                                                       │
+│                                                                                                                                              │
+│ - Files Modified: 10+ (rename propagation)                                                                                                   │
+│ - Breaking Changes: Property forwarding removal (internal only - views already migrated)                                                     │
+│ - Final Reduction: 63% smaller, focused responsibility                                                                                       │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Architecture After Refactoring                                                                                                               │
+│                                                                                                                                              │
+│ View Model Ecosystem                                                                                                                         │
+│                                                                                                                                              │
+│ MainTabView                                                                                                                                  │
+│ ├── FlightSettingsViewModel (@State, @Observable)                                                                                            │
+│ │   └── 26 settings properties + crew lists                                                                                                  │
+│ ├── FlightImageExtractorViewModel (@State, @Observable)                                                                                      │
+│ │   └── OCR, camera, photo library, FlightAware                                                                                              │
+│ ├── FlightEditingViewModel (@State, @Observable)                                                                                             │
+│ │   └── Editing mode state + change detection                                                                                                │
+│ ├── FlightFormViewModel (@StateObject, ObservableObject)                                                                                     │
+│ │   └── 22 form fields + time calculations + save/import                                                                                     │
+│ ├── FlightsFilterViewModel (@StateObject, ObservableObject)                                                                                  │
+│ │   └── Existing - no changes                                                                                                                │
+│ └── FRMSViewModel (@StateObject, ObservableObject)                                                                                           │
+│     └── Existing - no changes                                                                                                                │
+│                                                                                                                                              │
+│ Dependency Injection Pattern                                                                                                                 │
+│                                                                                                                                              │
+│ // MainTabView.swift                                                                                                                         │
+│ @StateObject private var flightFormVM = FlightFormViewModel()                                                                                │
+│ @State private var settingsVM = FlightSettingsViewModel()                                                                                    │
+│ @State private var imageExtractorVM = FlightImageExtractorViewModel()                                                                        │
+│ @State private var editingVM = FlightEditingViewModel()                                                                                      │
+│                                                                                                                                              │
+│ var body: some View {                                                                                                                        │
+│     TabView {                                                                                                                                │
+│         AddFlightView()                                                                                                                      │
+│             .environmentObject(flightFormVM)                                                                                                 │
+│             .environment(settingsVM)                                                                                                         │
+│             .environment(imageExtractorVM)                                                                                                   │
+│             .environment(editingVM)                                                                                                          │
+│                                                                                                                                              │
+│         FlightsView()                                                                                                                        │
+│             .environmentObject(flightFormVM)                                                                                                 │
+│             .environment(settingsVM)                                                                                                         │
+│             .environment(editingVM)                                                                                                          │
+│                                                                                                                                              │
+│         SettingsView()                                                                                                                       │
+│             .environment(settingsVM)                                                                                                         │
+│     }                                                                                                                                        │
+│     .onAppear {                                                                                                                              │
+│         // Inject settings into form VM for access to preferences                                                                            │
+│         flightFormVM.settingsViewModel = settingsVM                                                                                          │
+│     }                                                                                                                                        │
+│ }                                                                                                                                            │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Testing Strategy                                                                                                                             │
+│                                                                                                                                              │
+│ Phase 1 Testing (Settings)                                                                                                                   │
+│                                                                                                                                              │
+│ - Save all 26 settings → Kill app → Verify persistence                                                                                       │
+│ - Change crew defaults → Add new flight → Verify pre-population                                                                              │
+│ - Change fleet → Verify OCR uses correct parser                                                                                              │
+│ - Modify settings on one device → Verify CloudKit sync to other device                                                                       │
+│ - Import CSV → Verify recent crew names populate                                                                                             │
+│                                                                                                                                              │
+│ Phase 2 Testing (Image)                                                                                                                      │
+│                                                                                                                                              │
+│ - Capture photo from camera → Extract → Verify fields populate                                                                               │
+│ - Select from photo library → Extract → Verify OCR accuracy                                                                                  │
+│ - Enable "save to library" → Extract → Verify photo saves                                                                                    │
+│ - Fetch FlightAware → Select segment → Verify form populates                                                                                 │
+│ - OCR fails → Verify error handling                                                                                                          │
+│                                                                                                                                              │
+│ Phase 3 Testing (Editing)                                                                                                                    │
+│                                                                                                                                              │
+│ - Tap flight in logbook → Verify editing mode activates                                                                                      │
+│ - Edit fields → Cancel without saving → Verify no changes                                                                                    │
+│ - Edit fields → Save → Verify changes persist                                                                                                │
+│ - Edit flight → Delete → Verify removal from logbook                                                                                         │
+│ - Edit with unsaved changes → Back button → Verify discard alert                                                                             │
+│                                                                                                                                              │
+│ Phase 4 Testing (Rename & Cleanup)                                                                                                           │
+│                                                                                                                                              │
+│ - Full regression - all features from Phases 1-3                                                                                             │
+│ - Add new flight → Save → Verify in logbook                                                                                                  │
+│ - Import CSV → Verify all fields map correctly                                                                                               │
+│ - Draft auto-save → Kill app → Restore → Verify fields restore                                                                               │
+│ - All tabs navigate correctly                                                                                                                │
+│ - iPad split view works in landscape                                                                                                         │
+│                                                                                                                                              │
+│ Automated Tests (Recommended)                                                                                                                │
+│                                                                                                                                              │
+│ // Unit test example                                                                                                                         │
+│ func testSettingsPersistence() {                                                                                                             │
+│     let vm = FlightSettingsViewModel()                                                                                                       │
+│     vm.defaultCaptainName = "John Smith"                                                                                                     │
+│     vm.flightTimePosition = .captain                                                                                                         │
+│                                                                                                                                              │
+│     let vm2 = FlightSettingsViewModel() // Fresh instance                                                                                    │
+│     XCTAssertEqual(vm2.defaultCaptainName, "John Smith")                                                                                     │
+│     XCTAssertEqual(vm2.flightTimePosition, .captain)                                                                                         │
+│ }                                                                                                                                            │
+│                                                                                                                                              │
+│ // Integration test example                                                                                                                  │
+│ func testEditingFlow() {                                                                                                                     │
+│     let editingVM = FlightEditingViewModel()                                                                                                 │
+│     let formVM = FlightFormViewModel()                                                                                                       │
+│                                                                                                                                              │
+│     let sector = FlightSector(/* mock data */)                                                                                               │
+│     let formData = editingVM.beginEditing(sector)                                                                                            │
+│     formVM.loadForm(formData)                                                                                                                │
+│                                                                                                                                              │
+│     XCTAssertTrue(editingVM.isEditingMode)                                                                                                   │
+│     XCTAssertEqual(formVM.flightNumber, sector.flightNumber)                                                                                 │
+│ }                                                                                                                                            │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Critical Files to Modify                                                                                                                     │
+│                                                                                                                                              │
+│ 1. ViewModels/ (new files)                                                                                                                   │
+│   - FlightSettingsViewModel.swift (Phase 1)                                                                                                  │
+│   - FlightImageExtractorViewModel.swift (Phase 2)                                                                                            │
+│   - FlightEditingViewModel.swift (Phase 3)                                                                                                   │
+│ 2. ViewModels/FlightTimeExtractorViewModel.swift                                                                                             │
+│   - All phases - extract code, add forwarding, final cleanup                                                                                 │
+│ 3. Views/Screens/MainTabView.swift                                                                                                           │
+│   - All phases - add new @State VMs, inject via .environment()                                                                               │
+│ 4. Views/Screens/AddFlightView.swift                                                                                                         │
+│   - Phase 2: Update OCR flow to use FlightImageExtractorViewModel                                                                            │
+│   - Phase 3: Update editing mode checks                                                                                                      │
+│ 5. Views/Screens/SettingsView.swift                                                                                                          │
+│   - Phase 1: Migrate to FlightSettingsViewModel                                                                                              │
+│ 6. Views/Screens/FlightsView.swift                                                                                                           │
+│   - Phase 3: Use FlightEditingViewModel for edit mode                                                                                        │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Risk Mitigation                                                                                                                              │
+│                                                                                                                                              │
+│ Backward Compatibility                                                                                                                       │
+│                                                                                                                                              │
+│ - Forwarding properties ensure zero breaking changes during Phases 1-3                                                                       │
+│ - Only remove forwarding in Phase 4 after all views migrated                                                                                 │
+│ - All existing @EnvironmentObject var viewModel: FlightTimeExtractorViewModel references work unchanged                                      │
+│                                                                                                                                              │
+│ Rollback Strategy                                                                                                                            │
+│                                                                                                                                              │
+│ - Each phase is atomic - can stop after any phase if issues arise                                                                            │
+│ - Git commits after each phase for easy revert                                                                                               │
+│ - Forwarding properties remain until confident in stability                                                                                  │
+│                                                                                                                                              │
+│ Performance Considerations                                                                                                                   │
+│                                                                                                                                              │
+│ - Adding 3 new @State VMs has negligible memory overhead (~KB each)                                                                          │
+│ - @Observable is more efficient than @Published (when migrated)                                                                              │
+│ - No change to database operations or heavy lifting services                                                                                 │
+│                                                                                                                                              │
+│ CloudKit Sync                                                                                                                                │
+│                                                                                                                                              │
+│ - Settings persist via UserDefaultsService (unchanged)                                                                                       │
+│ - NSUbiquitousKeyValueStore notifications still work                                                                                         │
+│ - No changes to sync infrastructure                                                                                                          │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Timeline Estimate                                                                                                                            │
+│                                                                                                                                              │
+│ - Phase 1 (Settings): 2-3 days                                                                                                               │
+│ - Phase 2 (Image): 2-3 days                                                                                                                  │
+│ - Phase 3 (Editing): 1-2 days                                                                                                                │
+│ - Phase 4 (Cleanup): 1-2 days                                                                                                                │
+│ - Buffer & Testing: 2-3 days                                                                                                                 │
+│                                                                                                                                              │
+│ Total: 8-13 days (conservative estimate with thorough testing)                                                                               │
+│                                                                                                                                              │
+│ ---                                                                                                                                          │
+│ Success Metrics                                                                                                                              │
+│                                                                                                                                              │
+│ Code Quality                                                                                                                                 │
+│                                                                                                                                              │
+│ - ✅ FlightFormViewModel < 1,000 lines (down from 2,735)                                                                                     │
+│ - ✅ Each new ViewModel < 500 lines                                                                                                          │
+│ - ✅ Clear separation of concerns                                                                                                            │
+│                                                                                                                                              │
+│ Stability                                                                                                                                    │
+│                                                                                                                                              │
+│ - ✅ Zero regressions in existing functionality                                                                                              │
+│ - ✅ All manual test cases pass                                                                                                              │
+│ - ✅ No crashes in production                                                                                                                │
+│                                                                                                                                              │
+│ Maintainability                                                                                                                              │
+│                                                                                                                                              │
+│ - ✅ Settings changes isolated to FlightSettingsViewModel                                                                                    │
+│ - ✅ OCR changes isolated to FlightImageExtractorViewModel                                                                                   │
+│ - ✅ New features can target specific view models                                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+⏺ I'll implement this refactoring plan systematically, starting with Phase 1: Extract Settings. This is the highest-priority phase that will
+  remove 26 of 62 properties (42% of the bloat).       
+                             
+  Let me start by reading the existing FlightTimeExtractorViewModel to understand the current structure:                                        
+   
+⏺ Read 1 file (ctrl+o to expand)                                                                                                                
+                                                                                                                                              
+⏺ The file is too large. Let me read it in sections to understand the structure:                                                                
+                                                                                                                                                
+⏺ Read 1 file (ctrl+o to expand)     
+                                                                                                                                                
+⏺ Good! I can see the settings properties. Let me continue reading to find all settings-related methods:
+                                                                                                                                                
+⏺ Searched for 2 patterns (ctrl+o to expand)                                                                                                    
+                                                                                                                                                
+⏺ Let me read the crew management and settings update methods:
+                                                                                                                                                
+⏺ Reading 1 file… (ctrl+o to expand)                        
+                                                                                                                                                
+✢ Imagining… (36s · ↓ 2.5k tokens · thinking)
+  ⎿  Tip: $50 free extra usage · /extra-usage to enable                                                                                         
+   
