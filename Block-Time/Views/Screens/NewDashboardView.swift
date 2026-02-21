@@ -78,7 +78,6 @@ struct NewDashboardView: View {
                     ScrollView {
                         detailCards
                             .padding(.horizontal, 16)
-                            .padding(.top, 8)
                     }
                     .refreshable { await viewModel.load() }
                 }
