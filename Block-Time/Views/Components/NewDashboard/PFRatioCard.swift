@@ -72,7 +72,7 @@ struct PFRatioCard: View {
                     }
 
                     // Average reference line
-                    RuleMark(y: .value("Average", averagePF * 100))
+                    RuleMark(y: .value("Avg", averagePF * 100))
                         .foregroundStyle(Color.orange.opacity(0.7))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
                         .annotation(position: .trailing, alignment: .leading) {

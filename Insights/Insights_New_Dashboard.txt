@@ -1,0 +1,36 @@
+  13 new files, 1 modified:                                                
+
+  ┌─────────────────────────────────────────┬─────────────────────────────────────────────────────────────────────┐
+  │                  File                   │                               Purpose                               │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ ViewModels/NewDashboardViewModel.swift  │ @Observable @MainActor class — all data structs + Core Data queries │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ Views/Screens/NewDashboardView.swift    │ Main scroll view composing all 11 cards                             │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/FRMSStatusStripCard.swift  │ 3 animated ring gauges (7d / 28d / 365d flight time)                │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/ActivityChartCard.swift    │ Monthly block hours bar chart, SIM toggle, 12M/2Y/All picker        │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/FleetDonutCard.swift       │ Swift Charts donut — hours by aircraft type, top-5 + Other          │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/RoleDistributionCard.swift │ Stacked bar chart — Captain/ICUS/F/O split by month                 │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/PFRatioCard.swift          │ Line + area chart of PF% trend with average reference line          │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/NightHeatmapCard.swift     │ GitHub-style calendar grid — intensity = night hours per month      │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/TakeoffLandingCard.swift   │ Career T/O & LDG counts with day/night split                        │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/ApproachTypesCard.swift    │ Horizontal bars for AIII / ILS / RNP / GLS / NPA                    │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/TopRoutesCard.swift        │ Top 10 routes ranked by sectors with gold/silver/bronze badges      │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/TopRegistrationsCard.swift │ Top 10 aircraft tails by hours with mini bars                       │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ NewDashboard/CareerMilestonesCard.swift │ Career stats + animated progress bar to next hour milestone         │
+  ├─────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────┤
+  │ MainTabView.swift (modified)            │ Added 5th "Insights" tab — old Dashboard tab untouched              │
+  └─────────────────────────────────────────┴─────────────────────────────────────────────────────────────────────┘
+
+  To finalize later: delete the "Insights" tab entry in MainTabView, swap DashboardView() for NewDashboardView() on the existing tab, and
+  delete the old dashboard files.
