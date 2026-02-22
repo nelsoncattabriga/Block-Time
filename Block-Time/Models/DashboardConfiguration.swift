@@ -14,8 +14,8 @@ final class DashboardConfiguration {
     var sidebarCards: [DashboardCardID]
     var detailCards: [DashboardCardID]
 
-    private let sidebarKey = "insightsSidebarCards"
-    private let detailKey  = "insightsDetailCards"
+    private let sidebarKey = "insightsSidebarCards2"
+    private let detailKey  = "insightsDetailCards2"
 
     init() {
         sidebarCards = []
@@ -108,14 +108,11 @@ final class DashboardConfiguration {
             detailCards = cards
         } else {
             let isIPad = UIDevice.current.userInterfaceIdiom == .pad
-            let analyticsCards: [DashboardCardID] = [
-                .activityChart, .fleetDonut, .roleDistribution, .pfRatioChart,
-                .takeoffLanding, .approachTypes, .topRoutes, .topRegistrations,
-                .nightHeatmap, .careerMilestones
-            ]
+            let sidebarDefaults: Set<DashboardCardID> = [.totalTime, .frmsFlightTime, .frmsDutyTime]
+            let remaining = DashboardCardID.allCases.filter { !sidebarDefaults.contains($0) }
             detailCards = isIPad
-                ? analyticsCards
-                : [.totalTime, .frmsFlightTime, .frmsDutyTime] + analyticsCards
+                ? remaining
+                : [.totalTime, .frmsFlightTime, .frmsDutyTime] + remaining
         }
     }
 }
