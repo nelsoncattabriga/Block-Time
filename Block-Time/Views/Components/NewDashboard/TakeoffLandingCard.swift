@@ -19,7 +19,7 @@ struct TakeoffLandingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Takeoffs & Landings", icon: "airplane.departure") {
+            CardHeader(title: "T/O & LDGs", icon: "airplane") {
                 Picker("Period", selection: $period) {
                     ForEach(TLPeriod.allCases, id: \.self) {
                         Text($0.rawValue).tag($0)
