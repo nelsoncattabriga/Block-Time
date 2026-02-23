@@ -45,7 +45,7 @@ struct TimeByTypeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Time by Type (Top 5)", icon: "airplane.circle.fill")
+            CardHeader(title: "Time by Type", icon: "airplane.circle.fill")
 
             Picker("Display", selection: $displayMode) {
                 ForEach(FleetDisplayMode.allCases, id: \.self) { mode in

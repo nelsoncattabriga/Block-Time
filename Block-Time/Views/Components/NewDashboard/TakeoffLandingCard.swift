@@ -7,12 +7,27 @@
 
 import SwiftUI
 
+private enum TLPeriod: String, CaseIterable {
+    case oneMonth   = "1M"
+    case twelveMonths = "12M"
+    case all         = "ALL"
+}
+
 struct TakeoffLandingCard: View {
-    let stats: NDTakeoffLandingStats
+    @State private var period: TLPeriod = .oneMonth
+    @State private var stats: NDTakeoffLandingStats = .empty
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Takeoffs & Landings", icon: "airplane.departure")
+            CardHeader(title: "Takeoffs & Landings", icon: "airplane.departure") {
+                Picker("Period", selection: $period) {
+                    ForEach(TLPeriod.allCases, id: \.self) {
+                        Text($0.rawValue).tag($0)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
 
             HStack(spacing: 16) {
                 tlColumn(
@@ -40,6 +55,34 @@ struct TakeoffLandingCard: View {
         }
         .padding(16)
         .appCardStyle()
+        .onAppear { loadStats() }
+        .onChange(of: period) { loadStats() }
+    }
+
+    private func loadStats() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        let now = Date()
+        let endDate = formatter.string(from: now)
+
+        let flights: [FlightSector]
+        switch period {
+        case .all:
+            flights = FlightDatabaseService.shared.fetchAllFlights()
+        case .oneMonth:
+            let start = Calendar.current.date(byAdding: .month, value: -1, to: now)!
+            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+        case .twelveMonths:
+            let start = Calendar.current.date(byAdding: .month, value: -12, to: now)!
+            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+        }
+
+        var dTO = 0, nTO = 0, dLDG = 0, nLDG = 0
+        for f in flights {
+            dTO  += f.dayTakeoffs;  nTO  += f.nightTakeoffs
+            dLDG += f.dayLandings;  nLDG += f.nightLandings
+        }
+        stats = NDTakeoffLandingStats(dayTakeoffs: dTO, nightTakeoffs: nTO, dayLandings: dLDG, nightLandings: nLDG)
     }
 
     @ViewBuilder
@@ -52,7 +95,9 @@ struct TakeoffLandingCard: View {
         nightPct: Double,
         color: Color
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let dayPct = 1 - nightPct
+
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.caption).foregroundStyle(color)
@@ -64,16 +109,34 @@ struct TakeoffLandingCard: View {
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
 
-            VStack(alignment: .leading, spacing: 4) {
-                splitRow(label: "Day", count: day, pct: 1 - nightPct, color: .yellow)
-                splitRow(label: "Night", count: night, pct: nightPct, color: .indigo)
+            // Stacked horizontal bar
+            GeometryReader { geo in
+                HStack(spacing: 1) {
+                    if dayPct > 0 {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.yellow.opacity(0.85))
+                            .frame(width: max(0, geo.size.width * dayPct - 0.5))
+                    }
+                    if nightPct > 0 {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.indigo.opacity(0.85))
+                            .frame(width: max(0, geo.size.width * nightPct - 0.5))
+                    }
+                }
+            }
+            .frame(height: 8)
+            .clipShape(Capsule())
+
+            VStack(alignment: .leading, spacing: 3) {
+                legendRow(label: "Day",   count: day,   pct: dayPct,   color: .yellow)
+                legendRow(label: "Night", count: night, pct: nightPct, color: .indigo)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
-    private func splitRow(label: String, count: Int, pct: Double, color: Color) -> some View {
+    private func legendRow(label: String, count: Int, pct: Double, color: Color) -> some View {
         HStack(spacing: 6) {
             Circle()
                 .fill(color.opacity(0.8))

@@ -66,7 +66,7 @@ struct DashboardCardView: View {
         case .pfRatioChart:
             PFRatioCard(data: viewModel.pfRatioByMonth)
         case .takeoffLanding:
-            TakeoffLandingCard(stats: viewModel.tlStats)
+            TakeoffLandingCard()
         case .approachTypes:
             ApproachTypesCard(data: viewModel.approachTypes)
         case .topRoutes:
