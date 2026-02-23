@@ -71,6 +71,9 @@ struct FRMSView: View {
     @State private var disruptionTZDifference: Double = 0.0
     @State private var disruptionNextDutyOver16: Bool = false
 
+    // Cached home base timezone — set once on appear to avoid per-row FRMSCalculationService allocation
+    @State private var homeBaseTimeZone: TimeZone = .current
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -107,6 +110,10 @@ struct FRMSView: View {
                 //LogManager.shared.debug("FRMSView: onAppear called")
                 viewModel.loadFlightData(crewPosition: flightTimePosition)
                 updateMBTT()  // Initialize MBTT calculation
+                homeBaseTimeZone = FRMSCalculationService(configuration: viewModel.configuration).getHomeBaseTimeZone()
+            }
+            .onChange(of: viewModel.configuration.homeBase) { _, _ in
+                homeBaseTimeZone = FRMSCalculationService(configuration: viewModel.configuration).getHomeBaseTimeZone()
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
                 LogManager.shared.debug("FRMSView: Received .flightDataChanged notification")
@@ -2355,18 +2362,8 @@ struct FRMSView: View {
                             .foregroundColor(.secondary)
                     }
 
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color(.systemGray5))
-                                .frame(height: 6)
-
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(progressColor(status))
-                                .frame(width: min(CGFloat(current / limit) * geometry.size.width, geometry.size.width), height: 6)
-                        }
-                    }
-                    .frame(height: 6)
+                    ProgressView(value: min(current, limit), total: limit)
+                        .tint(progressColor(status))
                 }
                 .padding(16)
             }
@@ -2773,34 +2770,50 @@ struct FRMSView: View {
         }
     }
 
+    // MARK: - Cached Date Formatters
+    // Static so they're allocated once per app lifetime, not once per render call.
+
+    private static let _dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd MMM HHmm"
+        return f
+    }()
+
+    private static let _timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HHmm"
+        return f
+    }()
+
+    private static let _dateTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd MMM - HHmm"
+        return f
+    }()
+
+    private static let _localDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd MMM yyyy"
+        return f
+    }()
+
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM HHmm"
-        // Use device's current timezone (wherever you are)
-        return formatter.string(from: date)
+        Self._dateFormatter.string(from: date)
     }
 
     private func formatLocalDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM yyyy"
-        // Use home base timezone from FRMS configuration
-        let service = FRMSCalculationService(configuration: viewModel.configuration)
-        formatter.timeZone = service.getHomeBaseTimeZone()
-        return formatter.string(from: date)
+        // homeBaseTimeZone is set once in onAppear (and on homeBase change)
+        // — avoids allocating FRMSCalculationService for every row render.
+        Self._localDateFormatter.timeZone = homeBaseTimeZone
+        return Self._localDateFormatter.string(from: date)
     }
 
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HHmm"
-        // Use device's current timezone (wherever you are)
-        return formatter.string(from: date)
+        Self._timeFormatter.string(from: date)
     }
 
     private func formatDateTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM - HHmm"
-        // Use device's current timezone (wherever you are)
-        return formatter.string(from: date)
+        Self._dateTimeFormatter.string(from: date)
     }
 }
 
