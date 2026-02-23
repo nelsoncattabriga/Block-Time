@@ -40,6 +40,7 @@ struct AircraftTypeTimeCard: View {
                 } label: {
                     cardContent
                 }
+                .buttonStyle(.plain)
             }
         }
         .onAppear {
