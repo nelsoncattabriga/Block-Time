@@ -14,7 +14,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case frmsFlightTime    // 2-ring flight time gauge (28d/365d)
     case frmsDutyTime      // 2-ring duty time gauge (7d/14d)
     case activityChart     // Monthly block hours bar chart
-    case fleetDonut        // Fleet distribution pie chart
+    case timeByType        // Time by Type distribution pie chart
     case roleDistribution  // PF/PNF role breakdown
     case pfRatioChart      // PF ratio trend line
     case takeoffLanding    // Takeoff & landing stats
@@ -48,8 +48,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         switch self {
         case .frmsFlightTime:    return "FRMS Flight Time"
         case .frmsDutyTime:      return "FRMS Duty Time"
-        case .activityChart:     return "Activity Chart"
-        case .fleetDonut:        return "Fleet Distribution"
+        case .activityChart:     return "Flying Activity"
+        case .timeByType:        return "Time by Type"
         case .roleDistribution:  return "Role Distribution"
         case .pfRatioChart:      return "PF Ratio Chart"
         case .takeoffLanding:    return "Takeoffs & Landings"
@@ -82,7 +82,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .frmsFlightTime:    return "airplane.circle.fill"
         case .frmsDutyTime:      return "briefcase.fill"
         case .activityChart:     return "chart.bar.fill"
-        case .fleetDonut:        return "chart.pie.fill"
+        case .timeByType:        return "chart.pie.fill"
         case .roleDistribution:  return "person.2.fill"
         case .pfRatioChart:      return "chart.line.uptrend.xyaxis"
         case .takeoffLanding:    return "airplane.departure"
@@ -115,7 +115,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .frmsFlightTime:    return .orange
         case .frmsDutyTime:      return .teal
         case .activityChart:     return .blue
-        case .fleetDonut:        return .purple
+        case .timeByType:        return .purple
         case .roleDistribution:  return .teal
         case .pfRatioChart:      return .orange
         case .takeoffLanding:    return .green

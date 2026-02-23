@@ -17,6 +17,7 @@ struct NDMonthlyActivity: Identifiable {
     let blockHours: Double
     let simHours: Double
     let nightHours: Double
+    let sectorCount: Int
     var totalHours: Double { blockHours + simHours }
 }
 

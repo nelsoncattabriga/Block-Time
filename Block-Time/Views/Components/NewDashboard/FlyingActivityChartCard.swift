@@ -8,18 +8,22 @@
 import SwiftUI
 import Charts
 
-private struct StackedBar: Identifiable {
+private enum DisplayMode: String, CaseIterable {
+    case hours = "Hours"
+    case sectors = "Sectors"
+}
+
+private struct ChartBar: Identifiable {
     let id = UUID()
     let month: Date
-    let series: String
-    let hours: Double
+    let value: Double
 }
 
 struct FlyingActivityChartCard: View {
     let data: [NDMonthlyActivity]
 
     @State private var selectedMonths = 12
-    @State private var showSIM = false
+    @State private var displayMode: DisplayMode = .hours
 
     private var filtered: [NDMonthlyActivity] {
         guard selectedMonths > 0 else { return data }
@@ -27,13 +31,10 @@ struct FlyingActivityChartCard: View {
         return data.filter { $0.month >= cutoff }
     }
 
-    private var stackedData: [StackedBar] {
-        filtered.flatMap { item -> [StackedBar] in
-            var bars: [StackedBar] = [StackedBar(month: item.month, series: "Block", hours: item.blockHours)]
-            if showSIM && item.simHours > 0 {
-                bars.append(StackedBar(month: item.month, series: "SIM", hours: item.simHours))
-            }
-            return bars
+    private var chartData: [ChartBar] {
+        filtered.map { item in
+            let value = displayMode == .hours ? item.blockHours : Double(item.sectorCount)
+            return ChartBar(month: item.month, value: value)
         }
     }
 
@@ -47,18 +48,18 @@ struct FlyingActivityChartCard: View {
                     Text("6M").tag(6)
                     Text("12M").tag(12)
                     Text("5Y").tag(60)
-                    
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 110)
             }
 
-           // Can we change tis to toggle Sector count instead of SIM??
-            Toggle("Include SIM", isOn: $showSIM)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .tint(.cyan)
-                
+            Picker("Display", selection: $displayMode) {
+                ForEach(DisplayMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+
             if filtered.isEmpty {
                 ContentUnavailableView(
                     "No Activity",
@@ -67,16 +68,15 @@ struct FlyingActivityChartCard: View {
                 )
                 .frame(height: 180)
             } else {
-                Chart(stackedData) { item in
+                Chart(chartData) { item in
                     BarMark(
                         x: .value("Month", item.month, unit: .month),
-                        y: .value("Hours", item.hours)
+                        y: .value(displayMode == .hours ? "Hours" : "Sectors", item.value)
                     )
-                    .foregroundStyle(by: .value("Series", item.series))
+                    .foregroundStyle(displayMode == .hours ? Color.blue.gradient : Color.orange.gradient)
                     .cornerRadius(3)
                 }
-                .chartForegroundStyleScale(["Block": Color.blue.gradient, "SIM": Color.cyan.gradient])
-                .chartLegend(showSIM ? .visible : .hidden)
+                .chartLegend(.hidden)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: axisStride, count: axisCount)) { _ in
                         AxisGridLine()
@@ -91,18 +91,27 @@ struct FlyingActivityChartCard: View {
                 }
                 .frame(height: 200)
                 .animation(.spring(response: 0.4), value: selectedMonths)
-                .animation(.spring(response: 0.4), value: showSIM)
+                .animation(.spring(response: 0.4), value: displayMode)
             }
 
             // Summary row
             if !filtered.isEmpty {
-                let totalBlock = filtered.reduce(0) { $0 + $1.blockHours }
-                let avg = totalBlock / Double(filtered.count)
-                HStack {
-                    summaryChip(label: "Monthly Avg", value: String(format: "%.1f hrs", avg), color: .blue)
-                    Spacer()
-                    summaryChip(label: "Period Total", value: String(format: "%.1f hrs", totalBlock), color: .blue)
-                    
+                if displayMode == .hours {
+                    let totalBlock = filtered.reduce(0) { $0 + $1.blockHours }
+                    let avg = totalBlock / Double(filtered.count)
+                    HStack {
+                        summaryChip(label: "Monthly Avg", value: String(format: "%.1f hrs", avg), color: .blue)
+                        Spacer()
+                        summaryChip(label: "Period Total", value: String(format: "%.1f hrs", totalBlock), color: .blue)
+                    }
+                } else {
+                    let totalSectors = filtered.reduce(0) { $0 + $1.sectorCount }
+                    let avg = Double(totalSectors) / Double(filtered.count)
+                    HStack {
+                        summaryChip(label: "Monthly Avg", value: String(format: "%.0f sectors", avg), color: .orange)
+                        Spacer()
+                        summaryChip(label: "Period Total", value: "\(totalSectors) sectors", color: .orange)
+                    }
                 }
             }
         }

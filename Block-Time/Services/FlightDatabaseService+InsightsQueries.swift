@@ -95,18 +95,23 @@ extension FlightDatabaseService {
         var block: [Date: Double] = [:]
         var sim: [Date: Double] = [:]
         var night: [Date: Double] = [:]
+        var sectors: [Date: Int] = [:]
 
         for f in flights {
             guard let date = f.date else { continue }
             let m = monthStart(for: date)
-            block[m, default: 0] += hrs(f.blockTime)
+            let blockHrs = hrs(f.blockTime)
+            block[m, default: 0] += blockHrs
             sim[m, default: 0]   += hrs(f.simTime)
             night[m, default: 0] += hrs(f.nightTime)
+            if blockHrs > 0 {
+                sectors[m, default: 0] += 1
+            }
         }
 
         let months = Set(block.keys).union(sim.keys).union(night.keys)
         return months.sorted().map {
-            NDMonthlyActivity(month: $0, blockHours: block[$0] ?? 0, simHours: sim[$0] ?? 0, nightHours: night[$0] ?? 0)
+            NDMonthlyActivity(month: $0, blockHours: block[$0] ?? 0, simHours: sim[$0] ?? 0, nightHours: night[$0] ?? 0, sectorCount: sectors[$0] ?? 0)
         }
     }
 
