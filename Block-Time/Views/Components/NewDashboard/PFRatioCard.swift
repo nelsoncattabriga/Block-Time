@@ -70,13 +70,13 @@ struct PFRatioCard: View {
 
                     // Average reference line
                     RuleMark(y: .value("Avg", averagePF * 100))
-                        .foregroundStyle(Color.orange.opacity(0.7))
+                        .foregroundStyle(Color.orange.opacity(1.0))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
-                        .annotation(position: .trailing, alignment: .leading) {
-                            Text("Avg \(Int(averagePF * 100))%")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.orange)
-                        }
+//                        .annotation(position: .top, alignment: .trailing) {
+//                            Text("Avg \(Int(averagePF * 100))%")
+//                                .font(.caption)
+//                                .foregroundStyle(.orange)
+//                        }
                 }
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .month, count: filtered.count > 18 ? 3 : 1)) { _ in
