@@ -1,5 +1,5 @@
 //
-//  ActivityChartCard.swift
+//  FlyingActivityChartCard.swift
 //  Block-Time
 //
 //  Monthly flying activity bar chart with time-range picker.
@@ -15,7 +15,7 @@ private struct StackedBar: Identifiable {
     let hours: Double
 }
 
-struct ActivityChartCard: View {
+struct FlyingActivityChartCard: View {
     let data: [NDMonthlyActivity]
 
     @State private var selectedMonths = 12
@@ -52,6 +52,7 @@ struct ActivityChartCard: View {
                 .frame(width: 110)
             }
 
+           // Can we change tis to toggle Sector count instead of SIM??
             Toggle("Include SIM", isOn: $showSIM)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
