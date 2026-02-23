@@ -10,7 +10,7 @@ import SwiftUI
 
 enum DashboardCardID: String, Codable, CaseIterable, Hashable {
 
-    // ── Insights-specific cards ─────────────────────────────────────────────
+    // ── New Dashboard Cards  ─────────────────────────────────────────────
     case frmsFlightTime    // 2-ring flight time gauge (28d/365d)
     case frmsDutyTime      // 2-ring duty time gauge (7d/14d)
     case activityChart     // Monthly block hours bar chart
@@ -24,7 +24,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case nightHeatmap      // Night-hour calendar heatmap
     case careerMilestones  // Career overview & milestone progress
 
-    // ── Dashboard stat cards ────────────────────────────────────────────────
+    // ── Original Dashboard stat cards ────────────────────────────────────────────────
     case totalTime
     case picTime
     case icusTime

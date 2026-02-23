@@ -44,19 +44,19 @@ struct ActivityChartCard: View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Flying Activity", icon: "chart.bar.fill") {
                 Picker("", selection: $selectedMonths) {
+                    Text("5Y").tag(60)
                     Text("12M").tag(12)
                     Text("6M").tag(6)
-                    Text("All").tag(0)
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 110)
             }
 
             Toggle("Include SIM", isOn: $showSIM)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .tint(.cyan)
-
+                
             if filtered.isEmpty {
                 ContentUnavailableView(
                     "No Activity",
@@ -97,9 +97,10 @@ struct ActivityChartCard: View {
                 let totalBlock = filtered.reduce(0) { $0 + $1.blockHours }
                 let avg = totalBlock / Double(filtered.count)
                 HStack {
-                    summaryChip(label: "Total", value: String(format: "%.0f hrs", totalBlock), color: .blue)
+                    summaryChip(label: "Monthly Avg", value: String(format: "%.1f hrs", avg), color: .blue)
                     Spacer()
-                    summaryChip(label: "Monthly Avg", value: String(format: "%.1f hrs", avg), color: .secondary)
+                    summaryChip(label: "Period Total", value: String(format: "%.1f hrs", totalBlock), color: .blue)
+                    
                 }
             }
         }
@@ -110,8 +111,8 @@ struct ActivityChartCard: View {
     @ViewBuilder
     private func summaryChip(label: String, value: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text(value).font(.caption).fontWeight(.semibold).foregroundStyle(color)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.footnote).fontWeight(.semibold).foregroundStyle(color)
         }
     }
 }
