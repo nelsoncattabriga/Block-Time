@@ -26,11 +26,12 @@ struct PFRatioCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "PF Ratio Trend", icon: "chart.line.uptrend.xyaxis") {
+            CardHeader(title: "PF Ratio", icon: "chart.line.uptrend.xyaxis") {
                 Picker("", selection: $selectedMonths) {
+                    Text("6M").tag(6)
                     Text("12M").tag(12)
-                    Text("2Y").tag(24)
-                    Text("All").tag(0)
+                    Text("5Y").tag(60)
+                    
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 110)
@@ -80,7 +81,7 @@ struct PFRatioCard: View {
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .month, count: filtered.count > 18 ? 3 : 1)) { _ in
                         AxisGridLine()
-                        AxisValueLabel(format: .dateTime.month(.abbreviated))
+                        AxisValueLabel(format: .dateTime.month(.abbreviated), centered: true)
                     }
                 }
                 .chartYAxis {

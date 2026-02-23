@@ -15,7 +15,6 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case frmsDutyTime      // 2-ring duty time gauge (7d/14d)
     case activityChart     // Monthly block hours bar chart
     case timeByType        // Time by Type distribution pie chart
-    case roleDistribution  // PF/PNF role breakdown
     case pfRatioChart      // PF ratio trend line
     case takeoffLanding    // Takeoff & landing stats
     case approachTypes     // Approach type breakdown
@@ -50,8 +49,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .frmsDutyTime:      return "FRMS Duty Time"
         case .activityChart:     return "Flying Activity"
         case .timeByType:        return "Time by Type"
-        case .roleDistribution:  return "Role Distribution"
-        case .pfRatioChart:      return "PF Ratio Chart"
+        case .pfRatioChart:      return "PF Ratio"
         case .takeoffLanding:    return "Takeoffs & Landings"
         case .approachTypes:     return "Approach Types"
         case .topRoutes:         return "Top Routes"
@@ -83,7 +81,6 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .frmsDutyTime:      return "briefcase.fill"
         case .activityChart:     return "chart.bar.fill"
         case .timeByType:        return "chart.pie.fill"
-        case .roleDistribution:  return "person.2.fill"
         case .pfRatioChart:      return "chart.line.uptrend.xyaxis"
         case .takeoffLanding:    return "airplane.departure"
         case .approachTypes:     return "airplane.arrival"
@@ -116,7 +113,6 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .frmsDutyTime:      return .teal
         case .activityChart:     return .blue
         case .timeByType:        return .purple
-        case .roleDistribution:  return .teal
         case .pfRatioChart:      return .orange
         case .takeoffLanding:    return .green
         case .approachTypes:     return .indigo

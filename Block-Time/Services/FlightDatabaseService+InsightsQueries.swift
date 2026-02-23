@@ -16,7 +16,6 @@ struct NDInsightsData {
     let flightStatistics: FlightStatistics
     let monthlyActivity: [NDMonthlyActivity]
     let fleetHours: [NDFleetHours]
-    let monthlyRoles: [NDMonthlyRoleHours]
     let pfRatioByMonth: [NDMonthlyPFRatio]
     let monthlyNight: [NDMonthlyNight]
     let topRoutes: [NDRouteFrequency]
@@ -52,7 +51,6 @@ extension FlightDatabaseService {
                 flightStatistics: stats,
                 monthlyActivity: [],
                 fleetHours: [],
-                monthlyRoles: [],
                 pfRatioByMonth: [],
                 monthlyNight: [],
                 topRoutes: [],
@@ -68,7 +66,6 @@ extension FlightDatabaseService {
             flightStatistics: stats,
             monthlyActivity: computeMonthlyActivity(flights),
             fleetHours: computeFleetHours(flights),
-            monthlyRoles: computeMonthlyRoles(flights),
             pfRatioByMonth: computePFRatioByMonth(flights),
             monthlyNight: computeMonthlyNight(flights),
             topRoutes: computeTopRoutes(flights),
@@ -128,29 +125,6 @@ extension FlightDatabaseService {
 
         return hours.map { NDFleetHours(aircraftType: $0.key, hours: $0.value, sectors: sectors[$0.key] ?? 0) }
             .sorted { $0.hours > $1.hours }
-    }
-
-    private func computeMonthlyRoles(_ flights: [FlightEntity]) -> [NDMonthlyRoleHours] {
-        var p1: [Date: Double] = [:]
-        var p1us: [Date: Double] = [:]
-        var p2: [Date: Double] = [:]
-
-        for f in flights {
-            guard let date = f.date else { continue }
-            let m = monthStart(for: date)
-            p1[m, default: 0]   += hrs(f.p1Time)
-            p1us[m, default: 0] += hrs(f.p1usTime)
-            p2[m, default: 0]   += hrs(f.p2Time)
-        }
-
-        var result: [NDMonthlyRoleHours] = []
-        let months = Set(p1.keys).union(p1us.keys).union(p2.keys)
-        for m in months.sorted() {
-            if let h = p1[m],   h > 0.01 { result.append(NDMonthlyRoleHours(month: m, role: "Captain", hours: h)) }
-            if let h = p1us[m], h > 0.01 { result.append(NDMonthlyRoleHours(month: m, role: "ICUS",    hours: h)) }
-            if let h = p2[m],   h > 0.01 { result.append(NDMonthlyRoleHours(month: m, role: "F/O",     hours: h)) }
-        }
-        return result
     }
 
     private func computePFRatioByMonth(_ flights: [FlightEntity]) -> [NDMonthlyPFRatio] {

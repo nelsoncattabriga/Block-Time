@@ -21,13 +21,6 @@ struct NDMonthlyActivity: Identifiable {
     var totalHours: Double { blockHours + simHours }
 }
 
-struct NDMonthlyRoleHours: Identifiable {
-    let id = UUID()
-    let month: Date
-    let role: String
-    let hours: Double
-}
-
 struct NDMonthlyPFRatio: Identifiable {
     let id = UUID()
     let month: Date
@@ -142,7 +135,6 @@ final class NewDashboardViewModel {
 
     var monthlyActivity: [NDMonthlyActivity] = []
     var fleetHours: [NDFleetHours] = []
-    var monthlyRoles: [NDMonthlyRoleHours] = []
     var pfRatioByMonth: [NDMonthlyPFRatio] = []
     var monthlyNight: [NDMonthlyNight] = []
     var topRoutes: [NDRouteFrequency] = []
@@ -159,7 +151,6 @@ final class NewDashboardViewModel {
         let data = FlightDatabaseService.shared.getInsightsData()
         monthlyActivity  = data.monthlyActivity
         fleetHours       = data.fleetHours
-        monthlyRoles     = data.monthlyRoles
         pfRatioByMonth   = data.pfRatioByMonth
         monthlyNight     = data.monthlyNight
         topRoutes        = data.topRoutes

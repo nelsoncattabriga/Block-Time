@@ -80,7 +80,7 @@ struct FlyingActivityChartCard: View {
                 .chartXAxis {
                     AxisMarks(values: .stride(by: axisStride, count: axisCount)) { _ in
                         AxisGridLine()
-                        AxisValueLabel(format: .dateTime.month(.abbreviated))
+                        AxisValueLabel(format: .dateTime.month(.abbreviated), centered: true)
                     }
                 }
                 .chartYAxis {
