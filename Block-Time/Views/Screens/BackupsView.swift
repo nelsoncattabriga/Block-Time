@@ -365,50 +365,148 @@ private struct BackupDetailSheet: View {
 
     var body: some View {
         NavigationView {
-            List {
-                Section("Backup Information") {
-                    LabeledContent("Date", value: backup.formattedDate)
-                    LabeledContent("Size", value: backup.formattedSize)
-                    if let count = backup.flightCount {
-                        LabeledContent("Flights", value: "\(count)")
-                    }
-                }
+            ScrollView {
+                VStack(spacing: 20) {
 
-                Section("Actions") {
-                    Button(action: {
-                        showingRestoreConfirmation = true
-                    }) {
-                        HStack {
-                            Image(systemName: "arrow.counterclockwise.circle.fill")
-                                .foregroundColor(.green)
-                            Text("Restore from this Backup")
-                                .foregroundColor(.primary)
+                    // Header
+                    VStack(spacing: 10) {
+                        Image(systemName: "externaldrive.fill.badge.checkmark")
+                            .font(.system(size: 56))
+                            .foregroundColor(.blue)
+
+                        Text(backup.formattedDate)
+                            .font(.title3)
+                            .fontWeight(.bold)
+
+                        if let count = backup.flightCount {
+                            Text("\(count) flights · \(backup.formattedSize)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 5)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(20)
+                        } else {
+                            Text(backup.formattedSize)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 5)
+                                .background(Color(.systemGray5))
+                                .cornerRadius(20)
                         }
                     }
-                    .disabled(isRestoring)
+                    .padding(.top, 8)
 
-                    Button(action: {
-                        showingShareSheet = true
-                    }) {
+                    // Info Card
+                    VStack(spacing: 12) {
                         HStack {
-                            Image(systemName: "square.and.arrow.up")
+                            Image(systemName: "info.circle.fill")
                                 .foregroundColor(.blue)
-                            Text("Share Backup File")
-                                .foregroundColor(.primary)
+                                .font(.title3)
+                            Text("Backup Information")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
                         }
-                    }
 
-                    Button(role: .destructive, action: {
-                        showingDeleteConfirmation = true
-                    }) {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("Delete this Backup")
+                        VStack(spacing: 0) {
+                            infoRow(icon: "calendar", label: "Date", value: backup.formattedDate)
+                            Divider().padding(.leading, 32)
+                            infoRow(icon: "doc.fill", label: "File Size", value: backup.formattedSize)
+                            if let count = backup.flightCount {
+                                Divider().padding(.leading, 32)
+                                infoRow(icon: "airplane", label: "Flights", value: "\(count)")
+                            }
                         }
+                        .padding(12)
+                        .background(Color.blue.opacity(0.07))
+                        .cornerRadius(10)
                     }
+                    .padding(16)
+                    .background(.thinMaterial)
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                    )
+
+                    // Actions Card
+                    VStack(spacing: 12) {
+                        HStack {
+                            Image(systemName: "bolt.fill")
+                                .foregroundColor(.blue)
+                                .font(.title3)
+                            Text("Actions")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+
+                        ActionButton(
+                            title: "Restore from this Backup",
+                            subtitle: "Replace or merge your current data",
+                            icon: "arrow.counterclockwise.circle.fill",
+                            color: .green,
+                            isLoading: isRestoring
+                        ) {
+                            showingRestoreConfirmation = true
+                        }
+                        .disabled(isRestoring)
+
+                        ActionButton(
+                            title: "Share Backup File",
+                            subtitle: "Export or save a copy of this backup",
+                            icon: "square.and.arrow.up.fill",
+                            color: .blue,
+                            isLoading: false
+                        ) {
+                            showingShareSheet = true
+                        }
+
+                        Button(action: { showingDeleteConfirmation = true }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "trash.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.white)
+                                    .frame(width: 24)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Delete this Backup")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+
+                                    Text("Permanently remove this backup file")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.9))
+                            }
+                            .padding(16)
+                            .background(Color.red.opacity(0.75))
+                            .cornerRadius(10)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .padding(16)
+                    .background(.thinMaterial)
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                    )
                 }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 32)
             }
-            .listStyle(.insetGrouped)
             .navigationTitle("Backup Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -457,6 +555,23 @@ private struct BackupDetailSheet: View {
                 Text(resultMessage)
             }
         }
+    }
+
+    private func infoRow(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(.blue)
+                .frame(width: 20)
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+        }
+        .padding(.vertical, 6)
     }
 
     private func performRestore() {
@@ -936,11 +1051,5 @@ private struct RestoreModeSheet: View {
                 .padding(.horizontal)
                 .padding(.bottom, 20)
         }
-    }
-}
-
-#Preview {
-    NavigationStack {
-        BackupsView(viewModel: FlightTimeExtractorViewModel())
     }
 }
