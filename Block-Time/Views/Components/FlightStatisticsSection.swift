@@ -35,9 +35,9 @@ struct IPadFontScaling: ViewModifier {
 
     private var shouldScaleFont: Bool {
         // Scale fonts if:
-        // 1. On iPad (horizontalSizeClass == .regular), OR
+        // 1. On iPad (device idiom, regardless of injected size class), OR
         // 2. On iPhone with compact view (single column = wider cards)
-        horizontalSizeClass == .regular || settings.isCompactView
+        UIDevice.current.userInterfaceIdiom == .pad || settings.isCompactView
     }
 
     private var scaledFont: Font {
