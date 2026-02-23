@@ -39,7 +39,7 @@ struct CareerMilestonesCard: View {
                 Divider().frame(height: 44).padding(.horizontal, 8)
                 statBlock(
                     value: String(format: "%.1f yrs", stats.yearsOfData),
-                    label: "Over",
+                    label: "Logged",
                     icon: "calendar",
                     color: .orange
                 )
@@ -51,7 +51,7 @@ struct CareerMilestonesCard: View {
                 HStack {
                     Image(systemName: "flag.fill")
                         .font(.caption).foregroundStyle(.secondary)
-                    Text("Logbook started \(firstDate.formatted(.dateTime.day().month(.wide).year()))")
+                    Text("Logbook Records from \(firstDate.formatted(.dateTime.day().month(.wide).year()))")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
