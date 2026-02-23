@@ -311,7 +311,8 @@ struct FRMSView: View {
             if let totals = viewModel.cumulativeTotals {
                 AdaptiveCumulativeLimitsLayout(
                     viewModel: viewModel,
-                    totals: totals
+                    totals: totals,
+                    isInSplitView: selectedSection != nil
                 )
             } else {
                 Text("No flight data available")
@@ -341,8 +342,9 @@ struct FRMSView: View {
 
             if let limits = viewModel.a320B737NextDutyLimits, let totals = viewModel.cumulativeTotals {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Consecutive Duties Summary (A320/B737 only - iPhone only, iPad shows in cumulative section)
-                    if totals.hasConsecutiveDutyLimits && horizontalSizeClass == .compact {
+                    // Consecutive Duties Summary — iPhone only (selectedSection == nil).
+                    // On iPad (split view), it's shown inside AdaptiveCumulativeLimitsLayout instead.
+                    if totals.hasConsecutiveDutyLimits && horizontalSizeClass == .compact && selectedSection == nil {
                         buildConsecutiveInfoCard(totals: totals)
                     }
 
@@ -367,129 +369,6 @@ struct FRMSView: View {
             }
         }
     }
-
-    // MARK: - A320/B737 Sub-Views
-
-//    private func maxDutyCard(limits: A320B737NextDutyLimits) -> some View {
-//        // Get the window to display based on user selection
-//        let displayWindow = getSelectedWindow(limits: limits, selection: selectedTimeWindow)
-//
-//        return VStack(alignment: .leading, spacing: 16) {
-//            // Header with Planning|Operational toggle
-//            HStack {
-//                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
-//                    Text("Planning").tag(FRMSLimitType.planning)
-//                    Text("Operational").tag(FRMSLimitType.operational)
-//                }
-//                .pickerStyle(.segmented)
-//                .frame(width: horizontalSizeClass == .compact ? 200 : 220)
-//                
-//                Spacer()
-//                
-//                HStack {
-//                    Text("Sign-On Window")
-//                        .font(.headline)
-//                        .foregroundStyle(.secondary)
-//
-//                    Picker("Time Window", selection: $selectedTimeWindow) {
-//                        ForEach(TimeWindowSelection.allCases, id: \.self) { window in
-//                            Text(window.rawValue).tag(window)
-//                        }
-//                    }
-//                    .pickerStyle(.menu)
-//                    .font(.caption)
-//                }
-//            }
-//
-//            Divider()
-//
-//            // Sector-based duty limits
-//            
-//            Text("Max Duty")
-//                .font(.headline)
-//                .fontWeight(.semibold)
-//                .foregroundStyle(.primary)
-//            
-//            HStack(spacing: 12) {
-//                VStack(alignment: .leading, spacing: 4) {
-//                    Text("1-4 Sectors")
-//                        .font(.subheadline)
-//                        .foregroundStyle(.secondary)
-//                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors1to4)) hrs")
-//                        .font(.subheadline)
-//                        .fontWeight(.semibold)
-//                }
-//                
-//                Divider()
-//                    .frame(height: 35)
-//                
-//                VStack(alignment: .leading, spacing: 4) {
-//                    Text("5 Sectors")
-//                        .font(.subheadline)
-//                        .foregroundStyle(.secondary)
-//                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors5)) hrs")
-//                        .font(.subheadline)
-//                        .fontWeight(.semibold)
-//                }
-//                
-//                Divider()
-//                    .frame(height: 35)
-//                
-//                VStack(alignment: .leading, spacing: 4) {
-//                    Text("6 Sectors")
-//                        .font(.subheadline)
-//                        .foregroundStyle(.secondary)
-//                    Text("\(formatHoursMinutes(displayWindow.limits.maxDutySectors6)) hrs")
-//                        .font(.subheadline)
-//                        .fontWeight(.semibold)
-//                }
-//            Spacer()
-//            }
-//            .frame(maxWidth: .infinity)
-//            
-//            Divider()
-//
-//            // Flight time limit with darkness conditional
-//            VStack(alignment: .leading, spacing: 8) {
-//                Text("Max Flight Time")
-//                    .font(.headline)
-//                    .fontWeight(.semibold)
-//                    .foregroundStyle(.primary)
-//                Text(displayWindow.limits.maxFlightTimeDescription)
-//                    .font(.subheadline)
-//                    .fontWeight(.semibold)
-//            }
-//        }
-//        .padding()
-//        .background(.thinMaterial)
-//        .clipShape(RoundedRectangle(cornerRadius: 12))
-//        .onAppear {
-//            // Set initial selection to the applicable window based on earliest sign-on
-//            let applicableWindow = determineApplicableWindow(limits: limits)
-//            if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
-//                selectedTimeWindow = .early
-//            } else if applicableWindow.localStartTime == limits.afternoonWindow.localStartTime {
-//                selectedTimeWindow = .afternoon
-//            } else {
-//                selectedTimeWindow = .night
-//            }
-//        }
-//        .onChange(of: viewModel.selectedLimitType) { _, _ in
-//            // Update time window selection when limit type changes (Planning <-> Operational)
-//            let applicableWindow = determineApplicableWindow(limits: limits)
-//            if applicableWindow.localStartTime == limits.earlyWindow.localStartTime {
-//                selectedTimeWindow = .early
-//            } else if applicableWindow.localStartTime == limits.afternoonWindow.localStartTime {
-//                selectedTimeWindow = .afternoon
-//            } else {
-//                selectedTimeWindow = .night
-//            }
-//        }
-//    }
-
-    
-    ///***********************************************************
-
 
     
     private func maxDutyCard(limits: A320B737NextDutyLimits) -> some View {
@@ -2298,6 +2177,10 @@ struct FRMSView: View {
     private struct AdaptiveCumulativeLimitsLayout: View {
         @ObservedObject var viewModel: FRMSViewModel
         let totals: FRMSCumulativeTotals
+        /// True when inside the iPad split-view detail pane. Used to show
+        /// Consecutive Duties in the compact (portrait) layout path, while
+        /// keeping it out of the iPhone path (which shows it in Next Duty).
+        var isInSplitView: Bool = false
 
         @Environment(\.horizontalSizeClass) var horizontalSizeClass
         @EnvironmentObject var appViewModel: FlightTimeExtractorViewModel
@@ -2417,16 +2300,15 @@ struct FRMSView: View {
                 unit: "hrs",
                 accentColor: .orange
             )
-            
-//            // ADDED HERE
-//            if viewModel.configuration.fleet == .a320B737 {
-//                    buildDaysOffCard(
-//                    daysOff: totals.daysOff28Days,
-//                    required: 7
-//                    )
-//                
-//            }
-            
+
+            // Consecutive Duties (A320/B737 only) — shown here in compact layout
+            // only when in split-view (iPad portrait). On iPhone it remains in
+            // the Next Duty section via a320B737NextDutyContent.
+            if isInSplitView,
+               viewModel.configuration.fleet == .a320B737,
+               totals.hasConsecutiveDutyLimits {
+                buildConsecutiveInfoCard(totals: totals)
+            }
         }
 
         // MARK: - Section Header Helper
@@ -2528,11 +2410,164 @@ struct FRMSView: View {
         }
 
         private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Consecutive Duties")
-                    .iPadScaledFont(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.secondary)
+            let worst = worstConsecutiveStatus(totals: totals)
+            return HStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.teal)
+                    .frame(width: 3)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Consecutive Duties")
+                            .iPadScaledFont(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Image(systemName: worst.icon)
+                            .foregroundStyle(statusColor(worst))
+                            .iPadScaledFont(.headline)
+                    }
+
+                    HStack(spacing: 16) {
+                        if let maxConsec = totals.maxConsecutiveDuties {
+                            VStack {
+                                HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                    Text("\(totals.consecutiveDuties)")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
+                                    Text("/\(maxConsec)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("Cons. Days")
+                                    .font(.footnote)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+
+                        if let maxDuty11 = totals.maxDutyDaysIn11Days {
+                            VStack {
+                                HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                    Text("\(totals.dutyDaysIn11Days)")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
+                                    Text("/\(maxDuty11)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("in 11 Days")
+                                    .font(.footnote)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+
+                        if let maxEarly = totals.maxConsecutiveEarlyStarts {
+                            VStack {
+                                HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                    Text("\(totals.consecutiveEarlyStarts)")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
+                                    Text("/\(maxEarly)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("Early Starts")
+                                    .font(.footnote)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+
+                        if let maxLate = totals.maxConsecutiveLateNights {
+                            VStack {
+                                HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                    Text("\(totals.consecutiveLateNights)")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
+                                    Text("/\(maxLate)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("Late Nights")
+                                    .font(.footnote)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(16)
+            }
+            .appCardStyle()
+        }
+
+        private func worstConsecutiveStatus(totals: FRMSCumulativeTotals) -> FRMSComplianceStatus {
+            let statuses = [
+                totals.consecutiveDutiesStatus,
+                totals.dutyDaysIn11DaysStatus,
+                totals.consecutiveEarlyStartsStatus,
+                totals.consecutiveLateNightsStatus
+            ]
+            if statuses.contains(where: { if case .violation = $0 { return true }; return false }) {
+                return .violation(message: "")
+            }
+            if statuses.contains(where: { if case .warning = $0 { return true }; return false }) {
+                return .warning(message: "")
+            }
+            return .compliant
+        }
+
+        // MARK: - Helper Methods
+
+        private func statusColor(_ status: FRMSComplianceStatus) -> Color {
+            switch status {
+            case .compliant: return .green
+            case .warning: return .orange
+            case .violation: return .red
+            }
+        }
+
+        private func progressColor(_ status: FRMSComplianceStatus) -> Color {
+            switch status {
+            case .compliant: return .blue
+            case .warning: return .orange
+            case .violation: return .red
+            }
+        }
+
+        private func percentageOfLimit(used: Double, limit: Double) -> Double {
+            guard limit > 0 else { return 0 }
+            return (used / limit) * 100.0
+        }
+    }
+
+    // MARK: - Consecutive Duties Card
+
+    private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
+        let worst = worstConsecutiveStatus(totals: totals)
+        return HStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.teal)
+                .frame(width: 3)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Consecutive Duties")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: worst.icon)
+                        .foregroundStyle(statusColor(worst))
+                        .font(.headline)
+                }
 
                 HStack(spacing: 16) {
                     if let maxConsec = totals.maxConsecutiveDuties {
@@ -2606,115 +2641,24 @@ struct FRMSView: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(16)
-            .appCardStyle()
         }
-
-        // MARK: - Helper Methods
-
-        private func statusColor(_ status: FRMSComplianceStatus) -> Color {
-            switch status {
-            case .compliant: return .green
-            case .warning: return .orange
-            case .violation: return .red
-            }
-        }
-
-        private func progressColor(_ status: FRMSComplianceStatus) -> Color {
-            switch status {
-            case .compliant: return .blue
-            case .warning: return .orange
-            case .violation: return .red
-            }
-        }
-
-        private func percentageOfLimit(used: Double, limit: Double) -> Double {
-            guard limit > 0 else { return 0 }
-            return (used / limit) * 100.0
-        }
+        .appCardStyle()
     }
 
-    // MARK: - Consecutive Duties Card
-
-    private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Consecutive Duties")
-                .font(.headline)
-                .fontWeight(.semibold)
-
-            // First row - 4 items (only for A320/B737)
-            HStack(spacing: 16) {
-                if let maxConsec = totals.maxConsecutiveDuties {
-                    VStack {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(totals.consecutiveDuties)")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
-                            Text("/\(maxConsec)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("Cons. Days")
-                            .font(.footnote)
-                            .foregroundStyle(.primary)
-                    }
-                }
-
-                if let maxDuty11 = totals.maxDutyDaysIn11Days {
-                    VStack {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(totals.dutyDaysIn11Days)")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
-                            Text("/\(maxDuty11)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("in 11 Days")
-                            .font(.footnote)
-                            .foregroundStyle(.primary)
-                    }
-                }
-
-                if let maxEarly = totals.maxConsecutiveEarlyStarts {
-                    VStack {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(totals.consecutiveEarlyStarts)")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
-                            Text("/\(maxEarly)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("Early Starts")
-                            .font(.footnote)
-                            .foregroundStyle(.primary)
-                    }
-                }
-
-                if let maxLate = totals.maxConsecutiveLateNights {
-                    VStack {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(totals.consecutiveLateNights)")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
-                            Text("/\(maxLate)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("Late Nights")
-                            .font(.footnote)
-                            .foregroundStyle(.primary)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
+    private func worstConsecutiveStatus(totals: FRMSCumulativeTotals) -> FRMSComplianceStatus {
+        let statuses = [
+            totals.consecutiveDutiesStatus,
+            totals.dutyDaysIn11DaysStatus,
+            totals.consecutiveEarlyStartsStatus,
+            totals.consecutiveLateNightsStatus
+        ]
+        if statuses.contains(where: { if case .violation = $0 { return true }; return false }) {
+            return .violation(message: "")
         }
-        .padding()
-        .appCardStyle()
+        if statuses.contains(where: { if case .warning = $0 { return true }; return false }) {
+            return .warning(message: "")
+        }
+        return .compliant
     }
 
     private func dailyDutyRow(dailySummary: DailyDutySummary) -> some View {

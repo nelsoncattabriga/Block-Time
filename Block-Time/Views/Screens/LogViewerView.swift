@@ -399,8 +399,3 @@ private struct LogViewerShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-#Preview {
-    NavigationStack {
-        LogViewerView()
-    }
-}

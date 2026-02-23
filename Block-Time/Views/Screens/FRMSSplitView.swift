@@ -82,12 +82,18 @@ struct FRMSSplitView: View {
             } detail: {
                 // Persistent detail pane — FRMSView is never recreated when
                 // selectedSection changes, so all @State calculator values persist.
-                FRMSView(
-                    viewModel: frmsViewModel,
-                    flightTimePosition: flightTimeVM.flightTimePosition,
-                    selectedSection: selectedSection
-                )
-                .environmentObject(flightTimeVM)
+                // GeometryReader overrides horizontalSizeClass so subviews
+                // automatically switch to compact/iPhone layouts when the detail
+                // pane is narrow (e.g. iPad portrait).
+                GeometryReader { proxy in
+                    FRMSView(
+                        viewModel: frmsViewModel,
+                        flightTimePosition: flightTimeVM.flightTimePosition,
+                        selectedSection: selectedSection
+                    )
+                    .environmentObject(flightTimeVM)
+                    .environment(\.horizontalSizeClass, proxy.size.width < 550 ? .compact : .regular)
+                }
             }
             .navigationSplitViewStyle(.balanced)
             .onChange(of: scenePhase) { _, newPhase in
@@ -239,11 +245,4 @@ struct FRMSEmptyDetailView: View {
                 .ignoresSafeArea()
         )
     }
-}
-
-#Preview {
-    FRMSSplitView(
-        flightTimeVM: FlightTimeExtractorViewModel(),
-        frmsViewModel: FRMSViewModel()
-    )
 }
