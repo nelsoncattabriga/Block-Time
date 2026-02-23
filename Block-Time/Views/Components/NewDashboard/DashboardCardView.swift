@@ -70,7 +70,7 @@ struct DashboardCardView: View {
         case .approachTypes:
             ApproachTypesCard()
         case .topRoutes:
-            TopRoutesCard(routes: viewModel.topRoutes)
+            TopRoutesCard()
         case .topRegistrations:
             TopRegistrationsCard(registrations: viewModel.topRegistrations)
         case .nightHeatmap:

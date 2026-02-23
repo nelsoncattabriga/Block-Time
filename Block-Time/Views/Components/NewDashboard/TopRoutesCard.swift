@@ -7,14 +7,29 @@
 
 import SwiftUI
 
+private enum RoutesPeriod: String, CaseIterable {
+    case oneMonth     = "1M"
+    case twelveMonths = "12M"
+    case all          = "ALL"
+}
+
 struct TopRoutesCard: View {
-    let routes: [NDRouteFrequency]
+    @State private var period: RoutesPeriod = .oneMonth
+    @State private var routes: [NDRouteFrequency] = []
 
     private var maxSectors: Double { Double(routes.map { $0.sectors }.max() ?? 1) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Top Routes", icon: "point.topleft.down.to.point.bottomright.curvepath.fill")
+            CardHeader(title: "Top 5 Routes", icon: "point.topleft.down.to.point.bottomright.curvepath.fill") {
+                Picker("Period", selection: $period) {
+                    ForEach(RoutesPeriod.allCases, id: \.self) {
+                        Text($0.rawValue).tag($0)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
 
             if routes.isEmpty {
                 ContentUnavailableView(
@@ -33,6 +48,37 @@ struct TopRoutesCard: View {
         }
         .padding(16)
         .appCardStyle()
+        .onAppear { loadRoutes() }
+        .onChange(of: period) { loadRoutes() }
+    }
+
+    private func loadRoutes() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        let now = Date()
+        let endDate = formatter.string(from: now)
+
+        let flights: [FlightSector]
+        switch period {
+        case .all:
+            flights = FlightDatabaseService.shared.fetchAllFlights()
+        case .oneMonth:
+            let start = Calendar.current.date(byAdding: .month, value: -1, to: now)!
+            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+        case .twelveMonths:
+            let start = Calendar.current.date(byAdding: .month, value: -12, to: now)!
+            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+        }
+
+        var counts: [String: (from: String, to: String, n: Int)] = [:]
+        for f in flights {
+            let from = f.fromAirport; let to = f.toAirport
+            guard !from.isEmpty, !to.isEmpty else { continue }
+            let key = "\(from)-\(to)"
+            counts[key] = (from, to, (counts[key]?.n ?? 0) + 1)
+        }
+        routes = counts.values.sorted { $0.n > $1.n }.prefix(5)
+            .map { NDRouteFrequency(from: $0.from, to: $0.to, sectors: $0.n) }
     }
 
     @ViewBuilder

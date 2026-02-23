@@ -14,7 +14,7 @@ struct TopRegistrationsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Top Registrations", icon: "tag.fill")
+            CardHeader(title: "Top Registrations", icon: "airplane")
 
             if registrations.isEmpty {
                 ContentUnavailableView(
