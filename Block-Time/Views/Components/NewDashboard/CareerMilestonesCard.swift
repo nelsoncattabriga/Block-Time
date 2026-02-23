@@ -72,14 +72,14 @@ struct CareerMilestonesCard: View {
 
                     HStack {
                         Text(String(format: "%.0f hrs", stats.previousMilestone))
-                            .font(.system(size: 9)).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         let remaining = nextMilestone - stats.totalHours
                         Text(String(format: "%.0f hrs to go", remaining))
-                            .font(.system(size: 10)).fontWeight(.medium).foregroundStyle(.purple)
+                            .font(.caption).fontWeight(.medium).foregroundStyle(.purple)
                         Spacer()
                         Text(String(format: "%.0f hrs", nextMilestone))
-                            .font(.system(size: 9)).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
             } else {
@@ -91,9 +91,9 @@ struct CareerMilestonesCard: View {
             if let firstDate = stats.firstFlightDate {
                 HStack {
                     Image(systemName: "flag.fill")
-                        .font(.system(size: 9)).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                     Text("Logbook started \(firstDate.formatted(.dateTime.day().month(.wide).year()))")
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -105,12 +105,14 @@ struct CareerMilestonesCard: View {
     private func statBlock(value: String, label: String, icon: String, color: Color) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.caption2).foregroundStyle(color)
+                .font(.caption).foregroundStyle(color)
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .iPadScaledFont(.subheadline)
+                .fontWeight(.bold)
+                .fontDesign(.rounded)
                 .foregroundStyle(.primary)
             Text(label)
-                .font(.system(size: 9)).foregroundStyle(.secondary)
+                .font(.caption).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

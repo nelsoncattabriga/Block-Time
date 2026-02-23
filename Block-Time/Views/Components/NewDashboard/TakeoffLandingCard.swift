@@ -100,13 +100,13 @@ struct TakeoffLandingCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.caption).foregroundStyle(color)
+                    .iPadScaledFont(.caption).foregroundStyle(color)
                 Text(label)
-                    .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+                    .iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
             }
 
             Text("\(total)")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .foregroundStyle(color)
 
             // Stacked horizontal bar
@@ -142,12 +142,12 @@ struct TakeoffLandingCard: View {
                 .fill(color.opacity(0.8))
                 .frame(width: 6, height: 6)
             Text(label)
-                .font(.caption2).foregroundStyle(.secondary)
+                .iPadScaledFont(.caption).foregroundStyle(.secondary)
             Spacer()
             Text("\(count)")
-                .font(.caption2).fontWeight(.semibold)
+                .iPadScaledFont(.caption).fontWeight(.semibold)
             Text(String(format: "%.0f%%", pct * 100))
-                .font(.system(size: 9)).foregroundStyle(.secondary)
+                .iPadScaledFont(.caption).foregroundStyle(.secondary)
         }
     }
 }

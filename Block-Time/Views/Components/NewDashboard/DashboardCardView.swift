@@ -72,7 +72,7 @@ struct DashboardCardView: View {
         case .topRoutes:
             TopRoutesCard()
         case .topRegistrations:
-            TopRegistrationsCard(registrations: viewModel.topRegistrations)
+            TopRegistrationsCard()
         case .nightHeatmap:
             NightHeatmapCard(data: viewModel.monthlyNight)
         case .careerMilestones:

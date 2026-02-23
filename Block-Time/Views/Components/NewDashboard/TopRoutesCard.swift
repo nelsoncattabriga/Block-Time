@@ -86,14 +86,14 @@ struct TopRoutesCard: View {
         HStack(spacing: 10) {
             // Rank badge
             Text("\(index + 1)")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(.caption, design: .rounded, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 20, height: 20)
                 .background(rankColor(index).gradient, in: Circle())
 
             // Route label
             Text(route.routeString)
-                .font(.caption).fontWeight(.semibold)
+                .iPadScaledFont(.caption).fontWeight(.semibold)
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -111,9 +111,8 @@ struct TopRoutesCard: View {
             .frame(width: 80, height: 12)
 
             Text("\(route.sectors)")
-                .font(.caption).fontWeight(.bold)
+                .iPadScaledFont(.caption).fontWeight(.bold)
                 .foregroundStyle(.secondary)
-                .frame(width: 24, alignment: .trailing)
         }
     }
 

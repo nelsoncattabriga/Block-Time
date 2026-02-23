@@ -112,8 +112,8 @@ struct PFRatioCard: View {
     @ViewBuilder
     private func statChip(label: String, value: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text(value).font(.caption).fontWeight(.semibold).foregroundStyle(color)
+            Text(label).iPadScaledFont(.caption).foregroundStyle(.secondary)
+            Text(value).iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(color)
         }
     }
 }

@@ -53,7 +53,7 @@ struct IPadFontScaling: ViewModifier {
         case .callout: return .subheadline
         case .caption: return .callout
         case .caption2: return .caption
-        case .footnote: return .caption
+        case .footnote: return .subheadline
         default: return font
         }
     }

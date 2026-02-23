@@ -24,11 +24,11 @@ struct FRMSDutyStripCard: View {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini)
                     Text("Loading FRMS…")
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             } else if totals == nil {
                 Text("Duty data will appear after FRMS loads.")
-                    .font(.system(size: 10)).foregroundStyle(.secondary).italic()
+                    .font(.caption).foregroundStyle(.secondary).italic()
             } else {
                 HStack(spacing: 0) {
                     ringGauge(
@@ -76,10 +76,10 @@ struct FRMSDutyStripCard: View {
 
                 VStack(spacing: 1) {
                     Text(String(format: "%.1f", hours))
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
                         .foregroundColor(.primary)
                     Text("hrs")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
@@ -87,10 +87,10 @@ struct FRMSDutyStripCard: View {
 
             VStack(spacing: 2) {
                 Text(label)
-                    .font(.caption2).fontWeight(.semibold)
+                    .font(.caption).fontWeight(.semibold)
                     .foregroundColor(.secondary)
                 Text("/ \(Int(max))")
-                    .font(.system(size: 9))
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
         }

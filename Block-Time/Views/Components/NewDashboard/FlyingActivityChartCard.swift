@@ -122,8 +122,8 @@ struct FlyingActivityChartCard: View {
     @ViewBuilder
     private func summaryChip(label: String, value: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.footnote).fontWeight(.semibold).foregroundStyle(color)
+            Text(label).iPadScaledFont(.caption).foregroundStyle(.secondary)
+            Text(value).iPadScaledFont(.footnote).fontWeight(.semibold).foregroundStyle(color)
         }
     }
 }

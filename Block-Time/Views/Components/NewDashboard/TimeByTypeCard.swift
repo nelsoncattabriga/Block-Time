@@ -77,15 +77,15 @@ struct TimeByTypeCard: View {
                         VStack(spacing: 2) {
                             if displayMode == .hours {
                                 Text(String(format: "%.0f", totalHours))
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .font(.system(.title3, design: .rounded, weight: .bold))
                                 Text("hrs")
-                                    .font(.caption)
+                                    .iPadScaledFont(.caption)
                                     .foregroundStyle(.secondary)
                             } else {
                                 Text("\(totalSectors)")
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .font(.system(.title3, design: .rounded, weight: .bold))
                                 Text("sectors")
-                                    .font(.caption)
+                                    .iPadScaledFont(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -102,7 +102,7 @@ struct TimeByTypeCard: View {
                                     .frame(width: 10, height: 10)
 
                                 Text(item.aircraftType)
-                                    .font(.caption).fontWeight(.medium)
+                                    .iPadScaledFont(.caption).fontWeight(.medium)
                                     .foregroundStyle(.primary)
 
                                 Spacer()
@@ -110,7 +110,7 @@ struct TimeByTypeCard: View {
                                 Text(displayMode == .hours
                                      ? String(format: "%.0f", item.hours)
                                      : "\(item.sectors)")
-                                    .font(.caption)
+                                    .iPadScaledFont(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }

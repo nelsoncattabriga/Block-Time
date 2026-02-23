@@ -111,7 +111,7 @@ struct ApproachTypesCard: View {
     private func approachRow(item: NDApproachTypeStat) -> some View {
         HStack(spacing: 10) {
             Text(item.typeName)
-                .font(.caption).fontWeight(.bold)
+                .iPadScaledFont(.caption).fontWeight(.bold)
                 .foregroundStyle(item.color)
                 .frame(width: 36, alignment: .leading)
 
@@ -130,9 +130,9 @@ struct ApproachTypesCard: View {
 
             HStack(spacing: 4) {
                 Text("\(item.count)")
-                    .font(.caption).fontWeight(.semibold)
+                    .iPadScaledFont(.caption).fontWeight(.semibold)
                 Text(String(format: "%.0f%%", item.percentage))
-                    .font(.system(size: 9)).foregroundStyle(.secondary)
+                    .iPadScaledFont(.caption).foregroundStyle(.secondary)
             }
             .frame(width: 54, alignment: .trailing)
         }

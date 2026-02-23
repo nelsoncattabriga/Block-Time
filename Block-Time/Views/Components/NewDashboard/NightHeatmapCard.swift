@@ -41,14 +41,14 @@ struct NightHeatmapCard: View {
             CardHeader(title: "Night Flying", icon: "moon.stars.fill", iconColor: .indigo) {
                 HStack(spacing: 4) {
                     Text("Less")
-                        .font(.system(size: 9)).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                     ForEach([0.1, 0.3, 0.55, 0.8, 1.0], id: \.self) { intensity in
                         RoundedRectangle(cornerRadius: 2)
                             .fill(Color.indigo.opacity(0.18 + intensity * 0.78))
                             .frame(width: 12, height: 12)
                     }
                     Text("More")
-                        .font(.system(size: 9)).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
 
@@ -67,7 +67,7 @@ struct NightHeatmapCard: View {
                             Text("").frame(width: 34) // year label placeholder
                             ForEach(0..<12, id: \.self) { i in
                                 Text(monthAbbreviations[i])
-                                    .font(.system(size: 9))
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .frame(width: 24, alignment: .center)
                             }
@@ -77,7 +77,7 @@ struct NightHeatmapCard: View {
                         ForEach(years, id: \.self) { year in
                             HStack(spacing: 3) {
                                 Text(String(year))
-                                    .font(.system(size: 9)).foregroundStyle(.secondary)
+                                    .font(.caption).foregroundStyle(.secondary)
                                     .frame(width: 34, alignment: .trailing)
 
                                 ForEach(1...12, id: \.self) { month in
@@ -102,9 +102,9 @@ struct NightHeatmapCard: View {
                 let totalNight = data.reduce(0) { $0 + $1.nightHours }
                 HStack {
                     Image(systemName: "moon.fill")
-                        .font(.caption2).foregroundStyle(.indigo)
+                        .font(.caption).foregroundStyle(.indigo)
                     Text(String(format: "%.0f total night hours across %d months", totalNight, data.filter { $0.nightHours > 0 }.count))
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
         }

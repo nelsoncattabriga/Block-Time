@@ -63,10 +63,10 @@ struct FRMSFlightStripCard: View {
 
                 VStack(spacing: 1) {
                     Text(String(format: "%.1f", hours))
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
                         .foregroundColor(.primary)
                     Text("hrs")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
@@ -74,10 +74,10 @@ struct FRMSFlightStripCard: View {
 
             VStack(spacing: 2) {
                 Text(label)
-                    .font(.caption2).fontWeight(.semibold)
+                    .font(.caption).fontWeight(.semibold)
                     .foregroundColor(.secondary)
                 Text("/ \(Int(max))")
-                    .font(.system(size: 9))
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
         }

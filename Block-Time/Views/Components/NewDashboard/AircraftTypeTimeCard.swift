@@ -158,18 +158,39 @@ struct AircraftTypeTimeCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 if isIPad {
-                    // iPad (any orientation): show time entries in a single row
                     if !timeEntries.isEmpty {
-                        HStack(spacing: 12) {
-                            ForEach(timeEntries, id: \.label) { entry in
-                                HStack(spacing: 0) {
-                                    Text("\(entry.label): ")
-                                        .iPadScaledFont(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text(formatTime(entry.value))
-                                        .iPadScaledFont(.caption)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.primary)
+                        if isLandscape {
+                            // iPad landscape: single row, enough horizontal room
+                            HStack(spacing: 12) {
+                                ForEach(timeEntries, id: \.label) { entry in
+                                    HStack(spacing: 0) {
+                                        Text("\(entry.label): ")
+                                            .iPadScaledFont(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text(formatTime(entry.value))
+                                            .iPadScaledFont(.caption)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.primary)
+                                    }
+                                }
+                            }
+                        } else {
+                            // iPad portrait: 2-column grid to avoid wrapping
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 6) {
+                                ForEach(timeEntries, id: \.label) { entry in
+                                    HStack(spacing: 0) {
+                                        Text("\(entry.label): ")
+                                            .iPadScaledFont(.caption)
+                                            .foregroundColor(.secondary)
+                                        Text(formatTime(entry.value))
+                                            .iPadScaledFont(.caption)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.primary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
                         }
