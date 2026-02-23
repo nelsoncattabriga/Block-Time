@@ -2879,7 +2879,7 @@ private struct DisruptionRestSection: View {
             }
             .padding(.top, 12)
         } label: {
-            Text("Disruption Rest — FD10.2.1")
+            Text("Disruption Rest Calculator")
                 .font(.headline)
                 .fontWeight(.semibold)
         }
