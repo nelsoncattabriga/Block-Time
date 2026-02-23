@@ -44,9 +44,10 @@ struct FlyingActivityChartCard: View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Flying Activity", icon: "chart.bar.fill") {
                 Picker("", selection: $selectedMonths) {
-                    Text("5Y").tag(60)
-                    Text("12M").tag(12)
                     Text("6M").tag(6)
+                    Text("12M").tag(12)
+                    Text("5Y").tag(60)
+                    
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 110)

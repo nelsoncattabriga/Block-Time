@@ -17,7 +17,6 @@ struct FlightsSplitView: View {
     @State private var isSelectMode: Bool = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
-    @State private var refreshTrigger = UUID()
 
     // Determine if we should use split view based on device and size class
     private var shouldUseSplitView: Bool {
@@ -34,7 +33,6 @@ struct FlightsSplitView: View {
                     selectedFlight: $selectedFlight,
                     isAddingNewFlight: $isAddingNewFlight,
                     isSelectMode: $isSelectMode,
-                    refreshTrigger: refreshTrigger,
                     onFlightSelected: { flight in
 //                                LogManager.shared.debug("onFlightSelected callback: \(flight.flightNumberFormatted)")
                         isAddingNewFlight = false
@@ -103,10 +101,6 @@ struct FlightsSplitView: View {
                     columnVisibility = .doubleColumn
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
-                LogManager.shared.debug("FlightsSplitView: Received .flightDataChanged notification")
-                refreshTrigger = UUID()
-            }
         } else {
             // iPhone or iPad portrait: Standard navigation stack
             NavigationStack {
@@ -124,7 +118,6 @@ private struct FlightsListContent: View {
     @Binding var selectedFlight: FlightSector?
     @Binding var isAddingNewFlight: Bool
     @Binding var isSelectMode: Bool
-    let refreshTrigger: UUID
     let onFlightSelected: (FlightSector) -> Void
 
     private let databaseService = FlightDatabaseService.shared
@@ -501,16 +494,10 @@ private struct FlightsListContent: View {
             }
             loadFlights()
         }
-        .onChange(of: refreshTrigger) { _, _ in
-            // Store the currently selected flight ID
+        .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             let selectedFlightId = selectedFlight?.id
-
-            // Reload all flights from database
             loadFlights()
-
-            // Update the selected flight with fresh data from the reloaded list
             if let selectedId = selectedFlightId {
-                // Find the updated flight in the newly filtered list
                 if let updatedFlight = filteredFlightSectors.first(where: { $0.id == selectedId }) {
                     selectedFlight = updatedFlight
                 } else {

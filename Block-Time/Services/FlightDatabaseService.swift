@@ -2285,29 +2285,21 @@ class FlightDatabaseService: ObservableObject {
     }
 
     @objc private func handleRemoteStoreChange(_ notification: Notification) {
-        // This notification fires when CloudKit changes the persistent store
-        // Skip remote change notifications during initial setup to avoid unnecessary refreshes
-        guard hasCompletedInitialSetup else {
-            // Only log the first few times during initial setup to avoid log spam
-            if lastRemoteStoreChangeTime == nil {
-                LogManager.shared.debug("FlightDatabaseService: Remote store change skipped (initial setup not complete)")
-            }
-            lastRemoteStoreChangeTime = Date()
-            return
-        }
+        // This notification fires when CloudKit changes the persistent store.
+        // Previously this was skipped during initial setup, but that caused a bug where
+        // CloudKit changes made on another device before launch were never reflected in the UI
+        // because contextDidSave doesn't always fire for store-level remote changes.
 
         // Rate limit: Skip if we've processed a notification too recently
         let now = Date()
         if let lastTime = lastRemoteStoreChangeTime,
            now.timeIntervalSince(lastTime) < remoteStoreChangeMinInterval {
-            // Skip silently - too soon since last notification
             return
         }
 
         // Update the timestamp
         lastRemoteStoreChangeTime = now
 
-        // It's a reliable indicator that remote data has been imported
         LogManager.shared.debug("FlightDatabaseService: Remote store change detected - posting debounced notification")
         DispatchQueue.main.async {
             self.postDebouncedFlightDataChangedNotification()

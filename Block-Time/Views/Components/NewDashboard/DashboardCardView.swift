@@ -60,7 +60,7 @@ struct DashboardCardView: View {
         case .frmsDutyTime:
             FRMSDutyStripCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel)
         case .activityChart:
-            ActivityChartCard(data: viewModel.monthlyActivity)
+            FlyingActivityChartCard(data: viewModel.monthlyActivity)
         case .fleetDonut:
             FleetDonutCard(data: viewModel.fleetHours)
         case .roleDistribution:
