@@ -24,15 +24,15 @@ struct WorkRateHeatmapCard: View {
     let monthlyActivity: [NDMonthlyActivity]
     let dailyActivity: [NDDailyActivity]
 
-    @State private var period: HeatmapPeriod = .twelveMonths
+    @State private var period: HeatmapPeriod = .oneMonth
 
     private let accentColor       = Color.orange
     private let spacing: CGFloat  = 3
     private let labelWidth: CGFloat = 36
     private let cellHeightMonthly: CGFloat = 18
     private let cellHeightDaily: CGFloat   = 28
-    private let dayLabels   = ["M","T","W","T","F","S","S"]
-    private let monthLabels = ["J","F","M","A","M","J","J","A","S","O","N","D"]
+    private let dayLabels   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    private let monthLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
     // MARK: - Derived data
 
@@ -209,7 +209,7 @@ struct WorkRateHeatmapCard: View {
 
     @ViewBuilder
     private func monthlyHeatmap(width: CGFloat) -> some View {
-        let cellW = (width - labelWidth - spacing * 11) / 12
+        let cellW = (width - labelWidth - spacing * 12) / 12
         let years = yearsInRange
 
         VStack(alignment: .leading, spacing: spacing) {
@@ -231,7 +231,7 @@ struct WorkRateHeatmapCard: View {
                     Text(String(year))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
-                        .frame(width: labelWidth, alignment: .trailing)
+                        .frame(width: labelWidth, alignment: .leading)
 
                     ForEach(1...12, id: \.self) { month in
                         let h = monthHours(year: year, month: month)

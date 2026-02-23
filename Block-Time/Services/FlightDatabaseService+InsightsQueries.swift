@@ -241,9 +241,11 @@ extension FlightDatabaseService {
     private func computeCareerStats(_ flights: [FlightEntity]) -> NDCareerStats {
         let block = flights.reduce(0.0) { $0 + hrs($1.blockTime) }
         let sim   = flights.reduce(0.0) { $0 + hrs($1.simTime) }
+        let aircraftTypes = Set(flights.compactMap { $0.aircraftType }.filter { !$0.isEmpty })
         return NDCareerStats(
             totalHours: block + sim,
             totalSectors: flights.count,
+            totalAircraftTypes: aircraftTypes.count,
             firstFlightDate: flights.compactMap { $0.date }.min()
         )
     }

@@ -90,9 +90,10 @@ struct NDTakeoffLandingStats {
 struct NDCareerStats {
     let totalHours: Double
     let totalSectors: Int
+    let totalAircraftTypes: Int
     let firstFlightDate: Date?
 
-    static let empty = NDCareerStats(totalHours: 0, totalSectors: 0, firstFlightDate: nil)
+    static let empty = NDCareerStats(totalHours: 0, totalSectors: 0, totalAircraftTypes: 0, firstFlightDate: nil)
 
     var yearsOfData: Double {
         guard let first = firstFlightDate else { return 0 }

@@ -18,7 +18,7 @@ struct FRMSDutyStripCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Duty Time Limits", icon: "briefcase.fill")
+            CardHeader(title: "FRMS Duty Times", icon: "briefcase.fill")
 
             if frmsViewModel.isLoading {
                 HStack(spacing: 6) {
@@ -76,7 +76,7 @@ struct FRMSDutyStripCard: View {
 
                 VStack(spacing: 1) {
                     Text(String(format: "%.1f", hours))
-                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundColor(.primary)
                     Text("hrs")
                         .font(.caption)
@@ -85,14 +85,9 @@ struct FRMSDutyStripCard: View {
             }
             .frame(width: 74, height: 74)
 
-            VStack(spacing: 2) {
-                Text(label)
-                    .font(.caption).fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-                Text("/ \(Int(max))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text(label)
+                .font(.footnote).fontWeight(.medium)
+                .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
     }

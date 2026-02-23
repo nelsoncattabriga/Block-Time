@@ -12,7 +12,7 @@ struct FRMSFlightStripCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Flight Time Limits", icon: "clock.badge.checkmark")
+            CardHeader(title: "FRMS Flight Times", icon: "clock.badge.checkmark")
 
             HStack(spacing: 0) {
                 if let max7d = data.max7d {
@@ -63,7 +63,7 @@ struct FRMSFlightStripCard: View {
 
                 VStack(spacing: 1) {
                     Text(String(format: "%.1f", hours))
-                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundColor(.primary)
                     Text("hrs")
                         .font(.caption)
@@ -72,14 +72,9 @@ struct FRMSFlightStripCard: View {
             }
             .frame(width: 74, height: 74)
 
-            VStack(spacing: 2) {
-                Text(label)
-                    .font(.caption).fontWeight(.semibold)
-                    .foregroundColor(.secondary)
-                Text("/ \(Int(max))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text(label)
+                .font(.footnote).fontWeight(.medium)
+                .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
     }

@@ -31,61 +31,20 @@ struct CareerMilestonesCard: View {
                 )
                 Divider().frame(height: 44).padding(.horizontal, 8)
                 statBlock(
+                    value: "\(stats.totalAircraftTypes)",
+                    label: "A/C Types",
+                    icon: "airplane.circle.fill",
+                    color: .purple
+                )
+                Divider().frame(height: 44).padding(.horizontal, 8)
+                statBlock(
                     value: String(format: "%.1f yrs", stats.yearsOfData),
-                    label: "Logbook Span",
+                    label: "Over",
                     icon: "calendar",
                     color: .orange
                 )
             }
             .frame(maxWidth: .infinity)
-
-            Divider()
-
-            // Milestone progress
-            if let nextMilestone = stats.nextMilestone {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Next milestone")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Spacer()
-                        Text(String(format: "%.0f / %.0f hrs", stats.totalHours, nextMilestone))
-                            .font(.caption).fontWeight(.semibold).foregroundStyle(.primary)
-                    }
-
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.secondary.opacity(0.12))
-
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.blue, .purple],
-                                        startPoint: .leading, endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: geo.size.width * CGFloat(stats.milestoneProgress))
-                                .animation(.spring(response: 0.7, dampingFraction: 0.8), value: stats.milestoneProgress)
-                        }
-                    }
-                    .frame(height: 10)
-
-                    HStack {
-                        Text(String(format: "%.0f hrs", stats.previousMilestone))
-                            .font(.caption).foregroundStyle(.secondary)
-                        Spacer()
-                        let remaining = nextMilestone - stats.totalHours
-                        Text(String(format: "%.0f hrs to go", remaining))
-                            .font(.caption).fontWeight(.medium).foregroundStyle(.purple)
-                        Spacer()
-                        Text(String(format: "%.0f hrs", nextMilestone))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            } else {
-                Text("All major milestones reached!")
-                    .font(.caption).fontWeight(.semibold).foregroundStyle(.orange)
-            }
 
             // Start date
             if let firstDate = stats.firstFlightDate {
@@ -105,7 +64,7 @@ struct CareerMilestonesCard: View {
     private func statBlock(value: String, label: String, icon: String, color: Color) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.caption).foregroundStyle(color)
+                .font(.subheadline).foregroundStyle(color)
             Text(value)
                 .iPadScaledFont(.subheadline)
                 .fontWeight(.bold)
