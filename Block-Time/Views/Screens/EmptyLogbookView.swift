@@ -14,7 +14,7 @@ struct EmptyLogbookView: View {
                 .foregroundColor(.primary)
 
             
-            Text("Capture an ACARS, Manually Add, or Import from Settings")
+            Text("Add a Flight, or Import from Settings")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
