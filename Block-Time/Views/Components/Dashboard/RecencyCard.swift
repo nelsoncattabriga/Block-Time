@@ -52,20 +52,9 @@ struct RecencyCard: View {
                     //.foregroundColor(recencyStatus.color)
 
                 // Progress bar
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .frame(height: 6)
-                                .opacity(0.3)
-                                .foregroundColor(recencyStatus.color)
-
-                            RoundedRectangle(cornerRadius: 4)
-                                .frame(width: min(CGFloat(recencyStatus.daysRemaining) / CGFloat(recencyDays) * geometry.size.width, geometry.size.width), height: 4)
-                                .foregroundColor(recencyStatus.color)
-                        }
-                        .cornerRadius(2)
-                    }
-                    .frame(height: 6)
+                    ProgressView(value: min(Double(recencyStatus.daysRemaining) / Double(recencyDays), 1.0))
+                        .tint(recencyStatus.color)
+                        .frame(height: 6)
 
                 Text(expirationDate)
                     .iPadScaledFont(.caption)

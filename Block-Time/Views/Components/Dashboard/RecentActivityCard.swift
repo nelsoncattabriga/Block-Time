@@ -68,21 +68,9 @@ struct RecentActivityCard: View {
                 }
 
                 if maxHours != nil {
-                    // Progress bar
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            // Background
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(height: 6)
-
-                            // Progress
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(progressColor)
-                                .frame(width: geometry.size.width * hoursProgress, height: 6)
-                        }
-                    }
-                    .frame(height: 6)
+                    ProgressView(value: hoursProgress)
+                        .tint(progressColor)
+                        .frame(height: 6)
                 } else {
                     // Spacer to match progress bar height
                     Spacer()
