@@ -3,7 +3,7 @@
 //  Block-Time
 //
 //  Observable class holding which cards appear in the sidebar and detail pane
-//  of the Insights dashboard. Persists to UserDefaults automatically.
+//  of the Dashboard. Persists to UserDefaults automatically.
 //
 
 import SwiftUI

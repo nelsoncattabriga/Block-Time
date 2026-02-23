@@ -2,7 +2,7 @@
 //  DashboardCardID.swift
 //  Block-Time
 //
-//  Unified identifier for every card available in the Insights dashboard.
+//  Unified identifier for every card available in the Dashboard.
 //  Used by DashboardConfiguration to persist sidebar/detail layouts.
 //
 
@@ -20,7 +20,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case approachTypes     // Approach type breakdown
     case topRoutes         // Most-flown route pairs
     case topRegistrations  // Most-flown registrations
-    case nightHeatmap      // Night-hour calendar heatmap
+    case workRateHeatmap      // Work Rate calendar heatmap
     case careerMilestones  // Career overview & milestone progress
 
     // ── Original Dashboard stat cards ────────────────────────────────────────────────
@@ -54,7 +54,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .approachTypes:     return "Approach Types"
         case .topRoutes:         return "Top Routes"
         case .topRegistrations:  return "Top Registrations"
-        case .nightHeatmap:      return "Night Heatmap"
+        case .workRateHeatmap:   return "Work Rate"
         case .careerMilestones:  return "Career Overview"
         case .totalTime:         return "Total Time"
         case .picTime:           return "PIC Time"
@@ -86,7 +86,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .approachTypes:     return "airplane.arrival"
         case .topRoutes:         return "map.fill"
         case .topRegistrations:  return "tag.fill"
-        case .nightHeatmap:      return "moon.stars.fill"
+        case .workRateHeatmap:      return "chart.bar.xaxis"
         case .careerMilestones:  return "trophy.fill"
         case .totalTime:         return "clock.fill"
         case .picTime:           return "person.badge.shield.checkmark.fill"
@@ -118,7 +118,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .approachTypes:     return .indigo
         case .topRoutes:         return .red
         case .topRegistrations:  return .cyan
-        case .nightHeatmap:      return .indigo
+        case .workRateHeatmap:      return .indigo
         case .careerMilestones:  return .yellow
         case .totalTime:         return .blue
         case .picTime:           return .green

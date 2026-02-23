@@ -34,6 +34,14 @@ struct NDMonthlyNight: Identifiable {
     let nightHours: Double
 }
 
+struct NDDailyActivity: Identifiable {
+    let id = UUID()
+    let day: Date           // start of day (midnight)
+    let blockHours: Double
+    let simHours: Double
+    var totalHours: Double { blockHours + simHours }
+}
+
 struct NDFleetHours: Identifiable {
     let id = UUID()
     let aircraftType: String
@@ -134,6 +142,7 @@ struct NDFRMSStripData {
 final class NewDashboardViewModel {
 
     var monthlyActivity: [NDMonthlyActivity] = []
+    var dailyActivity: [NDDailyActivity] = []
     var fleetHours: [NDFleetHours] = []
     var pfRatioByMonth: [NDMonthlyPFRatio] = []
     var monthlyNight: [NDMonthlyNight] = []
@@ -150,6 +159,7 @@ final class NewDashboardViewModel {
         isLoading = true
         let data = FlightDatabaseService.shared.getInsightsData()
         monthlyActivity  = data.monthlyActivity
+        dailyActivity    = data.dailyActivity
         fleetHours       = data.fleetHours
         pfRatioByMonth   = data.pfRatioByMonth
         monthlyNight     = data.monthlyNight

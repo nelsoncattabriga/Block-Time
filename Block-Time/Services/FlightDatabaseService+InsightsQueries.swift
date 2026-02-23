@@ -15,6 +15,7 @@ import SwiftUI
 struct NDInsightsData {
     let flightStatistics: FlightStatistics
     let monthlyActivity: [NDMonthlyActivity]
+    let dailyActivity: [NDDailyActivity]
     let fleetHours: [NDFleetHours]
     let pfRatioByMonth: [NDMonthlyPFRatio]
     let monthlyNight: [NDMonthlyNight]
@@ -50,6 +51,7 @@ extension FlightDatabaseService {
             return NDInsightsData(
                 flightStatistics: stats,
                 monthlyActivity: [],
+                dailyActivity: [],
                 fleetHours: [],
                 pfRatioByMonth: [],
                 monthlyNight: [],
@@ -65,6 +67,7 @@ extension FlightDatabaseService {
         return NDInsightsData(
             flightStatistics: stats,
             monthlyActivity: computeMonthlyActivity(flights),
+            dailyActivity: computeDailyActivity(flights),
             fleetHours: computeFleetHours(flights),
             pfRatioByMonth: computePFRatioByMonth(flights),
             monthlyNight: computeMonthlyNight(flights),
@@ -109,6 +112,27 @@ extension FlightDatabaseService {
         let months = Set(block.keys).union(sim.keys).union(night.keys)
         return months.sorted().map {
             NDMonthlyActivity(month: $0, blockHours: block[$0] ?? 0, simHours: sim[$0] ?? 0, nightHours: night[$0] ?? 0, sectorCount: sectors[$0] ?? 0)
+        }
+    }
+
+    private func computeDailyActivity(_ flights: [FlightEntity]) -> [NDDailyActivity] {
+        let cal = Calendar.current
+        let now = Date()
+        guard let cutoff = cal.date(byAdding: .day, value: -35, to: now) else { return [] }
+
+        var block: [Date: Double] = [:]
+        var sim: [Date: Double] = [:]
+
+        for f in flights {
+            guard let date = f.date, date >= cutoff else { continue }
+            let d = cal.startOfDay(for: date)
+            block[d, default: 0] += hrs(f.blockTime)
+            sim[d, default: 0]   += hrs(f.simTime)
+        }
+
+        let days = Set(block.keys).union(sim.keys)
+        return days.sorted().map {
+            NDDailyActivity(day: $0, blockHours: block[$0] ?? 0, simHours: sim[$0] ?? 0)
         }
     }
 
