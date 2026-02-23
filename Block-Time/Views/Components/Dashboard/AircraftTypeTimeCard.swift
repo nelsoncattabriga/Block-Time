@@ -166,11 +166,11 @@ struct AircraftTypeTimeCard: View {
                                     HStack(spacing: 0) {
                                         Text("\(entry.label): ")
                                             .iPadScaledFont(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                         Text(formatTime(entry.value))
                                             .iPadScaledFont(.caption)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.primary)
+                                            .fontWeight(.semibold)
+                                            .foregroundStyle(.primary)
                                     }
                                 }
                             }
@@ -184,11 +184,11 @@ struct AircraftTypeTimeCard: View {
                                     HStack(spacing: 0) {
                                         Text("\(entry.label): ")
                                             .iPadScaledFont(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                         Text(formatTime(entry.value))
                                             .iPadScaledFont(.caption)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.primary)
+                                            .fontWeight(.semibold)
+                                            .foregroundStyle(.primary)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 }
@@ -205,12 +205,12 @@ struct AircraftTypeTimeCard: View {
                             ForEach(timeEntries, id: \.label) { entry in
                                 HStack(spacing: 0) {
                                     Text("\(entry.label): ")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .iPadScaledFont(.caption)
+                                        .foregroundStyle(.secondary)
                                     Text(formatTime(entry.value))
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.primary)
+                                        .iPadScaledFont(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.primary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -220,8 +220,8 @@ struct AircraftTypeTimeCard: View {
                     // iPad portrait or iPhone 2-column grid mode: show just total hours
                     Text(formatTime(aircraftStats.totalHours))
                         .iPadScaledFont(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
                 }
 
                 // Spacer to match progress bar height in other cards
@@ -230,7 +230,7 @@ struct AircraftTypeTimeCard: View {
 
                 Text("\(aircraftStats.totalSectors) sector\(aircraftStats.totalSectors == 1 ? "" : "s")")
                     .iPadScaledFont(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(16)

@@ -47,8 +47,8 @@ struct RecencyCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(recencyStatus.daysRemaining) day\(recencyStatus.daysRemaining == 1 ? "" : "s")")
                     .iPadScaledFont(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
                     //.foregroundColor(recencyStatus.color)
 
                 // Progress bar
@@ -69,7 +69,7 @@ struct RecencyCard: View {
 
                 Text(expirationDate)
                     .iPadScaledFont(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(16)

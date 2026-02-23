@@ -15,8 +15,8 @@ struct StatCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(value)
                     .iPadScaledFont(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
 
                 // Spacer to match progress bar height in other cards
                 Spacer()
@@ -24,7 +24,7 @@ struct StatCard: View {
 
                 Text(subtitle)
                     .iPadScaledFont(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(16)

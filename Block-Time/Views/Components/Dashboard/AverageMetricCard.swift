@@ -166,8 +166,8 @@ struct AverageMetricCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(formattedValue)
                     .iPadScaledFont(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
 
                 // Spacer to match progress bar height in other cards
                 // Show spacer if not in compact mode OR if showing "All Time" (shorter subtitle)
@@ -178,7 +178,7 @@ struct AverageMetricCard: View {
 
                 Text(displaySubtitle)
                     .iPadScaledFont(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(16)

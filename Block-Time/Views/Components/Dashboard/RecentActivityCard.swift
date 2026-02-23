@@ -50,21 +50,21 @@ struct RecentActivityCard: View {
                     // Format hours based on user preference
                     Text(showTimesInHoursMinutes ? FlightSector.decimalToHHMM(recentHours) : String(format: "%.1f hrs", recentHours))
                         .iPadScaledFont(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
 
 
                     if let max = maxHours {
                         Text(" / \(String(format: "%.0f", max))")
                             .iPadScaledFont(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
 
                     Image(systemName: "pencil")
                         .iPadScaledFont(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 if maxHours != nil {
@@ -91,7 +91,7 @@ struct RecentActivityCard: View {
 
                 Text("\(recentSectors) sector\(recentSectors == 1 ? "" : "s")")
                     .iPadScaledFont(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(16)
