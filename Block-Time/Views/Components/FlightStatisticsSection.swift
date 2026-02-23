@@ -174,14 +174,14 @@ struct FlightStatisticsSection: View {
                 icon: "desktopcomputer"
             )
 
-        case .pfRatio:
-            StatCard(
-                title: "PF Ratio",
-                value: String(format: "%.0f%%", statistics.pfPercentage),
-                subtitle: "\(statistics.pfSectors) of \(statistics.totalSectors)",
-                color: .green,
-                icon: "chart.pie.fill"
-            )
+//        case .pfRatio:
+//            StatCard(
+//                title: "PF Ratio",
+//                value: String(format: "%.0f%%", statistics.pfPercentage),
+//                subtitle: "\(statistics.pfSectors) of \(statistics.totalSectors)",
+//                color: .green,
+//                icon: "chart.pie.fill"
+//            )
 
         case .recentActivity7:
             RecentActivityCard(statistics: statistics, days: 7)

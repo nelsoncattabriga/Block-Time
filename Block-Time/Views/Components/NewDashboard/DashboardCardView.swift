@@ -128,14 +128,14 @@ struct DashboardCardView: View {
                 color: .cyan,
                 icon: "desktopcomputer"
             )
-        case .pfRatioStat:
-            StatCard(
-                title: "PF Ratio",
-                value: String(format: "%.0f%%", stats.pfPercentage),
-                subtitle: "\(stats.pfSectors) of \(stats.totalSectors)",
-                color: .orange,
-                icon: "chart.pie.fill"
-            )
+//        case .pfRatioStat:
+//            StatCard(
+//                title: "PF Ratio",
+//                value: String(format: "%.0f%%", stats.pfPercentage),
+//                subtitle: "\(stats.pfSectors) of \(stats.totalSectors)",
+//                color: .orange,
+//                icon: "chart.pie.fill"
+//            )
         case .recentActivity7:
             RecentActivityCard(statistics: stats, days: 7)
         case .recentActivity28:

@@ -7,7 +7,7 @@ enum StatCardType: String, CaseIterable, Identifiable {
     case p1usTime = "p1usTime"
     case nightTime = "nightTime"
     case simTime = "simTime"
-    case pfRatio = "pfRatio"
+//    case pfRatio = "pfRatio"
     case recentActivity7 = "recentActivity7"
     case recentActivity28 = "recentActivity28"
     case recentActivity30 = "recentActivity30"
@@ -28,7 +28,7 @@ enum StatCardType: String, CaseIterable, Identifiable {
         case .p1usTime: return "ICUS Time"
         case .nightTime: return "Night Time"
         case .simTime: return "Simulator Time"
-        case .pfRatio: return "PF Ratio"
+//        case .pfRatio: return "PF Ratio"
         case .recentActivity7: return "Last 7 Days"
         case .recentActivity28: return "Last 28 Day"
         case .recentActivity30: return "Last 30 Days"
@@ -49,7 +49,7 @@ enum StatCardType: String, CaseIterable, Identifiable {
         case .p1usTime: return "person.2.fill"
         case .nightTime: return "moon.fill"
         case .simTime: return "desktopcomputer"
-        case .pfRatio: return "chart.pie.fill"
+//        case .pfRatio: return "chart.pie.fill"
         case .recentActivity7: return "calendar"
         case .recentActivity28: return "calendar"
         case .recentActivity30: return "calendar"
@@ -70,7 +70,7 @@ enum StatCardType: String, CaseIterable, Identifiable {
         case .p1usTime: return .orange
         case .nightTime: return .indigo
         case .simTime: return .cyan
-        case .pfRatio: return .orange
+//        case .pfRatio: return .orange
         case .recentActivity7: return .green
         case .recentActivity28: return .green
         case .recentActivity30: return .green
