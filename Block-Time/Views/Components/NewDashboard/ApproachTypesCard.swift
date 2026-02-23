@@ -8,16 +8,41 @@
 import SwiftUI
 import Charts
 
+private enum ApproachPeriod: String, CaseIterable {
+    case oneMonth     = "1M"
+    case twelveMonths = "12M"
+    case all          = "ALL"
+}
+
 struct ApproachTypesCard: View {
-    let data: [NDApproachTypeStat]
+    @AppStorage("logApproaches") private var logApproaches = true
+    @State private var period: ApproachPeriod = .oneMonth
+    @State private var data: [NDApproachTypeStat] = []
 
     private var maxCount: Double { Double(data.map { $0.count }.max() ?? 1) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Approach Types", icon: "scope")
+            CardHeader(title: "Approach Types", icon: "scope") {
+                if logApproaches {
+                    Picker("Period", selection: $period) {
+                        ForEach(ApproachPeriod.allCases, id: \.self) {
+                            Text($0.rawValue).tag($0)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                }
+            }
 
-            if data.isEmpty {
+            if !logApproaches {
+                ContentUnavailableView(
+                    "Approaches Disabled",
+                    systemImage: "scope",
+                    description: Text("Enable Log Approaches in Flight Information Settings")
+                )
+                .frame(height: 120)
+            } else if data.isEmpty {
                 ContentUnavailableView(
                     "No Approach Data",
                     systemImage: "scope",
@@ -34,6 +59,52 @@ struct ApproachTypesCard: View {
         }
         .padding(16)
         .appCardStyle()
+        .onAppear { if logApproaches { loadData() } }
+        .onChange(of: period) { loadData() }
+        .onChange(of: logApproaches) { if logApproaches { loadData() } else { data = [] } }
+    }
+
+    private func loadData() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        let now = Date()
+        let endDate = formatter.string(from: now)
+
+        let flights: [FlightSector]
+        switch period {
+        case .all:
+            flights = FlightDatabaseService.shared.fetchAllFlights()
+        case .oneMonth:
+            let start = Calendar.current.date(byAdding: .month, value: -1, to: now)!
+            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+        case .twelveMonths:
+            let start = Calendar.current.date(byAdding: .month, value: -12, to: now)!
+            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+        }
+
+        var aiii = 0, ils = 0, rnp = 0, gls = 0, npa = 0, total = 0
+        for f in flights {
+            guard (f.dayLandings + f.nightLandings) > 0 else { continue }
+            total += 1
+            if f.isAIII { aiii += 1 }
+            if f.isILS  { ils  += 1 }
+            if f.isRNP  { rnp  += 1 }
+            if f.isGLS  { gls  += 1 }
+            if f.isNPA  { npa  += 1 }
+        }
+        guard total > 0 else { data = []; return }
+
+        let d = Double(total)
+        let raw: [(String, Int, Color)] = [
+            ("AIII", aiii, .blue),
+            ("ILS",  ils,  .green),
+            ("RNP",  rnp,  .orange),
+            ("GLS",  gls,  .purple),
+            ("NPA",  npa,  .red)
+        ]
+        data = raw.filter { $0.1 > 0 }
+            .map { NDApproachTypeStat(typeName: $0.0, count: $0.1, percentage: Double($0.1) / d * 100, color: $0.2) }
+            .sorted { $0.count > $1.count }
     }
 
     @ViewBuilder

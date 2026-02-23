@@ -68,7 +68,7 @@ struct DashboardCardView: View {
         case .takeoffLanding:
             TakeoffLandingCard()
         case .approachTypes:
-            ApproachTypesCard(data: viewModel.approachTypes)
+            ApproachTypesCard()
         case .topRoutes:
             TopRoutesCard(routes: viewModel.topRoutes)
         case .topRegistrations:

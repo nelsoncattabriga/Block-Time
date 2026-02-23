@@ -74,8 +74,8 @@ struct TopRoutesCard: View {
     private func rankColor(_ index: Int) -> Color {
         switch index {
         case 0: return .orange
-        case 1: return .gray
-        case 2: return .brown
+        case 1: return .indigo
+        case 2: return .green
         default: return .blue
         }
     }
