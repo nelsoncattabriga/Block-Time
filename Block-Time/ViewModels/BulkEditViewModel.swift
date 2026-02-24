@@ -47,6 +47,8 @@ class BulkEditViewModel: ObservableObject {
     @Published var aircraftType: FieldState<String> = .notEdited
     @Published var prefixOperation: FieldState<PrefixOperation> = .notEdited
     @Published var prefixValue: FieldState<String> = .notEdited
+    @Published var regoPrefixOperation: FieldState<PrefixOperation> = .notEdited
+    @Published var regoPrefixValue: FieldState<String> = .notEdited
 
     // Crew
     @Published var captainName: FieldState<String> = .notEdited
@@ -251,6 +253,8 @@ class BulkEditViewModel: ObservableObject {
             "aircraftType": aircraftType,
             "prefixOperation": prefixOperation,
             "prefixValue": prefixValue,
+            "regoPrefixOperation": regoPrefixOperation,
+            "regoPrefixValue": regoPrefixValue,
             "captainName": captainName,
             "foName": foName,
             "so1Name": so1Name,
@@ -360,6 +364,14 @@ class BulkEditViewModel: ObservableObject {
         }
         .store(in: &cancellables)
 
+        Publishers.CombineLatest(
+            $regoPrefixOperation, $regoPrefixValue
+        )
+        .sink { [weak self] _ in
+            self?.checkForModifications()
+        }
+        .store(in: &cancellables)
+
         $remarks
             .sink { [weak self] _ in
                 self?.checkForModifications()
@@ -373,6 +385,8 @@ class BulkEditViewModel: ObservableObject {
                           hasFieldBeenModified(aircraftType, key: "aircraftType") ||
                           hasFieldBeenModified(prefixOperation, key: "prefixOperation") ||
                           hasFieldBeenModified(prefixValue, key: "prefixValue") ||
+                          hasFieldBeenModified(regoPrefixOperation, key: "regoPrefixOperation") ||
+                          hasFieldBeenModified(regoPrefixValue, key: "regoPrefixValue") ||
                           hasFieldBeenModified(captainName, key: "captainName") ||
                           hasFieldBeenModified(foName, key: "foName") ||
                           hasFieldBeenModified(so1Name, key: "so1Name") ||
@@ -449,6 +463,29 @@ class BulkEditViewModel: ObservableObject {
                     let uppercasePrefix = prefix.uppercased()
                     if currentFlightNumber.uppercased().hasPrefix(uppercasePrefix) {
                         updated.flightNumber = String(currentFlightNumber.dropFirst(uppercasePrefix.count))
+                    }
+
+                case .noChange:
+                    break
+                }
+            }
+
+            // Handle rego prefix operation
+            if case .value(let operation) = regoPrefixOperation, operation != .noChange,
+               case .value(let prefix) = regoPrefixValue, !prefix.isEmpty {
+                let currentReg = updated.aircraftReg
+
+                switch operation {
+                case .add:
+                    let uppercasePrefix = prefix.uppercased()
+                    if !currentReg.uppercased().hasPrefix(uppercasePrefix) {
+                        updated.aircraftReg = uppercasePrefix + currentReg
+                    }
+
+                case .remove:
+                    let uppercasePrefix = prefix.uppercased()
+                    if currentReg.uppercased().hasPrefix(uppercasePrefix) {
+                        updated.aircraftReg = String(currentReg.dropFirst(uppercasePrefix.count))
                     }
 
                 case .noChange:

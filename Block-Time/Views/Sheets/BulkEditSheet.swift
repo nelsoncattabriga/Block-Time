@@ -61,6 +61,12 @@ struct BulkEditSheet: View {
                                 operationState: $bulkEditViewModel.prefixOperation,
                                 prefixState: $bulkEditViewModel.prefixValue
                             )
+
+                            BulkEditPrefixManager(
+                                title: "Rego Prefix",
+                                operationState: $bulkEditViewModel.regoPrefixOperation,
+                                prefixState: $bulkEditViewModel.regoPrefixValue
+                            )
                         }
                     }
 
@@ -1821,6 +1827,7 @@ struct AircraftTypePickerSheet: View {
 // MARK: - BulkEditPrefixManager
 
 struct BulkEditPrefixManager: View {
+    var title: String = "Flight Number Prefix"
     @Binding var operationState: BulkEditViewModel.FieldState<BulkEditViewModel.PrefixOperation>
     @Binding var prefixState: BulkEditViewModel.FieldState<String>
 
@@ -1831,7 +1838,7 @@ struct BulkEditPrefixManager: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Flight Number Prefix")
+            Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
@@ -1925,7 +1932,7 @@ struct BulkEditPrefixManager: View {
                 // Prefix Text Field (only show when Add or Remove is selected)
                 if selectedOperation != .noChange && !isIndeterminate {
                     TextField(
-                        selectedOperation == .add ? "Prefix to add (e.g., QF)" : "Prefix to remove (e.g., QF)",
+                        selectedOperation == .add ? "Prefix to add" : "Prefix to remove",
                         text: $prefixValue
                     )
                     .textCase(.uppercase)
