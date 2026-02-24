@@ -403,23 +403,23 @@ class FRMSCalculationService {
 
             // Fleet-specific consecutive duty restrictions (A320/B737 only)
             if configuration.fleet == .a320B737 {
-                // Consecutive duty days restriction (max 6) - FD12.2b
-                if cumulativeTotals.consecutiveDuties >= 6 {
-                    restrictions.append("Maximum 6 consecutive duty days reached")
+                // Consecutive duty days restriction - FD12.2b
+                if cumulativeTotals.consecutiveDuties >= SH_Planning_FltDuty.maxConsecutiveDutyDays {
+                    restrictions.append("Maximum \(SH_Planning_FltDuty.maxConsecutiveDutyDays) consecutive duty days reached")
                 }
 
-                // Duty days in 11-day period restriction (max 9) - FD12.2a
-                if cumulativeTotals.dutyDaysIn11Days >= 9 {
-                    restrictions.append("Maximum 9 duty days in 11-day period reached")
+                // Duty days in 11-day period restriction - FD12.2a
+                if cumulativeTotals.dutyDaysIn11Days >= SH_Planning_FltDuty.maxDutyDaysIn11Days {
+                    restrictions.append("Maximum \(SH_Planning_FltDuty.maxDutyDaysIn11Days) duty days in 11-day period reached")
                 }
 
-                // Consecutive early starts restriction (max 4)
-                if cumulativeTotals.consecutiveEarlyStarts >= 4 {
-                    restrictions.append("Maximum 4 consecutive early starts reached")
+                // Consecutive early starts restriction - FD13.6
+                if cumulativeTotals.consecutiveEarlyStarts >= SH_Planning_FltDuty.maxConsecutiveEarlyStarts {
+                    restrictions.append("Maximum \(SH_Planning_FltDuty.maxConsecutiveEarlyStarts) consecutive early starts reached")
                 }
 
-                // Consecutive late nights restriction (max 4 in 7 days, or 5 once per 28 days)
-                if cumulativeTotals.consecutiveLateNights >= 4 {
+                // Consecutive late nights restriction - FD14.1
+                if cumulativeTotals.consecutiveLateNights >= SH_Planning_FltDuty.lateNightMaxConsecutiveNights {
                     restrictions.append("Late night operations limit approaching")
                 }
             }
@@ -1291,7 +1291,7 @@ class FRMSCalculationService {
             let dutyHours7Nights = lateNightDutiesIn7Days.reduce(0.0) { $0 + $1.dutyTime }
 
             let recoveryOption: LateNightRecoveryOption
-            if cumulativeTotals.consecutiveLateNights >= 4 {
+            if cumulativeTotals.consecutiveLateNights >= SH_Planning_FltDuty.lateNightMaxConsecutiveNights {
                 recoveryOption = .require24HoursOff
             } else if cumulativeTotals.consecutiveLateNights >= 2 {
                 recoveryOption = .continueOnLateNights
@@ -1301,9 +1301,9 @@ class FRMSCalculationService {
 
             lateNightStatus = LateNightStatus(
                 consecutiveLateNights: cumulativeTotals.consecutiveLateNights,
-                maxConsecutiveLateNights: 4,
+                maxConsecutiveLateNights: SH_Planning_FltDuty.lateNightMaxConsecutiveNights,
                 dutyHoursIn7Nights: dutyHours7Nights,
-                maxDutyHoursIn7Nights: 40.0,
+                maxDutyHoursIn7Nights: SH_Planning_FltDuty.lateNightMaxDutyHoursIn7NightPeriod,
                 canUse5NightException: true, // Would need to track 28-day usage
                 recoveryOption: recoveryOption
             )
@@ -1312,20 +1312,22 @@ class FRMSCalculationService {
         // Build consecutive duty status
         let consecutiveDutyStatus = ConsecutiveDutyStatus(
             consecutiveDuties: cumulativeTotals.consecutiveDuties,
-            maxConsecutiveDuties: 6,
+            maxConsecutiveDuties: SH_Planning_FltDuty.maxConsecutiveDutyDays,
             dutyDaysIn11Days: cumulativeTotals.dutyDaysIn11Days,
-            maxDutyDaysIn11Days: 9,
+            maxDutyDaysIn11Days: SH_Planning_FltDuty.maxDutyDaysIn11Days,
             consecutiveEarlyStarts: cumulativeTotals.consecutiveEarlyStarts,
-            maxConsecutiveEarlyStarts: 4
+            maxConsecutiveEarlyStarts: SH_Planning_FltDuty.maxConsecutiveEarlyStarts
         )
 
         // Pattern end requirement (simplified - would need pattern tracking)
+        // FD19: 1-2 day pattern → 12 hrs; 3-4 day pattern → 15 hrs
         var patternEndRequirement: PatternEndRequirement? = nil
         if cumulativeTotals.consecutiveDuties >= 3 {
+            let req = SH_Planning_FltDuty.patternTimeFreeRequirements.last  // 3 or 4 day pattern
             patternEndRequirement = PatternEndRequirement(
                 patternDays: cumulativeTotals.consecutiveDuties,
-                minimumRestHours: cumulativeTotals.consecutiveDuties >= 3 ? 15.0 : 12.0,
-                reason: cumulativeTotals.consecutiveDuties >= 3 ? "3-4 day pattern" : "1-2 day pattern"
+                minimumRestHours: req?.minTimeFreeHours ?? 15.0,
+                reason: req?.patternDescription ?? "3-4 day pattern"
             )
         }
 
@@ -1380,7 +1382,7 @@ class FRMSCalculationService {
         let daysOffRequirements = DaysOffRequirements(
             dutyBeforeXDay: "Complete ≤2230 local (previous day)",
             dutyAfterXDay: "Earliest sign-on 0500 local",
-            minimumDuration: 36.0,
+            minimumDuration: SH_Planning_FltDuty.minHoursFreeIn7Days,
             operationalException: "May extend to 2300 local for operational disruptions"
         )
 
@@ -1402,7 +1404,7 @@ class FRMSCalculationService {
 
         // Deadheading limitations (FD15, FD25)
         let deadheadingLimitations = DeadheadingLimitations(
-            absoluteMaximum: 16.0,
+            absoluteMaximum: SH_Planning_FltDuty.deadheadingAbsoluteMaxDutyHours,
             restCalculationNote: "Deadheading included in total duty for rest calculation",
             sectorCountingRule: "Last sector deadheading doesn't count; before flight duty does count"
         )
@@ -1477,12 +1479,12 @@ class FRMSCalculationService {
         }
 
         // Check consecutive duty restrictions
-        if a320B737Limits.consecutiveDutyStatus.consecutiveDuties >= 6 {
-            violations.append("Maximum 6 consecutive duty days already reached")
+        if a320B737Limits.consecutiveDutyStatus.consecutiveDuties >= SH_Planning_FltDuty.maxConsecutiveDutyDays {
+            violations.append("Maximum \(SH_Planning_FltDuty.maxConsecutiveDutyDays) consecutive duty days already reached")
         }
 
-        if a320B737Limits.consecutiveDutyStatus.dutyDaysIn11Days >= 9 {
-            violations.append("Maximum 9 duty days in 11-day period already reached")
+        if a320B737Limits.consecutiveDutyStatus.dutyDaysIn11Days >= SH_Planning_FltDuty.maxDutyDaysIn11Days {
+            violations.append("Maximum \(SH_Planning_FltDuty.maxDutyDaysIn11Days) duty days in 11-day period already reached")
         }
 
         // Determine compliance
@@ -1552,14 +1554,13 @@ class FRMSCalculationService {
         // Base rest calculation
         var minimumRest: Double
 
-        if duty.dutyTime <= 12 {
-            // FD18.1 (Planning) & FD28.1 (Operational): Same formula for both
-            // Formula: MAX(10 hours, previous duty length)
-            minimumRest = max(duty.dutyTime, 10.0)
+        // FD18.1 (Planning) & FD28.1 (Operational): Same formula for both
+        let restFormula = SH_Planning_FltDuty.timeFreeWithinPattern
+        if duty.dutyTime <= restFormula.dutyThresholdHours {
+            minimumRest = max(duty.dutyTime, restFormula.minFreeHours)
         } else {
-            // Over 12 hours: 12 + 1.5 * (duty - 12)
-            let excess = duty.dutyTime - 12.0
-            minimumRest = 12.0 + (1.5 * excess)
+            let excess = duty.dutyTime - restFormula.baseHours
+            minimumRest = restFormula.baseHours + (restFormula.multiplier * excess)
         }
 
         // Special rules for augmented crews
