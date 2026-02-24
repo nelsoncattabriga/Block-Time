@@ -23,7 +23,7 @@ private struct DutyBand: Identifiable {
 
 struct FRMSView: View {
 
-    @ObservedObject var viewModel: FRMSViewModel
+    @Bindable var viewModel: FRMSViewModel
     let flightTimePosition: FlightTimePosition
     /// Non-nil on iPad split view — indicates which section to show.
     /// Nil on iPhone (or iPad portrait) — all sections rendered as before.
@@ -2182,7 +2182,7 @@ struct FRMSView: View {
     // MARK: - Adaptive Cumulative Limits Layout
 
     private struct AdaptiveCumulativeLimitsLayout: View {
-        @ObservedObject var viewModel: FRMSViewModel
+        var viewModel: FRMSViewModel
         let totals: FRMSCumulativeTotals
         /// True when inside the iPad split-view detail pane. Used to show
         /// Consecutive Duties in the compact (portrait) layout path, while

@@ -10,7 +10,7 @@ import SwiftUI
 
 struct SettingsSplitView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
     @State private var selectedCategory: SettingsCategory? = .crew
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass

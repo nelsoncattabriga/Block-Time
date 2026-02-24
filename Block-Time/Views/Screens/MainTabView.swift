@@ -16,7 +16,7 @@ enum FlightDestination: Hashable {
 struct MainTabView: View {
     @StateObject private var viewModel = FlightTimeExtractorViewModel()
     @StateObject private var flightsFilterViewModel = FlightsFilterViewModel()
-    @StateObject private var frmsViewModel = FRMSViewModel()
+    @State private var frmsViewModel = FRMSViewModel()
     @StateObject private var userDefaultsService = UserDefaultsService()
     @ObservedObject private var appState = AppState.shared
     @State private var selectedTab = 0

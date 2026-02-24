@@ -12,7 +12,7 @@ import SwiftUI
 
 struct DashboardCardView: View {
     let cardID: DashboardCardID
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
     let viewModel: NewDashboardViewModel
     var isCompact: Bool = false
 

@@ -10,7 +10,7 @@ import SwiftUI
 struct OnboardingFlowView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
     @StateObject private var userDefaultsService = UserDefaultsService()
 
     @State private var currentStep = 0

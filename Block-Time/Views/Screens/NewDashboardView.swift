@@ -10,7 +10,7 @@
 import SwiftUI
 
 struct NewDashboardView: View {
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
 
     @State private var viewModel = NewDashboardViewModel()
     @State private var config = DashboardConfiguration()

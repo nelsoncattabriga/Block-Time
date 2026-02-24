@@ -50,7 +50,7 @@ enum FRMSSection: String, Hashable, CaseIterable {
 
 struct FRMSSplitView: View {
     @ObservedObject var flightTimeVM: FlightTimeExtractorViewModel
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
     @State private var selectedSection: FRMSSection? = .cumulativeLimits
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -125,7 +125,7 @@ struct FRMSSplitView: View {
 private struct FRMSSidebarContent: View {
     @Binding var selectedSection: FRMSSection?
     let availableSections: [FRMSSection]
-    @ObservedObject var viewModel: FRMSViewModel
+    var viewModel: FRMSViewModel
 
     var body: some View {
         List(selection: $selectedSection) {

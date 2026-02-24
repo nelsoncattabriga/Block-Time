@@ -7,14 +7,13 @@
 //
 
 import Foundation
-import Combine
 
-@MainActor
-class FRMSViewModel: ObservableObject {
+@Observable @MainActor
+class FRMSViewModel {
 
     // MARK: - Properties
 
-    @Published var configuration: FRMSConfiguration {
+    var configuration: FRMSConfiguration {
         didSet {
             LogManager.shared.debug("FRMSViewModel: Configuration changed - triggering refresh")
             saveConfiguration()
@@ -22,17 +21,17 @@ class FRMSViewModel: ObservableObject {
         }
     }
 
-    @Published var cumulativeTotals: FRMSCumulativeTotals?
-    @Published var maximumNextDuty: FRMSMaximumNextDuty?
-    @Published var a320B737NextDutyLimits: A320B737NextDutyLimits?
-    @Published var recentDuties: [FRMSDuty] = []
-    @Published var recentDutiesByDay: [DailyDutySummary] = []
-    @Published var lastDuty: FRMSDuty?
+    var cumulativeTotals: FRMSCumulativeTotals?
+    var maximumNextDuty: FRMSMaximumNextDuty?
+    var a320B737NextDutyLimits: A320B737NextDutyLimits?
+    var recentDuties: [FRMSDuty] = []
+    var recentDutiesByDay: [DailyDutySummary] = []
+    var lastDuty: FRMSDuty?
 
-    @Published var isLoading = false  // Track loading state for UI
+    var isLoading = false  // Track loading state for UI
 
     // Limit type selection (Planning vs Operational) - applies to active fleet
-    @Published var selectedLimitType: FRMSLimitType = .planning {
+    var selectedLimitType: FRMSLimitType = .planning {
         didSet {
             LogManager.shared.debug("FRMSViewModel: Limit type changed to \(selectedLimitType)")
             // Recalculate limits when limit type changes

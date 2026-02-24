@@ -11,7 +11,7 @@ import SwiftUI
 
 struct FRMSDutyStripCard: View {
     let flightStrip: NDFRMSStripData
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
 
     private var totals: FRMSCumulativeTotals? { frmsViewModel.cumulativeTotals }
     private var fleet: FRMSFleet { flightStrip.fleet }

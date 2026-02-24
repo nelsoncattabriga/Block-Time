@@ -54,7 +54,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 // MARK: - Main Settings View (iPhone/Portrait iPad)
 struct SettingsView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
     @Environment(ThemeService.self) private var themeService
 
     var body: some View {
@@ -308,7 +308,7 @@ struct FlightInformationSettingsView: View {
 // MARK: - FRMS Settings Detail View
 struct FRMSSettingsDetailView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
     @Environment(ThemeService.self) private var themeService
 
     var body: some View {
@@ -1516,7 +1516,7 @@ private struct ModernFleetSelectorRow: View {
 
 // MARK: - FRMS Card
 private struct ModernFRMSCard: View {
-    @ObservedObject var viewModel: FRMSViewModel
+    @Bindable var viewModel: FRMSViewModel
 
     var body: some View {
         VStack(spacing: 16) {

@@ -12,7 +12,7 @@ import SwiftUI
 struct DashboardSidebarView: View {
     let config: DashboardConfiguration
     let viewModel: NewDashboardViewModel
-    @ObservedObject var frmsViewModel: FRMSViewModel
+    var frmsViewModel: FRMSViewModel
 
     var body: some View {
         ScrollView {
