@@ -156,7 +156,7 @@ struct SH_NextDutyView: View {
         }
     }
 
-    private func dutyColumn(title: String, hours: Double) -> some View {
+    private func dutyColumn(title: String, hours: Double, color: Color = AppColors.accentOrange) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.subheadline)
@@ -165,7 +165,7 @@ struct SH_NextDutyView: View {
             Text(formatTime(hours))
                 .font(.body)
                 .fontWeight(.semibold)
-                .foregroundStyle(AppColors.accentOrange)
+                .foregroundStyle(color)
         }
     }
 
@@ -198,20 +198,20 @@ struct SH_NextDutyView: View {
             if displayWindow.limitType == .operational {
                 // Operational limits: 3 columns (1 Sector | 2+ Sectors | >7 hrs night)
                 HStack(spacing: 12) {
-                    dutyColumn(title: "1 Sector",      hours: 10.5)
+                    dutyColumn(title: "1 Sector",      hours: 10.5, color: AppColors.accentBlue)
                     Divider().frame(height: 35)
-                    dutyColumn(title: "2+ Sectors",    hours: 10.0)
+                    dutyColumn(title: "2+ Sectors",    hours: 10.0, color: AppColors.accentBlue)
                     Divider().frame(height: 35)
-                    dutyColumn(title: "> 7 hrs Night", hours: 9.5)
+                    dutyColumn(title: "> 7 hrs Night", hours: 9.5,  color: AppColors.accentBlue)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
             } else {
                 // Planning limits: 2 columns (Standard | >7 hrs night)
                 HStack(spacing: 12) {
-                    dutyColumn(title: "Standard",      hours: 10.0)
+                    dutyColumn(title: "Standard",      hours: 10.0, color: AppColors.accentBlue)
                     Divider().frame(height: 35)
-                    dutyColumn(title: "> 7 hrs Night", hours: 9.5)
+                    dutyColumn(title: "> 7 hrs Night", hours: 9.5,  color: AppColors.accentBlue)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)

@@ -375,11 +375,11 @@ struct LH_NextDutyView: View {
                 Text("Relevant Sectors")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.blue)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.secondary.opacity(0.08))
+                    .background(Color.blue.opacity(0.08))
 
                 ForEach(sectors.indices, id: \.self) { i in
                     HStack(spacing: 8) {
@@ -404,11 +404,11 @@ struct LH_NextDutyView: View {
                 Text("Disruption Rest Limits")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.blue)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.secondary.opacity(0.08))
+                    .background(Color.blue.opacity(0.08))
 
                 // Pre-duty
                 HStack(alignment: .top) {
@@ -538,13 +538,13 @@ struct LH_NextDutyView: View {
                 Text(col)
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.blue)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.secondary.opacity(0.08))
+        .background(Color.blue.opacity(0.08))
     }
 
     private func formatDecimalHours(_ hours: Double) -> String {

@@ -127,9 +127,13 @@ struct FRMSView: View {
                     },
                     label: {
                         HStack {
-                            Text("Next Duty Limits")
-                                .font(.title3)
-                                .fontWeight(.semibold)
+                            HStack(spacing: 6) {
+                                Image(systemName: "airplane.departure")
+                                    .foregroundStyle(AppColors.accentOrange)
+                                Text("Next Duty Limits")
+                            }
+                            .font(.title3)
+                            .fontWeight(.semibold)
 
                             Spacer()
 
@@ -162,9 +166,13 @@ struct FRMSView: View {
                             .padding(.top, 8)
                     },
                     label: {
-                        Text("Minimum Base Turnaround Time")
-                            .font(.title3)
-                            .fontWeight(.semibold)
+                        HStack(spacing: 6) {
+                            Image(systemName: "house.fill")
+                                .foregroundStyle(.purple)
+                            Text("Minimum Base Turnaround Time")
+                        }
+                        .font(.title3)
+                        .fontWeight(.semibold)
                     }
                 )
                 .foregroundStyle(.primary)
@@ -181,9 +189,13 @@ struct FRMSView: View {
                             .padding(.top, 8)
                     },
                     label: {
-                        Text("Recent Duties")
-                            .font(.title3)
-                            .fontWeight(.semibold)
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar")
+                                .foregroundStyle(AppColors.accentBlue)
+                            Text("Recent Duties")
+                        }
+                        .font(.title3)
+                        .fontWeight(.semibold)
                     }
                 )
                 .foregroundStyle(.primary)
@@ -417,17 +429,18 @@ struct FRMSView: View {
                             Label("Rest Required:", systemImage: "house.fill")
                                 .font(.headline)
                                 .fontWeight(.semibold)
+                                .foregroundStyle(.purple)
 
                             // Spacer()
 
                             Text(mbtt.description)
                                 .font(.headline)
                                 .fontWeight(.semibold)
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.purple)
                         }
                     }
                     .padding()
-                    .background(.blue.opacity(0.1))
+                    .background(.purple.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
@@ -467,37 +480,39 @@ struct FRMSView: View {
     }
 
     private func dailyDutyRow(dailySummary: DailyDutySummary) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Date header
-            HStack {
-                Text(formatLocalDate(dailySummary.date))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(AppColors.accentBlue)
+                .frame(width: 3)
 
-                Spacer()
+            VStack(alignment: .leading, spacing: 8) {
+                // Date header
+                HStack {
+                    Text(formatLocalDate(dailySummary.date))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
 
-                Text("\(dailySummary.totalSectors) Sector\(dailySummary.totalSectors == 1 ? "" : "s")")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                    Spacer()
+
+                    Text("\(dailySummary.totalSectors) Sector\(dailySummary.totalSectors == 1 ? "" : "s")")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                }
+
+                // Daily totals
+                HStack(spacing: 16) {
+                    Label("Duty: \(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalDutyTime) : String(format: "%.1f", dailySummary.totalDutyTime)) hrs", systemImage: "clock")
+                        .font(.subheadline)
+                        .foregroundStyle(AppColors.accentOrange)
+
+                    Label("Flight: \(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalFlightTime) : String(format: "%.1f", dailySummary.totalFlightTime)) hrs", systemImage: "clock.badge.airplane")
+                        .font(.subheadline)
+                        .foregroundStyle(AppColors.accentBlue)
+                }
             }
-
-            // Daily totals
-            HStack(spacing: 16) {
-
-                Label("Duty: \(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalDutyTime) : String(format: "%.1f", dailySummary.totalDutyTime)) hrs", systemImage: "clock")
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-
-               // Spacer()
-
-                Label("Flight: \(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalFlightTime) : String(format: "%.1f", dailySummary.totalFlightTime)) hrs", systemImage: "clock.badge.airplane")
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-            }
-
+            .padding(12)
         }
-        .padding()
         .appCardStyle()
     }
 
