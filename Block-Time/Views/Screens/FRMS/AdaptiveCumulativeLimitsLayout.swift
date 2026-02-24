@@ -131,10 +131,11 @@ struct AdaptiveCumulativeLimitsLayout: View {
         buildLimitCard(
             title: "Duty Time (14 Days)",
             current: totals.dutyTime14Days,
-            limit: viewModel.configuration.fleet.maxDutyTime14Days,
+            limit: viewModel.configuration.fleet.maxDutyTime14DaysInitial ?? viewModel.configuration.fleet.maxDutyTime14Days,
             status: totals.dutyStatus14Days,
             unit: "hrs",
-            accentColor: .orange
+            accentColor: .orange,
+            note: viewModel.configuration.fleet.maxDutyTime14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
         )
 
         // Consecutive Duties (A320/B737 only) — shown here in compact layout
