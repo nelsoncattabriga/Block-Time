@@ -37,11 +37,20 @@ struct FRMSDutyStripCard: View {
                         max: fleet.maxDutyTime7Days
                     )
                     Divider().frame(height: 72).padding(.horizontal, 8)
-                    ringGauge(
-                        label: "14 Days",
-                        hours: totals?.dutyTime14Days ?? 0,
-                        max: fleet.maxDutyTime14Days
-                    )
+                    VStack(spacing: 4) {
+                        ringGauge(
+                            label: "14 Days",
+                            hours: totals?.dutyTime14Days ?? 0,
+                            max: fleet.maxDutyTime14DaysInitial ?? fleet.maxDutyTime14Days
+                        )
+                        if fleet.maxDutyTime14DaysInitial != nil,
+                           (totals?.dutyTime14Days ?? 0) >= 85 {
+                            Text("100 hrs with agreement")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .frame(maxWidth: .infinity)
             }
