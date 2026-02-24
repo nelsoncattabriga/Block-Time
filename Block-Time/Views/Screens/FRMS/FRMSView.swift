@@ -1,0 +1,1938 @@
+//
+//  FRMSView.swift
+//  Block-Time
+//
+//  FRMS (Fatigue Risk Management System) Tab View
+//  Displays flight/duty time limits and maximum next duty calculator
+//
+
+import SwiftUI
+
+// MARK: - Helper Functions
+
+func formatHoursMinutes(_ decimalHours: Double) -> String {
+    // Use standardized conversion with proper rounding
+    return decimalHours.toHoursMinutesString
+}
+
+struct FRMSView: View {
+
+    @Bindable var viewModel: FRMSViewModel
+    let flightTimePosition: FlightTimePosition
+    /// Non-nil on iPad split view — indicates which section to show.
+    /// Nil on iPhone (or iPad portrait) — all sections rendered as before.
+    var selectedSection: FRMSSection? = nil
+    @Environment(ThemeService.self) private var themeService
+    @EnvironmentObject var appViewModel: FlightTimeExtractorViewModel
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
+
+    @State private var selectedCrewComplement: CrewComplement = .fourPilot
+    @State private var selectedRestFacility: CrewRestFacility = .twoClass1
+    @State private var selectedSignOnWindow: SignOnWindow = .w0800_1359
+    @State private var expectedDutyHours: Double = 10.0
+    @State private var nextDutyIsDeadhead: Bool = false
+
+    // Time window selection for SH duty limits display
+    enum TimeWindowSelection: String, CaseIterable {
+        case early = "0500-1459"
+        case afternoon = "1500-1959"
+        case night = "2000-0459"
+    }
+    @State private var selectedTimeWindow: TimeWindowSelection = .early
+
+    // MBTT parameters (for A380/A330/B787)
+    @State private var mbttDaysAwayCategory: String = "2-4"  // Options: "1", "2-4", "5-8", "9-12", ">12"
+    @State private var mbttCreditedHoursCategory: String = "≤20"  // Options: "≤20", ">20", ">40", ">60"
+    @State private var mbttHadDutyOver18Hours: Bool = false
+    @State private var calculatedMBTT: FRMSMinimumBaseTurnaroundTime? = nil
+
+    // Special Scenarios expansion state (for widebody fleet)
+    @State private var expandSimulator = false
+    @State private var expandDaysOff = false
+    @State private var expandAnnualLeave = false
+    @State private var expandReserve = false
+    @State private var expandDeadheading = false
+
+    // LH section expansion state
+    @State private var expandNextDutyLimits = false
+    @State private var expandMinimumBaseTurnaround = false
+    @State private var expandRecentDuties = false
+    @State private var expandCrewRestClassification = false
+    @State private var expandDisruptionRest = false
+
+    // Disruption Rest — FD10.2.1
+    @State private var disruptionPreviousDutyHours: Double = 12.0
+    @State private var disruptionTZDifference: Double = 0.0
+    @State private var disruptionNextDutyOver16: Bool = false
+
+    // Cached home base timezone — set once on appear to avoid per-row FRMSCalculationService allocation
+    @State private var homeBaseTimeZone: TimeZone = .current
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                themeService.getGradient()
+                    .ignoresSafeArea()
+
+                ZStack {
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            if let section = selectedSection {
+                                // iPad split view — show the selected section only (no DisclosureGroups)
+                                sectionContent(for: section)
+                            } else {
+                                // iPhone (or iPad portrait) — all sections, unchanged layout
+                                allSectionsContent
+                            }
+                        }
+                        .padding()
+                        .frame(maxWidth: selectedSection == nil && horizontalSizeClass == .regular ? 800 : .infinity)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .refreshable {
+                        LogManager.shared.debug("FRMSView: Pull-to-refresh triggered")
+                        await viewModel.refreshFlightData(crewPosition: flightTimePosition)
+                        updateMBTT()
+                    }
+                    .opacity(viewModel.isLoading ? 0.3 : 1.0)
+                }
+            }
+            .navigationTitle(selectedSection?.rawValue ?? "FRMS")
+            .navigationBarTitleDisplayMode(.inline)
+            .background(Color(.systemGroupedBackground))
+            .onAppear {
+                //LogManager.shared.debug("FRMSView: onAppear called")
+                viewModel.loadFlightData(crewPosition: flightTimePosition)
+                updateMBTT()  // Initialize MBTT calculation
+                homeBaseTimeZone = FRMSCalculationService(configuration: viewModel.configuration).getHomeBaseTimeZone()
+            }
+            .onChange(of: viewModel.configuration.homeBase) { _, _ in
+                homeBaseTimeZone = FRMSCalculationService(configuration: viewModel.configuration).getHomeBaseTimeZone()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
+                LogManager.shared.debug("FRMSView: Received .flightDataChanged notification")
+                Task {
+                    await viewModel.refreshFlightData(crewPosition: flightTimePosition)
+                    updateMBTT()
+                }
+            }
+        }
+    }
+
+    // MARK: - Split View Section Content
+
+    /// All sections rendered sequentially — used on iPhone and iPad portrait (selectedSection == nil).
+    /// This is the exact layout that existed before split-view was introduced.
+    @ViewBuilder
+    private var allSectionsContent: some View {
+        // Minimum Rest / Earliest Sign-On Section (A320/B737 only)
+        if viewModel.configuration.fleet == .a320B737,
+           let limits = viewModel.a320B737NextDutyLimits {
+            minimumRestSection(limits: limits)
+        }
+
+        // Cumulative Limits Section
+        cumulativeLimitsSection
+
+        // Maximum Next Duty Calculator
+        if viewModel.configuration.fleet == .a380A330B787 {
+            VStack(alignment: .leading, spacing: 16) {
+                DisclosureGroup(
+                    isExpanded: $expandNextDutyLimits,
+                    content: {
+                        VStack(spacing: 16) {
+                            // iPhone: Show toggle at top when expanded
+                            if horizontalSizeClass == .compact {
+                                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                                    Text("Planning").tag(FRMSLimitType.planning)
+                                    Text("Operational").tag(FRMSLimitType.operational)
+                                }
+                                .pickerStyle(.segmented)
+                            }
+                            maximumNextDutySection
+                        }
+                        .padding(.top, 8)
+                    },
+                    label: {
+                        HStack {
+                            Text("Next Duty Limits")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+
+                            Spacer()
+
+                            // iPad: Show toggle in header
+                            if horizontalSizeClass != .compact {
+                                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                                    Text("Planning").tag(FRMSLimitType.planning)
+                                    Text("Operational").tag(FRMSLimitType.operational)
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 220)
+                                .padding(.trailing, 16)
+                            }
+                        }
+                    }
+                )
+                .foregroundStyle(.primary)
+            }
+        } else {
+            maximumNextDutySection
+        }
+
+        // MBTT Calculator Section (for A380/A330/B787)
+        if viewModel.configuration.fleet == .a380A330B787 {
+            VStack(alignment: .leading, spacing: 16) {
+                DisclosureGroup(
+                    isExpanded: $expandMinimumBaseTurnaround,
+                    content: {
+                        minimumBaseTurnaroundSection
+                            .padding(.top, 8)
+                    },
+                    label: {
+                        Text("Minimum Base Turnaround Time")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                    }
+                )
+                .foregroundStyle(.primary)
+            }
+        }
+
+        // Recent Duties
+        if viewModel.configuration.fleet == .a380A330B787 {
+            VStack(alignment: .leading, spacing: 16) {
+                DisclosureGroup(
+                    isExpanded: $expandRecentDuties,
+                    content: {
+                        recentDutiesSection
+                            .padding(.top, 8)
+                    },
+                    label: {
+                        Text("Recent Duties")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                    }
+                )
+                .foregroundStyle(.primary)
+            }
+        } else {
+            recentDutiesSection
+        }
+    }
+
+    /// Content for the selected sidebar section (iPad split-view path).
+    /// DisclosureGroups are omitted — each section fills the detail pane directly.
+    @ViewBuilder
+    private func sectionContent(for section: FRMSSection) -> some View {
+        switch section {
+        case .cumulativeLimits:
+            cumulativeLimitsSection
+        case .nextDuty:
+            nextDutySectionContent
+        case .minBaseTurnaround:
+            minimumBaseTurnaroundSection
+        case .recentDuties:
+            recentDutiesSection
+        }
+    }
+
+    /// Next Duty section content for the split-view detail pane.
+    /// Includes the Planning/Operational picker that was previously in the DisclosureGroup label.
+    @ViewBuilder
+    private var nextDutySectionContent: some View {
+        // Minimum Rest (A320/B737 only)
+        if viewModel.configuration.fleet == .a320B737,
+           let limits = viewModel.a320B737NextDutyLimits {
+            minimumRestSection(limits: limits)
+        }
+
+        // Planning / Operational toggle (replaces the DisclosureGroup label for A380)
+        if viewModel.configuration.fleet == .a380A330B787 {
+            Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                Text("Planning").tag(FRMSLimitType.planning)
+                Text("Operational").tag(FRMSLimitType.operational)
+            }
+            .pickerStyle(.segmented)
+        }
+
+        maximumNextDutySection
+    }
+
+    // MARK: - Minimum Rest Section
+
+    private func minimumRestSection(limits: A320B737NextDutyLimits) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Minimum Rest & Sign-On")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.orange)
+                    .frame(width: 3)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Minimum Rest")
+                            .font(.headline.bold())
+                            .foregroundStyle(.secondary)
+                        Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppColors.accentOrange)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("Earliest Sign-On")
+                            .font(.headline.bold())
+                            .foregroundStyle(.secondary)
+                        Text(formatDateTime(limits.earliestSignOn))
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppColors.accentOrange)
+                    }
+                }
+                .padding(16)
+            }
+            .appCardStyle()
+        }
+    }
+
+    // MARK: - Cumulative Limits Section
+
+    private var cumulativeLimitsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Cumulative Limits")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            if let totals = viewModel.cumulativeTotals {
+                AdaptiveCumulativeLimitsLayout(
+                    viewModel: viewModel,
+                    totals: totals,
+                    isInSplitView: selectedSection != nil
+                )
+            } else {
+                Text("No flight data available")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            }
+        }
+    }
+
+    // MARK: - Maximum Next Duty Section
+
+    private var maximumNextDutySection: some View {
+        Group {
+            if viewModel.configuration.fleet == .a320B737 {
+                a320B737NextDutyContent
+            } else {
+                maximumNextDutyContent
+            }
+        }
+    }
+
+    // MARK: - A320/B737 Next Duty Content
+
+    private var a320B737NextDutyContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+
+            if let limits = viewModel.a320B737NextDutyLimits, let totals = viewModel.cumulativeTotals {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Consecutive Duties Summary — iPhone only (selectedSection == nil).
+                    // On iPad (split view), it's shown inside AdaptiveCumulativeLimitsLayout instead.
+                    if totals.hasConsecutiveDutyLimits && horizontalSizeClass == .compact && selectedSection == nil {
+                        buildConsecutiveInfoCard(totals: totals)
+                    }
+
+                    // Active Restrictions (if any)
+                    if limits.backOfClockRestriction != nil || limits.lateNightStatus != nil || limits.consecutiveDutyStatus.hasActiveRestrictions {
+                        activeRestrictionsSection(limits: limits)
+                    }
+
+                    // Next Duty Limits Title
+                    Text("Next Duty Limits")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    // Max Duty Card (with controls inside)
+                    maxDutyCard(limits: limits)
+                }
+            } else {
+                Text("No duty data available")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            }
+        }
+    }
+
+    
+    private func maxDutyCard(limits: A320B737NextDutyLimits) -> some View {
+        
+        let displayWindow = getSelectedWindow(limits: limits, selection: selectedTimeWindow)
+
+        return VStack(alignment: .leading, spacing: 16) {
+            
+            // Adaptive Header
+            headerSection
+            
+            Divider()
+
+            // MARK: - Max Duty and Flight Time Limits (Adaptive Layout)
+
+            if horizontalSizeClass == .compact {
+                // iPhone: Vertical stack
+                VStack(alignment: .leading, spacing: 16) {
+                    maxDutySection(displayWindow: displayWindow)
+                    Divider()
+                    maxFlightTimeSection(displayWindow: displayWindow)
+                }
+            } else {
+                // iPad: Horizontal layout
+                HStack(alignment: .top, spacing: 20) {
+                    maxDutySection(displayWindow: displayWindow)
+
+                    Divider()
+                        .frame(maxHeight: .infinity)
+
+                    maxFlightTimeSection(displayWindow: displayWindow)
+                }
+            }
+        }
+        .padding()
+        .appCardStyle()
+        .onAppear {
+            updateTimeWindowSelection(limits: limits)
+        }
+        .onChange(of: viewModel.selectedLimitType) { _, _ in
+            updateTimeWindowSelection(limits: limits)
+        }
+    }
+    
+    private var headerSection: some View {
+        Group {
+            if horizontalSizeClass == .compact {
+                // iPhone layout
+                VStack(alignment: .leading, spacing: 12) {
+                    limitTypePicker
+                    signOnWindowSection
+                }
+            } else {
+                // iPad layout
+                HStack {
+                    limitTypePicker
+                        .frame(width: 220)
+                    
+                    Spacer()
+                    
+                    signOnWindowSection
+                }
+            }
+        }
+    }
+    
+    private var limitTypePicker: some View {
+        Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+            Text("Planning").tag(FRMSLimitType.planning)
+            Text("Operational").tag(FRMSLimitType.operational)
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: horizontalSizeClass == .compact ? .infinity : nil)
+    }
+    
+    private var signOnWindowSection: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Sign-On Window")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            
+            Picker("Time Window", selection: $selectedTimeWindow) {
+                ForEach(TimeWindowSelection.allCases, id: \.self) { window in
+                    Text(window.rawValue).tag(window)
+                }
+            }
+            .pickerStyle(.menu)
+            .font(.caption)
+        }
+    }
+    
+    private func dutyColumn(title: String, hours: Double) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Text(formatTime(hours))
+                .font(.body)
+                .fontWeight(.semibold)
+                .foregroundStyle(AppColors.accentOrange)
+        }
+    }
+
+    private func maxDutySection(displayWindow: DutyTimeWindow) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Max Duty")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+
+            HStack(spacing: 12) {
+                dutyColumn(
+                    title: "1-4 Sectors",
+                    hours: displayWindow.limits.maxDutySectors1to4
+                )
+
+                Divider()
+                    .frame(height: 35)
+
+                dutyColumn(
+                    title: "5 Sectors",
+                    hours: displayWindow.limits.maxDutySectors5
+                )
+
+                Divider()
+                    .frame(height: 35)
+
+                dutyColumn(
+                    title: "6 Sectors",
+                    hours: displayWindow.limits.maxDutySectors6
+                )
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func maxFlightTimeSection(displayWindow: DutyTimeWindow) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Max Flight Time")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+
+            if displayWindow.limitType == .operational {
+                // Operational limits: 3 columns (1 Sector | 2+ Sectors | >7 hrs night)
+                HStack(spacing: 12) {
+                    dutyColumn(
+                        title: "1 Sector",
+                        hours: 10.5
+                    )
+
+                    Divider()
+                        .frame(height: 35)
+
+                    dutyColumn(
+                        title: "2+ Sectors",
+                        hours: 10.0
+                    )
+
+                    Divider()
+                        .frame(height: 35)
+
+                    dutyColumn(
+                        title: "> 7 hrs Night",
+                        hours: 9.5
+                    )
+
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                // Planning limits: 2 columns (Standard | >7 hrs night)
+                HStack(spacing: 12) {
+                    dutyColumn(
+                        title: "Standard",
+                        hours: 10.0
+                    )
+
+                    Divider()
+                        .frame(height: 35)
+
+                    dutyColumn(
+                        title: "> 7 hrs Night",
+                        hours: 9.5
+                    )
+
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private func updateTimeWindowSelection(limits: A320B737NextDutyLimits) {
+        let applicableWindow = determineApplicableWindow(limits: limits)
+        
+        switch applicableWindow.localStartTime {
+        case limits.earlyWindow.localStartTime:
+            selectedTimeWindow = .early
+        case limits.afternoonWindow.localStartTime:
+            selectedTimeWindow = .afternoon
+        default:
+            selectedTimeWindow = .night
+        }
+    }
+    
+    
+    
+    
+    ///***********************************************************
+    ///
+    /// Determine which time window applies based on earliest sign-on
+    private func determineApplicableWindow(limits: A320B737NextDutyLimits) -> DutyTimeWindow {
+        // Check which window is currently available
+        if limits.earlyWindow.isCurrentlyAvailable {
+            return limits.earlyWindow
+        } else if limits.afternoonWindow.isCurrentlyAvailable {
+            return limits.afternoonWindow
+        } else {
+            return limits.nightWindow
+        }
+    }
+
+    /// Get the window to display based on user selection
+    private func getSelectedWindow(limits: A320B737NextDutyLimits, selection: TimeWindowSelection) -> DutyTimeWindow {
+        switch selection {
+        case .early:
+            return limits.earlyWindow
+        case .afternoon:
+            return limits.afternoonWindow
+        case .night:
+            return limits.nightWindow
+        }
+    }
+
+    private func activeRestrictionsSection(limits: A320B737NextDutyLimits) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Active Restrictions")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Back of clock restriction
+            if let backOfClock = limits.backOfClockRestriction {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                        Text("Back of Clock Restriction")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+
+                    Text(backOfClock.reason)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text("Next duty: Sign-on no earlier than \(formatTime(backOfClock.earliestSignOn))")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            // Late night status
+            if let lateNight = limits.lateNightStatus {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "moon")
+                            .foregroundStyle(.blue)
+                        Text("Late Night Operations")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Consecutive Nights")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("\(lateNight.consecutiveLateNights) / \(lateNight.maxConsecutiveLateNights)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Duty Hours (7 nights)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("\(formatHoursMinutes(lateNight.dutyHoursIn7Nights)) / \(formatHoursMinutes(lateNight.maxDutyHoursIn7Nights)) hrs")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                    }
+
+                    if lateNight.recoveryOption != .noRestriction {
+                        Text(lateNight.recoveryOption.rawValue)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 4)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.blue.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            // Consecutive duty status
+            if limits.consecutiveDutyStatus.hasActiveRestrictions {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "calendar")
+                            .foregroundStyle(.orange)
+                        Text("Consecutive Duty Limits")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+
+                    let status = limits.consecutiveDutyStatus
+                    VStack(alignment: .leading, spacing: 4) {
+                        if status.consecutiveDuties >= status.maxConsecutiveDuties {
+                            Text("Max \(status.maxConsecutiveDuties) consecutive duty days reached")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if status.dutyDaysIn11Days >= status.maxDutyDaysIn11Days {
+                            Text("Max \(status.maxDutyDaysIn11Days) duty days in 11-day period reached")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if status.consecutiveEarlyStarts >= status.maxConsecutiveEarlyStarts {
+                            Text("Max \(status.maxConsecutiveEarlyStarts) consecutive early starts reached")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .appCardStyle()
+    }
+
+    private func specialScenariosSection(scenarios: SpecialScenarios) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Special Scenarios")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            VStack(spacing: 8) {
+                // Simulator Training
+                if let simulator = scenarios.simulatorRestrictions {
+                    DisclosureGroup(
+                        isExpanded: $expandSimulator,
+                        content: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                if let dayBefore = simulator.dayBeforeRestriction {
+                                    bulletPoint(text: dayBefore)
+                                }
+                                if let rest = simulator.restBeforeSimulator {
+                                    bulletPoint(text: "Minimum \(formatHoursMinutes(rest)) hours rest before simulator")
+                                }
+                                if let sameDay = simulator.sameDayProhibition {
+                                    bulletPoint(text: sameDay)
+                                }
+                                Text("Applies to: \(simulator.applicableRegion)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 4)
+                            }
+                            .padding(.top, 8)
+                        },
+                        label: {
+                            Text("Simulator Training")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                    )
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                // Days Off (X Days)
+                if let daysOff = scenarios.daysOffRequirements {
+                    DisclosureGroup(
+                        isExpanded: $expandDaysOff,
+                        content: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                bulletPoint(text: "Before: \(daysOff.dutyBeforeXDay)")
+                                bulletPoint(text: "After: \(daysOff.dutyAfterXDay)")
+                                bulletPoint(text: "Minimum: \(formatHoursMinutes(daysOff.minimumDuration)) hours")
+                                if let exception = daysOff.operationalException {
+                                    bulletPoint(text: exception)
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                            .padding(.top, 8)
+                        },
+                        label: {
+                            Text("Days Off (X Days)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                    )
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                // Annual Leave
+                if let annualLeave = scenarios.annualLeaveRestrictions {
+                    DisclosureGroup(
+                        isExpanded: $expandAnnualLeave,
+                        content: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                bulletPoint(text: "Before: \(annualLeave.beforeLeaveRestriction)")
+                                bulletPoint(text: "After: \(annualLeave.afterLeaveRestriction)")
+                                if let minDays = annualLeave.minimumLeaveDays {
+                                    bulletPoint(text: "Applies to leave ≥\(minDays) days (NZ)")
+                                }
+                                if annualLeave.canWaive {
+                                    bulletPoint(text: "Pilot may agree to waive")
+                                        .foregroundStyle(.blue)
+                                }
+                                Text("Applies to: \(annualLeave.applicableRegion)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 4)
+                            }
+                            .padding(.top, 8)
+                        },
+                        label: {
+                            Text("Annual Leave Adjacency")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                    )
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                // Reserve Duty
+                if let reserve = scenarios.reserveDutyRules {
+                    DisclosureGroup(
+                        isExpanded: $expandReserve,
+                        content: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                bulletPoint(text: "After callout: \(reserve.afterCalloutRest)")
+                                bulletPoint(text: "Without callout: \(reserve.withoutCalloutRest)")
+                                bulletPoint(text: "Between reserves: \(reserve.betweenReservePeriods)")
+                            }
+                            .padding(.top, 8)
+                        },
+                        label: {
+                            Text("Reserve Duty")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                    )
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                // Deadheading
+                if let deadheading = scenarios.deadheadingLimitations {
+                    DisclosureGroup(
+                        isExpanded: $expandDeadheading,
+                        content: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                bulletPoint(text: "Absolute maximum: \(formatHoursMinutes(deadheading.absoluteMaximum)) hours total duty")
+                                bulletPoint(text: deadheading.restCalculationNote)
+                                bulletPoint(text: deadheading.sectorCountingRule)
+                            }
+                            .padding(.top, 8)
+                        },
+                        label: {
+                            Text("Deadheading Limitations")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                    )
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+        .padding()
+        .appCardStyle()
+    }
+
+    private func bulletPoint(text: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Text("•")
+                .font(.subheadline)
+            Text(text)
+                .font(.subheadline)
+        }
+    }
+
+    // What-If Calculator removed - operational limits only
+
+    private var maximumNextDutyContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+
+            // Crew Complement Picker
+            VStack(spacing: 12) {
+                Picker("Crew Complement", selection: $selectedCrewComplement) {
+                    ForEach([CrewComplement.twoPilot, .threePilot, .fourPilot], id: \.self) { complement in
+                        Text(complement.description).tag(complement)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: selectedCrewComplement) { _, newValue in
+                    LogManager.shared.debug("FRMSView: Crew complement changed to \(newValue)")
+                    switch newValue {
+                    case .twoPilot:
+                        selectedRestFacility = .class1
+                    case .threePilot:
+                        selectedRestFacility = .class1
+                    case .fourPilot:
+                        selectedRestFacility = .twoClass1
+                    }
+                    updateMaxNextDuty()
+                }
+            }
+            .padding()
+            .appCardStyle()
+
+            // Duty & Flight Time Limits
+            if let maxDuty = viewModel.maximumNextDuty,
+               let signOnLimits = maxDuty.signOnBasedLimits,
+               !signOnLimits.isEmpty {
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Duty & Flight Time Limits")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+
+                    // Rest facility picker (3/4-pilot only)
+                    if !restFacilityPickerOptions.isEmpty {
+                        Picker("Rest Facility", selection: $selectedRestFacility) {
+                            ForEach(restFacilityPickerOptions, id: \.facility) { option in
+                                Text(option.label).tag(option.facility)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        crewRestFacilityNoteView
+                    }
+
+                    // Sign-on time picker (2-pilot planning only)
+                    if selectedCrewComplement == .twoPilot && viewModel.selectedLimitType == .planning {
+                        Picker("Sign-On Time", selection: $selectedSignOnWindow) {
+                            ForEach(SignOnWindow.allCases, id: \.self) { window in
+                                Text(window.rawValue).tag(window)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+
+                    VStack(spacing: 10) {
+                        let filteredLimits = filteredSignOnLimits(from: signOnLimits)
+                        ForEach(filteredLimits.indices, id: \.self) { i in
+                            signOnTimeRangeCard(range: filteredLimits[i], limitType: viewModel.selectedLimitType)
+                        }
+                    }
+                }
+                .padding()
+                .appCardStyle()
+            }
+
+            // Rest Requirements
+            LHRestRequirementsView(
+                crewComplement: selectedCrewComplement,
+                limitType: viewModel.selectedLimitType,
+                expectedDutyHours: $expectedDutyHours,
+                nextDutyIsDeadhead: $nextDutyIsDeadhead
+            )
+
+            // Disruption Rest — FD10.2.1
+            DisruptionRestSection(
+                isExpanded: $expandDisruptionRest,
+                previousDutyHours: $disruptionPreviousDutyHours,
+                tzDifference: $disruptionTZDifference,
+                nextDutyOver16: $disruptionNextDutyOver16,
+                crewComplement: selectedCrewComplement
+            )
+
+            // Deadheading (planning only)
+            if viewModel.selectedLimitType == .planning {
+                lhDeadheadingSection
+            }
+
+            // Relevant Sectors (A380 & B787 only)
+            lhRelevantSectorsSection
+
+            // Cumulative restriction warnings
+            if let maxDuty = viewModel.maximumNextDuty, !maxDuty.restrictions.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Restrictions", systemImage: "exclamationmark.triangle")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.orange)
+
+                    ForEach(maxDuty.restrictions, id: \.self) { restriction in
+                        Text("• \(restriction)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .onAppear {
+            if !viewModel.isLoading, viewModel.cumulativeTotals != nil {
+                updateMaxNextDuty()
+            }
+        }
+        .onChange(of: viewModel.isLoading) { _, isLoading in
+            if !isLoading {
+                updateMaxNextDuty()
+            }
+        }
+        .onChange(of: viewModel.selectedLimitType) { _, newLimitType in
+            updateMaxNextDuty()
+            // Seats in Passenger Compartment is operational-only; reset when switching to planning
+            if newLimitType == .planning && selectedRestFacility == .seatInPassengerCompartment {
+                selectedRestFacility = .twoClass1
+            }
+        }
+    }
+
+    // MARK: - Rest Facility Picker Helpers
+
+    /// FD10.2.2 note shown below the rest facility picker (collapsed by default).
+    private var crewRestFacilityNoteView: some View {
+        DisclosureGroup(
+            isExpanded: $expandCrewRestClassification,
+            content: {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach([
+                        ("Class 1", LH_Operational_FltDuty.class1Aircraft),
+                        ("Class 2", LH_Operational_FltDuty.class2Aircraft),
+                    ], id: \.0) { label, aircraft in
+                        HStack(alignment: .top, spacing: 6) {
+                            Text(label)
+                                .font(.footnote)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.primary)
+                                .frame(width: 48, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(aircraft, id: \.aircraft) { def in
+                                    if let config = def.configuration {
+                                        Text("\(def.aircraft) — \(config)")
+                                    } else {
+                                        Text(def.aircraft)
+                                    }
+                                }
+                            }
+                            .font(.footnote)
+                            .foregroundStyle(.primary)
+                        }
+                    }
+
+//                    Text(LH_Operational_FltDuty.crewRestFacilityStatutoryNote)
+//                        .font(.caption2)
+//                        .foregroundStyle(.tertiary)
+//                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 6)
+            },
+            label: {
+                Text("Crew Rest Classification")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+            }
+        )
+        .padding(10)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var restFacilityPickerOptions: [(facility: CrewRestFacility, label: String)] {
+        switch selectedCrewComplement {
+        case .twoPilot:
+            return []
+        case .threePilot:
+            return [(.class1, "Class 1"), (.class2, "Class 2")]
+        case .fourPilot:
+            if viewModel.selectedLimitType == .operational {
+                return [
+                    (.twoClass1, "2× Class 1"),
+                    (.oneClass1OneClass2, "Mixed"),
+                    (.twoClass2, "2× Class 2"),
+                    (.seatInPassengerCompartment, "PAX Seat"),
+                    
+                    
+                    
+                ]
+            } else {
+                return [(.twoClass1, "2× Class 1"), (.oneClass1OneClass2, "Mixed"), (.twoClass2, "2× Class 2")]
+            }
+        }
+    }
+
+    private func filteredSignOnLimits(from limits: [SignOnTimeRange]) -> [SignOnTimeRange] {
+        if selectedCrewComplement == .twoPilot {
+            // Planning: filter to the selected sign-on window (may return 1 or 2 rows for 0800–1359)
+            if viewModel.selectedLimitType == .planning {
+                return limits.filter { $0.timeRange == selectedSignOnWindow.rawValue }
+            }
+            // Operational: single "All sign-on times" row, show as-is
+            return limits
+        }
+        // For 4-pilot with 2×Class 1 selected, also show the FD3.4 extension row
+        if selectedCrewComplement == .fourPilot && selectedRestFacility == .twoClass1 {
+            return limits.filter { $0.restFacility == .twoClass1 || $0.restFacility == .twoClass1FD34 }
+        }
+        return limits.filter { $0.restFacility == selectedRestFacility }
+    }
+
+    // MARK: - LH Deadheading Section (Planning Only)
+
+    private var lhDeadheadingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Deadheading Limits")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            // Duty Limits — one block per duty type
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(LH_Planning_FltDuty.deadheadLimits.indices, id: \.self) { i in
+                    let limit = LH_Planning_FltDuty.deadheadLimits[i]
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(limit.dutyType.rawValue)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(alignment: .top, spacing: 24) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Duty Limit")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(formatHoursMinutes(limit.dutyPeriodLimit) + " hrs")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .monospacedDigit()
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Sectors")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(limit.sectorLimit)
+                                    .font(.subheadline)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+
+                        if let req = limit.requirements {
+                            Text(req)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+
+                    if i < LH_Planning_FltDuty.deadheadLimits.count - 1 {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+
+                Divider()
+                Text(LH_Planning_FltDuty.deadheadPreDutyRestNote)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.04))
+            }
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+
+            // Pre-Duty Rest
+            lhRestCard(
+                title: "Deadhead — Min Pre-Duty Rest",
+                rows: LH_Planning_FltDuty.deadheadPreDutyRest.map {
+                    (threshold: $0.dutyPeriodThreshold,
+                     minRest: "\(Int($0.minimumRestHours)) hrs",
+                     condition: $0.requirements)
+                },
+                footnote: nil
+            )
+
+            // Post-Duty Rest
+            lhRestCard(
+                title: "Deadhead — Min Post-Duty Rest",
+                rows: LH_Planning_FltDuty.deadheadPostDutyRest.map {
+                    (threshold: $0.dutyPeriodThreshold,
+                     minRest: "\(Int($0.minimumRestHours)) hrs",
+                     condition: $0.requirements)
+                },
+                footnote: LH_Planning_FltDuty.deadheadPostDutyRestNote
+            )
+        }
+        .padding()
+        .appCardStyle()
+    }
+
+    // MARK: - LH Relevant Sectors Section
+
+    private var lhRelevantSectorsSection: some View {
+        let sectors = LH_Operational_FltDuty.relevantSectors
+        let postDutyRest = LH_Operational_FltDuty.relevantSectorPostDutyRest
+        let inboundRest = LH_Operational_FltDuty.relevantSectorInboundAUNZRest
+        let preRest = LH_Operational_FltDuty.relevantSectorPreDutyRestHours
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Relevant Sectors - Patterns > 18 hrs")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            Text("A380 & B787 only")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            // Named sectors list
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Relevant Sectors")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.08))
+
+                ForEach(sectors.indices, id: \.self) { i in
+                    HStack(spacing: 8) {
+                        Text(sectors[i])
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+
+                    if i < sectors.count - 1 {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+            }
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+
+            // Disruption Rest table
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Disruption Rest Limits")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.08))
+
+                // Pre-duty
+                HStack(alignment: .top) {
+                    Text("Prior to operating")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("\(Int(preRest)) hrs")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+
+                Divider().padding(.leading, 12)
+
+                Text("After operating a Relevant Sector:")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                ForEach(postDutyRest.indices, id: \.self) { i in
+                    let row = postDutyRest[i]
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(row.condition)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if let hrs = row.minimumRestHours {
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("\(Int(hrs)) hrs")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                if let note = row.note {
+                                    Text(note)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                }
+                            }
+                        } else if let note = row.note {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+
+                    if i < postDutyRest.count - 1 {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+
+                Divider().padding(.leading, 12)
+
+                Text("After Relevant Sector inbound to AU or NZ:")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                ForEach(inboundRest.indices, id: \.self) { i in
+                    let row = inboundRest[i]
+                    HStack {
+                        Text(row.context.rawValue)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text("\(Int(row.minimumRestHours)) hrs")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+
+                    if i < inboundRest.count - 1 {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+            }
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+
+            if viewModel.selectedLimitType == .planning {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("FD3.4.1")
+                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                    Text("Minimum 4 pilot crew for patterns > 18 hrs.")
+                        .font(.caption).foregroundStyle(.secondary)
+
+                    Text("FD3.4.2")
+                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                    Text(LH_Planning_FltDuty.relevantSectorMBTTIncrease)
+                        .font(.caption).foregroundStyle(.secondary)
+
+                    Text("FD3.4.3")
+                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                    Text(LH_Planning_FltDuty.relevantSectorHomeTransport)
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(10)
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .padding()
+        .appCardStyle()
+    }
+
+    // MARK: - LH Table Helper Views
+
+    private func lhTableHeader(columns: [String]) -> some View {
+        HStack(spacing: 8) {
+            ForEach(columns, id: \.self) { col in
+                Text(col)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.secondary.opacity(0.08))
+    }
+
+    private func formatDecimalHours(_ hours: Double) -> String {
+        if hours == Double(Int(hours)) {
+            return String(Int(hours))
+        }
+        return String(format: "%.1f", hours)
+    }
+
+    // MARK: - Minimum Base Turnaround Time Section
+
+    private var minimumBaseTurnaroundSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(spacing: 16) {
+                if horizontalSizeClass == .compact {
+                    // iPhone: stacked layout
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Trip Length")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Picker("Days Away", selection: $mbttDaysAwayCategory) {
+                            Text("1 day").tag("1")
+                            Text("2-4 days").tag("2-4")
+                            Text("5-8 days").tag("5-8")
+                            Text("9-12 days").tag("9-12")
+                            Text(">12 days").tag(">12")
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: mbttDaysAwayCategory) { _, newValue in
+                            LogManager.shared.debug("FRMSView: MBTT days away changed to \(newValue)")
+                            updateMBTT()
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Trip Credit Hours")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Picker("Credited Hours", selection: $mbttCreditedHoursCategory) {
+                            Text("≤20 hrs").tag("≤20")
+                            Text(">20 hrs").tag(">20")
+                            Text(">40 hrs").tag(">40")
+                            Text(">60 hrs").tag(">60")
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: mbttCreditedHoursCategory) { _, newValue in
+                            LogManager.shared.debug("FRMSView: MBTT credited hours changed to \(newValue)")
+                            updateMBTT()
+                        }
+                    }
+                    Toggle(isOn: $mbttHadDutyOver18Hours) {
+                        Text("Planned duty >18 hrs")
+                            .font(.subheadline)
+                    }
+                    .onChange(of: mbttHadDutyOver18Hours) { _, newValue in
+                        LogManager.shared.debug("FRMSView: MBTT duty over 18 hours changed to \(newValue)")
+                        updateMBTT()
+                    }
+                } else {
+                    // iPad: two-column layout — pickers on left, toggle on right
+                    HStack(alignment: .top, spacing: 24) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Trip Length")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Picker("Days Away", selection: $mbttDaysAwayCategory) {
+                                    Text("1 day").tag("1")
+                                    Text("2-4 days").tag("2-4")
+                                    Text("5-8 days").tag("5-8")
+                                    Text("9-12 days").tag("9-12")
+                                    Text(">12 days").tag(">12")
+                                }
+                                .pickerStyle(.segmented)
+                                .onChange(of: mbttDaysAwayCategory) { _, newValue in
+                                    LogManager.shared.debug("FRMSView: MBTT days away changed to \(newValue)")
+                                    updateMBTT()
+                                }
+                            }
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Trip Credit Hours")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Picker("Credited Hours", selection: $mbttCreditedHoursCategory) {
+                                    Text("≤20 hrs").tag("≤20")
+                                    Text(">20 hrs").tag(">20")
+                                    Text(">40 hrs").tag(">40")
+                                    Text(">60 hrs").tag(">60")
+                                }
+                                .pickerStyle(.segmented)
+                                .onChange(of: mbttCreditedHoursCategory) { _, newValue in
+                                    LogManager.shared.debug("FRMSView: MBTT credited hours changed to \(newValue)")
+                                    updateMBTT()
+                                }
+                            }
+                        }
+                        Divider()
+                        VStack(alignment: .leading, spacing: 16) {
+                            Toggle(isOn: $mbttHadDutyOver18Hours) {
+                                Text("Planned duty >18 hrs")
+                                    .font(.subheadline)
+                            }
+                            .onChange(of: mbttHadDutyOver18Hours) { _, newValue in
+                                LogManager.shared.debug("FRMSView: MBTT duty over 18 hours changed to \(newValue)")
+                                updateMBTT()
+                            }
+                        }
+                        .frame(maxWidth: 240)
+                    }
+                }
+
+                // MBTT Result Display — always full width
+                if let mbtt = calculatedMBTT {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Label("Rest Required:", systemImage: "house.fill")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+
+                            // Spacer()
+
+                            Text(mbtt.description)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                    .padding()
+                    .background(.blue.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .padding()
+            .appCardStyle()
+        }
+    }
+
+    // MARK: - Recent Duties Section
+
+    private var recentDutiesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Title only shown for SH fleet (LH has it in DisclosureGroup)
+            if viewModel.configuration.fleet == .a320B737 {
+                Text("Recent Duties (\(viewModel.configuration.homeBase))")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+            }
+
+//            Text("Home Base: \(viewModel.configuration.homeBase)")
+//                .font(.subheadline)
+//                .fontWeight(.semibold)
+
+            if !viewModel.recentDutiesByDay.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(viewModel.recentDutiesByDay.prefix(7)) { dailySummary in
+                        dailyDutyRow(dailySummary: dailySummary)
+                    }
+                }
+            } else {
+                Text("No recent duties")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            }
+        }
+    }
+
+    // MARK: - Helper Views
+
+    private func limitCard(title: String, current: Double, limit: Double, status: FRMSComplianceStatus, unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                Image(systemName: status.icon)
+                    .foregroundStyle(statusColor(status))
+            }
+
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Text(formatHoursMinutes(current))
+                    .font(.title)
+                    .fontWeight(.bold)
+
+                Text("/ \(Int(limit)) \(unit)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            ProgressView(value: current, total: limit)
+                .tint(progressColor(status))
+
+            Text(String(format: "%.0f%% used", viewModel.percentageOfLimit(used: current, limit: limit)))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding()
+        .appCardStyle()
+    }
+
+    private func daysOffCard(daysOff: Int, required: Int) -> some View {
+        let periodDays = viewModel.configuration.fleet.flightTimePeriodDays
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Days Off (\(periodDays) Days)")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                Image(systemName: daysOff >= required ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .foregroundStyle(daysOff >= required ? .green : .orange)
+            }
+
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Text("\(daysOff)")
+                    .font(.title)
+                    .fontWeight(.bold)
+
+                Text("/ \(required) days")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .appCardStyle()
+    }
+
+    private func maxDutyParameterRow(icon: String, title: String, value: String, color: Color) -> some View {
+        HStack {
+            Label(title, systemImage: icon)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(color)
+        }
+    }
+
+    private func signOnTimeRangeCard(range: SignOnTimeRange, limitType: FRMSLimitType) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Time range header
+            Text(range.timeRange)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.primary)
+            
+            // Duty and flight time limits - adaptive layout
+            AdaptiveLimitLayout(range: range, limitType: limitType, showTimesInHoursMinutes: appViewModel.showTimesInHoursMinutes)
+            
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Consecutive Duties Card
+
+    private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
+        let worst = worstConsecutiveStatus(totals: totals)
+        return HStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.teal)
+                .frame(width: 3)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Consecutive Duties")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Image(systemName: worst.icon)
+                        .foregroundStyle(statusColor(worst))
+                        .font(.headline)
+                }
+
+                HStack(spacing: 16) {
+                    if let maxConsec = totals.maxConsecutiveDuties {
+                        VStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(totals.consecutiveDuties)")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
+                                Text("/\(maxConsec)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Cons. Days")
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+
+                    if let maxDuty11 = totals.maxDutyDaysIn11Days {
+                        VStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(totals.dutyDaysIn11Days)")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
+                                Text("/\(maxDuty11)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("in 11 Days")
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+
+                    if let maxEarly = totals.maxConsecutiveEarlyStarts {
+                        VStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(totals.consecutiveEarlyStarts)")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
+                                Text("/\(maxEarly)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Early Starts")
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+
+                    if let maxLate = totals.maxConsecutiveLateNights {
+                        VStack {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(totals.consecutiveLateNights)")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
+                                Text("/\(maxLate)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("Late Nights")
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(16)
+        }
+        .appCardStyle()
+    }
+
+    private func worstConsecutiveStatus(totals: FRMSCumulativeTotals) -> FRMSComplianceStatus {
+        let statuses = [
+            totals.consecutiveDutiesStatus,
+            totals.dutyDaysIn11DaysStatus,
+            totals.consecutiveEarlyStartsStatus,
+            totals.consecutiveLateNightsStatus
+        ]
+        if statuses.contains(where: { if case .violation = $0 { return true }; return false }) {
+            return .violation(message: "")
+        }
+        if statuses.contains(where: { if case .warning = $0 { return true }; return false }) {
+            return .warning(message: "")
+        }
+        return .compliant
+    }
+
+    private func dailyDutyRow(dailySummary: DailyDutySummary) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Date header
+            HStack {
+                Text(formatLocalDate(dailySummary.date))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Spacer()
+
+                Text("\(dailySummary.totalSectors) Sector\(dailySummary.totalSectors == 1 ? "" : "s")")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+            }
+
+            // Daily totals
+            HStack(spacing: 16) {
+
+                Label("Duty: \(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalDutyTime) : String(format: "%.1f", dailySummary.totalDutyTime)) hrs", systemImage: "clock")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+
+               // Spacer()
+
+                Label("Flight: \(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalFlightTime) : String(format: "%.1f", dailySummary.totalFlightTime)) hrs", systemImage: "clock.badge.airplane")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+            }
+
+        }
+        .padding()
+        .appCardStyle()
+    }
+
+    // MARK: - Helper Methods
+
+    /// Formats decimal hours respecting the Flight Times display setting.
+    /// Returns "H:MM" in hrs:min mode, or "X.X hrs" in decimal mode.
+    private func formatTime(_ decimalHours: Double) -> String {
+        if appViewModel.showTimesInHoursMinutes {
+            return decimalHours.toHoursMinutesString
+        } else {
+            return String(format: "%.1f hrs", decimalHours)
+        }
+    }
+
+    private func updateMaxNextDuty() {
+        // Use Class 1 as the default rest facility for augmented ops
+        // (rest facility picker removed; all options shown in the duty limits table)
+        let restFacility: RestFacilityClass = selectedCrewComplement == .twoPilot ? .none : .class1
+        viewModel.maximumNextDuty = viewModel.calculateMaxNextDuty(
+            crewComplement: selectedCrewComplement,
+            restFacility: restFacility,
+            limitType: viewModel.selectedLimitType
+        )
+    }
+
+    private func updateMBTT() {
+        // Convert category selections to actual values for calculation
+        let daysAway: Int
+        switch mbttDaysAwayCategory {
+        case "1": daysAway = 1
+        case "2-4": daysAway = 3  // Use middle value
+        case "5-8": daysAway = 6  // Use middle value
+        case "9-12": daysAway = 10  // Use middle value
+        case ">12": daysAway = 13
+        default: daysAway = 3
+        }
+
+        let creditedHours: Double
+        switch mbttCreditedHoursCategory {
+        case "≤20": creditedHours = 15.0  // Representative value ≤20
+        case ">20": creditedHours = 25.0  // Representative value >20 but ≤40
+        case ">40": creditedHours = 50.0  // Representative value >40 but ≤60
+        case ">60": creditedHours = 70.0  // Representative value >60
+        default: creditedHours = 15.0
+        }
+
+        calculatedMBTT = viewModel.calculateMBTT(
+            daysAway: daysAway,
+            creditedFlightHours: creditedHours,
+            hadPlannedDutyOver18Hours: mbttHadDutyOver18Hours
+        )
+    }
+
+    private func statusColor(_ status: FRMSComplianceStatus) -> Color {
+        switch status {
+        case .compliant: return .green
+        case .warning: return .orange
+        case .violation: return .red
+        }
+    }
+
+    private func progressColor(_ status: FRMSComplianceStatus) -> Color {
+        switch status {
+        case .compliant: return .blue
+        case .warning: return .orange
+        case .violation: return .red
+        }
+    }
+
+    private func statusText(_ status: FRMSComplianceStatus) -> String {
+        switch status {
+        case .compliant: return "Compliant"
+        case .warning: return "Warning"
+        case .violation: return "Violation"
+        }
+    }
+
+    // MARK: - Cached Date Formatters
+    // Static so they're allocated once per app lifetime, not once per render call.
+
+    private static let _dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd MMM HHmm"
+        return f
+    }()
+
+    private static let _timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HHmm"
+        return f
+    }()
+
+    private static let _dateTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd MMM - HHmm"
+        return f
+    }()
+
+    private static let _localDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd MMM yyyy"
+        return f
+    }()
+
+    private func formatDate(_ date: Date) -> String {
+        Self._dateFormatter.string(from: date)
+    }
+
+    private func formatLocalDate(_ date: Date) -> String {
+        // homeBaseTimeZone is set once in onAppear (and on homeBase change)
+        // — avoids allocating FRMSCalculationService for every row render.
+        Self._localDateFormatter.timeZone = homeBaseTimeZone
+        return Self._localDateFormatter.string(from: date)
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        Self._timeFormatter.string(from: date)
+    }
+
+    private func formatDateTime(_ date: Date) -> String {
+        Self._dateTimeFormatter.string(from: date)
+    }
+}
