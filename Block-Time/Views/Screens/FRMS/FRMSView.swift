@@ -76,18 +76,28 @@ struct FRMSView: View {
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGroupedBackground))
             .toolbar {
-                if viewModel.configuration.fleet == .a380A330B787 {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showLimitsReference = true
-                        } label: {
-                            Image(systemName: "book.pages")
-                        }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showLimitsReference = true
+                    } label: {
+                        Image(systemName: "book.pages")
                     }
                 }
             }
             .fullScreenCover(isPresented: $showLimitsReference) {
-                LimitsReferenceSheet(initialLimitType: viewModel.selectedLimitType)
+                if viewModel.configuration.fleet == .a380A330B787 {
+                    LimitsReferenceSheet(
+                        initialLimitType: viewModel.selectedLimitType,
+                        planningResource: "lh_frms_planning_limits",
+                        operationalResource: "lh_frms_operational_limits"
+                    )
+                } else {
+                    LimitsReferenceSheet(
+                        initialLimitType: viewModel.selectedLimitType,
+                        planningResource: "sh_frms_planning_limits",
+                        operationalResource: "sh_frms_operational_limits"
+                    )
+                }
             }
             .onAppear {
                 //LogManager.shared.debug("FRMSView: onAppear called")

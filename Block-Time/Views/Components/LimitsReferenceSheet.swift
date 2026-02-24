@@ -27,17 +27,19 @@ private struct HTMLReferenceView: UIViewRepresentable {
 // MARK: - LimitsReferenceSheet
 
 struct LimitsReferenceSheet: View {
+    let planningResource: String
+    let operationalResource: String
     @State private var selectedLimitType: FRMSLimitType
     @Environment(\.dismiss) private var dismiss
 
-    init(initialLimitType: FRMSLimitType) {
+    init(initialLimitType: FRMSLimitType, planningResource: String, operationalResource: String) {
         _selectedLimitType = State(initialValue: initialLimitType)
+        self.planningResource = planningResource
+        self.operationalResource = operationalResource
     }
 
     private var resourceName: String {
-        selectedLimitType == .planning
-            ? "lh_frms_planning_limits"
-            : "lh_frms_operational_limits"
+        selectedLimitType == .planning ? planningResource : operationalResource
     }
 
     var body: some View {
