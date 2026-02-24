@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FRMS Operational Limits — A380/A330/B787 Rev 4</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --accent: #e0363b;
+    --text: #e4e4e7;
+    --muted: #9ca3af;
+    --header-bg: #1e2130;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    line-height: 1.5;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #fff;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin: 28px 0 12px 0;
+    padding-left: 12px;
+    border-left: 3px solid var(--accent);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--header-bg);
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .val { font-weight: 600; color: #fff; font-variant-numeric: tabular-nums; }
+  .note { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .footnote {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--header-bg);
+    line-height: 1.5;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-2p { background: #1e3a5f; color: #60a5fa; }
+  .badge-3p { background: #1a3f2e; color: #4ade80; }
+  .badge-4p { background: #3f1a3f; color: #c084fc; }
+  .rest-section { margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>FRMS Operational Limits — Chapter 1B (FD10)</h1>
+  <div class="subtitle">A380 / A330 / B787 &nbsp;·&nbsp; Revision 4 &nbsp;·&nbsp; 26 June 2023</div>
+
+  <!-- 2 PILOT OPERATIONAL -->
+  <div class="section-title"><span class="badge badge-2p">2 Pilot</span> &nbsp;Flight &amp; Duty Time Limits (Operational)</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Local Sign-On</th>
+          <th>Duty Period Limit</th>
+          <th>Flight Time Limit</th>
+          <th>Requirements</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="3">ALL</td>
+          <td><span class="val">11</span> planned · <span class="val">12</span> pilot discretion</td>
+          <td><span class="val">9.5</span></td>
+          <td class="note">If more than 7 hours of flight time conducted in darkness</td>
+        </tr>
+        <tr>
+          <td><span class="val">11</span> planned · <span class="val">12</span> pilot discretion</td>
+          <td><span class="val">10</span></td>
+          <td class="note">If greater than 1 sector is rostered</td>
+        </tr>
+        <tr>
+          <td><span class="val">11</span> planned · <span class="val">12</span> pilot discretion</td>
+          <td><span class="val">10.5</span></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card rest-section">
+    <table>
+      <thead><tr><th colspan="3">2 Pilot — Minimum Pre-Duty Rest</th></tr>
+        <tr><th>Duty Period</th><th>Min Rest</th><th>Requirements</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>≤ 11</td><td><span class="val">10</span></td><td></td></tr>
+        <tr><td>&gt; 11</td><td><span class="val">12</span></td><td></td></tr>
+        <tr><td colspan="2">Within a 7 day period</td><td class="note">1 continuous period embracing 2200 and 0600 on 2 consecutive nights</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card rest-section">
+    <table>
+      <thead><tr><th colspan="3">2 Pilot — Minimum Post-Duty Rest</th></tr>
+        <tr><th>Duty Period / Flight Time</th><th>Min Rest</th><th>Requirements</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>≤ 11</td><td><span class="val">10</span></td><td></td></tr>
+        <tr><td>Duty Period &gt; 11 or Flight Time &gt; 8 (due to extension beyond planned duty period)</td><td><span class="val">10 + 1 additional hour</span> for each 15 min or part thereof when TOD exceeded 11 hrs</td><td class="note">If next duty period includes operating sectors. However, if next duty is solely deadheading, only 12 hours rest is required.</td></tr>
+        <tr><td>Duty Period &gt; 12 or Flight Time &gt; 9 (due to extension beyond planned duty period)</td><td><span class="val">24</span></td><td></td></tr>
+      </tbody>
+    </table>
+    <div class="footnote">*1: If a pilot has completed 2 consecutive duty periods, the aggregate of which exceeds 8 hours flight time or 11 hours duty period, and the intervening rest period is less than: a) 12 consecutive hours embracing 2200–0600 LT; or b) 24 consecutive hours if not embracing 2200–0600 LT — the pilot shall have a rest period of at least 12 consecutive hours embracing 2200–0600 LT or 24 consecutive hours, prior to commencing a further duty period. The 12 consecutive hours may commence from 2300 provided the succeeding duty period does not exceed 6 hours and the pilot was scheduled to be free of duty no later than 2200 LT and the aircraft was delayed beyond that time.</div>
+  </div>
+
+  <!-- 3 PILOT OPERATIONAL -->
+  <div class="section-title"><span class="badge badge-3p">3 Pilot</span> &nbsp;Flight &amp; Duty Time Limits (Operational)</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Crew Rest Facility</th>
+          <th>Duty Period Limit</th>
+          <th>Flight Time Limit</th>
+          <th>Requirements</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Seat in Passenger Compartment</td>
+          <td><span class="val">14</span></td>
+          <td>8 consecutive hrs of active duty</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Class 2 Rest</td>
+          <td><span class="val">16</span></td>
+          <td rowspan="2" class="note">A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.</td>
+          <td rowspan="2" class="note">≤ 2 sectors if duty period was scheduled to exceed 14</td>
+        </tr>
+        <tr>
+          <td>Class 1 Rest</td>
+          <td><span class="val">18</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card rest-section">
+    <table>
+      <thead><tr><th colspan="3">3 Pilot — Minimum Pre-Duty Rest</th></tr>
+        <tr><th>Duty Period</th><th>Min Rest</th><th>Requirements</th></tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="2">—</td><td><span class="val">10</span></td><td class="note">If 12 hours rest was rostered between 2 consecutive duties and the first duty does not exceed 11 hours and the total of both duties do not exceed 24 hours</td></tr>
+        <tr><td><span class="val">12</span></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card rest-section">
+    <table>
+      <thead><tr><th colspan="3">3 Pilot — Minimum Post-Duty Rest</th></tr>
+        <tr><th>Duty Period</th><th>Min Rest</th><th>Requirements</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>≤ 16</td><td><span class="val">12</span></td><td></td></tr>
+        <tr><td>&gt; 16</td><td><span class="val">24</span></td><td></td></tr>
+      </tbody>
+    </table>
+    <div class="footnote">If the next duty period is solely deadheading then the minimum pre-duty deadheading limits apply.</div>
+  </div>
+
+  <!-- 4 PILOT OPERATIONAL -->
+  <div class="section-title"><span class="badge badge-4p">4 Pilot</span> &nbsp;Flight &amp; Duty Time Limits (Operational)</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Crew Rest Facility</th>
+          <th>Duty Period Limit</th>
+          <th>Flight Time Limit</th>
+          <th>Requirements</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Seats in Passenger Compartment</td>
+          <td><span class="val">14</span></td>
+          <td>8 consecutive hrs of active duty</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>2 × Class 2 Rest</td>
+          <td><span class="val">16</span></td>
+          <td rowspan="3" class="note">A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.</td>
+          <td rowspan="3" class="note">≤ 2 sectors if duty period was scheduled to exceed 14 hours</td>
+        </tr>
+        <tr>
+          <td>1 × Class 1 &amp; 1 × Class 2 Rest *1</td>
+          <td><span class="val">20</span></td>
+        </tr>
+        <tr>
+          <td>2 × Class 1 Rest</td>
+          <td><span class="val">20</span></td>
+        </tr>
+        <tr>
+          <td>2 × Class 1 Rest — &gt;18 Hours as per FD3.4</td>
+          <td><span class="val">21</span> (A380 &amp; B787 only)</td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="footnote">*1: Consideration to be given to the management of mixed crew rest facilities with priority of the higher class of rest facility for the landing crew.</div>
+  </div>
+
+  <div class="card rest-section">
+    <table>
+      <thead><tr><th colspan="3">4 Pilot — Minimum Pre-Duty Rest</th></tr>
+        <tr><th>Duty Period</th><th>Min Rest</th><th>Requirements</th></tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="2">—</td><td><span class="val">10</span></td><td class="note">If 12 hours rest was rostered between 2 consecutive duties and the first duty does not exceed 11 hours and the total of both duties do not exceed 24 hours</td></tr>
+        <tr><td><span class="val">12</span></td><td></td></tr>
+        <tr><td>&gt; 18 Hours as per FD3.4</td><td colspan="2" class="note">Refer to disruption limits below</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card rest-section">
+    <table>
+      <thead><tr><th colspan="3">4 Pilot — Minimum Post-Duty Rest</th></tr>
+        <tr><th>Duty Period</th><th>Min Rest</th><th>Requirements</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>≤ 16</td><td><span class="val">12</span></td><td></td></tr>
+        <tr><td>&gt; 16</td><td><span class="val">24</span></td><td></td></tr>
+        <tr><td>&gt; 18 Hours as per FD3.4</td><td colspan="2" class="note">Refer to disruption limits below</td></tr>
+      </tbody>
+    </table>
+    <div class="footnote">If the next duty period is solely deadheading then the minimum pre-duty deadheading limits apply.</div>
+  </div>
+
+  <!-- RELEVANT SECTORS -->
+  <div class="section-title">Patterns &gt; 18 Hours — Relevant Sectors (A380 &amp; B787 Only)</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Relevant Sectors</th></tr></thead>
+      <tbody>
+        <tr><td>a) Any planned duty period greater than 18 hours</td></tr>
+        <tr><td>b) Sydney to Dallas and vice versa</td></tr>
+        <tr><td>c) Melbourne to Dallas and vice versa</td></tr>
+        <tr><td>d) Perth to London and vice versa</td></tr>
+        <tr><td>e) Auckland to New York and vice versa</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead><tr><th colspan="2">Disruption Rest Limits — Relevant Sectors</th></tr>
+        <tr><th>Condition</th><th>Min Rest</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Prior to operating a Relevant Sector</td><td><span class="val">22</span></td></tr>
+        <tr><td colspan="2" style="color:var(--muted); font-weight:600; padding-top:14px;">After operating a Relevant Sector:</td></tr>
+        <tr><td>&nbsp;&nbsp;(i) Captain OR First Officer</td><td><span class="val">27</span></td></tr>
+        <tr><td>&nbsp;&nbsp;(ii) Captain OR First Officer and a duty period &gt; 20 hours</td><td><span class="val">36</span></td></tr>
+        <tr><td>&nbsp;&nbsp;(iii) Captain AND First Officer</td><td><span class="val">36</span></td></tr>
+        <tr><td>&nbsp;&nbsp;(iv) If Duty Period &lt; 18 hours</td><td class="note">Chapter 1B Flight and Duty Limitations apply as per FD10.1</td></tr>
+        <tr><td>&nbsp;&nbsp;(v) If Duty Period &gt; 18 hours, at crew discretion, where next operating sector has flight time &lt; 4 hours</td><td><span class="val">24</span><br><span class="note">Min rest before operating any Relevant Sector is then 36 hours</span></td></tr>
+        <tr><td colspan="2" style="color:var(--muted); font-weight:600; padding-top:14px;">After Relevant Sector inbound to Australia or New Zealand:</td></tr>
+        <tr><td>&nbsp;&nbsp;(i) Next operation returning to same time zone destination</td><td><span class="val">36</span></td></tr>
+        <tr><td>&nbsp;&nbsp;(ii) Next operation is domestic or trans-Tasman sector</td><td><span class="val">22</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subtitle" style="margin-top:32px; text-align:center; font-size:11px;">
+    Source: Qantas FRMS Ruleset A380/A330/B787 — Revision 4 — 26 June 2023 — Chapter 1B (FD10)
+  </div>
+</div>
+</body>
+</html>

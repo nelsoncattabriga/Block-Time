@@ -37,6 +37,9 @@ struct FRMSView: View {
     @State private var expandMinimumBaseTurnaround = false
     @State private var expandRecentDuties = false
 
+    // LH limits reference sheet
+    @State private var showLimitsReference = false
+
     // Cached home base timezone — set once on appear to avoid per-row FRMSCalculationService allocation
     @State private var homeBaseTimeZone: TimeZone = .current
 
@@ -72,6 +75,20 @@ struct FRMSView: View {
             .navigationTitle(selectedSection?.rawValue ?? "FRMS")
             .navigationBarTitleDisplayMode(.inline)
             .background(Color(.systemGroupedBackground))
+            .toolbar {
+                if viewModel.configuration.fleet == .a380A330B787 {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showLimitsReference = true
+                        } label: {
+                            Image(systemName: "book.pages")
+                        }
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $showLimitsReference) {
+                LimitsReferenceSheet(initialLimitType: viewModel.selectedLimitType)
+            }
             .onAppear {
                 //LogManager.shared.debug("FRMSView: onAppear called")
                 viewModel.loadFlightData(crewPosition: flightTimePosition)

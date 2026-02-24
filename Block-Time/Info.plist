@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDisplayName</key>
+	<string>Block-Time</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -30,20 +32,26 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundleDisplayName</key>
-	<string>Block-Time</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Block-Time needs access to your camera for ACARS capture.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Block-Time needs permission to save ACARS images to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Block-Time needs access to your photo library to save and retrieve ACARS images.</string>
 	<key>NSUbiquitousContainers</key>
 	<dict>
 		<key>iCloud.com.thezoolab.blocktime</key>
@@ -58,28 +66,15 @@
 	</dict>
 	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>Block-Time needs access to your camera for ACARS capture.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Block-Time needs permission to save ACARS images to your photo library.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Block-Time needs access to your photo library to save and retrieve ACARS images.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
 	<key>UIFileSharingEnabled</key>
 	<true/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
