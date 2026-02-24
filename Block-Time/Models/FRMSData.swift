@@ -63,10 +63,20 @@ enum FRMSFleet: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// Initial 14-day duty limit (at roster publication, no agreement required).
+    /// SH only: 90 hrs (FD12/FD22). LH has a single limit of 100 hrs.
+    var maxDutyTime14DaysInitial: Double? {
+        switch self {
+        case .a320B737: return 90.0
+        case .a380A330B787: return nil
+        }
+    }
+
+    /// Hard maximum 14-day duty limit (requires pilot agreement or open time bid for SH).
     var maxDutyTime14Days: Double {
         switch self {
-        case .a320B737: return 100.0  // Can be extended from 90 with agreement
-        case .a380A330B787: return 100.0  // FD6.4.3: 100 hours in any consecutive 14 days
+        case .a320B737: return 100.0
+        case .a380A330B787: return 100.0  // FD6.4.3
         }
     }
 }
@@ -415,11 +425,21 @@ struct FRMSCumulativeTotals: Codable, Sendable {
     }
 
     func dutyStatus14Days(for fleet: FRMSFleet) -> FRMSComplianceStatus {
-        let limit = fleet.maxDutyTime14Days
-        if dutyTime14Days > limit {
-            return .violation(message: "Exceeded \(Int(limit)) duty hours in 14 days")
-        } else if dutyTime14Days > (limit * 0.9) {
-            return .warning(message: "Approaching \(Int(limit))-hour duty limit")
+        let hardLimit = fleet.maxDutyTime14Days
+        if dutyTime14Days > hardLimit {
+            return .violation(message: "Exceeded \(Int(hardLimit)) duty hours in 14 days")
+        }
+        if let initialLimit = fleet.maxDutyTime14DaysInitial {
+            // SH: warn when approaching or exceeding the 90 hr initial roster limit
+            if dutyTime14Days > initialLimit {
+                return .warning(message: "Exceeds \(Int(initialLimit))-hr initial limit — pilot agreement required")
+            } else if dutyTime14Days > initialLimit * 0.9 {
+                return .warning(message: "Approaching \(Int(initialLimit))-hour duty limit")
+            }
+        } else {
+            if dutyTime14Days > hardLimit * 0.9 {
+                return .warning(message: "Approaching \(Int(hardLimit))-hour duty limit")
+            }
         }
         return .compliant
     }

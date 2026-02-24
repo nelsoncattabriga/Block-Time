@@ -47,7 +47,7 @@ struct SH_NextDutyView: View {
                     }
 
                     // Active Restrictions (if any)
-                    if limits.backOfClockRestriction != nil || limits.lateNightStatus != nil || limits.consecutiveDutyStatus.hasActiveRestrictions {
+                    if (limits.backOfClockRestriction != nil && viewModel.selectedLimitType == .planning) || limits.lateNightStatus != nil || limits.consecutiveDutyStatus.hasActiveRestrictions {
                         activeRestrictionsSection(limits: limits)
                     }
 
@@ -195,27 +195,16 @@ struct SH_NextDutyView: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
 
-            if displayWindow.limitType == .operational {
-                // Operational limits: 3 columns (1 Sector | 2+ Sectors | >7 hrs night)
-                HStack(spacing: 12) {
-                    dutyColumn(title: "1 Sector",      hours: 10.5, color: AppColors.accentBlue)
-                    Divider().frame(height: 35)
-                    dutyColumn(title: "2+ Sectors",    hours: 10.0, color: AppColors.accentBlue)
-                    Divider().frame(height: 35)
-                    dutyColumn(title: "> 7 hrs Night", hours: 9.5,  color: AppColors.accentBlue)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity)
-            } else {
-                // Planning limits: 2 columns (Standard | >7 hrs night)
-                HStack(spacing: 12) {
-                    dutyColumn(title: "Standard",      hours: 10.0, color: AppColors.accentBlue)
-                    Divider().frame(height: 35)
-                    dutyColumn(title: "> 7 hrs Night", hours: 9.5,  color: AppColors.accentBlue)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity)
+            // Planning (FD13.3) and Operational (FD23.3) have identical flight time conditions
+            HStack(spacing: 12) {
+                dutyColumn(title: "1 Sector",      hours: 10.5, color: AppColors.accentBlue)
+                Divider().frame(height: 35)
+                dutyColumn(title: "2+ Sectors",    hours: 10.0, color: AppColors.accentBlue)
+                Divider().frame(height: 35)
+                dutyColumn(title: "> 7 hrs Night", hours: 9.5,  color: AppColors.accentBlue)
+                Spacer()
             }
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -228,8 +217,8 @@ struct SH_NextDutyView: View {
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Back of clock restriction
-            if let backOfClock = limits.backOfClockRestriction {
+            // Back of clock restriction — FD14.4 (planning only, not in operational chapter)
+            if let backOfClock = limits.backOfClockRestriction, viewModel.selectedLimitType == .planning {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Image(systemName: "exclamationmark.triangle")

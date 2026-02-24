@@ -67,10 +67,11 @@ struct AdaptiveCumulativeLimitsLayout: View {
                     buildLimitCard(
                         title: "Duty Time (14 Days)",
                         current: totals.dutyTime14Days,
-                        limit: viewModel.configuration.fleet.maxDutyTime14Days,
+                        limit: viewModel.configuration.fleet.maxDutyTime14DaysInitial ?? viewModel.configuration.fleet.maxDutyTime14Days,
                         status: totals.dutyStatus14Days,
                         unit: "hrs",
-                        accentColor: .orange
+                        accentColor: .orange,
+                        note: viewModel.configuration.fleet.maxDutyTime14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
                     )
                 }
 
@@ -159,7 +160,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
 
     // MARK: - Card Building Functions
 
-    private func buildLimitCard(title: String, current: Double, limit: Double, status: FRMSComplianceStatus, unit: String, accentColor: Color) -> some View {
+    private func buildLimitCard(title: String, current: Double, limit: Double, status: FRMSComplianceStatus, unit: String, accentColor: Color, note: String? = nil) -> some View {
         HStack(spacing: 0) {
             Rectangle()
                 .fill(accentColor)
@@ -192,6 +193,12 @@ struct AdaptiveCumulativeLimitsLayout: View {
 
                 ProgressView(value: min(current, limit), total: limit)
                     .tint(progressColor(status))
+
+                if let note {
+                    Text(note)
+                        .iPadScaledFont(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
             .padding(16)
         }

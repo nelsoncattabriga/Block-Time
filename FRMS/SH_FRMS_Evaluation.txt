@@ -1,0 +1,127 @@
+ SH Model Compliance Analysis                                                                                                           
+   
+  Model values — correctly match the HTML                                                                                                
+                                                                                                                                       
+  Both models are accurate for everything they actually contain:                                                                         
+
+  ┌──────────────────────────────────────────────────────┬──────────┬─────────────┐
+  │                         What                         │ Planning │ Operational │
+  ├──────────────────────────────────────────────────────┼──────────┼─────────────┤
+  │ 2-pilot duty limits (12/11, 11/10, 10/10)            │ ✅       │ —           │
+  ├──────────────────────────────────────────────────────┼──────────┼─────────────┤
+  │ 2-pilot duty limits (14/13/12, 13/12/11, 12/12/11)   │ —        │ ✅          │
+  ├──────────────────────────────────────────────────────┼──────────┼─────────────┤
+  │ Augmented duty limits (16 hrs screened / 14 hrs pax) │ ✅       │ ✅          │
+  ├──────────────────────────────────────────────────────┼──────────┼─────────────┤
+  │ 2-pilot flight time limits (9.5 / 10 / 10.5)         │ ✅       │ ✅          │
+  ├──────────────────────────────────────────────────────┼──────────┼─────────────┤
+  │ Augmented flight time limit (10.5)                   │ ✅       │ ✅          │
+  └──────────────────────────────────────────────────────┴──────────┴─────────────┘
+
+  No wrong numbers. The values the models contain are correct.
+
+  ---
+  What the HTML contains that is NOT in the SH models
+
+  The models only cover FD13 (planning) and FD23 (operational) — the duty/flight time limits. Everything else in the HTML is absent from
+  both model files:
+
+  Cumulative limits (FD11–12 / FD21–22):
+  - Planning has a 13 consecutive bid periods: 950 hr flight time limit (FD11.1) — not tracked anywhere in the project
+  - The 14-day duty limit has two values: 90 hrs (initial roster publication) vs 100 hrs (with pilot agreement or open time bid).
+  FRMSFleet.maxDutyTime14Days uses only 100 — the 90 hr initial threshold is never surfaced
+  - 1.5× simulator/training factor for cumulative duty (FD12.1 / FD22.1) — not modeled
+  - Max 9 days in any 11-day period; max 6 consecutive duty days (FD12.2 / FD22.2) — tracked in FRMSCumulativeTotals but the rule
+  definition is not in the SH model files
+  - Min 36 hrs free of all duty in any 7 consecutive days (FD12.3 / FD22.3) — not in SH models
+
+  Rules entirely absent from the SH models:
+  - FD13.2 / FD23.2 — Emergency Procedures Training extension to 15 hrs for non-SYD/MEL based pilots
+  - FD13.5 / FD23.5 — Reserve duty max 12 consecutive hours
+  - FD13.6 — Consecutive early starts: max 4 consecutive duties with sign-on prior to 0706 (definition not in SH_Planning_FltDuty;
+  computed elsewhere)
+  - FD14 / FD24 — Late night operations full ruleset:
+    - Max 4 consecutive nights; 5 nights once per 28 days exception
+    - FD14.3(a): Max 40 hrs duty in any 7-night period when >2 LNO duties
+    - FD14.3(b): Max 4 duty periods in that 7-night period
+    - FD14.3(c): Recovery — remain on LNO or min 24 hrs free before any other duty
+  - FD14.4 — Back of clock (planning HTML only — see discrepancy below)
+  - FD15 / FD25 — Deadheading rules (6 clauses, including the 16 hr absolute maximum for any duty with flight duty)
+  - FD17 (planning) — Split duty: min 6 hrs rest, +4 hrs from FD13.1, max 16 hrs total; 50% rest discount (max 4 hrs); 2300–0530
+  restriction
+  - FD27 (operational) — Split duty: two accommodation types — sleeping (+4 hrs, 16 hr max) vs resting (+2 hrs, no stated max); 2300–0530
+   rule
+  - FD18.1 / FD28 — Time free within a pattern: 10 hrs or equal to duty (whichever greater) when duty ≤12; 12 + 1.5×(duty−12) when duty
+  >12
+  - FD28 additionally: rest may be reduced to 9 hrs when duty ≤10 hrs and rest includes 2200–0600; standby with no callout → 10 hrs
+  minimum
+  - FD19 — Time free following a pattern: 12 hrs (1–2 day pattern); 15 hrs (3–4 day pattern)
+  - FD20 / FD28.5 — Days free: 7 days in any 28 days and 24 days in any 84 days; 8 days per calendar month; 26 days in any 3 consecutive
+  calendar months
+
+  ---
+  Discrepancies (values/rules in the models that conflict with HTML)
+
+  1. Back-of-clock (FD14.4) — Planning only
+  The back-of-clock restriction (sign-on no earlier than 1000 LT next day) appears only in the planning HTML (FD14.4). It is absent from
+  the operational HTML entirely. However, SH_NextDutyView shows it as an "Active Restriction" without distinguishing between planning and
+   operational modes. Per the HTML source of truth, it should not appear when viewing operational limits.
+
+  2. Planning flight time UI — simplified incorrectly
+  SH_NextDutyView shows planning flight time as two columns: Standard = 10.0 hrs and > 7 hrs Night = 9.5 hrs. But the planning HTML
+  (FD13.3) specifies the same three conditions as operational:
+  7 hrs darkness → 9.5 hrs
+  1 sector → 10.0 hrs
+  - All other occasions → 10.5 hrs
+
+  The SH_Planning_FltDuty model has all three values correctly. The UI drops the 10.5 hr single-sector case and mislabels 10.0 as
+  "Standard." It should display 3 columns, identical to the operational view.
+
+  ---
+  Summary table
+
+  ┌────────────────────────────────────────┬───────────┬────────────┬───────────────────────────────────────────────────┐
+  │              HTML section              │ In models │   In UI    │                       Notes                       │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Duty limits by time window             │ ✅        │ ✅         │                                                   │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Flight time limits (3 conditions)      │ ✅ model  │ ⚠️  UI      │ Planning shows only 2, missing 10.5 single-sector │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Augmented crew limits                  │ ✅        │ ✅         │                                                   │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ 28-day / 365-day flight time           │ FRMSFleet │ ✅         │ Not in SH model files                             │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ 13-bid-period 950 hr limit             │ ❌        │ ❌         │ Planning-only; not tracked anywhere               │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ 14-day duty (90 initial / 100 agreed)  │ ⚠️         │ ⚠️          │ Only 100 used; 90 hr threshold missing            │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ 1.5× sim/training factor               │ ❌        │ ❌         │ Not modeled                                       │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ 9-in-11 days / 6 consecutive           │ FRMSData  │ ✅         │ Not in SH model files                             │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ 36 hrs free in 7 days                  │ FRMSData  │ ✅         │ Not in SH model files                             │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Reserve duty 12 hr max                 │ ❌        │ ❌         │                                                   │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Consecutive early starts rule          │ FRMSData  │ ✅         │ Definition not in SH model                        │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Late night ops (FD14/24)               │ FRMSData  │ ✅ partial │ 40 hr 7-night limit / recovery rules not modeled  │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Back-of-clock (FD14.4)                 │ FRMSData  │ ⚠️          │ Planning only per HTML; shown in both modes       │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Deadheading (16 hr max)                │ ❌        │ partial    │ Special scenarios section partially wired         │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Split duty                             │ ❌        │ ❌         │                                                   │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Time free within pattern formula       │ ❌        │ ❌         │                                                   │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Time free following pattern (12/15 hr) │ ❌        │ ❌         │                                                   │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Days-free calendar rules               │ ❌        │ ❌         │                                                   │
+  ├────────────────────────────────────────┼───────────┼────────────┼───────────────────────────────────────────────────┤
+  │ Emergency Procedures 15 hr extension   │ ❌        │ ❌         │                                                   │
+  └────────────────────────────────────────┴───────────┴────────────┴───────────────────────────────────────────────────┘
+
+  The most actionable gaps are: the planning flight time UI bug (easy fix), the back-of-clock showing in operational mode (easy fix), and
+   the 14-day 90 hr initial threshold being swallowed by the 100 hr maximum. Everything else is genuinely absent from the models — not
+  wrong values, just unmodeled rules. Would you like to tackle any of these?
