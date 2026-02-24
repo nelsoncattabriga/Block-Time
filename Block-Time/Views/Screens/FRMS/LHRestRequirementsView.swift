@@ -94,12 +94,12 @@ struct LHRestRequirementsView: View {
         switch (crewComplement, limitType) {
         case (.twoPilot, .operational):
             return [
-                DutyBand(id: "op2p_le11", label: "≤ 11:00", value: 10.0),
-                DutyBand(id: "op2p_1115", label: "11:15",   value: 11.25),
-                DutyBand(id: "op2p_1130", label: "11:30",   value: 11.5),
-                DutyBand(id: "op2p_1145", label: "11:45",   value: 11.75),
-                DutyBand(id: "op2p_1200", label: "12:00",   value: 12.0),
-                DutyBand(id: "op2p_gt12", label: "> 12:00", value: 13.0),
+                DutyBand(id: "op2p_le11", label: "≤ 11 hrs",    value: 10.0),
+                DutyBand(id: "op2p_1115", label: "11:15 hrs",   value: 11.25),
+                DutyBand(id: "op2p_1130", label: "11:30 hrs",   value: 11.5),
+                DutyBand(id: "op2p_1145", label: "11:45 hrs",   value: 11.75),
+                DutyBand(id: "op2p_1200", label: "12:00 hrs",   value: 12.0),
+                DutyBand(id: "op2p_gt12", label: "> 12 hrs",    value: 13.0),
             ]
         case (.twoPilot, .planning):
             return [
