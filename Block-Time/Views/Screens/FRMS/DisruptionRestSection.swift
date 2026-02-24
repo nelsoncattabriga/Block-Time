@@ -83,9 +83,13 @@ struct DisruptionRestSection: View {
             }
             .padding(.top, 12)
         } label: {
-            Text("Disruption Rest Calculator")
-                .font(.headline)
-                .fontWeight(.semibold)
+            HStack(spacing: 6) {
+                Image(systemName: "bolt.circle.fill")
+                    .foregroundStyle(.orange)
+                Text("Disruption Rest Calculator")
+            }
+            .font(.headline)
+            .fontWeight(.semibold)
         }
         .padding()
         .appCardStyle()
@@ -232,13 +236,15 @@ struct DisruptionRestSection: View {
 
     private var effectiveRestRow: some View {
         HStack {
-            Text("Minimum Rest")
+            Label("Minimum Rest", systemImage: "bed.double.fill")
                 .font(.subheadline)
                 .fontWeight(.semibold)
+                .foregroundStyle(.blue)
             Spacer()
             Text(formatHoursMinutes(effectiveRest))
                 .font(.title3)
                 .fontWeight(.bold)
+                .foregroundStyle(.blue)
                 .monospacedDigit()
         }
         .padding(.vertical, 12)
@@ -256,6 +262,7 @@ struct DisruptionRestSection: View {
                 Text(label)
                     .font(.subheadline)
                     .fontWeight(isBold ? .semibold : .regular)
+                    .foregroundStyle(isBold ? .primary : .secondary)
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -264,6 +271,7 @@ struct DisruptionRestSection: View {
             Text(formatHoursMinutes(value))
                 .font(.subheadline)
                 .fontWeight(isBold ? .semibold : .regular)
+                .foregroundStyle(isBold ? AppColors.accentOrange : .secondary)
                 .monospacedDigit()
         }
         .padding(.vertical, 10)

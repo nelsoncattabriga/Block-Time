@@ -34,20 +34,23 @@ struct AdaptiveLimitLayout: View {
                 LimitInfoView(
                     icon: "clock",
                     label: "Max Duty",
-                    value: formatTime(range.getMaxDuty(for: limitType))
+                    value: formatTime(range.getMaxDuty(for: limitType)),
+                    valueColor: AppColors.accentOrange
                 )
 
                 LimitInfoView(
                     icon: "airplane",
                     label: "Max Flight Time",
-                    value: flightTimeDisplay
+                    value: flightTimeDisplay,
+                    valueColor: AppColors.accentBlue
                 )
 
                 if let sectorLimit = range.sectorLimit {
                     LimitInfoView(
                         icon: "airplane",
                         label: "Sectors",
-                        value: sectorLimit
+                        value: sectorLimit,
+                        valueColor: .secondary
                     )
                 }
             }
@@ -62,6 +65,7 @@ struct AdaptiveLimitLayout: View {
                     Text(formatTime(range.getMaxDuty(for: limitType)))
                         .font(.subheadline)
                         .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.accentOrange)
                 }
 
                 Divider()
@@ -74,6 +78,7 @@ struct AdaptiveLimitLayout: View {
                     Text(flightTimeDisplay)
                         .font(.subheadline)
                         .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.accentBlue)
                 }
 
                 if let sectorLimit = range.sectorLimit {
@@ -87,6 +92,7 @@ struct AdaptiveLimitLayout: View {
                         Text(sectorLimit)
                             .font(.subheadline)
                             .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -101,6 +107,7 @@ struct LimitInfoView: View {
     let icon: String
     let label: String
     let value: String
+    var valueColor: Color = .primary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -111,7 +118,7 @@ struct LimitInfoView: View {
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundStyle(.primary)
+                .foregroundStyle(valueColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

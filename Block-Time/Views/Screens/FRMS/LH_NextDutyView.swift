@@ -254,7 +254,7 @@ struct LH_NextDutyView: View {
             Text(range.timeRange)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundStyle(.primary)
+                .foregroundStyle(AppColors.accentOrange)
 
             AdaptiveLimitLayout(range: range, limitType: limitType, showTimesInHoursMinutes: appViewModel.showTimesInHoursMinutes)
         }

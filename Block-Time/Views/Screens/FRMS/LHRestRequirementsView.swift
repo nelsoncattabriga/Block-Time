@@ -41,6 +41,7 @@ func lhRestCard(title: String, rows: [LHRestRow], footnote: String?) -> some Vie
                 Text(row.minRest)
                     .font(.subheadline)
                     .fontWeight(.semibold)
+                    .foregroundStyle(AppColors.accentOrange)
                     .frame(width: 70, alignment: .leading)
 
                 if let condition = row.condition {

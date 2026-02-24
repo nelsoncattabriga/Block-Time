@@ -244,7 +244,7 @@ struct SH_NextDutyView: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Text("Next duty: Sign-on no earlier than \(formatTime(backOfClock.earliestSignOn))")
+                    Text("Next Sign-on no earlier than \(formatTime(backOfClock.earliestSignOn))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
