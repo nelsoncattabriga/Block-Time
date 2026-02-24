@@ -404,6 +404,14 @@ class FRMSViewModel {
         )
     }
 
+    func calculateMBTT(daysAway: Int, creditedFlightHours: Double, hadPlannedDutyOver18Hours: Bool) -> FRMSMinimumBaseTurnaroundTime? {
+        return calculationService.calculateMBTT(
+            daysAway: daysAway,
+            creditedFlightHours: creditedFlightHours,
+            hadPlannedDutyOver18Hours: hadPlannedDutyOver18Hours
+        )
+    }
+
     // MARK: - Compliance Checking
 
     /// Check if a proposed duty would be compliant
