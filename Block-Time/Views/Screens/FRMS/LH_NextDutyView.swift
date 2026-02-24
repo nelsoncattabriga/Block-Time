@@ -80,6 +80,10 @@ struct LH_NextDutyView: View {
 
                     // Sign-on time picker (2-pilot planning only)
                     if selectedCrewComplement == .twoPilot && viewModel.selectedLimitType == .planning {
+                        Text("Sign-On Time")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         Picker("Sign-On Time", selection: $selectedSignOnWindow) {
                             ForEach(SignOnWindow.allCases, id: \.self) { window in
                                 Text(window.rawValue).tag(window)

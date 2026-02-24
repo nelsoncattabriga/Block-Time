@@ -84,6 +84,8 @@ struct LHRestRequirementsView: View {
     @Binding var expectedDutyHours: Double
     @Binding var nextDutyIsDeadhead: Bool
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     private var dutyBandOptions: [DutyBand] {
         if nextDutyIsDeadhead {
             return [
@@ -305,12 +307,27 @@ struct LHRestRequirementsView: View {
                 }
                 .pickerStyle(.segmented)
 
-                Picker("Expected Duty", selection: $expectedDutyHours) {
-                    ForEach(dutyBandOptions) { band in
-                        Text(band.label).tag(band.value)
+                if horizontalSizeClass == .compact {
+                    HStack {
+                        Text("Expected Duration")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary.opacity(0.8))
+                        Spacer()
+                        Picker("Expected Duration", selection: $expectedDutyHours) {
+                            ForEach(dutyBandOptions) { band in
+                                Text(band.label).tag(band.value)
+                            }
+                        }
+                        .pickerStyle(.menu)
                     }
+                } else {
+                    Picker("Expected Duty", selection: $expectedDutyHours) {
+                        ForEach(dutyBandOptions) { band in
+                            Text(band.label).tag(band.value)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
             }
             .padding()
             .background(.ultraThinMaterial)
