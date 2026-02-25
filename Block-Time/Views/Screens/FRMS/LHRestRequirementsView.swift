@@ -24,7 +24,7 @@ func lhRestCard(title: String, rows: [LHRestRow], footnote: String?) -> some Vie
         Text(title)
             .font(.subheadline)
             .fontWeight(.semibold)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -35,7 +35,7 @@ func lhRestCard(title: String, rows: [LHRestRow], footnote: String?) -> some Vie
             HStack(alignment: .top, spacing: 8) {
                 Text(row.threshold == "—" ? row.threshold : "\(row.threshold) hrs")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     .frame(minWidth: 80, alignment: .leading)
 
                 Text(row.minRest)
@@ -46,7 +46,7 @@ func lhRestCard(title: String, rows: [LHRestRow], footnote: String?) -> some Vie
 
                 if let condition = row.condition {
                     Text(condition)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
@@ -64,7 +64,7 @@ func lhRestCard(title: String, rows: [LHRestRow], footnote: String?) -> some Vie
         if let note = footnote, !note.isEmpty {
             Divider()
             Text(note)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)

@@ -452,7 +452,7 @@ enum LH_Operational_FltDuty {
         RelevantSectorDisruptionRest(
             condition: "Duty Period > 18 hours, at crew discretion, where next operating sector has a flight time < 4 hours",
             minimumRestHours: 24,
-            note: "The minimum rest period before operating any Relevant Sector is to then be 36 hours."
+            note: "Min Rest before Operating any Relevant Sector is to be 36 hours."
         ),
     ]
 

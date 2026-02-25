@@ -25,6 +25,8 @@ struct LH_NextDutyView: View {
 
     @State private var expandCrewRestClassification = false
     @State private var expandDisruptionRest = false
+    @State private var expandDeadheading = false
+    @State private var expandRelevantSectors = false
 
     @State private var disruptionPreviousDutyHours: Double = 12.0
     @State private var disruptionTZDifference: Double = 0.0
@@ -82,7 +84,7 @@ struct LH_NextDutyView: View {
                     if selectedCrewComplement == .twoPilot && viewModel.selectedLimitType == .planning {
                         Text("Sign-On Time")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Picker("Sign-On Time", selection: $selectedSignOnWindow) {
                             ForEach(SignOnWindow.allCases, id: \.self) { window in
@@ -101,6 +103,26 @@ struct LH_NextDutyView: View {
                 }
                 .padding()
                 .appCardStyle()
+
+                // Cumulative restriction warnings
+                if let maxDuty = viewModel.maximumNextDuty, !maxDuty.restrictions.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Restrictions", systemImage: "exclamationmark.triangle")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.orange)
+
+                        ForEach(maxDuty.restrictions, id: \.self) { restriction in
+                            Text("• \(restriction)")
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(.orange.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             }
 
             // Rest Requirements
@@ -127,26 +149,6 @@ struct LH_NextDutyView: View {
 
             // Relevant Sectors (A380 & B787 only)
             lhRelevantSectorsSection
-
-            // Cumulative restriction warnings
-            if let maxDuty = viewModel.maximumNextDuty, !maxDuty.restrictions.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Restrictions", systemImage: "exclamationmark.triangle")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.orange)
-
-                    ForEach(maxDuty.restrictions, id: \.self) { restriction in
-                        Text("• \(restriction)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(.orange.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
         }
         .onAppear {
             if !viewModel.isLoading, viewModel.cumulativeTotals != nil {
@@ -205,7 +207,7 @@ struct LH_NextDutyView: View {
                 Text("Crew Rest Classification")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
             }
         )
         .padding(10)
@@ -266,10 +268,10 @@ struct LH_NextDutyView: View {
     // MARK: - LH Deadheading Section (Planning Only)
 
     private var lhDeadheadingSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Deadheading Limits")
-                .font(.headline)
-                .fontWeight(.semibold)
+        DisclosureGroup(
+            isExpanded: $expandDeadheading,
+            content: {
+                VStack(alignment: .leading, spacing: 12) {
 
             // Duty Limits — one block per duty type
             VStack(alignment: .leading, spacing: 0) {
@@ -285,8 +287,8 @@ struct LH_NextDutyView: View {
                         HStack(alignment: .top, spacing: 24) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Duty Limit")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.footnote)
+                                    .foregroundStyle(.primary)
                                 Text(formatHoursMinutes(limit.dutyPeriodLimit) + " hrs")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
@@ -295,8 +297,8 @@ struct LH_NextDutyView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Sectors")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.footnote)
+                                    .foregroundStyle(.primary)
                                 Text(limit.sectorLimit)
                                     .font(.subheadline)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -305,8 +307,8 @@ struct LH_NextDutyView: View {
 
                         if let req = limit.requirements {
                             Text(req)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -320,8 +322,8 @@ struct LH_NextDutyView: View {
 
                 Divider()
                 Text(LH_Planning_FltDuty.deadheadPreDutyRestNote)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.footnote)
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -348,7 +350,15 @@ struct LH_NextDutyView: View {
                 },
                 footnote: LH_Planning_FltDuty.deadheadPostDutyRestNote
             )
-        }
+                }
+                .padding(.top, 12)
+            },
+            label: {
+                Text("Deadheading Limits")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+            }
+        )
         .padding()
         .appCardStyle()
     }
@@ -361,14 +371,10 @@ struct LH_NextDutyView: View {
         let inboundRest = LH_Operational_FltDuty.relevantSectorInboundAUNZRest
         let preRest = LH_Operational_FltDuty.relevantSectorPreDutyRestHours
 
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("Relevant Sectors - Patterns > 18 hrs")
-                .font(.headline)
-                .fontWeight(.semibold)
-
-            Text("A380 & B787 only")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        return DisclosureGroup(
+            isExpanded: $expandRelevantSectors,
+            content: {
+                VStack(alignment: .leading, spacing: 12) {
 
             // Named sectors list
             VStack(alignment: .leading, spacing: 0) {
@@ -414,7 +420,7 @@ struct LH_NextDutyView: View {
                 HStack(alignment: .top) {
                     Text("Prior to operating")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Text("\(Int(preRest)) hrs")
                         .font(.subheadline)
@@ -426,9 +432,9 @@ struct LH_NextDutyView: View {
                 Divider().padding(.leading, 12)
 
                 Text("After operating a Relevant Sector:")
-                    .font(.caption)
+                    .font(.footnote)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
                     .padding(.bottom, 4)
@@ -438,7 +444,7 @@ struct LH_NextDutyView: View {
                     HStack(alignment: .top, spacing: 8) {
                         Text(row.condition)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         if let hrs = row.minimumRestHours {
@@ -448,15 +454,15 @@ struct LH_NextDutyView: View {
                                     .fontWeight(.semibold)
                                 if let note = row.note {
                                     Text(note)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                                        .font(.caption)
+                                        .foregroundStyle(.primary)
                                         .multilineTextAlignment(.trailing)
                                 }
                             }
                         } else if let note = row.note {
                             Text(note)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.footnote)
+                                .foregroundStyle(.primary)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
                         }
                     }
@@ -471,9 +477,9 @@ struct LH_NextDutyView: View {
                 Divider().padding(.leading, 12)
 
                 Text("After Relevant Sector inbound to AU or NZ:")
-                    .font(.caption)
+                    .font(.footnote)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
                     .padding(.bottom, 4)
@@ -483,7 +489,7 @@ struct LH_NextDutyView: View {
                     HStack {
                         Text(row.context.rawValue)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         Text("\(Int(row.minimumRestHours)) hrs")
@@ -505,27 +511,40 @@ struct LH_NextDutyView: View {
             if viewModel.selectedLimitType == .planning {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("FD3.4.1")
-                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                        .font(.caption).fontWeight(.semibold).foregroundStyle(.primary)
                     Text("Minimum 4 pilot crew for patterns > 18 hrs.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.footnote).foregroundStyle(.primary)
 
                     Text("FD3.4.2")
-                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                        .font(.caption).fontWeight(.semibold).foregroundStyle(.primary)
                         .padding(.top, 4)
                     Text(LH_Planning_FltDuty.relevantSectorMBTTIncrease)
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.footnote).foregroundStyle(.primary)
 
                     Text("FD3.4.3")
-                        .font(.caption2).fontWeight(.semibold).foregroundStyle(.secondary)
+                        .font(.caption).fontWeight(.semibold).foregroundStyle(.primary)
                         .padding(.top, 4)
                     Text(LH_Planning_FltDuty.relevantSectorHomeTransport)
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.footnote).foregroundStyle(.primary)
                 }
                 .padding(10)
                 .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-        }
+                }
+                .padding(.top, 12)
+            },
+            label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Relevant Sectors")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    Text("Patterns > 18 hrs · A380 & B787 only")
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                }
+            }
+        )
         .padding()
         .appCardStyle()
     }
@@ -536,7 +555,7 @@ struct LH_NextDutyView: View {
         HStack(spacing: 8) {
             ForEach(columns, id: \.self) { col in
                 Text(col)
-                    .font(.caption)
+                    .font(.footnote)
                     .fontWeight(.semibold)
                     .foregroundStyle(.blue)
                     .frame(maxWidth: .infinity, alignment: .leading)
