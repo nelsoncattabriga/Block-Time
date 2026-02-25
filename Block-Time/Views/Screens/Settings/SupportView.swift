@@ -1,5 +1,5 @@
 //
-//  AboutView.swift
+//  SupportView.swift
 //  Block-Time
 //
 //  Created by Nelson on 29/11/2025.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct AboutView: View {
+struct SupportView: View {
     @Environment(ThemeService.self) private var themeService
     @AppStorage("debugModeEnabled") private var debugModeEnabled = false
     @State private var showingLogViewer = false
@@ -278,6 +278,6 @@ struct AboutView: View {
 
 #Preview {
     NavigationView {
-        AboutView()
+        SupportView()
     }
 }

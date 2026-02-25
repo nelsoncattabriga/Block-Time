@@ -127,7 +127,7 @@ struct SettingsView: View {
         case .importExport:
             ImportExportView(viewModel: viewModel)
         case .about:
-            AboutView()
+            SupportView()
         }
     }
 }
