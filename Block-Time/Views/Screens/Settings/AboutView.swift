@@ -50,7 +50,7 @@ struct AboutView: View {
                             .foregroundColor(.primary)
 
                         Text("Version \(appVersion).\(buildNumber)")
-                            .font(.subheadline)
+                            .font(.headline)
                             .foregroundColor(.secondary)
                             .onTapGesture {
                                 versionTapCount += 1
@@ -63,13 +63,13 @@ struct AboutView: View {
                         Spacer(minLength: 20)
 
                         VStack(spacing: 20){
-                            Text("www.block-time.app")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                            
-                            Text("support@block-time.app")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
+                            Link("Online User Guide", destination: URL(string: "https://block-time.app/guide/")!)
+                                .foregroundColor(.blue)
+                                .font(.title3.bold())
+                                
+                            Link("Email Support", destination: URL(string: "mailto:support@block-time.app")!)
+                                .foregroundColor(.blue)
+                                .font(.title3.bold())
                         }
                     }
                 }
@@ -242,7 +242,7 @@ struct AboutView: View {
                     .ignoresSafeArea()
             }
         )
-        .navigationTitle("About")
+        .navigationTitle("Support")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showingLogViewer) {
             LogViewerView()

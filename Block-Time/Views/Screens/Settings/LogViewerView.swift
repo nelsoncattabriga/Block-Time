@@ -68,52 +68,14 @@ struct LogViewerView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
-                Menu {
-                    Button {
-                        HapticManager.shared.impact(.light)
-                        selectedFilter = nil
-                        applyFilters()
-                    } label: {
-                        if selectedFilter == nil {
-                            Label("All Levels", systemImage: "checkmark")
-                        } else {
-                            Text("All Levels")
-                        }
-                    }
-
-                    Divider()
-
+                Picker("Filter", selection: $selectedFilter) {
+                    Text("All Levels").tag(Optional<LogLevel>.none)
                     ForEach(LogLevel.allCases, id: \.self) { level in
-                        Button {
-                            HapticManager.shared.impact(.light)
-                            selectedFilter = level
-                            applyFilters()
-                        } label: {
-                            if selectedFilter == level {
-                                Label("\(level.emoji) \(level.displayName)", systemImage: "checkmark")
-                            } else {
-                                Text("\(level.emoji) \(level.displayName)")
-                            }
-                        }
+                        Text(level.displayName).tag(Optional(level))
                     }
-                } label: {
-                    HStack(spacing: 6) {
-                        if let filter = selectedFilter {
-                            Text("\(filter.emoji) \(filter.displayName)")
-                        } else {
-                            Text("All Levels")
-                        }
-                        Image(systemName: "chevron.down")
-                            .font(.caption)
-                    }
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(selectedFilter != nil ? colorForLevel(selectedFilter!) : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
                 }
+                .pickerStyle(.menu)
+                .onChange(of: selectedFilter) { _, _ in applyFilters() }
 
                 Spacer()
             }
@@ -191,12 +153,12 @@ struct LogViewerView: View {
                                 Text(line)
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundColor(.primary)
-                                    .textSelection(.enabled)
                                     .padding(.horizontal)
                                     .padding(.vertical, 1)
                                     .id(index)
                             }
                         }
+                        .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical)
                         .onAppear {
@@ -352,15 +314,6 @@ struct LogViewerView: View {
                     self.isFiltering = false
                 }
             }
-        }
-    }
-
-    private func colorForLevel(_ level: LogLevel) -> Color {
-        switch level {
-        case .debug: return .gray
-        case .info: return .blue
-        case .warning: return .orange
-        case .error: return .red
         }
     }
 

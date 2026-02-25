@@ -10,7 +10,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case backups = "Backup & Sync"
     case importExport = "Import & Export"
     case appearance = "Appearance"
-    case about = "About"
+    case about = "Support"
 
     var id: String { rawValue }
 
@@ -46,7 +46,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .frms: return "Fatigue Risk Management System"
         case .backups: return "iCloud Sync & Backups"
         case .importExport: return "Import & Export Data"
-        case .about: return "App Version & Developer Info"
+        case .about: return "App Version & Support Links"
         }
     }
 }
