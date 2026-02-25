@@ -529,13 +529,21 @@ struct FRMSView: View {
 
                 // Daily totals
                 HStack(spacing: 16) {
-                    Label("Duty: \(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalDutyTime) : String(format: "%.1f", dailySummary.totalDutyTime)) hrs", systemImage: "clock")
-                        .font(.subheadline)
-                        .foregroundStyle(AppColors.accentOrange)
-
-                    Label("Flight: \(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalFlightTime) : String(format: "%.1f", dailySummary.totalFlightTime)) hrs", systemImage: "clock.badge.airplane")
-                        .font(.subheadline)
-                        .foregroundStyle(AppColors.accentBlue)
+                    Label {
+                        Text("Duty: ").foregroundStyle(.secondary) + Text("\(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalDutyTime) : String(format: "%.1f", dailySummary.totalDutyTime)) hrs").foregroundStyle(AppColors.accentOrange)
+                    } icon: {
+                        Image(systemName: "clock")//.foregroundStyle(AppColors.accentOrange)
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    
+                    Label {
+                        Text("Flight: ").foregroundStyle(.secondary) + Text("\(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalFlightTime) : String(format: "%.1f", dailySummary.totalFlightTime)) hrs").foregroundStyle(AppColors.accentBlue)
+                    } icon: {
+                        Image(systemName: "clock.badge.airplane")//.foregroundStyle(AppColors.accentBlue)
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                 }
             }
             .padding(12)
