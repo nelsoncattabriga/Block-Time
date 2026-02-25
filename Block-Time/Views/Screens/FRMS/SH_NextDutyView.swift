@@ -46,11 +46,6 @@ struct SH_NextDutyView: View {
                         buildConsecutiveInfoCard(totals: totals)
                     }
 
-                    // Active Restrictions (if any)
-                    if (limits.backOfClockRestriction != nil && viewModel.selectedLimitType == .planning) || limits.lateNightStatus != nil || limits.consecutiveDutyStatus.hasActiveRestrictions {
-                        activeRestrictionsSection(limits: limits)
-                    }
-
                     // Next Duty Limits Title
                     Text("Next Duty Limits")
                         .font(.title3)
@@ -79,6 +74,12 @@ struct SH_NextDutyView: View {
             headerSection
 
             Divider()
+
+            // Active Restrictions inline (if any)
+            if (limits.backOfClockRestriction != nil && viewModel.selectedLimitType == .planning) || limits.lateNightStatus != nil || limits.consecutiveDutyStatus.hasActiveRestrictions {
+                activeRestrictionsSection(limits: limits)
+                Divider()
+            }
 
             if horizontalSizeClass == .compact {
                 // iPhone: Vertical stack
@@ -330,8 +331,6 @@ struct SH_NextDutyView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .appCardStyle()
     }
 
     // MARK: - Special Rules Section
