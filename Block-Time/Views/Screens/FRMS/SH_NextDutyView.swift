@@ -645,7 +645,8 @@ struct SH_NextDutyView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Consecutive Duties")
-                        .font(.headline)
+//                        .font(.headline)
+                        .iPadScaledFont(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.secondary)
 
@@ -656,7 +657,7 @@ struct SH_NextDutyView: View {
                         .font(.headline)
                 }
 
-                HStack(spacing: 16) {
+                HStack(spacing: 12) {
                     if let maxConsec = totals.maxConsecutiveDuties {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
@@ -666,7 +667,9 @@ struct SH_NextDutyView: View {
                                 Text("/\(maxConsec)")
                                     .font(.subheadline).foregroundStyle(.secondary)
                             }
-                            Text("Cons. Days").font(.subheadline).foregroundStyle(.primary)
+                            Text("Cons Days")
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
                         }
                     }
 
