@@ -288,17 +288,18 @@ struct LH_NextDutyView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Duty Limit")
                                     .font(.footnote)
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(.secondary)
                                 Text(formatHoursMinutes(limit.dutyPeriodLimit) + " hrs")
                                     .font(.subheadline)
-                                    .fontWeight(.medium)
+                                    .fontWeight(.semibold)
                                     .monospacedDigit()
+                                    .foregroundStyle(AppColors.accentOrange)
                             }
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Sectors")
                                     .font(.footnote)
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(.secondary)
                                 Text(limit.sectorLimit)
                                     .font(.subheadline)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -308,7 +309,7 @@ struct LH_NextDutyView: View {
                         if let req = limit.requirements {
                             Text(req)
                                 .font(.footnote)
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -323,7 +324,7 @@ struct LH_NextDutyView: View {
                 Divider()
                 Text(LH_Planning_FltDuty.deadheadPreDutyRestNote)
                     .font(.footnote)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -432,7 +433,7 @@ struct LH_NextDutyView: View {
                 Divider().padding(.leading, 12)
 
                 Text("After operating a Relevant Sector:")
-                    .font(.footnote)
+                    .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 12)
@@ -454,15 +455,15 @@ struct LH_NextDutyView: View {
                                     .fontWeight(.semibold)
                                 if let note = row.note {
                                     Text(note)
-                                        .font(.caption)
-                                        .foregroundStyle(.primary)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
                                         .multilineTextAlignment(.trailing)
                                 }
                             }
                         } else if let note = row.note {
                             Text(note)
                                 .font(.footnote)
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
                         }
                     }
@@ -477,7 +478,7 @@ struct LH_NextDutyView: View {
                 Divider().padding(.leading, 12)
 
                 Text("After Relevant Sector inbound to AU or NZ:")
-                    .font(.footnote)
+                    .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 12)
@@ -540,7 +541,7 @@ struct LH_NextDutyView: View {
                         .font(.headline)
                         .fontWeight(.semibold)
                     Text("Patterns > 18 hrs · A380 & B787 only")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.primary)
                 }
             }

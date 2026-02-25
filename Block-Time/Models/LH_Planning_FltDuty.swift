@@ -500,12 +500,12 @@ enum LH_Planning_FltDuty {
         RelevantSectorDisruptionRest(
             condition: "Duty Period < 18 hours",
             minimumRestHours: nil,
-            note: "Chapter 1B Flight and Duty Limitations apply as per FD10.1"
+            note: "Chapter 1B Flight & Duty Lims Apply (FD10.1)"
         ),
         RelevantSectorDisruptionRest(
             condition: "Duty Period > 18 hours, at crew discretion, where next operating sector has a flight time < 4 hours",
             minimumRestHours: 24,
-            note: "Min Rest before Operating any Relevant Sector is to be 36 hours."
+            note: "Min Rest 36 hrs"
         ),
     ]
 
