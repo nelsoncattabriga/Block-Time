@@ -33,7 +33,6 @@ struct SH_NextDutyView: View {
     @State private var expandAnnualLeave = false
     @State private var expandReserve = false
     @State private var expandDeadheading = false
-    @State private var expandSplitDuty = false
 
     // MARK: - Body
 
@@ -59,9 +58,6 @@ struct SH_NextDutyView: View {
 
                     // Max Duty Card (with controls inside)
                     maxDutyCard(limits: limits)
-
-                    // Reference Rules Card
-                    referenceRulesCard()
                 }
             } else {
                 Text("No duty data available")
@@ -102,6 +98,9 @@ struct SH_NextDutyView: View {
                     maxFlightTimeSection(displayWindow: displayWindow)
                 }
             }
+
+            Divider()
+            specialRulesSection()
         }
         .padding()
         .appCardStyle()
@@ -335,139 +334,59 @@ struct SH_NextDutyView: View {
         .appCardStyle()
     }
 
-    // MARK: - Reference Rules Card
+    // MARK: - Special Rules Section
 
-    private func referenceRulesCard() -> some View {
+    private func specialRulesSection() -> some View {
         let isPlanning = viewModel.selectedLimitType == .planning
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("Reference Limits")
+        let sleepingIncrease = Int(SH_Planning_FltDuty.splitDutyRules.maxDutyIncreaseHours)
+        let sleepingMax = Int(SH_Planning_FltDuty.splitDutyRules.maxTotalDutyHours)
+        let reserveHrs = Int(isPlanning
+            ? SH_Planning_FltDuty.reserveDutyMaxConsecutiveHours
+            : SH_Operational_FltDuty.reserveDutyMaxConsecutiveHours)
+        let deadheadMax = Int(isPlanning
+            ? SH_Planning_FltDuty.deadheadingAbsoluteMaxDutyHours
+            : SH_Operational_FltDuty.deadheadingAbsoluteMaxDutyHours)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Special Rules")
                 .font(.headline)
                 .fontWeight(.semibold)
+                .foregroundStyle(.primary)
 
-            VStack(spacing: 8) {
+            ruleRow(icon: "bed.double", label: "Split Duty (Sleeping)", value: "+\(sleepingIncrease) hrs · max \(sleepingMax) hrs")
 
-                // Split Duty
-                DisclosureGroup(
-                    isExpanded: $expandSplitDuty,
-                    content: {
-                        splitDutyContent(isPlanning: isPlanning)
-                            .padding(.top, 8)
-                    },
-                    label: {
-                        Text("Split Duty")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-                )
-                .padding()
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                // Reserve Duty
-                DisclosureGroup(
-                    isExpanded: $expandReserve,
-                    content: {
-                        reserveDutyContent(isPlanning: isPlanning)
-                            .padding(.top, 8)
-                    },
-                    label: {
-                        Text("Reserve Duty")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-                )
-                .padding()
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                // Deadheading
-                DisclosureGroup(
-                    isExpanded: $expandDeadheading,
-                    content: {
-                        deadheadingContent(isPlanning: isPlanning)
-                            .padding(.top, 8)
-                    },
-                    label: {
-                        Text("Deadheading")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-                )
-                .padding()
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-        }
-        .padding()
-        .appCardStyle()
-    }
-
-    private func splitDutyContent(isPlanning: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if isPlanning {
-                // Planning: one accommodation type (FD17)
-                let rules = SH_Planning_FltDuty.splitDutyRules
-                bulletPoint(text: "Min rest: \(Int(rules.minRestHours)) hrs at suitable sleeping accommodation")
-                bulletPoint(text: "Max duty increase: +\(Int(rules.maxDutyIncreaseHours)) hrs above FD13.1 limits")
-                bulletPoint(text: "Max total duty: \(Int(rules.maxTotalDutyHours)) hrs")
-                bulletPoint(text: "Rest discount: \(Int(rules.restDiscountFraction * 100))% (max \(Int(rules.maxRestDiscountHours)) hrs)")
-                Text("Night window \(rules.nightWindowStart)–\(rules.nightWindowEnd):")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 2)
-                bulletPoint(text: "Rest must be uninterrupted ≥\(Int(rules.nightRestMinUninterruptedHours)) hrs")
-                bulletPoint(text: "Max FDP \(Int(rules.nightRestMaxTotalDutyHours)) hrs; no rest discounting")
-            } else {
-                // Operational: two accommodation types (FD27)
-                let sleeping = SH_Operational_FltDuty.splitDutyRulesBySleeping
-                let resting  = SH_Operational_FltDuty.splitDutyRulesByResting
-                Text("Sleeping accommodation")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                bulletPoint(text: "Min \(Int(sleeping.minRestHours)) hrs rest → +\(Int(sleeping.maxDutyIncreaseHours)) hrs duty, max \(Int(sleeping.maxTotalDutyHours ?? 0)) hrs")
-                if let frac = sleeping.restDiscountFraction, let maxDisc = sleeping.maxRestDiscountHours {
-                    bulletPoint(text: "Rest discount: \(Int(frac * 100))% (max \(Int(maxDisc)) hrs)")
-                }
-                Text("Resting accommodation")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 4)
-                bulletPoint(text: "Min \(Int(resting.minRestHours)) hrs rest → +\(Int(resting.maxDutyIncreaseHours)) hrs duty (no stated max)")
-                bulletPoint(text: "No rest discounting")
-                Text("Night window \(sleeping.nightWindowStart)–\(sleeping.nightWindowEnd):")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 4)
-                bulletPoint(text: "Uninterrupted ≥\(Int(sleeping.nightRestMinUninterruptedHours)) hrs; max FDP \(Int(sleeping.nightRestMaxTotalDutyHours)) hrs; no discount")
-            }
-        }
-    }
-
-    private func reserveDutyContent(isPlanning: Bool) -> some View {
-        let maxHrs = isPlanning
-            ? SH_Planning_FltDuty.reserveDutyMaxConsecutiveHours
-            : SH_Operational_FltDuty.reserveDutyMaxConsecutiveHours
-        let clause = isPlanning ? "FD13.5" : "FD23.5"
-        return VStack(alignment: .leading, spacing: 6) {
-            bulletPoint(text: "Max \(Int(maxHrs)) consecutive hrs (\(clause))")
-            bulletPoint(text: "Must have suitable sleeping accommodation")
-            bulletPoint(text: "Free from all duties associated with employment")
-        }
-    }
-
-    private func deadheadingContent(isPlanning: Bool) -> some View {
-        let maxDuty = isPlanning
-            ? SH_Planning_FltDuty.deadheadingAbsoluteMaxDutyHours
-            : SH_Operational_FltDuty.deadheadingAbsoluteMaxDutyHours
-        let clause = isPlanning ? "FD15" : "FD25"
-        return VStack(alignment: .leading, spacing: 6) {
-            bulletPoint(text: "Absolute max duty with flight duty: \(Int(maxDuty)) hrs (\(clause).6)")
-            bulletPoint(text: "Deadheading counts toward total duty for rest calculation")
-            bulletPoint(text: "Last sector if deadhead: does not count toward sector limit")
-            bulletPoint(text: "Deadhead before flight duty: counts as a sector")
             if !isPlanning {
-                bulletPoint(text: "Operational: may extend FD23.1 limits at pilot discretion (\(clause).2)")
+                let restingIncrease = Int(SH_Operational_FltDuty.splitDutyRulesByResting.maxDutyIncreaseHours)
+                ruleRow(icon: "chair.lounge", label: "Split Duty (Resting)", value: "+\(restingIncrease) hrs")
             }
+
+            ruleRow(icon: "phone", label: "Reserve Duty", value: "Max \(reserveHrs) consecutive hrs")
+
+            ruleRow(icon: "airplane", label: "Deadheading", value: "Max \(deadheadMax) hrs total duty")
+
+            if !isPlanning {
+                Text("Pilot may extend FD23.1 limits at discretion (FD25.2)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 28)
+            }
+        }
+    }
+
+    private func ruleRow(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .frame(width: 20)
+                .foregroundStyle(.secondary)
+
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.semibold)
         }
     }
 
