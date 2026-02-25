@@ -31,6 +31,10 @@ struct SH_NextDutyView: View {
     @State private var expandSimulator = false
     @State private var expandDaysOff = false
     @State private var expandAnnualLeave = false
+    private enum SpecialRuleItem { case splitDuty, reserve, deadheading }
+    @State private var expandedSpecialRule: SpecialRuleItem? = nil
+
+    // Retained for dead-code specialScenariosSection
     @State private var expandReserve = false
     @State private var expandDeadheading = false
 
@@ -156,7 +160,7 @@ struct SH_NextDutyView: View {
                 }
             }
             .pickerStyle(.menu)
-            .font(.caption)
+            .font(.subheadline)
         }
     }
 
@@ -167,7 +171,7 @@ struct SH_NextDutyView: View {
                 .foregroundStyle(.secondary)
 
             Text(formatTime(hours))
-                .font(.body)
+                .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundStyle(color)
         }
@@ -262,7 +266,7 @@ struct SH_NextDutyView: View {
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Consecutive Nights")
-                                .font(.caption2)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Text("\(lateNight.consecutiveLateNights) / \(lateNight.maxConsecutiveLateNights)")
                                 .font(.subheadline)
@@ -271,7 +275,7 @@ struct SH_NextDutyView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Duty Hours (7 nights)")
-                                .font(.caption2)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Text("\(formatHoursMinutes(lateNight.dutyHoursIn7Nights)) / \(formatHoursMinutes(lateNight.maxDutyHoursIn7Nights)) hrs")
                                 .font(.subheadline)
@@ -335,57 +339,137 @@ struct SH_NextDutyView: View {
 
     // MARK: - Special Rules Section
 
+    private func accordionBinding(for item: SpecialRuleItem) -> Binding<Bool> {
+        Binding(
+            get: { expandedSpecialRule == item },
+            set: { expandedSpecialRule = $0 ? item : nil }
+        )
+    }
+
     private func specialRulesSection() -> some View {
         let isPlanning = viewModel.selectedLimitType == .planning
-        let sleepingIncrease = Int(SH_Planning_FltDuty.splitDutyRules.maxDutyIncreaseHours)
-        let sleepingMax = Int(SH_Planning_FltDuty.splitDutyRules.maxTotalDutyHours)
-        let reserveHrs = Int(isPlanning
-            ? SH_Planning_FltDuty.reserveDutyMaxConsecutiveHours
-            : SH_Operational_FltDuty.reserveDutyMaxConsecutiveHours)
-        let deadheadMax = Int(isPlanning
-            ? SH_Planning_FltDuty.deadheadingAbsoluteMaxDutyHours
-            : SH_Operational_FltDuty.deadheadingAbsoluteMaxDutyHours)
-
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 12) {
             Text("Special Rules")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
 
-            ruleRow(icon: "bed.double", label: "Split Duty (Sleeping)", value: "+\(sleepingIncrease) hrs · max \(sleepingMax) hrs")
+            VStack(spacing: 8) {
+                DisclosureGroup(
+                    isExpanded: accordionBinding(for: .splitDuty),
+                    content: {
+                        splitDutyContent(isPlanning: isPlanning)
+                            .padding(.top, 8)
+                    },
+                    label: {
+                        Text("Split Duty")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                )
+                .padding()
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            if !isPlanning {
-                let restingIncrease = Int(SH_Operational_FltDuty.splitDutyRulesByResting.maxDutyIncreaseHours)
-                ruleRow(icon: "chair.lounge", label: "Split Duty (Resting)", value: "+\(restingIncrease) hrs")
-            }
+                DisclosureGroup(
+                    isExpanded: accordionBinding(for: .reserve),
+                    content: {
+                        reserveDutyContent(isPlanning: isPlanning)
+                            .padding(.top, 8)
+                    },
+                    label: {
+                        Text("Reserve Duty")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                )
+                .padding()
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            ruleRow(icon: "phone", label: "Reserve Duty", value: "Max \(reserveHrs) consecutive hrs")
-
-            ruleRow(icon: "airplane", label: "Deadheading", value: "Max \(deadheadMax) hrs total duty")
-
-            if !isPlanning {
-                Text("Pilot may extend FD23.1 limits at discretion (FD25.2)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.leading, 28)
+                DisclosureGroup(
+                    isExpanded: accordionBinding(for: .deadheading),
+                    content: {
+                        deadheadingContent(isPlanning: isPlanning)
+                            .padding(.top, 8)
+                    },
+                    label: {
+                        Text("Deadheading")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                )
+                .padding()
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
     }
 
-    private func ruleRow(icon: String, label: String, value: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .frame(width: 20)
-                .foregroundStyle(.secondary)
+    private func splitDutyContent(isPlanning: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if isPlanning {
+                let rules = SH_Planning_FltDuty.splitDutyRules
+                bulletPoint(text: "Min rest: \(Int(rules.minRestHours)) hrs at suitable sleeping accommodation")
+                bulletPoint(text: "Max duty increase: +\(Int(rules.maxDutyIncreaseHours)) hrs above FD13.1 limits")
+                bulletPoint(text: "Max total duty: \(Int(rules.maxTotalDutyHours)) hrs")
+                bulletPoint(text: "Rest discount: \(Int(rules.restDiscountFraction * 100))% (max \(Int(rules.maxRestDiscountHours)) hrs)")
+                Text("Night window \(rules.nightWindowStart)–\(rules.nightWindowEnd):")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+                bulletPoint(text: "Rest must be uninterrupted ≥\(Int(rules.nightRestMinUninterruptedHours)) hrs")
+                bulletPoint(text: "Max FDP \(Int(rules.nightRestMaxTotalDutyHours)) hrs; no rest discounting")
+            } else {
+                let sleeping = SH_Operational_FltDuty.splitDutyRulesBySleeping
+                let resting  = SH_Operational_FltDuty.splitDutyRulesByResting
+                Text("Sleeping accommodation")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                bulletPoint(text: "Min \(Int(sleeping.minRestHours)) hrs rest → +\(Int(sleeping.maxDutyIncreaseHours)) hrs duty, max \(Int(sleeping.maxTotalDutyHours ?? 0)) hrs")
+                if let frac = sleeping.restDiscountFraction, let maxDisc = sleeping.maxRestDiscountHours {
+                    bulletPoint(text: "Rest discount: \(Int(frac * 100))% (max \(Int(maxDisc)) hrs)")
+                }
+                Text("Resting accommodation")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 4)
+                bulletPoint(text: "Min \(Int(resting.minRestHours)) hrs rest → +\(Int(resting.maxDutyIncreaseHours)) hrs duty (no stated max)")
+                bulletPoint(text: "No rest discounting")
+                Text("Night window \(sleeping.nightWindowStart)–\(sleeping.nightWindowEnd):")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 4)
+                bulletPoint(text: "Uninterrupted ≥\(Int(sleeping.nightRestMinUninterruptedHours)) hrs; max FDP \(Int(sleeping.nightRestMaxTotalDutyHours)) hrs; no discount")
+            }
+        }
+    }
 
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private func reserveDutyContent(isPlanning: Bool) -> some View {
+        let maxHrs = isPlanning
+            ? SH_Planning_FltDuty.reserveDutyMaxConsecutiveHours
+            : SH_Operational_FltDuty.reserveDutyMaxConsecutiveHours
+        let clause = isPlanning ? "FD13.5" : "FD23.5"
+        return VStack(alignment: .leading, spacing: 6) {
+            bulletPoint(text: "Max \(Int(maxHrs)) consecutive hrs (\(clause))")
+            bulletPoint(text: "Must have suitable sleeping accommodation")
+            bulletPoint(text: "Free from all duties associated with employment")
+        }
+    }
 
-            Text(value)
-                .font(.subheadline)
-                .fontWeight(.semibold)
+    private func deadheadingContent(isPlanning: Bool) -> some View {
+        let maxDuty = isPlanning
+            ? SH_Planning_FltDuty.deadheadingAbsoluteMaxDutyHours
+            : SH_Operational_FltDuty.deadheadingAbsoluteMaxDutyHours
+        let clause = isPlanning ? "FD15" : "FD25"
+        return VStack(alignment: .leading, spacing: 6) {
+            bulletPoint(text: "Absolute max duty with flight duty: \(Int(maxDuty)) hrs (\(clause).6)")
+            bulletPoint(text: "Deadheading counts toward total duty for rest calculation")
+            bulletPoint(text: "Last sector if deadhead: does not count toward sector limit")
+            bulletPoint(text: "Deadhead before flight duty: counts as a sector")
+            if !isPlanning {
+                bulletPoint(text: "Operational: may extend FD23.1 limits at pilot discretion (\(clause).2)")
+            }
         }
     }
 
@@ -582,7 +666,7 @@ struct SH_NextDutyView: View {
                                 Text("/\(maxConsec)")
                                     .font(.subheadline).foregroundStyle(.secondary)
                             }
-                            Text("Cons. Days").font(.footnote).foregroundStyle(.primary)
+                            Text("Cons. Days").font(.subheadline).foregroundStyle(.primary)
                         }
                     }
 
@@ -595,7 +679,7 @@ struct SH_NextDutyView: View {
                                 Text("/\(maxDuty11)")
                                     .font(.subheadline).foregroundStyle(.secondary)
                             }
-                            Text("in 11 Days").font(.footnote).foregroundStyle(.primary)
+                            Text("in 11 Days").font(.subheadline).foregroundStyle(.primary)
                         }
                     }
 
@@ -608,7 +692,7 @@ struct SH_NextDutyView: View {
                                 Text("/\(maxEarly)")
                                     .font(.subheadline).foregroundStyle(.secondary)
                             }
-                            Text("Early Starts").font(.footnote).foregroundStyle(.primary)
+                            Text("Early Starts").font(.subheadline).foregroundStyle(.primary)
                         }
                     }
 
@@ -621,7 +705,7 @@ struct SH_NextDutyView: View {
                                 Text("/\(maxLate)")
                                     .font(.subheadline).foregroundStyle(.secondary)
                             }
-                            Text("Late Nights").font(.footnote).foregroundStyle(.primary)
+                            Text("Late Nights").font(.subheadline).foregroundStyle(.primary)
                         }
                     }
                 }
