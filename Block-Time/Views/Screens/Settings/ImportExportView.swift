@@ -534,35 +534,39 @@ private struct ActionButton: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundColor(.white)
+                    .foregroundColor(color)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
 
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
                 if isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .progressViewStyle(CircularProgressViewStyle(tint: color))
                         .scaleEffect(0.8)
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(color.opacity(0.7))
                 }
             }
             .padding(16)
-            .background(color.opacity(0.85))
+            .background(color.opacity(0.12))
             .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(color.opacity(0.4), lineWidth: 1)
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -662,14 +666,21 @@ struct WebCISMappingView: View {
                     }) {
                         HStack {
                             Image(systemName: "airplane")
+                                .foregroundColor(.blue)
                             Text(registrationMappings.isEmpty ? "Setup Aircraft Types" : "Edit Aircraft Types")
+                                .foregroundColor(.primary)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
+                                .foregroundColor(Color.blue.opacity(0.7))
                         }
                         .padding()
-                        .background(Color.blue.opacity(0.1))
+                        .background(Color.blue.opacity(0.12))
                         .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.blue.opacity(0.4), lineWidth: 1)
+                        )
                     }
                 }
                 .padding(.horizontal)
@@ -683,14 +694,19 @@ struct WebCISMappingView: View {
                 }) {
                     HStack {
                         Image(systemName: "arrow.down.circle.fill")
+                            .foregroundColor(.green)
                         Text("Import webCIS Data")
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.green)
-                    .foregroundColor(.white)
+                    .background(Color.green.opacity(0.12))
                     .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.green.opacity(0.4), lineWidth: 1)
+                    )
                 }
                 .padding()
             }
