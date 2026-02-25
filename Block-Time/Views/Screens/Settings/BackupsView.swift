@@ -316,35 +316,39 @@ private struct ActionButton: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundColor(.white)
+                    .foregroundColor(color)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
 
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
                 if isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .progressViewStyle(CircularProgressViewStyle(tint: color))
                         .scaleEffect(0.8)
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(color.opacity(0.7))
                 }
             }
             .padding(16)
-            .background(color.opacity(0.85))
+            .background(color.opacity(0.12))
             .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(color.opacity(0.4), lineWidth: 1)
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -469,29 +473,33 @@ private struct BackupDetailSheet: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "trash.fill")
                                     .font(.title3)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.red)
                                     .frame(width: 24)
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Delete this Backup")
                                         .font(.subheadline)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.primary)
 
                                     Text("Permanently remove this backup file")
                                         .font(.caption)
-                                        .foregroundColor(.white.opacity(0.9))
+                                        .foregroundColor(.secondary)
                                 }
 
                                 Spacer()
 
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundColor(.white.opacity(0.9))
+                                    .foregroundColor(Color.red.opacity(0.7))
                             }
                             .padding(16)
-                            .background(Color.red.opacity(0.75))
+                            .background(Color.red.opacity(0.12))
                             .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                            )
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -776,7 +784,7 @@ struct ManageBackupsView: View {
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: "doc.badge.arrow.up.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(.blue)
                         .font(.title3)
                         .frame(width: 24)
 
@@ -784,22 +792,26 @@ struct ManageBackupsView: View {
                         Text("Choose File")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
 
                         Text("Browse and select a backup file")
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundColor(.secondary)
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(Color.blue.opacity(0.7))
                 }
                 .padding(16)
-                .background(Color.blue.opacity(0.85))
+                .background(Color.blue.opacity(0.12))
                 .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.blue.opacity(0.4), lineWidth: 1)
+                )
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -1005,8 +1017,12 @@ private struct RestoreModeSheet: View {
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray6))
+                        .background(Color.green.opacity(0.12))
                         .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.green.opacity(0.4), lineWidth: 1)
+                        )
                     }
                     .buttonStyle(PlainButtonStyle())
 
@@ -1029,8 +1045,12 @@ private struct RestoreModeSheet: View {
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray6))
+                        .background(Color.orange.opacity(0.12))
                         .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                        )
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -1042,11 +1062,15 @@ private struct RestoreModeSheet: View {
                 Button(action: onCancel) {
                     Text("Cancel")
                         .font(.headline)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemGray5))
+                        .background(Color(.systemGray6))
                         .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color(.systemGray4), lineWidth: 1)
+                        )
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
