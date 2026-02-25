@@ -250,14 +250,19 @@ struct MigrationImportView: View {
                 }) {
                     HStack {
                         Image(systemName: "square.and.arrow.down.fill")
+                            .foregroundColor(.orange)
                         Text("Import Data")
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(selectedFileURL == nil ? Color.gray : Color.orange)
-                    .foregroundColor(.white)
+                    .background(Color.orange.opacity(0.12))
                     .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                    )
                 }
                 .disabled(selectedFileURL == nil)
                 .padding(.horizontal)
@@ -268,14 +273,19 @@ struct MigrationImportView: View {
                 }) {
                     HStack {
                         Image(systemName: "doc.badge.plus")
+                            .foregroundColor(.blue)
                         Text(selectedFileURL == nil ? "Select Migration File" : "Choose Different File")
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
+                    .background(Color.blue.opacity(0.12))
                     .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.blue.opacity(0.4), lineWidth: 1)
+                    )
                 }
                 .padding(.horizontal)
             }
@@ -481,14 +491,19 @@ struct MigrationImportView: View {
             }) {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
                     Text("Done")
                         .fontWeight(.semibold)
+                        .foregroundColor(.primary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.green)
-                .foregroundColor(.white)
+                .background(Color.green.opacity(0.12))
                 .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.green.opacity(0.4), lineWidth: 1)
+                )
             }
             .padding(.horizontal)
             .padding(.bottom)

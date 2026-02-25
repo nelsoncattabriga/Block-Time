@@ -124,18 +124,23 @@ struct ExportLogbookView: View {
                 HStack {
                     if isExporting {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .progressViewStyle(CircularProgressViewStyle(tint: .indigo))
                     } else {
                         Image(systemName: "square.and.arrow.up.fill")
+                            .foregroundColor(.indigo)
                     }
                     Text(isExporting ? "Exporting..." : "Export Logbook")
                         .fontWeight(.semibold)
+                        .foregroundColor(.primary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(isExporting || flightCount == 0 ? Color.gray : Color.indigo)
-                .foregroundColor(.white)
+                .background(Color.indigo.opacity(0.12))
                 .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.indigo.opacity(0.4), lineWidth: 1)
+                )
             }
             .disabled(isExporting || flightCount == 0)
             .padding(.horizontal)
@@ -201,14 +206,19 @@ struct ExportLogbookView: View {
                 }) {
                     HStack {
                         Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.indigo)
                         Text("Share Export File")
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.indigo)
-                    .foregroundColor(.white)
+                    .background(Color.indigo.opacity(0.12))
                     .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.indigo.opacity(0.4), lineWidth: 1)
+                    )
                 }
                 .padding(.horizontal)
 
@@ -219,9 +229,13 @@ struct ExportLogbookView: View {
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.gray.opacity(0.2))
-                        .foregroundColor(.primary)
+                        .background(Color(.systemGray6))
+                        .foregroundColor(.secondary)
                         .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color(.systemGray4), lineWidth: 1)
+                        )
                 }
                 .padding(.horizontal)
                 .padding(.bottom)

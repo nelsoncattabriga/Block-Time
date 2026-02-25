@@ -91,18 +91,23 @@ struct UnifiedRosterImportView: View {
                     HStack {
                         if isProcessing {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                         } else {
                             Image(systemName: "square.and.arrow.down.fill")
+                                .foregroundColor(.blue)
                         }
                         Text(isProcessing ? "Processing..." : "Select Roster File")
                             .fontWeight(.semibold)
+                            .foregroundColor(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(isProcessing ? Color.gray : Color.blue)
-                    .foregroundColor(.white)
+                    .background(Color.blue.opacity(0.12))
                     .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.blue.opacity(0.4), lineWidth: 1)
+                    )
                 }
                 .disabled(isProcessing)
                 .padding(.horizontal)
@@ -135,18 +140,23 @@ struct UnifiedRosterImportView: View {
                             HStack {
                                 if isProcessing {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                                 } else {
                                     Image(systemName: "doc.text.magnifyingglass")
+                                        .foregroundColor(.blue)
                                 }
                                 Text(isProcessing ? "Processing..." : "Process")
                                     .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(isProcessing || pastedRoster.isEmpty ? Color.gray : Color.blue)
-                            .foregroundColor(.white)
+                            .background(Color.blue.opacity(0.12))
                             .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.blue.opacity(0.4), lineWidth: 1)
+                            )
                         }
                         .disabled(isProcessing || pastedRoster.isEmpty)
 
@@ -156,14 +166,19 @@ struct UnifiedRosterImportView: View {
                         }) {
                             HStack {
                                 Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
                                 Text("Clear")
                                     .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(pastedRoster.isEmpty ? Color.gray : Color.red)
-                            .foregroundColor(.white)
+                            .background(Color.red.opacity(0.12))
                             .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                            )
                         }
                         .disabled(pastedRoster.isEmpty)
                     }

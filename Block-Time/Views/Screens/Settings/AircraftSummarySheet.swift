@@ -248,9 +248,13 @@ struct AircraftSummarySheet: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.red.opacity(0.1))
+            .background(Color.red.opacity(0.12))
             .foregroundColor(.red)
             .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.red.opacity(0.4), lineWidth: 1)
+            )
         }
         .padding(.top, 8)
     }
