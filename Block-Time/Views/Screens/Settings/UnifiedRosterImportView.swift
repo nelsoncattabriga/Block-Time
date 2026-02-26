@@ -77,7 +77,7 @@ struct UnifiedRosterImportView: View {
                         title: "Share from Mail",
                         steps: [
                             "In webCIS, tap Send My Roster",
-                            "Open the email in Mail, then long-press the attached file",
+                            "Open the email in Mail, then long-press the attached file / tap to open",
                             "Tap Share and select Block-Time from the app row",
                             "You may need to scroll to the right to find it",
                             "Tap 'More' to edit the list"
@@ -695,8 +695,6 @@ private struct FlightSummaryRow: View {
         return formatter.string(from: date)
     }
 }
-
-// PasteOnlyTextView and NoKeyboardTextView are now in PasteOnlyTextView.swift
 
 #Preview {
     UnifiedRosterImportView()
