@@ -16,6 +16,8 @@ struct SupportView: View {
     @State private var showingRecalculateConfirm = false
     @State private var isRecalculating = false
     @State private var recalculateResult: String?
+    @State private var showingUUIDRegenerationAlert = false
+    @State private var uuidRegenerationMessage = ""
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
@@ -126,12 +128,12 @@ struct SupportView: View {
                                     .frame(width: 20)
 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("iCloud & DB Debug")
+                                    Text("iCloud Debug")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundColor(.primary)
 
-                                    Text("Don't Use Unless Directed")
+                                    Text("Shows error simulation in iCloud Sync Status")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -147,7 +149,7 @@ struct SupportView: View {
                             .cornerRadius(8)
 
                             if debugModeEnabled {
-                                Text("Debug buttons will appear in iCloud Sync Status")
+                                Text("Error simulation buttons will appear in iCloud Sync Status")
                                     .font(.caption)
                                     .foregroundColor(.orange)
                                     .multilineTextAlignment(.center)
@@ -196,8 +198,54 @@ struct SupportView: View {
                                     .multilineTextAlignment(.center)
                                     .padding(.top, 4)
                             }
+
+                            // Regenerate UUIDs Button
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                let result = FlightDatabaseService.shared.regenerateAllFlightUUIDs()
+                                var message = "Updated \(result.updatedCount) flights\nRemoved \(result.duplicatesRemoved) duplicates"
+                                if !result.duplicatesList.isEmpty {
+                                    message += "\n\nDuplicates removed:"
+                                    for duplicate in result.duplicatesList.prefix(10) {
+                                        message += "\n• \(duplicate)"
+                                    }
+                                    if result.duplicatesList.count > 10 {
+                                        message += "\n... and \(result.duplicatesList.count - 10) more"
+                                    }
+                                }
+                                uuidRegenerationMessage = message
+                                showingUUIDRegenerationAlert = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .foregroundColor(.blue)
+                                        .frame(width: 20)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Regenerate UUIDs & De-dupe DB")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+
+                                        Text("Fixes duplicate flights and regenerates identifiers")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
+                                }
+                                .padding(12)
+                                .background(Color(.orange).opacity(0.5))
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                         .padding(.top, 8)
+                        .alert("UUID Regeneration Complete", isPresented: $showingUUIDRegenerationAlert) {
+                            Button("OK", role: .cancel) { }
+                        } message: {
+                            Text(uuidRegenerationMessage)
+                        }
                     },
                     label: {
                         HStack {
@@ -277,7 +325,8 @@ struct SupportView: View {
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         SupportView()
     }
+    .environment(ThemeService.shared)
 }

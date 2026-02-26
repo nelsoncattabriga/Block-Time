@@ -1619,9 +1619,6 @@ struct ModernCloudKitSyncCard: View {
     @Environment(CloudKitSettingsSyncService.self) var settingsService
     @AppStorage("debugModeEnabled") private var debugModeEnabled = false
 
-    @State private var showUUIDRegenerationAlert = false
-    @State private var uuidRegenerationMessage = ""
-
     var body: some View {
         VStack(spacing: 16) {
             // Header
@@ -1757,49 +1754,6 @@ struct ModernCloudKitSyncCard: View {
                         }
                         .padding(.top, 4)
 
-                        // Database Maintenance
-                        Divider()
-                            .padding(.horizontal, -4)
-                            .padding(.top, 8)
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Debug: Database Maintenance")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.orange)
-
-                            Button(action: {
-                                let result = databaseService.regenerateAllFlightUUIDs()
-                                print("UUID Regeneration: Updated \(result.updatedCount) flights, removed \(result.duplicatesRemoved) duplicates")
-
-                                // Build message with duplicate details
-                                var message = "Updated \(result.updatedCount) flights\nRemoved \(result.duplicatesRemoved) duplicates"
-
-                                if !result.duplicatesList.isEmpty {
-                                    message += "\n\nDuplicates removed:"
-                                    for duplicate in result.duplicatesList.prefix(10) {
-                                        message += "\n• \(duplicate)"
-                                    }
-                                    if result.duplicatesList.count > 10 {
-                                        message += "\n... and \(result.duplicatesList.count - 10) more"
-                                    }
-                                }
-
-                                uuidRegenerationMessage = message
-                                showUUIDRegenerationAlert = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .font(.caption)
-                                    Text("Regenerate UUIDs & Remove Duplicates")
-                                        .font(.caption)
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.blue)
-                        }
-                        .padding(.top, 4)
                     }
                 }
             }
@@ -1812,11 +1766,6 @@ struct ModernCloudKitSyncCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.blue.opacity(0.2), lineWidth: 1)
         )
-        .alert("UUID Regeneration Complete", isPresented: $showUUIDRegenerationAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(uuidRegenerationMessage)
-        }
     }
 
     @ViewBuilder
