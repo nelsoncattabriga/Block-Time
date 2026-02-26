@@ -157,7 +157,10 @@ private struct GuideWebView: UIViewRepresentable {
 
         func startObserving(_ webView: WKWebView) {
             progressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] webView, _ in
-                self?.parent.estimatedProgress = webView.estimatedProgress
+                let progress = webView.estimatedProgress
+                Task { @MainActor [weak self] in
+                    self?.parent.estimatedProgress = progress
+                }
             }
         }
 
