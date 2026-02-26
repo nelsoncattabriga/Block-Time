@@ -127,7 +127,7 @@ struct UnifiedRosterImportView: View {
                         steps: [
                             "In webCIS, tap Send My Roster",
                             "Open the email in Mail and tap the attached file to preview it",
-                            "Tap Select All then Copy",
+                            "Tap Select All, then Copy",
                             "Paste into the field below",
                             "Tap 'Process'"
                         ]
@@ -380,7 +380,7 @@ private struct ImportNoticeBanner: View {
                     .font(.subheadline)
                     .fontWeight(.bold)
 
-                Text("Import only works with the file **EMAILED** from webCIS via **SEND MY ROSTER**")
+                Text("Import will only work with the file **EMAILED** from webCIS via **SEND MY ROSTER**")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

@@ -34,6 +34,9 @@ struct ImportExportView: View {
     @State private var webCISImportData: ImportData?
     @State private var showingWebCISMappingSheet = false
 
+    // webCIS instructions state
+    @State private var showingWebCISInstructions = false
+
     // Roster import state
     @State private var showingRosterImport = false
 
@@ -143,6 +146,13 @@ struct ImportExportView: View {
         } message: {
             Text("This will permanently delete all data.")
         }
+        .sheet(isPresented: $showingWebCISInstructions) {
+            WebCISImportInstructionsView {
+                activeFilePickerMode = .webCIS
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showingRosterImport) {
             UnifiedRosterImportView()
                 .presentationDetents([.large])
@@ -245,9 +255,7 @@ struct ImportExportView: View {
                     color: .orange.opacity(0.8),
                     isLoading: false
                 ) {
-                    print("🔘 Import webCIS button tapped")
-                    activeFilePickerMode = .webCIS
-                    print("🔘 activeFilePickerMode set to: \(String(describing: activeFilePickerMode))")
+                    showingWebCISInstructions = true
                 }
                 .disabled(isImportingWebCIS)
 
