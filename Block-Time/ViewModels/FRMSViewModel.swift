@@ -162,24 +162,9 @@ class FRMSViewModel {
                 LogManager.shared.debug("  Recent duty: signOn=\(timeFormatter.string(from: duty.signOn)), signOff=\(timeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
             }
 
-            // Filter to only completed flights (past dates only, not future)
-            // Use IN time (actual landing) to determine if a duty is complete for display purposes
-            // This allows flights to appear immediately after landing, not after sign-off buffer
-            let now = Date()
-            let signOffBufferSeconds = TimeInterval(config.signOffMinutesAfterIN * 60)
-            let completedDuties = duties.filter { duty in
-                // Calculate effective IN time by subtracting sign-off buffer from sign-off
-                let effectiveInTime = duty.signOff.addingTimeInterval(-signOffBufferSeconds)
-                let isComplete = effectiveInTime <= now
-
-                // Debug logging for recent duties
-                // let formatter = DateFormatter()
-                // formatter.dateFormat = "dd/MM HHmm"
-                // formatter.timeZone = TimeZone.current
-                // LogManager.shared.debug("FRMS Duty: signOff=\(formatter.string(from: duty.signOff)), effectiveIN=\(formatter.string(from: effectiveInTime)), now=\(formatter.string(from: now)), included=\(isComplete)")
-
-                return isComplete
-            }
+            // Filter to only completed duties — a duty is complete when its last flight
+            // has an actual IN time entered. If no IN time, the duty is still in progress.
+            let completedDuties = duties.filter { $0.hasActualINTime }
 
             // Filter duties to last 365 days (duty dates can differ from flight dates due to timezone adjustments)
             // Note: We already fetched flights from last 365 days, but duty grouping can shift dates slightly
@@ -282,24 +267,9 @@ class FRMSViewModel {
             LogManager.shared.debug("  Recent duty: signOn=\(timeFormatter.string(from: duty.signOn)), signOff=\(timeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
         }
 
-        // Filter to only completed flights (past dates only, not future)
-        // Use IN time (actual landing) to determine if a duty is complete for display purposes
-        // This allows flights to appear immediately after landing, not after sign-off buffer
-        let now = Date()
-        let signOffBufferSeconds = TimeInterval(config.signOffMinutesAfterIN * 60)
-        let completedDuties = duties.filter { duty in
-            // Calculate effective IN time by subtracting sign-off buffer from sign-off
-            let effectiveInTime = duty.signOff.addingTimeInterval(-signOffBufferSeconds)
-            let isComplete = effectiveInTime <= now
-
-            // Debug logging for recent duties
-            // let formatter = DateFormatter()
-            // formatter.dateFormat = "dd/MM HHmm"
-            // formatter.timeZone = TimeZone.current
-            // LogManager.shared.debug("FRMS Duty: signOff=\(formatter.string(from: duty.signOff)), effectiveIN=\(formatter.string(from: effectiveInTime)), now=\(formatter.string(from: now)), included=\(isComplete)")
-
-            return isComplete
-        }
+        // Filter to only completed duties — a duty is complete when its last flight
+        // has an actual IN time entered. If no IN time, the duty is still in progress.
+        let completedDuties = duties.filter { $0.hasActualINTime }
 
         // Filter duties to last 365 days (duty dates can differ from flight dates due to timezone adjustments)
         // Note: We already fetched flights from last 365 days, but duty grouping can shift dates slightly
@@ -647,6 +617,7 @@ class FRMSViewModel {
                     nightTime: duty.nightTime,
                     sectors: duty.sectors,
                     isInternational: duty.isInternational,
+                    hasActualINTime: duty.hasActualINTime,
                     homeBaseTimeZone: homeTimeZone
                 )
             }
@@ -706,6 +677,7 @@ class FRMSViewModel {
             nightTime: totalNightTime,
             sectors: totalSectors,
             isInternational: isInternational,
+            hasActualINTime: lastDuty.hasActualINTime,
             homeBaseTimeZone: homeTimeZone
         )
     }

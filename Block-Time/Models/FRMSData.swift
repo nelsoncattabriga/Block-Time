@@ -268,6 +268,7 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
     let sectors: Int
     let timeClass: OperationTimeClass
     let isInternational: Bool
+    let hasActualINTime: Bool   // true when built from entered OUT/IN times (not scheduled STA)
 
     init(id: UUID = UUID(),
          date: Date,
@@ -280,6 +281,7 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
          nightTime: Double = 0,
          sectors: Int,
          isInternational: Bool = false,
+         hasActualINTime: Bool = false,
          homeBaseTimeZone: TimeZone = TimeZone(identifier: "Australia/Sydney")!) {
 
         self.id = id
@@ -293,6 +295,7 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
         self.nightTime = nightTime
         self.sectors = sectors
         self.isInternational = isInternational
+        self.hasActualINTime = hasActualINTime
 
         // Calculate duty time (sign-on to sign-off) using standardized conversion
         self.dutyTime = signOff.timeIntervalSince(signOn).toDecimalHours

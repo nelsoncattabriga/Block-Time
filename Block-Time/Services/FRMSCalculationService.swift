@@ -1805,6 +1805,7 @@ class FRMSCalculationService {
             nightTime: nightTime,
             sectors: 1,  // Each FlightSector is 1 sector
             isInternational: isInternational,
+            hasActualINTime: !flightSector.outTime.isEmpty && !flightSector.inTime.isEmpty,
             homeBaseTimeZone: homeTimeZone
         )
     }
