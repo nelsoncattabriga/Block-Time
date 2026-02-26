@@ -222,7 +222,7 @@ struct SupportView: View {
                                         .frame(width: 20)
 
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("Regenerate UUIDs & De-dupe DB")
+                                        Text("Regen UUIDs & Remove Duplicates")
                                             .font(.subheadline)
                                             .fontWeight(.medium)
                                             .foregroundColor(.primary)
