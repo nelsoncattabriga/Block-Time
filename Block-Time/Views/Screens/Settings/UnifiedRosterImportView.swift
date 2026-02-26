@@ -55,9 +55,6 @@ struct UnifiedRosterImportView: View {
                         .font(.title2)
                         .fontWeight(.bold)
 
-//                    Text("Supports both Short Haul and Long Haul rosters")
-//                        .font(.caption)
-//                        .foregroundColor(.secondary)
                 }
                 .padding(.top)
 
@@ -81,7 +78,9 @@ struct UnifiedRosterImportView: View {
                         steps: [
                             "In webCIS, tap Send My Roster",
                             "Open the email in Mail, then long-press the attached file",
-                            "Tap Share and select Block-Time from the app row"
+                            "Tap Share and select Block-Time from the app row",
+                            "You may need to scroll to the right to find it",
+                            "Tap 'More' to edit the list"
                         ]
                     ) { EmptyView() }
                     .padding(.horizontal)
@@ -128,7 +127,9 @@ struct UnifiedRosterImportView: View {
                         steps: [
                             "In webCIS, tap Send My Roster",
                             "Open the email in Mail and tap the attached file to preview it",
-                            "Tap Select All then Copy, then paste into the field below and tap 'Process'"
+                            "Tap Select All then Copy",
+                            "Paste into the field below",
+                            "Tap 'Process'"
                         ]
                     ) {
                         Divider()
@@ -379,7 +380,7 @@ private struct ImportNoticeBanner: View {
                     .font(.subheadline)
                     .fontWeight(.bold)
 
-                Text("Import only works with the file **emailed** from webCIS via **Send My Roster**")
+                Text("Import only works with the file **EMAILED** from webCIS via **SEND MY ROSTER**")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -429,9 +430,9 @@ private struct ImportMethodCard<Action: View>: View {
                 ZStack {
                     Circle()
                         .fill(iconColor.opacity(0.12))
-                        .frame(width: 42, height: 42)
+                        .frame(width: 36, height: 36)
                     Image(systemName: icon)
-                        .font(.subheadline)
+                        .font(.headline)
                         .foregroundColor(iconColor)
                 }
 
@@ -472,7 +473,7 @@ private struct ImportMethodCard<Action: View>: View {
             action
         }
         .padding()
-        .background(Color(.secondarySystemBackground))
+        .background(Color(.secondarySystemBackground).overlay(iconColor.opacity(0.05)))
         .cornerRadius(14)
         .overlay(
             RoundedRectangle(cornerRadius: 14)
