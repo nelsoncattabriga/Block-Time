@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FRMS Planning Limits — A320/B737 Rev 4.2</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --accent: #3b82f6;
+    --accent-dim: rgba(59, 130, 246, 0.12);
+    --text: #e4e4e7;
+    --muted: #9ca3af;
+    --header-bg: #1e2130;
+    --val-color: #f9fafb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    line-height: 1.5;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .badge {
+    display: inline-block; background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 4px; margin-right: 8px; vertical-align: middle;
+  }
+  .subtitle { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .section-title {
+    font-size: 15px; font-weight: 700; color: #fff;
+    margin: 28px 0 12px 0; padding-left: 12px; border-left: 3px solid var(--accent);
+  }
+  .clause-ref { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; margin-bottom: 16px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--header-bg); color: var(--muted); font-weight: 600;
+    text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.5px;
+    padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  .val { font-weight: 700; color: var(--val-color); font-size: 15px; font-variant-numeric: tabular-nums; }
+  .val-unit { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 2px; }
+  .note { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .note-block {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 16px; font-size: 12.5px; color: var(--muted); line-height: 1.6;
+  }
+  .note-block strong { color: var(--text); }
+  .time-badge {
+    display: inline-block; background: var(--accent-dim); color: var(--accent);
+    font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; font-variant-numeric: tabular-nums;
+  }
+  .footer { margin-top: 36px; text-align: center; font-size: 11px; color: var(--muted); opacity: 0.7; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div style="margin-bottom:32px;">
+    <h1><span class="badge">Planning</span> Flight &amp; Duty Limitations</h1>
+    <div class="subtitle">A320 / B737 — Australia-Based Crew — Chapter 1A</div>
+  </div>
+
+  <!-- FLIGHT TIME LIMITS -->
+  <div class="section-title">Flight Time Limits <span class="clause-ref">FD11.1</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Period</th><th>Max Flight Time</th></tr></thead>
+      <tbody>
+        <tr><td>Any consecutive 28 days</td><td><span class="val">100</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>Any consecutive 365 days</td><td><span class="val">1,000</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>Any 13 consecutive bid periods (at roster promulgation)</td><td><span class="val">950</span><span class="val-unit">hrs</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CUMULATIVE DUTY TIME LIMITS -->
+  <div class="section-title">Cumulative Duty Time Limits <span class="clause-ref">FD12</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Period</th><th>Max Duty Time</th></tr></thead>
+      <tbody>
+        <tr><td>Any consecutive 7 days</td><td><span class="val">60</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>Any consecutive 14 days (initial roster publication)</td><td><span class="val">90</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>Any consecutive 14 days (with pilot agreement or open time bid)</td><td><span class="val">100</span><span class="val-unit">hrs</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note-block">
+    <strong>FD12.1</strong> — Simulator training and training flights (excl. line training, line checks, deadheading) factored by <strong>1.5×</strong> for trainee and support pilot.<br>
+    <strong>FD12.2</strong> — Max <strong>9 days</strong> in any <strong>11-day</strong> period; max <strong>6 consecutive</strong> duty days.<br>
+    <strong>FD12.3</strong> — Min <strong>36 hrs</strong> free of all duty in any 7 consecutive days; <em>or</em> 2 consecutive local nights (no later than 22:00 – no earlier than 05:00) in any 8 consecutive nights.
+  </div>
+
+  <!-- MAX DUTY PERIODS — 2 PILOT -->
+  <div class="section-title">Maximum Duty Periods — 2 Pilot Operations <span class="clause-ref">FD13.1</span></div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Local Start Time</th><th>Sectors 1–4</th><th>Sectors 5 or 6</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="time-badge">0500–1459</span></td>
+          <td><span class="val">12</span><span class="val-unit">hrs</span></td>
+          <td><span class="val">11</span><span class="val-unit">hrs</span></td>
+        </tr>
+        <tr>
+          <td><span class="time-badge">1500–1959</span></td>
+          <td><span class="val">11</span><span class="val-unit">hrs</span></td>
+          <td><span class="val">10</span><span class="val-unit">hrs</span></td>
+        </tr>
+        <tr>
+          <td><span class="time-badge">2000–0459</span></td>
+          <td><span class="val">10</span><span class="val-unit">hrs</span></td>
+          <td><span class="val">10</span><span class="val-unit">hrs</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- MAX DUTY — AUGMENTED -->
+  <div class="section-title">Maximum Duty Periods — Augmented Crew <span class="clause-ref">FD13.1</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Rest Facility</th><th>Max Duty</th><th>Sector Limit</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Comfortable seat, separate from and screened from flight deck and passenger compartment, environmentally conducive to rest</td>
+          <td><span class="val">16</span><span class="val-unit">hrs</span></td>
+          <td class="note">Max 2 sectors if FDP scheduled to exceed 14 hours</td>
+        </tr>
+        <tr>
+          <td>Comfortable seat in passenger compartment</td>
+          <td><span class="val">14</span><span class="val-unit">hrs</span></td>
+          <td class="note">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note-block">
+    <strong>FD13.2</strong> — Max duty may be extended to <strong>15 hrs</strong> for a pilot (not based in Sydney or Melbourne) undertaking Emergency Procedures Training at another base. Refer FD6.1 if rostered duty exceeds 13 hrs.
+  </div>
+
+  <!-- FLIGHT TIME — 2 PILOT -->
+  <div class="section-title">Flight Time Limits — 2 Pilot Operations <span class="clause-ref">FD13.3</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Condition</th><th>Max Flight Time</th></tr></thead>
+      <tbody>
+        <tr><td>More than 7 hours of flight time in a duty period conducted in darkness</td><td><span class="val">9.5</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>More than 1 sector scheduled</td><td><span class="val">10</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>All other occasions</td><td><span class="val">10.5</span><span class="val-unit">hrs</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FLIGHT TIME — >2 PILOTS -->
+  <div class="section-title">Flight Time Limits — More Than 2 Pilots <span class="clause-ref">FD13.4</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Condition</th><th>Max Flight Time</th></tr></thead>
+      <tbody>
+        <tr><td>All occasions</td><td><span class="val">10.5</span><span class="val-unit">hrs</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RESERVE DUTY -->
+  <div class="section-title">Reserve Duty <span class="clause-ref">FD13.5</span></div>
+  <div class="note-block">
+    Max <strong>12 consecutive hours</strong>. Access to suitable sleeping accommodation and free from all duties associated with employment.
+  </div>
+
+  <!-- CONSECUTIVE EARLY STARTS -->
+  <div class="section-title">Consecutive Early Starts <span class="clause-ref">FD13.6</span></div>
+  <div class="note-block">
+    Maximum <strong>4 consecutive</strong> duties with sign-on prior to <strong>0706</strong> local time.
+  </div>
+
+  <!-- LATE NIGHT OPERATIONS -->
+  <div class="section-title">Late Night Operations <span class="clause-ref">FD14</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Rule</th><th>Limit</th></tr></thead>
+      <tbody>
+        <tr><td>Max consecutive nights with late night ops in any 7 consecutive night period</td><td><span class="val">4</span><span class="val-unit">nights</span></td></tr>
+        <tr><td>Once per 28 consecutive days: max late night ops in any 7 consecutive night period</td><td><span class="val">5</span><span class="val-unit">nights</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note-block">
+    <strong>FD14.3</strong> — Where &gt;2 duty periods involve late night ops in any 7 consecutive night period:<br>
+    (a) Max <strong>40 hrs</strong> duty in that 7-night period.<br>
+    (b) Max <strong>4 duty periods</strong> in that 7-night period (except per FD14.2).<br>
+    (c) After consecutive late nights: remain on late night ops (up to FD14.1/14.2 limits) <em>and/or</em> min <strong>24 hrs</strong> free of duty before any other duty.<br><br>
+    <strong>FD14.4</strong> — Back of clock operation (≥2 hrs between 0100–0459 local at departure): next duty in Australia sign-on no earlier than <strong>1000 local</strong> the following day.
+  </div>
+
+  <!-- DEADHEADING -->
+  <div class="section-title">Deadheading Following a Flight Duty <span class="clause-ref">FD15</span></div>
+  <div class="note-block">
+    <strong>FD15.1</strong> — May deadhead following flight duty up to <strong>Operational Limits</strong> (FD23.1 table).<br>
+    <strong>FD15.2</strong> — At pilot discretion, FD23.1 limits may be extended when deadheading.<br>
+    <strong>FD15.3</strong> — Deadheading included in total duty period for rest and FDT calculations.<br>
+    <strong>FD15.4</strong> — Deadheading sector (if last sector) does not count in sector determination for max duty.<br>
+    <strong>FD15.5</strong> — Deadheading sector before a flight duty <em>is</em> counted as a sector.<br>
+    <strong>FD15.6</strong> — No duty period with flight duty to exceed <strong>16 hours</strong>.
+  </div>
+
+  <!-- SPLIT DUTY -->
+  <div class="section-title">Split Duty <span class="clause-ref">FD17</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Rule</th><th>Limit</th></tr></thead>
+      <tbody>
+        <tr><td>Minimum rest period at suitable sleeping accommodation</td><td><span class="val">6</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>Max duty increase from FD13.1 limits</td><td>+<span class="val">4</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>Total duty period must not exceed</td><td><span class="val">16</span><span class="val-unit">hrs</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note-block">
+    <strong>FD17.3</strong> — Rest period may be discounted by <strong>50%</strong> (max 4 hrs) for subsequent time free of duty and cumulative duty calculations.<br>
+    <strong>FD17.4</strong> — If rest includes any period between 2300–0530: rest must be uninterrupted min <strong>7 hrs</strong> at suitable sleeping accommodation; max duty may be increased to <strong>16 hrs</strong>; rest discounting <strong>not permitted</strong>.
+  </div>
+
+  <!-- TIME FREE — WITHIN PATTERN -->
+  <div class="section-title">Time Free from Duty — Within a Pattern <span class="clause-ref">FD18.1</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Previous Duty Period</th><th>Min Time Free of Duty</th></tr></thead>
+      <tbody>
+        <tr><td>Does not exceed 12 hours</td><td><span class="val">10</span><span class="val-unit">hrs</span> or as long as previous duty, whichever is greater</td></tr>
+        <tr><td>Exceeds 12 hours</td><td><span class="val">12</span><span class="val-unit">hrs</span> + 1.5 × (duty − 12 hrs)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TIME FREE — FOLLOWING PATTERN -->
+  <div class="section-title">Time Free from Duty — Following a Pattern (Roster Construction) <span class="clause-ref">FD19</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Pattern Length</th><th>Min Time Free of Duty</th></tr></thead>
+      <tbody>
+        <tr><td>1 or 2 day pattern</td><td><span class="val">12</span><span class="val-unit">hrs</span></td></tr>
+        <tr><td>3 or 4 day pattern</td><td><span class="val">15</span><span class="val-unit">hrs</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TIME FREE FROM DUTY -->
+  <div class="section-title">Time Free from Duty <span class="clause-ref">FD20</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Period</th><th>Requirement</th></tr></thead>
+      <tbody>
+        <tr><td>Any consecutive 7 days</td><td>Min <span class="val">36</span><span class="val-unit">hrs</span> free of all duty</td></tr>
+        <tr><td><em>or</em> any consecutive 8 nights</td><td>2 consecutive local nights (no later than 22:00 – no earlier than 05:00)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note-block">
+    <strong>FD20.2</strong> — Either:<br>
+    (a) Min <strong>7 days</strong> free in any 28 consecutive days <em>and</em> min <strong>24 days</strong> free in any 84 consecutive days; <em>or</em><br>
+    (b) Min <strong>8 days</strong> free in any calendar month; <em>and</em><br>
+    (c) Min <strong>26 days</strong> free in any 3 consecutive calendar months.
+  </div>
+
+  <div class="footer">
+    Source: Qantas FRMS Ruleset A320/B737 — Revision 4.1 — 1 October 2024 — Chapter 1A (FD11–FD20)
+  </div>
+
+</div>
+</body>
+</html>
