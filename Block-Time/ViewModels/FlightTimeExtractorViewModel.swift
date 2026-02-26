@@ -189,8 +189,10 @@ class FlightTimeExtractorViewModel: ObservableObject {
         if isSimulator {
             return !blockTime.isEmpty && !flightDate.isEmpty
         }
-        // For regular flights, require OUT, IN, date, and airports
-        return !outTime.isEmpty && !inTime.isEmpty && !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty
+        // For regular flights, require date and airports, plus either OUT/IN times or STD/STA (for future flights)
+        let hasActualTimes = !outTime.isEmpty && !inTime.isEmpty
+        let hasScheduledTimes = !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty
+        return !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty && (hasActualTimes || hasScheduledTimes)
     }
 
     var formattedFlightNumber: String {
@@ -2303,7 +2305,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 return
             }
         } else {
-            guard !outTime.isEmpty && !inTime.isEmpty else {
+            guard !outTime.isEmpty && !inTime.isEmpty || !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty else {
                 showError("No times extracted yet")
                 return
             }
@@ -2317,8 +2319,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
         statusMessage = "Saving to logbook..."
         statusColor = .blue
 
-        // For simulator flights without OUT/IN times, use the blockTime field directly
-        let blockTimeCalculated = (isSimulator && (outTime.isEmpty || inTime.isEmpty)) ? blockTime : calculateFlightTime()
+        // Calculate block time: use OUT/IN if available, otherwise fall back to manual blockTime field (future/sim flights)
+        let blockTimeCalculated = (!outTime.isEmpty && !inTime.isEmpty) ? calculateFlightTime() : (blockTime.isEmpty ? "0.0" : blockTime)
         if nightTime.isEmpty { updateNightTime() }
 
         // Calculate time credits based on selected time credit type
