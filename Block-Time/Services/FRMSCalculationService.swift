@@ -1806,6 +1806,7 @@ class FRMSCalculationService {
             sectors: 1,  // Each FlightSector is 1 sector
             isInternational: isInternational,
             hasActualINTime: !flightSector.outTime.isEmpty && !flightSector.inTime.isEmpty,
+            toAirport: flightSector.toAirport,
             homeBaseTimeZone: homeTimeZone
         )
     }

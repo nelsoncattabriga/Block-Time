@@ -618,6 +618,7 @@ class FRMSViewModel {
                     sectors: duty.sectors,
                     isInternational: duty.isInternational,
                     hasActualINTime: duty.hasActualINTime,
+                    toAirport: duty.toAirport,
                     homeBaseTimeZone: homeTimeZone
                 )
             }
@@ -678,6 +679,7 @@ class FRMSViewModel {
             sectors: totalSectors,
             isInternational: isInternational,
             hasActualINTime: lastDuty.hasActualINTime,
+            toAirport: lastDuty.toAirport,
             homeBaseTimeZone: homeTimeZone
         )
     }

@@ -269,6 +269,7 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
     let timeClass: OperationTimeClass
     let isInternational: Bool
     let hasActualINTime: Bool   // true when built from entered OUT/IN times (not scheduled STA)
+    let toAirport: String       // ICAO code of the last sector's destination
 
     init(id: UUID = UUID(),
          date: Date,
@@ -282,6 +283,7 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
          sectors: Int,
          isInternational: Bool = false,
          hasActualINTime: Bool = false,
+         toAirport: String = "",
          homeBaseTimeZone: TimeZone = TimeZone(identifier: "Australia/Sydney")!) {
 
         self.id = id
@@ -296,6 +298,7 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
         self.sectors = sectors
         self.isInternational = isInternational
         self.hasActualINTime = hasActualINTime
+        self.toAirport = toAirport
 
         // Calculate duty time (sign-on to sign-off) using standardized conversion
         self.dutyTime = signOff.timeIntervalSince(signOn).toDecimalHours

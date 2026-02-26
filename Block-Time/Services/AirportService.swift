@@ -131,6 +131,20 @@ class AirportService {
         return airportData[icaoCode.uppercased()]?.timezoneOffset
     }
 
+    /// Get a TimeZone for an airport ICAO code, accounting for DST on a given date
+    /// - Parameters:
+    ///   - icaoCode: 4-letter ICAO code (e.g., "YSSY")
+    ///   - date: The date used to determine whether DST is active
+    /// - Returns: TimeZone with the correct UTC offset, or nil if airport not found
+    func getTimeZone(for icaoCode: String, on date: Date) -> TimeZone? {
+        guard let airportInfo = airportData[icaoCode.uppercased()] else { return nil }
+        var totalOffset = airportInfo.timezoneOffset
+        if isDSTActive(on: date, dstCode: airportInfo.dstCode) {
+            totalOffset += 1.0
+        }
+        return TimeZone(secondsFromGMT: Int(totalOffset * 3600))
+    }
+
     /// Check if an airport is in Australia
     /// - Parameter code: Airport ICAO or IATA code
     /// - Returns: true if the airport is in Australia (ICAO starts with YB, YM, YP, or YS)

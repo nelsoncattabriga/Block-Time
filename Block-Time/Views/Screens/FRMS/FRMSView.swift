@@ -631,6 +631,13 @@ struct FRMSView: View {
     }
 
     private func formatDateTime(_ date: Date) -> String {
-        Self._dateTimeFormatter.string(from: date)
+        // Display in the arrival airport's local timezone (DST-aware), falling back to UTC
+        let toAirport = viewModel.lastDuty?.toAirport ?? ""
+        if let tz = AirportService.shared.getTimeZone(for: toAirport, on: date) {
+            Self._dateTimeFormatter.timeZone = tz
+        } else {
+            Self._dateTimeFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        }
+        return Self._dateTimeFormatter.string(from: date)
     }
 }
