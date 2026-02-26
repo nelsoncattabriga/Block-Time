@@ -61,130 +61,124 @@ struct UnifiedRosterImportView: View {
                 }
                 .padding(.top)
 
-                // Instructions
+                // webCIS notice banner
+                ImportNoticeBanner()
+                    .padding(.horizontal)
+
+                // Method cards
                 VStack(alignment: .leading, spacing: 12) {
+                    Text("Choose an Import Method")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                        .padding(.horizontal)
 
-                    InstructionRow(
-                        icon: "1.circle.fill",
-                        text: "Select the downloaded roster file; OR"
-                    )
-
-                    InstructionRow(
-                        icon: "2.circle.fill",
-                        text: "Copy & Paste Roster Below; OR"
-                    )
-
-                    InstructionRow(
-                        icon: "3.circle.fill",
-                        text: "Share to Block-Time via Share Sheet"
-                    )
-                }
-                                .padding()
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(12)
-                                .padding(.horizontal)
-
-                // Import Button
-                Button(action: {
-                    showingFilePicker = true
-                }) {
-                    HStack {
-                        if isProcessing {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                        } else {
-                            Image(systemName: "square.and.arrow.down.fill")
-                                .foregroundColor(.blue)
-                        }
-                        Text(isProcessing ? "Processing..." : "Select Roster File")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue.opacity(0.12))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.blue.opacity(0.4), lineWidth: 1)
-                    )
-                }
-                .disabled(isProcessing)
-                .padding(.horizontal)
-                .padding(.bottom)
-
-                Divider()
-
-                VStack(alignment: .leading) {
-                    HStack{
-                        Text("Paste Roster Below")
-                            .font(.headline)
-                    }
-
-                    PasteOnlyTextView(text: $pastedRoster)
-                        .frame(minHeight: 150)
-                        .padding()
-                        .background(Color(.systemBackground))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-
-                    // Process and Clear Buttons
-                    HStack(spacing: 12) {
-                        // Process Button
-                        Button(action: {
-                            processPastedRoster()
-                        }) {
+                    ImportMethodCard(
+                        icon: "square.and.arrow.up",
+                        iconColor: .purple,
+                        title: "Share from Mail",
+                        steps: [
+                            "In webCIS, tap Send My Roster",
+                            "Open the email in Mail, then long-press the attached file",
+                            "Tap Share and select Block-Time from the app row"
+                        ]
+                    ) { EmptyView() }
+                    .padding(.horizontal)
+                    
+                    
+                    ImportMethodCard(
+                        icon: "folder.badge.plus",
+                        iconColor: .blue,
+                        title: "Saved Roster File",
+                        steps: [
+                            "In webCIS, tap Send My Roster",
+                            "Open the email and save the attached file",
+                            "Tap the button below and choose the saved file"
+                        ],
+                    ) {
+                        Divider()
+                        Button {
+                            showingFilePicker = true
+                        } label: {
                             HStack {
                                 if isProcessing {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                                 } else {
-                                    Image(systemName: "doc.text.magnifyingglass")
-                                        .foregroundColor(.blue)
+                                    Image(systemName: "square.and.arrow.down.fill")
                                 }
-                                Text(isProcessing ? "Processing..." : "Process")
+                                Text(isProcessing ? "Processing..." : "Select Roster File")
                                     .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
                             }
                             .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue.opacity(0.12))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.blue.opacity(0.4), lineWidth: 1)
-                            )
+                            .padding(.vertical, 10)
+                            .foregroundColor(.blue)
                         }
-                        .disabled(isProcessing || pastedRoster.isEmpty)
-
-                        // Clear Button
-                        Button(action: {
-                            pastedRoster = ""
-                        }) {
-                            HStack {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.red)
-                                Text("Clear")
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red.opacity(0.12))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.red.opacity(0.4), lineWidth: 1)
-                            )
-                        }
-                        .disabled(pastedRoster.isEmpty)
+                        .disabled(isProcessing)
                     }
+                    .padding(.horizontal)
+
+                    
+
+                    ImportMethodCard(
+                        icon: "doc.on.clipboard",
+                        iconColor: .teal,
+                        title: "Copy & Paste",
+                        steps: [
+                            "In webCIS, tap Send My Roster",
+                            "Open the email in Mail and tap the attached file to preview it",
+                            "Tap Select All then Copy, then paste into the field below and tap 'Process'"
+                        ]
+                    ) {
+                        Divider()
+                        PasteOnlyTextView(text: $pastedRoster)
+                            .frame(minHeight: 130)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        HStack(spacing: 10) {
+                            Button {
+                                processPastedRoster()
+                            } label: {
+                                HStack {
+                                    if isProcessing {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .teal))
+                                    } else {
+                                        Image(systemName: "doc.text.magnifyingglass")
+                                    }
+                                    Text(isProcessing ? "Processing..." : "Process")
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .foregroundColor(.teal)
+                            }
+                            .disabled(isProcessing || pastedRoster.isEmpty)
+
+                            Button {
+                                pastedRoster = ""
+                            } label: {
+                                HStack {
+                                    Image(systemName: "xmark.circle.fill")
+                                    Text("Clear")
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .foregroundColor(.red)
+                            }
+                            .disabled(pastedRoster.isEmpty)
+                        }
+                    }
+                    .padding(.horizontal)
                 }
-                .padding()
                 }
+
             }
             .navigationTitle("Import Roster")
             .navigationBarTitleDisplayMode(.inline)
@@ -370,23 +364,123 @@ struct UnifiedRosterImportView: View {
     }
 }
 
-// MARK: - Instruction Row
+// MARK: - Import Notice Banner
 
-private struct InstructionRow: View {
+private struct ImportNoticeBanner: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .font(.subheadline)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("webCIS Roster File Required")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+
+                Text("Import only works with the file **emailed** from webCIS via **Send My Roster**")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.orange.opacity(0.45), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Import Method Card
+
+private struct ImportMethodCard<Action: View>: View {
+    //let method: Int
     let icon: String
-    let text: String
+    let iconColor: Color
+    let title: String
+    //let badge: String?
+    //let badgeColor: Color
+    let steps: [String]
+    //var isRecommended: Bool = false
+    let action: Action
+
+    init(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        steps: [String],
+        @ViewBuilder action: () -> Action
+    ) {
+        self.icon = icon
+        self.iconColor = iconColor
+        self.title = title
+        self.steps = steps
+        self.action = action()
+    }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(.blue)
-                .frame(width: 24)
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(iconColor.opacity(0.12))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: icon)
+                        .font(.subheadline)
+                        .foregroundColor(iconColor)
+                }
 
-            Text(text)
-                .font(.subheadline)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                }
 
-            Spacer()
+                Spacer()
+
+            }
+
+            // Steps
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("\(index + 1)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(iconColor)
+                            .frame(width: 20, height: 20)
+                            .background(iconColor.opacity(0.12))
+                            .clipShape(Circle())
+
+                        Text(step)
+                            .font(.subheadline)
+                            //.fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+
+            // Inline action (file picker button or paste area)
+            action
         }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(
+                    Color(.separator).opacity(0.4),
+                    lineWidth: 1.5
+                )
+        )
     }
 }
 
