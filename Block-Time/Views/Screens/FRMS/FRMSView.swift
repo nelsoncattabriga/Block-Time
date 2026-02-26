@@ -636,7 +636,7 @@ struct FRMSView: View {
         if let tz = AirportService.shared.getTimeZone(for: toAirport, on: date) {
             Self._dateTimeFormatter.timeZone = tz
         } else {
-            Self._dateTimeFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+            Self._dateTimeFormatter.timeZone = .current
         }
         return Self._dateTimeFormatter.string(from: date)
     }
