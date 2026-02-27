@@ -135,7 +135,8 @@ final class PurchaseService {
     /// Simulates a trial with the given days remaining (0 = expired, 1–30 = active).
     func resetTrialForTesting(daysRemaining: Int = 0) {
         let elapsed = trialDuration - Double(daysRemaining) * 24 * 60 * 60
-        let installDate = Date().addingTimeInterval(-elapsed)
+        // Subtract 30s buffer so Int() truncation doesn't floor to daysRemaining - 1
+        let installDate = Date().addingTimeInterval(-elapsed + 30)
         UserDefaults.standard.set(installDate, forKey: installDateKey)
         isPro = false
         UserDefaults.standard.set(false, forKey: isProKey)

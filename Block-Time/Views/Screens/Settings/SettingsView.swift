@@ -56,6 +56,7 @@ struct SettingsView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
     var frmsViewModel: FRMSViewModel
     @Environment(ThemeService.self) private var themeService
+    @Environment(PurchaseService.self) private var purchaseService
 
     var body: some View {
         ZStack {
@@ -64,7 +65,9 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
-                    TrialStatusCard()
+                    if !purchaseService.isPro {
+                        TrialStatusCard()
+                    }
 
                     ForEach(SettingsCategory.allCases) { category in
                         NavigationLink(destination: categoryDetailView(for: category)) {

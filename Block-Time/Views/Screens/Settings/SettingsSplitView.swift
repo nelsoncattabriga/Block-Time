@@ -82,14 +82,17 @@ struct SettingsSplitView: View {
 private struct SettingsCategoriesListContent: View {
     @Binding var selectedCategory: SettingsCategory?
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
+    @Environment(PurchaseService.self) private var purchaseService
 
     var body: some View {
         List(selection: $selectedCategory) {
-            Section {
-                TrialStatusCard()
-                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+            if !purchaseService.isPro {
+                Section {
+                    TrialStatusCard()
+                        .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
             }
 
             ForEach(SettingsCategory.allCases, id: \.self) { category in

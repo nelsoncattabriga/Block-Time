@@ -57,7 +57,7 @@ struct SplashScreenView: View {
                         .foregroundColor(.white.opacity(0.9))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
-                        .background(purchaseService.isPro ? Color.blue : Color.secondary.opacity(0.75), in: Capsule())
+                        .background(purchaseService.isPro ? Color.blue.opacity(0.75) : Color.secondary.opacity(0.75), in: Capsule())
 
                     Text(appVersion)
                         .font(.subheadline.bold())
