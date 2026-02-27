@@ -57,6 +57,9 @@ struct Block_TimeApp: App {
     var body: some Scene {
         WindowGroup {
             SplashScreenView()
+                .task {
+                    await purchaseService.listenForTransactions()
+                }
                 .preferredColorScheme(colorSchemeForAppearanceMode(themeService.appearanceMode))
                 .environment(themeService)
                 .environment(cloudKitService)

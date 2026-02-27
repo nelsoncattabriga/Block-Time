@@ -27,6 +27,7 @@ final class PurchaseService {
     var products: [Product] = []
     var isLoading: Bool = false
     var purchaseError: String?
+    var showRestoreNotFoundAlert: Bool = false
 
     // MARK: - Trial
 
@@ -56,6 +57,18 @@ final class PurchaseService {
             UserDefaults.standard.set(Date(), forKey: installDateKey)
         }
         isPro = UserDefaults.standard.bool(forKey: isProKey)
+    }
+
+    /// Starts listening for incoming transactions (promo codes, deferred purchases).
+    /// Call once at app launch and keep the Task alive for the app's lifetime.
+    func listenForTransactions() async {
+        for await result in Transaction.updates {
+            if case .verified(let transaction) = result,
+               transaction.productID == productID {
+                markAsPro()
+                await transaction.finish()
+            }
+        }
     }
 
     // MARK: - StoreKit
@@ -96,11 +109,16 @@ final class PurchaseService {
         isLoading = true
         defer { isLoading = false }
         purchaseError = nil
+        var found = false
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result,
                transaction.productID == productID {
                 markAsPro()
+                found = true
             }
+        }
+        if !found {
+            showRestoreNotFoundAlert = true
         }
     }
 
