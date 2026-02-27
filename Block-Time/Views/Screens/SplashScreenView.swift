@@ -8,6 +8,7 @@ import SwiftUI
 
 struct SplashScreenView: View {
     @Environment(ThemeService.self) private var themeService
+    @Environment(PurchaseService.self) private var purchaseService
     @State private var isActive = false
     @State private var scale: CGFloat = 0.7
     @State private var opacity: Double = 0.3
@@ -49,6 +50,14 @@ struct SplashScreenView: View {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.secondary)
+
+                    Text(purchaseService.isPro ? "PRO" : "TRIAL")
+                        .font(.headline)
+                        .fontWeight(.heavy)
+                        .foregroundColor(.white.opacity(0.9))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(purchaseService.isPro ? Color.blue : Color.secondary.opacity(0.75), in: Capsule())
 
                     Text(appVersion)
                         .font(.subheadline.bold())

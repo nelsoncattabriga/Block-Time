@@ -40,7 +40,10 @@ struct MainTabView: View {
     var body: some View {
         // Both iPad and iPhone now use tab bar navigation
         tabLayout
-            .fullScreenCover(isPresented: .constant(!purchaseService.hasAccess)) {
+            .fullScreenCover(isPresented: Binding(
+                get: { !purchaseService.hasAccess },
+                set: { _ in }
+            )) {
                 PaywallView()
             }
     }
