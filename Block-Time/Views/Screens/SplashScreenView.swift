@@ -51,13 +51,15 @@ struct SplashScreenView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.secondary)
 
-                    Text(purchaseService.isPro ? "PRO" : "TRIAL")
-                        .font(.headline)
-                        .fontWeight(.heavy)
-                        .foregroundColor(.white.opacity(0.9))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(purchaseService.isPro ? Color.blue.opacity(0.75) : Color.secondary.opacity(0.75), in: Capsule())
+                    if !purchaseService.isPro {
+                        Text("TRIAL")
+                            .font(.headline)
+                            .fontWeight(.heavy)
+                            .foregroundColor(.white.opacity(0.9))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(Color.secondary.opacity(0.75), in: Capsule())
+                    }
 
                     Text(appVersion)
                         .font(.subheadline.bold())

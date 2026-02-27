@@ -13,7 +13,6 @@ struct PaywallView: View {
     @Environment(PurchaseService.self) private var purchaseService
     @Environment(ThemeService.self) private var themeService
     @Environment(\.dismiss) private var dismiss
-    @State private var showSuccess = false
 
     private let skyBlue = Color(red: 0.18, green: 0.52, blue: 0.92)
     private let deepBlue = Color(red: 0.08, green: 0.25, blue: 0.60)
@@ -39,10 +38,6 @@ struct PaywallView: View {
                 Spacer()
             }
             .ignoresSafeArea()
-
-            if showSuccess {
-                successOverlay
-            }
 
             VStack(spacing: 0) {
                 if isDismissible {
@@ -77,49 +72,19 @@ struct PaywallView: View {
         .task {
             await purchaseService.loadProducts()
         }
+        .onChange(of: purchaseService.isPro) { _, isPro in
+            if isPro {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.3))
+                    dismiss()
+                }
+            }
+        }
         .alert("No Purchase Found", isPresented: Bindable(purchaseService).showRestoreNotFoundAlert) {
             Button("OK", role: .cancel) { }
         } message: {
             Text("No previous Block-Time Pro purchase found using this Apple ID.")
         }
-    }
-
-    // MARK: - Success Overlay
-
-    private var successOverlay: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            ZStack {
-                Circle()
-                    .fill(.white.opacity(0.15))
-                    .frame(width: 120, height: 120)
-                Circle()
-                    .fill(.white.opacity(0.08))
-                    .frame(width: 150, height: 150)
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.white)
-            }
-
-            VStack(spacing: 10) {
-                Text("Welcome to Block-Time Pro")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-
-                Text("Your purchase was successful. Thank You!")
-                    .font(.body)
-                    .foregroundStyle(.white.opacity(0.80))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .transition(.opacity.combined(with: .scale(scale: 0.95)))
     }
 
     // MARK: - Header
@@ -213,14 +178,7 @@ struct PaywallView: View {
         VStack(spacing: 12) {
             // Primary purchase button
             Button {
-                Task {
-                    await purchaseService.purchase()
-                    if purchaseService.isPro {
-                        withAnimation(.easeInOut(duration: 0.4)) {
-                            showSuccess = true
-                        }
-                    }
-                }
+                Task { await purchaseService.purchase() }
             } label: {
                 HStack {
                     if purchaseService.isLoading {

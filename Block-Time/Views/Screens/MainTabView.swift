@@ -28,8 +28,7 @@ struct MainTabView: View {
 
     private var settingsTabBadge: Int {
         guard !purchaseService.isPro else { return 0 }
-        let days = purchaseService.trialDaysRemaining
-        return days <= 7 ? days : 0
+        return purchaseService.trialDaysRemaining
     }
 
     // Determine if we're on iPad in landscape

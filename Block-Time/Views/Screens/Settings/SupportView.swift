@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SupportView: View {
     @Environment(ThemeService.self) private var themeService
+    @Environment(PurchaseService.self) private var purchaseService
     @AppStorage("debugModeEnabled") private var debugModeEnabled = false
     @State private var showingLogViewer = false
     @State private var devToolsExpanded = false
@@ -50,6 +51,16 @@ struct SupportView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
+
+                        if !purchaseService.isPro {
+                            Text("TRIAL")
+                                .font(.caption)
+                                .fontWeight(.heavy)
+                                .foregroundColor(.white.opacity(0.9))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(Color.secondary.opacity(0.75), in: Capsule())
+                        }
 
                         Text("Version \(appVersion).\(buildNumber)")
                             .font(.headline)
