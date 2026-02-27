@@ -203,6 +203,12 @@ struct PaywallView: View {
             }
             .disabled(purchaseService.isLoading || purchaseService.products.isEmpty)
 
+            Text("One-time purchase. No subscriptions.")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.7))
+            
+            Spacer()
+            
             // Restore purchases
             Button("Restore Purchase") {
                 Task { await purchaseService.restorePurchases() }
@@ -219,9 +225,7 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
             }
 
-            Text("One-time purchase. No subscriptions.")
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.7))
+            
         }
     }
 

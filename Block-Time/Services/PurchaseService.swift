@@ -132,10 +132,11 @@ final class PurchaseService {
     // MARK: - Debug
 
     #if DEBUG
-    /// Simulates an expired trial by backdating the install date 31 days.
-    func resetTrialForTesting() {
-        let expiredDate = Date().addingTimeInterval(-31 * 24 * 60 * 60)
-        UserDefaults.standard.set(expiredDate, forKey: installDateKey)
+    /// Simulates a trial with the given days remaining (0 = expired, 1–30 = active).
+    func resetTrialForTesting(daysRemaining: Int = 0) {
+        let elapsed = trialDuration - Double(daysRemaining) * 24 * 60 * 60
+        let installDate = Date().addingTimeInterval(-elapsed)
+        UserDefaults.standard.set(installDate, forKey: installDateKey)
         isPro = false
         UserDefaults.standard.set(false, forKey: isProKey)
     }
