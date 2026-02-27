@@ -34,7 +34,7 @@ struct TrialStatusCard: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Block-Time Pro")
+                Text("Block-Time")
                     .font(.headline)
                     .fontWeight(.semibold)
                 Text("Full access unlocked")
@@ -106,7 +106,7 @@ struct TrialStatusCard: View {
             Button {
                 showingPaywall = true
             } label: {
-                Text("Upgrade to Block-Time Pro — \(upgradePrice)")
+                Text("Unlock Block-Time — \(upgradePrice)")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)

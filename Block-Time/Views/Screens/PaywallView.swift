@@ -83,7 +83,7 @@ struct PaywallView: View {
         .alert("No Purchase Found", isPresented: Bindable(purchaseService).showRestoreNotFoundAlert) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("No previous Block-Time Pro purchase found using this Apple ID.")
+            Text("No previous Block-Time purchase found using this Apple ID.")
         }
     }
 
@@ -104,15 +104,15 @@ struct PaywallView: View {
                     .shadow(color: deepBlue.opacity(0.5), radius: 10, x: 0, y: 4)
             }
 
-            Text(isDismissible ? "Upgrade to Block-Time Pro" : "Your Trial Has Ended")
+            Text(isDismissible ? "Unlock Block-Time" : "Your Trial Has Ended")
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
             Text(isDismissible
-                 ? "Purchase Block-Time Pro Now."
-                 : "Purchase Block-Time Pro to continue tracking your flights.")
+                 ? "Purchase Block-Time Now."
+                 : "Purchase Block-Time to continue tracking your flights.")
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.80))
                 .multilineTextAlignment(.center)
