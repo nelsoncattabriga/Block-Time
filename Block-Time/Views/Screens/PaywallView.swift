@@ -98,9 +98,11 @@ struct PaywallView: View {
                 Circle()
                     .fill(accentBlue.opacity(0.12))
                     .frame(width: 96, height: 96)
-                Image(systemName: "airplane.circle.fill")
-                    .font(.system(size: 52))
-                    .foregroundStyle(.white)
+                Image("SplashIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     .shadow(color: deepBlue.opacity(0.5), radius: 10, x: 0, y: 4)
             }
 
