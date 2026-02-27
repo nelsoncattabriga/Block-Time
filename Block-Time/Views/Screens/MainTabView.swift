@@ -24,6 +24,7 @@ struct MainTabView: View {
     @State private var showingOnboardingFlow = false
     @State private var showingMigrationImport = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(PurchaseService.self) private var purchaseService
 
     // Determine if we're on iPad in landscape
     private var isIPadLandscape: Bool {
@@ -33,6 +34,9 @@ struct MainTabView: View {
     var body: some View {
         // Both iPad and iPhone now use tab bar navigation
         tabLayout
+            .fullScreenCover(isPresented: .constant(!purchaseService.hasAccess)) {
+                PaywallView()
+            }
     }
 
     // MARK: - Tab Layout (for both iPhone and iPad)

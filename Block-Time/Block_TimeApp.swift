@@ -13,14 +13,21 @@ struct Block_TimeApp: App {
     @State private var incomingMigrationURL: URL?
     @State private var themeService = ThemeService.shared
     @State private var cloudKitService = CloudKitSettingsSyncService.shared
+    @State private var purchaseService = PurchaseService.shared
     @ObservedObject private var appState = AppState.shared
 
     init() {
         // Reset debug mode to off every app launch
         UserDefaults.standard.set(false, forKey: "debugModeEnabled")
-
+        
         // Run one-time simulator flight migration
         performSimulatorFlightMigration()
+        
+    #if DEBUG
+        PurchaseService.shared.resetTrialForTesting() // shows paywall
+        // PurchaseService.shared.resetToFreshInstall() // fresh trial
+    #endif
+        
     }
 
     private func performSimulatorFlightMigration() {
@@ -53,6 +60,7 @@ struct Block_TimeApp: App {
                 .preferredColorScheme(colorSchemeForAppearanceMode(themeService.appearanceMode))
                 .environment(themeService)
                 .environment(cloudKitService)
+                .environment(purchaseService)
                 .environment(\.managedObjectContext, FlightDatabaseService.shared.viewContext)
                 .onOpenURL { url in
                     handleIncomingURL(url)

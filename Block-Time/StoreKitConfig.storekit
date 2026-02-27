@@ -1,0 +1,39 @@
+{
+  "identifier" : "F1A2B3C4-D5E6-7890-ABCD-EF1234567890",
+  "nonConsumableProducts" : [
+    {
+      "displayPrice" : "29.99",
+      "familySharable" : false,
+      "internalID" : "1001",
+      "localizations" : [
+        {
+          "description" : "Unlock all Block Time Pro features permanently. Includes flight logbook, FRMS limits, dashboard analytics, export, and iCloud sync.",
+          "displayName" : "Block Time Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.thezoolab.blocktime.pro",
+      "referenceName" : "Block Time Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      }
+    ]
+  },
+  "version" : {
+    "major" : 1,
+    "minor" : 0
+  }
+}

@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52E6FD222F51217D008DD58E /* StoreKit.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		522DB4EE2F26FA7E00739A34 /* Block-Time.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Block-Time.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		52E6FD222F51217D008DD58E /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -36,6 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,6 +52,7 @@
 			isa = PBXGroup;
 			children = (
 				522DB4F02F26FA7E00739A34 /* Block-Time */,
+				52E6FD212F51217D008DD58E /* Frameworks */,
 				522DB4EF2F26FA7E00739A34 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -56,6 +63,14 @@
 				522DB4EE2F26FA7E00739A34 /* Block-Time.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		52E6FD212F51217D008DD58E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				52E6FD222F51217D008DD58E /* StoreKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
