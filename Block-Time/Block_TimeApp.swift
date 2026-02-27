@@ -24,8 +24,8 @@ struct Block_TimeApp: App {
         performSimulatorFlightMigration()
         
     #if DEBUG
-        PurchaseService.shared.resetTrialForTesting() // shows paywall
-        // PurchaseService.shared.resetToFreshInstall() // fresh trial
+        //PurchaseService.shared.resetTrialForTesting() // shows paywall
+        PurchaseService.shared.resetToFreshInstall() // fresh trial
     #endif
         
     }

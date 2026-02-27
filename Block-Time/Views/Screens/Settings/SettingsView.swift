@@ -64,6 +64,8 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
+                    TrialStatusCard()
+
                     ForEach(SettingsCategory.allCases) { category in
                         NavigationLink(destination: categoryDetailView(for: category)) {
                             HStack(spacing: 16) {

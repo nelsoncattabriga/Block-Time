@@ -26,6 +26,12 @@ struct MainTabView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(PurchaseService.self) private var purchaseService
 
+    private var settingsTabBadge: Int {
+        guard !purchaseService.isPro else { return 0 }
+        let days = purchaseService.trialDaysRemaining
+        return days <= 7 ? days : 0
+    }
+
     // Determine if we're on iPad in landscape
     private var isIPadLandscape: Bool {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
@@ -70,6 +76,7 @@ struct MainTabView: View {
                     Image(systemName: "gear")
                     Text("Settings")
                 }
+                .badge(settingsTabBadge)
                 .tag(3)
 
         }

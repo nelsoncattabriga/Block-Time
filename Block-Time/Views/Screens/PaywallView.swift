@@ -9,8 +9,10 @@ import SwiftUI
 import StoreKit
 
 struct PaywallView: View {
+    var isDismissible: Bool = false
     @Environment(PurchaseService.self) private var purchaseService
     @Environment(ThemeService.self) private var themeService
+    @Environment(\.dismiss) private var dismiss
 
     private let skyBlue = Color(red: 0.18, green: 0.52, blue: 0.92)
     private let deepBlue = Color(red: 0.08, green: 0.25, blue: 0.60)
@@ -37,16 +39,34 @@ struct PaywallView: View {
             }
             .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 20) {
-                    headerSection
-                    featuresSection
-                    purchaseSection
+            VStack(spacing: 0) {
+                if isDismissible {
+                    HStack {
+                        Spacer()
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
+                        .padding(.top, 16)
+                        .padding(.trailing, 20)
+                    }
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 28)
-                .frame(maxWidth: 520)
-                .frame(maxWidth: .infinity)
+
+                ScrollView {
+                    VStack(spacing: 20) {
+                        headerSection
+                        featuresSection
+                        purchaseSection
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, isDismissible ? 8 : 28)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: 520)
+                    .frame(maxWidth: .infinity)
+                }
             }
         }
         .task {
@@ -76,13 +96,15 @@ struct PaywallView: View {
                     .shadow(color: deepBlue.opacity(0.5), radius: 10, x: 0, y: 4)
             }
 
-            Text("Your Trial Has Ended")
+            Text(isDismissible ? "Upgrade to Block-Time Pro" : "Your Trial Has Ended")
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text("Purchase Block-Time Pro to continue tracking your flights, FRMS limits, and career insights.")
+            Text(isDismissible
+                 ? "Purchase Block-Time Pro Now."
+                 : "Purchase Block-Time Pro to continue tracking your flights.")
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.80))
                 .multilineTextAlignment(.center)
@@ -198,7 +220,7 @@ struct PaywallView: View {
             }
 
             Text("One-time purchase. No subscriptions.")
-                .font(.footnote)
+                .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.7))
         }
     }
@@ -207,7 +229,7 @@ struct PaywallView: View {
 
     private var purchaseButtonTitle: String {
         if let product = purchaseService.products.first {
-            return "Purchase Block-Time Pro — \(product.displayPrice)"
+            return "Purchase Now — \(product.displayPrice)"
         }
         return "Purchase Block-Time Pro"
     }

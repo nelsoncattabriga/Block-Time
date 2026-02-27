@@ -85,6 +85,13 @@ private struct SettingsCategoriesListContent: View {
 
     var body: some View {
         List(selection: $selectedCategory) {
+            Section {
+                TrialStatusCard()
+                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+
             ForEach(SettingsCategory.allCases, id: \.self) { category in
                 HStack(spacing: 0) {
                     
