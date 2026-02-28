@@ -59,6 +59,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     private let timeCalculationManager: TimeCalculationManager
     private let logbookImportService: LogbookImportService
     private let flightAwareService = FlightAwareService.shared
+    private let aeroDataBoxService = AeroDataBoxService.shared
     
     // MARK: - Published Properties
     @Published var selectedImage: UIImage?
@@ -2563,22 +2564,20 @@ class FlightTimeExtractorViewModel: ObservableObject {
                     LogManager.shared.debug("🔧 DEBUG: After update - savePhotosToLibrary: \(savePhotosToLibrary)")
     }
 
-    // MARK: - FlightAware Integration
+    // MARK: - Flight Data Lookup (FlightAware + AeroDataBox)
 
-    /// Fetch flight data from FlightAware for the current flight number and date
+    /// Kick off concurrent fetch from FlightAware and AeroDataBox, then merge results.
     func fetchFlightAwareData() {
-        // Validate we have required data
         guard !flightNumber.isEmpty else {
             showError("Please enter a flight number first")
             return
         }
-
         guard !flightDate.isEmpty else {
             showError("Please select a flight date first")
             return
         }
 
-        // Convert flight number to FlightAware format
+        // FlightAware needs ICAO airline code (e.g. QFA933)
         guard let flightAwareCode = flightNumber.toFlightAwareFormat(
             userAirlinePrefix: includeAirlinePrefixInFlightNumber ? nil : airlinePrefix
         ) else {
@@ -2586,54 +2585,206 @@ class FlightTimeExtractorViewModel: ObservableObject {
             return
         }
 
+        // AeroDataBox uses IATA airline code (e.g. QF933)
+        let iataFlightNumber = includeAirlinePrefixInFlightNumber
+            ? flightNumber
+            : airlinePrefix + flightNumber
+
         isFetchingFlightAware = true
-        statusMessage = "Fetching flight data from FlightAware..."
+        statusMessage = "Searching flight databases..."
         statusColor = .blue
         HapticManager.shared.impact(.medium)
 
+        LogManager.shared.info("🔍 Flight lookup: FA=\(flightAwareCode), ADB=\(iataFlightNumber), utcDate=\(flightDate)")
+
         Task {
-            do {
-                let flightDataArray = try await flightAwareService.fetchFlightData(
-                    flightNumber: flightAwareCode,
-                    date: flightDate
+            // Step 1: Fetch FlightAware first — its result gives us the departure ICAO
+            // and UTC departure time needed to compute the correct AeroDataBox local date.
+            let faResults = await fetchFromFlightAware(code: flightAwareCode, date: flightDate)
+
+            // Step 2: Derive the local departure date for AeroDataBox.
+            // AeroDataBox uses dateLocalRole=Departure, so it expects the LOCAL date at the
+            // departure airport — which can differ from the UTC date by ±1 day.
+            let adbLocalDate: String
+            if let firstFA = faResults.first {
+                let localDate = AirportService.shared.convertToLocalDate(
+                    utcDateString: firstFA.flightDate,
+                    utcTimeString: firstFA.departureTime,
+                    airportICAO: firstFA.origin
                 )
+                adbLocalDate = localDate
+                LogManager.shared.info("🔍 ADB local date: \(localDate) (derived from \(firstFA.origin) UTC \(firstFA.flightDate) \(firstFA.departureTime))")
+            } else {
+                // No FA result — use the user's UTC date as best available guess
+                adbLocalDate = flightDate
+                LogManager.shared.info("🔍 ADB local date: \(flightDate) (UTC fallback — no FA result to derive from)")
+            }
 
-                // print("ViewModel: Received \(flightDataArray.count) flight segment(s)")
+            // Step 3: Fetch AeroDataBox with the precise local departure date
+            let adbResults = await fetchFromAeroDataBox(flightNumber: iataFlightNumber, localDate: adbLocalDate)
 
-                await MainActor.run {
-                    self.isFetchingFlightAware = false
+            let merged = mergeFlightResults(flightAware: faResults, aeroDataBox: adbResults)
 
-                    if flightDataArray.isEmpty {
-                        self.showError("No flights found for this date")
-                        HapticManager.shared.notification(.error)
-                    } else if flightDataArray.count == 1 {
-                        // Single flight - populate directly
-                        let flightData = flightDataArray[0]
-                        //print("📝 ViewModel: Populating form with single flight: \(flightData.origin) → \(flightData.destination)")
-                        self.populateFieldsWithFlightData(flightData)
-                        self.statusMessage = "Flight data retrieved successfully!"
-                        self.statusColor = .green
-                        HapticManager.shared.notification(.success)
-                    } else {
-                        // Multiple flights - show selection sheet
-                        //print("📋 ViewModel: Multiple segments found - showing selection sheet")
-                        self.flightSegments = flightDataArray
-                        self.showingSegmentSelection = true
-                        self.statusMessage = "Multiple segments found - select one"
-                        self.statusColor = .orange
-                        HapticManager.shared.impact(.light)
-                    }
-                }
+            await MainActor.run {
+                self.isFetchingFlightAware = false
 
-            } catch {
-                            LogManager.shared.debug("ViewModel: Error fetching flight data - \(error.localizedDescription)")
-                await MainActor.run {
-                    self.isFetchingFlightAware = false
-                    self.showError(error.localizedDescription)
+                if merged.isEmpty {
+                    self.showError("No flights found for this date")
                     HapticManager.shared.notification(.error)
+                } else if merged.count == 1 {
+                    self.populateFieldsWithFlightData(merged[0])
+                    self.statusMessage = "Flight data retrieved successfully!"
+                    self.statusColor = .green
+                    HapticManager.shared.notification(.success)
+                } else {
+                    self.flightSegments = merged
+                    self.showingSegmentSelection = true
+                    self.statusMessage = "Multiple segments found - select one"
+                    self.statusColor = .orange
+                    HapticManager.shared.impact(.light)
                 }
             }
         }
+    }
+
+    // MARK: - Private fetch helpers
+
+    private func fetchFromFlightAware(code: String, date: String) async -> [FlightAwareData] {
+        do {
+            let results = try await flightAwareService.fetchFlightData(flightNumber: code, date: date)
+            LogManager.shared.info("✈️ FlightAware: \(results.count) result(s) for \(code)")
+            for (i, r) in results.enumerated() {
+                LogManager.shared.info("✈️ FlightAware [\(i)] \(r.origin)→\(r.destination): OUT=\(r.departureTime) (actual=\(r.departureIsActual)), IN=\(r.arrivalTime) (actual=\(r.arrivalIsActual)), STD=\(r.scheduledDepartureTime ?? "nil"), STA=\(r.scheduledArrivalTime ?? "nil"), date=\(r.flightDate)")
+            }
+            return results
+        } catch {
+            LogManager.shared.warning("✈️ FlightAware: fetch failed — \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private func fetchFromAeroDataBox(flightNumber: String, localDate: String) async -> [FlightAwareData] {
+        let results = await aeroDataBoxService.fetchFlightData(flightNumber: flightNumber, localDepartureDate: localDate)
+        LogManager.shared.info("🌐 AeroDataBox: \(results.count) result(s) for \(flightNumber) on local date \(localDate)")
+        return results
+    }
+
+    /// Merge results from both sources, preferring entries with actual gate times.
+    /// Matches legs by ICAO origin+destination pair.
+    private func mergeFlightResults(flightAware: [FlightAwareData], aeroDataBox: [FlightAwareData]) -> [FlightAwareData] {
+        LogManager.shared.info("🔀 Merge: FlightAware=\(flightAware.count), AeroDataBox=\(aeroDataBox.count)")
+
+        // If one source returned nothing, use the other as-is
+        if flightAware.isEmpty && aeroDataBox.isEmpty {
+            LogManager.shared.info("🔀 Merge: Both sources empty")
+            return []
+        }
+        if flightAware.isEmpty {
+            LogManager.shared.info("🔀 Merge: FlightAware empty — using AeroDataBox results only")
+            return aeroDataBox
+        }
+        if aeroDataBox.isEmpty {
+            LogManager.shared.info("🔀 Merge: AeroDataBox empty — using FlightAware results only")
+            return flightAware
+        }
+
+        // Both returned data — match legs by route
+        var merged: [FlightAwareData] = []
+        var matchedADBIndices = Set<Int>()
+
+        for faFlight in flightAware {
+            if let adbIdx = aeroDataBox.firstIndex(where: {
+                $0.origin == faFlight.origin && $0.destination == faFlight.destination
+            }) {
+                let adbFlight = aeroDataBox[adbIdx]
+                matchedADBIndices.insert(adbIdx)
+
+                LogManager.shared.info("🔀 \(faFlight.origin)→\(faFlight.destination): hybrid field merge")
+                LogManager.shared.info("   FA : OUT=\(faFlight.departureTime) (actual=\(faFlight.departureIsActual)), IN=\(faFlight.arrivalTime) (actual=\(faFlight.arrivalIsActual))")
+                LogManager.shared.info("   ADB: OUT=\(adbFlight.departureTime) (actual=\(adbFlight.departureIsActual)), IN=\(adbFlight.arrivalTime) (actual=\(adbFlight.arrivalIsActual)), T/O=\(adbFlight.departureRunwayTime ?? "nil"), LDG=\(adbFlight.arrivalRunwayTime ?? "nil")")
+                LogManager.shared.info("   ADB registration: \(adbFlight.aircraftRegistration ?? "nil")")
+
+                merged.append(hybridMerge(flightAware: faFlight, aeroDataBox: adbFlight))
+            } else {
+                // No ADB leg matched this FA leg
+                LogManager.shared.info("🔀 \(faFlight.origin)→\(faFlight.destination): FlightAware only (no AeroDataBox match)")
+                merged.append(faFlight)
+            }
+        }
+
+        // Append any ADB legs not matched by a FA leg (e.g. extra segments FA missed)
+        for (idx, adbFlight) in aeroDataBox.enumerated() where !matchedADBIndices.contains(idx) {
+            LogManager.shared.info("🔀 \(adbFlight.origin)→\(adbFlight.destination): AeroDataBox only (no FlightAware match)")
+            merged.append(adbFlight)
+        }
+
+        LogManager.shared.info("🔀 Merge complete: \(merged.count) leg(s) total")
+        return merged
+    }
+
+    /// Field-level hybrid merge for a matched FA+ADB pair.
+    ///
+    /// Rules:
+    /// - OUT time: prefer the source with an actual (FA first, then ADB). If both actual, use FlightAware.
+    /// - IN  time: when AeroDataBox has an actual revisedTime, use whichever IN time is **later**
+    ///             (the later gate-arrival time is more conservative and closer to true block-in).
+    /// - Aircraft registration: always taken from AeroDataBox (FA doesn't provide it).
+    /// - All other fields (route, date, STD/STA, runway times): taken from FA as the base.
+    private func hybridMerge(flightAware fa: FlightAwareData, aeroDataBox adb: FlightAwareData) -> FlightAwareData {
+        var result = fa  // start with FlightAware as the base
+
+        // ── OUT time ────────────────────────────────────────────────────────
+        if !fa.departureIsActual && adb.departureIsActual {
+            result.departureTime     = adb.departureTime
+            result.departureIsActual = true
+            LogManager.shared.info("🔀 OUT: AeroDataBox \(adb.departureTime) used (FA has scheduled only)")
+        } else {
+            LogManager.shared.info("🔀 OUT: FlightAware \(fa.departureTime) used (actual=\(fa.departureIsActual))")
+        }
+
+        // ── IN time ─────────────────────────────────────────────────────────
+        // When AeroDataBox has an actual IN, take the later of the two.
+        // Use the OUT time as an anchor so midnight crossings are handled correctly:
+        // any IN time numerically less than OUT has crossed midnight — add 1440 before comparing.
+        if adb.arrivalIsActual {
+            let outMinutes = timeStringToMinutes(result.departureTime) ?? 0
+            let faMinutes  = timeStringToMinutes(fa.arrivalTime).map  { $0 < outMinutes ? $0 + 1440 : $0 }
+            let adbMinutes = timeStringToMinutes(adb.arrivalTime).map { $0 < outMinutes ? $0 + 1440 : $0 }
+            if let faMin = faMinutes, let adbMin = adbMinutes {
+                if adbMin > faMin {
+                    result.arrivalTime     = adb.arrivalTime
+                    result.arrivalIsActual = true
+                    LogManager.shared.info("🔀 IN : AeroDataBox \(adb.arrivalTime) used (later than FA \(fa.arrivalTime); adjusted mins: ADB=\(adbMin) FA=\(faMin))")
+                } else {
+                    LogManager.shared.info("🔀 IN : FlightAware \(fa.arrivalTime) used (later than or equal to ADB \(adb.arrivalTime); adjusted mins: FA=\(faMin) ADB=\(adbMin))")
+                }
+            }
+        } else {
+            LogManager.shared.info("🔀 IN : FlightAware \(fa.arrivalTime) used (AeroDataBox has no actual IN)")
+        }
+
+        // ── Aircraft registration ────────────────────────────────────────────
+        // AeroDataBox is the only source that provides this.
+        if let reg = adb.aircraftRegistration, !reg.isEmpty {
+            result.aircraftRegistration = reg
+            LogManager.shared.info("🔀 REG: \(reg) from AeroDataBox")
+        }
+
+        // ── ADB runway times ─────────────────────────────────────────────────
+        result.departureRunwayTime = adb.departureRunwayTime
+        result.arrivalRunwayTime   = adb.arrivalRunwayTime
+
+        LogManager.shared.info("🔀 Hybrid result: OUT=\(result.departureTime) (actual=\(result.departureIsActual)), IN=\(result.arrivalTime) (actual=\(result.arrivalIsActual))")
+        return result
+    }
+
+    /// Convert HH:MM time string to total minutes since midnight for comparison.
+    private func timeStringToMinutes(_ time: String) -> Int? {
+        let parts = time.components(separatedBy: ":")
+        guard parts.count == 2,
+              let hours = Int(parts[0]),
+              let minutes = Int(parts[1]) else { return nil }
+        return hours * 60 + minutes
     }
 
     /// Populate form fields with selected flight data
@@ -2649,6 +2800,21 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
         if let sta = flightData.scheduledArrivalTime {
             self.scheduledArrival = sta
+        }
+
+        // Populate aircraft registration if provided (also triggers auto aircraft type lookup).
+        // Respect the Long A/C Registration setting: if off, strip the country prefix (e.g. "VH-OQK" → "OQK").
+        if let reg = flightData.aircraftRegistration, !reg.isEmpty {
+            let formattedReg: String
+            if showFullAircraftReg {
+                formattedReg = reg
+            } else if let dashIndex = reg.firstIndex(of: "-") {
+                formattedReg = String(reg[reg.index(after: dashIndex)...])
+            } else {
+                formattedReg = reg  // No dash (e.g. US N-numbers) — use as-is
+            }
+            LogManager.shared.info("✈️ Aircraft registration from AeroDataBox: \(reg) → stored as \(formattedReg) (showFullReg=\(showFullAircraftReg))")
+            self.updateAircraftReg(formattedReg)
         }
 
         // Recalculate block time and night time
