@@ -1,0 +1,207 @@
+import Foundation
+
+let headers = [
+	"x-rapidapi-key": "d6d4f69c1cmshdc0e597482e0f12p110325jsna8a57713f83d",
+	"x-rapidapi-host": "aerodatabox.p.rapidapi.com"
+]
+
+let request = NSMutableURLRequest(url: NSURL(string: "https://aerodatabox.p.rapidapi.com/flights/number/QF1/2026-02-27?withAircraftImage=false&withLocation=false&withFlightPlan=false&dateLocalRole=Departure")! as URL,
+                                        cachePolicy: .useProtocolCachePolicy,
+                                    timeoutInterval: 10.0)
+request.httpMethod = "GET"
+request.allHTTPHeaderFields = headers
+
+let session = URLSession.shared
+let dataTask = session.dataTask(with: request as URLRequest, completionHandler: { (data, response, error) -> Void in
+	if (error != nil) {
+		print(error as Any)
+	} else {
+		let httpResponse = response as? HTTPURLResponse
+		print(httpResponse)
+	}
+})
+
+dataTask.resume()
+
+
+
+
+[
+  {
+    "greatCircleDistance": {
+      "meter": 6287956.72,
+      "km": 6287.96,
+      "mile": 3907.16,
+      "nm": 3395.23,
+      "feet": 20629779.28
+    },
+    "departure": {
+      "airport": {
+        "icao": "YSSY",
+        "iata": "SYD",
+        "name": "Sydney Kingsford Smith",
+        "shortName": "Kingsford Smith",
+        "municipalityName": "Sydney",
+        "location": {
+          "lat": -33.9461,
+          "lon": 151.177
+        },
+        "countryCode": "AU",
+        "timeZone": "Australia/Sydney"
+      },
+      "scheduledTime": {
+        "utc": "2026-02-27 05:15Z",
+        "local": "2026-02-27 16:15+11:00"
+      },
+      "revisedTime": {
+        "utc": "2026-02-27 05:25Z",
+        "local": "2026-02-27 16:25+11:00"
+      },
+      "runwayTime": {
+        "utc": "2026-02-27 05:55Z",
+        "local": "2026-02-27 16:55+11:00"
+      },
+      "terminal": "1",
+      "quality": [
+        "Basic",
+        "Live"
+      ]
+    },
+    "arrival": {
+      "airport": {
+        "icao": "WSSS",
+        "iata": "SIN",
+        "name": "Singapore Changi",
+        "shortName": "Changi",
+        "municipalityName": "Singapore",
+        "location": {
+          "lat": 1.35019,
+          "lon": 103.994
+        },
+        "countryCode": "SG",
+        "timeZone": "Asia/Singapore"
+      },
+      "scheduledTime": {
+        "utc": "2026-02-27 13:35Z",
+        "local": "2026-02-27 21:35+08:00"
+      },
+      "revisedTime": {
+        "utc": "2026-02-27 13:31Z",
+        "local": "2026-02-27 21:31+08:00"
+      },
+      "terminal": "1",
+      "baggageBelt": "16",
+      "quality": [
+        "Basic",
+        "Live"
+      ]
+    },
+    "lastUpdatedUtc": "2026-02-27 18:30Z",
+    "number": "QF 1",
+    "callSign": "QFA1",
+    "status": "Arrived",
+    "codeshareStatus": "IsOperator",
+    "isCargo": false,
+    "aircraft": {
+      "reg": "VH-OQK",
+      "modeS": "7C492A",
+      "model": "Airbus A380-800"
+    },
+    "airline": {
+      "name": "Qantas",
+      "iata": "QF",
+      "icao": "QFA"
+    }
+  },
+  {
+    "greatCircleDistance": {
+      "meter": 10887922.64,
+      "km": 10887.92,
+      "mile": 6765.44,
+      "nm": 5879.01,
+      "feet": 35721530.98
+    },
+    "departure": {
+      "airport": {
+        "icao": "WSSS",
+        "iata": "SIN",
+        "name": "Singapore Changi",
+        "shortName": "Changi",
+        "municipalityName": "Singapore",
+        "location": {
+          "lat": 1.35019,
+          "lon": 103.994
+        },
+        "countryCode": "SG",
+        "timeZone": "Asia/Singapore"
+      },
+      "scheduledTime": {
+        "utc": "2026-02-27 15:35Z",
+        "local": "2026-02-27 23:35+08:00"
+      },
+      "revisedTime": {
+        "utc": "2026-02-27 15:35Z",
+        "local": "2026-02-27 23:35+08:00"
+      },
+      "runwayTime": {
+        "utc": "2026-02-27 16:31Z",
+        "local": "2026-02-28 00:31+08:00"
+      },
+      "terminal": "1",
+      "checkInDesk": "8",
+      "gate": "D46",
+      "quality": [
+        "Basic",
+        "Live"
+      ]
+    },
+    "arrival": {
+      "airport": {
+        "icao": "EGLL",
+        "iata": "LHR",
+        "name": "London Heathrow",
+        "shortName": "Heathrow",
+        "municipalityName": "London",
+        "location": {
+          "lat": 51.4706,
+          "lon": -0.461941
+        },
+        "countryCode": "GB",
+        "timeZone": "Europe/London"
+      },
+      "scheduledTime": {
+        "utc": "2026-02-28 06:15Z",
+        "local": "2026-02-28 06:15+00:00"
+      },
+      "revisedTime": {
+        "utc": "2026-02-28 06:06Z",
+        "local": "2026-02-28 06:06+00:00"
+      },
+      "predictedTime": {
+        "utc": "2026-02-28 05:14Z",
+        "local": "2026-02-28 05:14+00:00"
+      },
+      "terminal": "3",
+      "quality": [
+        "Basic",
+        "Live"
+      ]
+    },
+    "lastUpdatedUtc": "2026-02-28 05:41Z",
+    "number": "QF 1",
+    "callSign": "QFA1",
+    "status": "EnRoute",
+    "codeshareStatus": "IsOperator",
+    "isCargo": false,
+    "aircraft": {
+      "reg": "VH-OQK",
+      "modeS": "7C492A",
+      "model": "Airbus A380-800"
+    },
+    "airline": {
+      "name": "Qantas",
+      "iata": "QF",
+      "icao": "QFA"
+    }
+  }
+]

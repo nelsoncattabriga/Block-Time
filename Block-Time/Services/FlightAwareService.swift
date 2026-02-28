@@ -8,14 +8,35 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Flight Data Source
+
+enum FlightDataSource {
+    case flightAware
+    case aeroDataBox
+}
+
+// MARK: - Shared Flight Data Model
+
 struct FlightAwareData {
     let origin: String
     let destination: String
-    let departureTime: String  // Actual departure time - Format: HH:MM
-    let arrivalTime: String    // Actual arrival time - Format: HH:MM
-    let scheduledDepartureTime: String?  // Scheduled departure time - Format: HH:MM
-    let scheduledArrivalTime: String?    // Scheduled arrival time - Format: HH:MM
-    let flightDate: String     // Format: dd/MM/yyyy
+    var departureTime: String         // Best available departure time - Format: HH:MM UTC
+    var arrivalTime: String           // Best available arrival time - Format: HH:MM UTC
+    let scheduledDepartureTime: String?  // STD - Format: HH:MM UTC
+    let scheduledArrivalTime: String?    // STA - Format: HH:MM UTC
+    let flightDate: String            // Format: dd/MM/yyyy
+
+    // Source tracking — defaults let existing FlightAwareService creation sites compile unchanged
+    var source: FlightDataSource = .flightAware
+    var departureIsActual: Bool = true      // false = no actual time; STD used as fallback
+    var arrivalIsActual: Bool = true        // false = no actual time; STA used as fallback
+
+    // AeroDataBox runway times (wheels off / on) — stored for hybrid merge analysis, not used directly
+    var departureRunwayTime: String? = nil  // HH:MM UTC — AeroDataBox runwayTime departure
+    var arrivalRunwayTime: String? = nil    // HH:MM UTC — AeroDataBox runwayTime arrival
+
+    // Aircraft registration if provided by the data source
+    var aircraftRegistration: String? = nil
 
     var displayDescription: String {
         "\(origin) → \(destination) • Dep: \(departureTime) • Arr: \(arrivalTime)"
