@@ -193,6 +193,11 @@ class UserDefaultsService: ObservableObject {
     // MARK: - Initialization
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
+        userDefaults.register(defaults: [
+            Keys.displayFlightsInLocalTime: true,
+            Keys.logApproaches: true,
+            Keys.includeAirlinePrefixInFlightNumber: true
+        ])
     }
     
     // MARK: - Load/Save All Settings
