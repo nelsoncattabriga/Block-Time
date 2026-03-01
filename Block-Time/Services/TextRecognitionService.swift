@@ -1004,25 +1004,27 @@ class TextRecognitionService: ObservableObject {
     
     private func extractAirports(from lines: [String]) -> (from: String, to: String) {
         let airportPattern = try! NSRegularExpression(pattern: "([A-Z]{4})/([A-Z]{4})")
-        
+
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespaces).uppercased()
             if !trimmedLine.contains("QFA") && !trimmedLine.contains("DEPT") && !trimmedLine.contains("DEST") {
-                let matches = airportPattern.matches(in: line, range: NSRange(line.startIndex..., in: line))
+                // Compact spaces so OCR artefacts like "Y SSY/WSSS" become "YSSY/WSSS"
+                let compactLine = trimmedLine.replacingOccurrences(of: " ", with: "")
+                let matches = airportPattern.matches(in: compactLine, range: NSRange(compactLine.startIndex..., in: compactLine))
                 if let match = matches.first {
-                    let fromRange = Range(match.range(at: 1), in: line)!
-                    let toRange = Range(match.range(at: 2), in: line)!
-                    let fromAirport = String(line[fromRange])
-                    let toAirport = String(line[toRange])
-                    
+                    let fromRange = Range(match.range(at: 1), in: compactLine)!
+                    let toRange = Range(match.range(at: 2), in: compactLine)!
+                    let fromAirport = String(compactLine[fromRange])
+                    let toAirport = String(compactLine[toRange])
+
                     if fromAirport.allSatisfy({ $0.isLetter }) && toAirport.allSatisfy({ $0.isLetter }) {
-                                LogManager.shared.debug("Airports extracted: FROM=\(fromAirport), TO=\(toAirport)")
+                        LogManager.shared.debug("Airports extracted: FROM=\(fromAirport), TO=\(toAirport)")
                         return (fromAirport, toAirport)
                     }
                 }
             }
         }
-        
+
         return ("", "")
     }
     
