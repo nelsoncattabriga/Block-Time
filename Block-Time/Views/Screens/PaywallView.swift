@@ -257,11 +257,11 @@ struct PaywallView: View {
     }
 
     private let proFeatures: [ProFeature] = [
-        ProFeature(icon: "airplane.departure", title: "Flight Logbook", description: "Log unlimited flights with all time fields"),
-        ProFeature(icon: "chart.xyaxis.line", title: "Dashboard & Analytics", description: "Career milestones, charts, and heatmaps"),
+        ProFeature(icon: "airplane.departure", title: "Flight Logbook", description: "Log unlimited flights"),
+        ProFeature(icon: "chart.xyaxis.line", title: "Dashboard & Analytics", description: "Career milestones, charts, and limits"),
         ProFeature(icon: "clock.badge.checkmark", title: "FRMS Limits", description: "Real-time fatigue risk monitoring"),
-        ProFeature(icon: "square.and.arrow.up", title: "Export & Backup", description: "Export your logbook and schedule backups"),
-        ProFeature(icon: "icloud", title: "iCloud Sync", description: "Sync settings across your devices"),
+        ProFeature(icon: "square.and.arrow.up", title: "Automatic Backups", description: "Automatic backups for your logbook"),
+        ProFeature(icon: "icloud", title: "iCloud Sync", description: "Sync across all your iOS devices"),
     ]
 }
 
