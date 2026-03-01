@@ -27,8 +27,8 @@ struct Block_TimeApp: App {
         //PurchaseService.shared.resetToFreshInstall() // fresh trial
         
 //          PurchaseService.shared.resetTrialForTesting()            // expired — shows paywall
-//          PurchaseService.shared.resetTrialForTesting(daysRemaining: 3)  // red badge, warning icon
-          PurchaseService.shared.resetTrialForTesting(daysRemaining: 7)  // orange badge
+          PurchaseService.shared.resetTrialForTesting(daysRemaining: 3)  // red badge, warning icon
+//          PurchaseService.shared.resetTrialForTesting(daysRemaining: 7)  // orange badge
 //          PurchaseService.shared.resetTrialForTesting(daysRemaining: 15) // blue badge, normal state
 
 

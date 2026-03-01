@@ -52,7 +52,7 @@ struct SplashScreenView: View {
                         .foregroundColor(.secondary)
 
                     if !purchaseService.isPro {
-                        Text("TRIAL")
+                        Text("30 DAY TRIAL")
                             .font(.headline)
                             .fontWeight(.heavy)
                             .foregroundColor(.white.opacity(0.9))

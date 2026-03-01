@@ -13,10 +13,12 @@ struct FlightsSplitView: View {
     @ObservedObject var filterViewModel: FlightsFilterViewModel
     @State private var selectedFlight: FlightSector?
     @State private var isAddingNewFlight: Bool = false
+    @State private var showingPaywall = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
     @State private var isSelectMode: Bool = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(PurchaseService.self) private var purchaseService
 
     // Determine if we should use split view based on device and size class
     private var shouldUseSplitView: Bool {
@@ -85,7 +87,11 @@ struct FlightsSplitView: View {
                         EmptyDetailView(
                             isSelectMode: isSelectMode,
                             onAddFlight: {
-                                isAddingNewFlight = true
+                                if purchaseService.canAddFlight {
+                                    isAddingNewFlight = true
+                                } else {
+                                    showingPaywall = true
+                                }
                             }
                         )
                         .onAppear {
@@ -95,6 +101,9 @@ struct FlightsSplitView: View {
                 }
             }
             .navigationSplitViewStyle(.balanced)
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView(isDismissible: true)
+            }
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 // Force sidebar to show when app becomes active
                 if newPhase == .active && shouldUseSplitView {
@@ -121,6 +130,8 @@ private struct FlightsListContent: View {
     let onFlightSelected: (FlightSector) -> Void
 
     private let databaseService = FlightDatabaseService.shared
+    @Environment(PurchaseService.self) private var purchaseService
+    @State private var showingPaywall = false
     @State private var allFlightSectors: [FlightSector] = []
     @State private var filteredFlightSectors: [FlightSector] = []
     @State private var showingFilterSheet = false
@@ -315,8 +326,12 @@ private struct FlightsListContent: View {
                     if !isSelectMode {
                         Button(action: {
                             HapticManager.shared.impact(.light)
-                            selectedFlight = nil
-                            isAddingNewFlight = true
+                            if purchaseService.canAddFlight {
+                                selectedFlight = nil
+                                isAddingNewFlight = true
+                            } else {
+                                showingPaywall = true
+                            }
                         }) {
                             Image(systemName: "plus.circle")
                                 .font(.title2)
@@ -460,6 +475,9 @@ private struct FlightsListContent: View {
                     .labelStyle(.iconOnly)
                 }
             }
+        }
+        .fullScreenCover(isPresented: $showingPaywall) {
+            PaywallView(isDismissible: true)
         }
         .sheet(isPresented: $showingFilterSheet) {
             FilterSheet(

@@ -106,13 +106,13 @@ struct PaywallView: View {
                     .shadow(color: deepBlue.opacity(0.5), radius: 10, x: 0, y: 4)
             }
 
-            Text(isDismissible ? "Unlock Block-Time" : "Your Trial Has Ended")
+            Text(purchaseService.isTrialActive ? "Unlock Block-Time" : "Your Trial Has Ended")
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
-            Text(isDismissible
+            Text(purchaseService.isTrialActive
                  ? "Purchase Block-Time Now."
                  : "Purchase Block-Time to continue tracking your flights.")
                 .font(.body)

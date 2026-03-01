@@ -8,6 +8,7 @@ struct ModernActionButtonsCard: View {
     @Binding var successMessage: String
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(PurchaseService.self) private var purchaseService
 
     // Check if we're in iPad split view mode
     private var isInSplitView: Bool {
@@ -38,7 +39,7 @@ struct ModernActionButtonsCard: View {
                         subtitle: "Save changes",
                         icon: "checkmark.circle.fill",
                         color: .green,
-                        isEnabled: viewModel.hasUnsavedChanges,
+                        isEnabled: viewModel.hasUnsavedChanges && purchaseService.canAddFlight,
                         action: {
                             if viewModel.updateExistingFlight() {
                                 // Show success notification

@@ -49,6 +49,11 @@ final class PurchaseService {
         isPro || isTrialActive
     }
 
+    /// True if the user can add new flights (same condition — gated separately from app access).
+    var canAddFlight: Bool {
+        isPro || isTrialActive
+    }
+
     // MARK: - Init
 
     private init() {

@@ -19,6 +19,8 @@ struct FlightsViewWithFilter: View {
 struct FlightsView: View {
     private let databaseService = FlightDatabaseService.shared
     @Environment(ThemeService.self) private var themeService
+    @Environment(PurchaseService.self) private var purchaseService
+    @State private var showingPaywall = false
     @State private var allFlightSectors: [FlightSector] = []
     @State private var filteredFlightSectors: [FlightSector] = []
     @State private var hasLoadedFlights = false
@@ -257,7 +259,11 @@ struct FlightsView: View {
                         if !isSelectMode {
                             Button(action: {
                                 HapticManager.shared.impact(.light)
-                                isAddingNewFlight = true
+                                if purchaseService.canAddFlight {
+                                    isAddingNewFlight = true
+                                } else {
+                                    showingPaywall = true
+                                }
                             }) {
                                 Image(systemName: "plus.circle")
                                     .font(.title2)
@@ -369,6 +375,9 @@ struct FlightsView: View {
                         }
                     }
                 }
+            }
+            .fullScreenCover(isPresented: $showingPaywall) {
+                PaywallView(isDismissible: true)
             }
             .sheet(isPresented: $showingFilterSheet) {
                 FilterSheet(
