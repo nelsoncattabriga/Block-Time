@@ -1160,12 +1160,15 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
 
         if formatted.contains(airlinePrefix) && !includeLeadingZeroInFlightNumber {
-            if formatted.hasPrefix(airlinePrefix + "0") {
-                formatted = airlinePrefix + String(formatted.dropFirst(airlinePrefix.count + 1))
+            let numericPart = String(formatted.dropFirst(airlinePrefix.count))
+            if numericPart.hasPrefix("0") {
+                let stripped = String(numericPart.drop(while: { $0 == "0" }))
+                formatted = airlinePrefix + (stripped.isEmpty ? numericPart : stripped)
             }
         } else if !formatted.contains(airlinePrefix) && !includeLeadingZeroInFlightNumber {
             if formatted.hasPrefix("0") {
-                formatted = String(formatted.dropFirst())
+                let stripped = String(formatted.drop(while: { $0 == "0" }))
+                if !stripped.isEmpty { formatted = stripped }
             }
         }
 
