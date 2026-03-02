@@ -335,28 +335,25 @@ class TextRecognitionService: ObservableObject {
     }
 
     private func extractOutTime(from text: String) -> String {
+        // D = digit class including slashed-zero variants OCR'd from the B737 FMC (Ø, ø, O, o)
+        let d = "[\\dØøOo]"
         let outPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "OUT\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*:\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT[^\\d]{0,10}(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OUT.{0,30}?(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "OUT\\s+(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT\\s*[:\\-\\.]?\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*:\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT[^\(d)]{0,20}(\(d){2})\\s*[:\\-;\\.]?\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT[^\(d)]{0,10}(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT.{0,30}?(\(d){2}:\(d){2})"),
             // Relaxed patterns for OCR errors ($ or other chars instead of digits)
-            // Match patterns like "$7:25" or "07:25" where first char might be $ or digit
-            try! NSRegularExpression(pattern: "OUT\\s+([\\$\\d][\\d]:[\\d]{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*([\\$\\d][\\d]:[\\d]{2})"),
-            // Even more relaxed: single digit/$ followed by colon (e.g., "$7:25")
-            try! NSRegularExpression(pattern: "OUT\\s+([\\$\\d]:[\\d]{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*([\\$\\d]:[\\d]{2})"),
-            // Very relaxed patterns for severe OCR errors (Ø, O, etc. instead of 0)
-            // Match patterns like "0Ø:25", "ØØ:25", "0O:25" where Ø or O might appear instead of digits
-            try! NSRegularExpression(pattern: "OUT\\s+([\\dØøOo]{2}:[\\d]{2})"),
-            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*([\\dØøOo]{2}:[\\d]{2})")
+            try! NSRegularExpression(pattern: "OUT\\s+([\\$\(d)][\(d)]:\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*([\\$\(d)][\(d)]:\(d){2})"),
+            // Even more relaxed: single digit/$ followed by colon
+            try! NSRegularExpression(pattern: "OUT\\s+([\\$\(d)]:\(d){2})"),
+            try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*([\\$\(d)]:\(d){2})")
         ]
 
         return extractTimeWithPatterns(outPatterns, from: text, timeType: "OUT")

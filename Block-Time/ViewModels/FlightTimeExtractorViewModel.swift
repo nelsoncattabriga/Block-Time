@@ -1039,8 +1039,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
 
         // After populating ACARS data, check for a matching scheduled/future flight
-        // and pre-fill empty fields with data from the roster
-        prefillFromMatchingScheduledFlight()
+        // and pre-fill empty fields with data from the roster.
+        // Skip when editing — the flight is already loaded, no need to search for a match.
+        if !isEditingMode {
+            prefillFromMatchingScheduledFlight()
+        }
     }
 
     /// Search for a matching scheduled flight and pre-fill empty form fields with its data
