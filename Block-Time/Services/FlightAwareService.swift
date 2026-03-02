@@ -997,8 +997,32 @@ class FlightAwareService {
     private func findAllMatchingFlights(in flights: [[String: Any]], targetDate: DateComponents, originalDateString: String) -> [FlightAwareData] {
         var allFlights: [FlightAwareData] = []
 
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+
         // Search through JSON flight array for matching date
         for flight in flights {
+
+            // Resolve a timestamp from whichever field is available
+            var timestamp: Int?
+            if let ts = flight["timestamp"] as? Int {
+                timestamp = ts
+            } else if let ts = flight["roundedTimestamp"] as? Int {
+                timestamp = ts
+            } else if let gateDep = flight["gateDepartureTimes"] as? [String: Any],
+                      let actual = gateDep["actual"] as? Int {
+                timestamp = actual
+            } else if let takeoff = flight["takeoffTimes"] as? [String: Any],
+                      let actual = takeoff["actual"] as? Int {
+                timestamp = actual
+            }
+
+            // If we have a timestamp, filter by date; otherwise let it through
+            if let ts = timestamp {
+                let flightDateString = dateFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ts)))
+                guard flightDateString == originalDateString else { continue }
+            }
 
             // Extract origin, destination, and times
             guard let origin = flight["origin"] as? String ?? flight["originCode"] as? String,
@@ -1007,7 +1031,6 @@ class FlightAwareService {
                   let arrivalTime = flight["arrivalTime"] as? String ?? flight["gateArrivalTime"] as? String else {
                 continue
             }
-
 
             // Convert times to HH:MM format if needed
             let formattedDepTime = formatTime(departureTime)
