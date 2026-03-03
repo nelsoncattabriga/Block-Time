@@ -322,7 +322,7 @@ struct ModernCapturedDataCard: View {
 
                 // Flight Times section
                 HStack {
-                    Text(viewModel.enterTimesInLocalTime ? "Flight Times (Local)" : "Flight Times (UTC)")
+                    Text(viewModel.enterTimesInLocalTime ? "Flight Times (LOCAL)" : "Flight Times (UTC)")
                         .font(.footnote.bold())
                         .foregroundColor(.primary.opacity(0.8))
                     Spacer()
