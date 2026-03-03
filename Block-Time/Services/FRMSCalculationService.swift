@@ -107,7 +107,7 @@ class FRMSCalculationService {
     ///   - fromAirport: Departure airport code (ICAO or IATA)
     ///   - toAirport: Arrival airport code (ICAO or IATA)
     /// - Returns: Sign-on time
-    func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil) -> Date {
+    func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil, isSim: Bool = false) -> Date {
         // Use STD (Scheduled Time of Departure) for sign-on calculation when available
         // Only fall back to OUT (actual departure) if STD is not available
         let departureTime: Date
@@ -116,6 +116,12 @@ class FRMSCalculationService {
         } else {
             departureTime = outTime  // No STD available, use OUT
         }
+
+        // SIM sign-on is 45 minutes before start (FD12.1)
+        if isSim {
+            return Calendar.current.date(byAdding: .minute, value: -45, to: departureTime) ?? departureTime
+        }
+
         var minutesBefore = configuration.signOnMinutesBeforeSTD
 
         // Special case: First flight of the day that is a positioning flight between two Australian ports
@@ -132,9 +138,11 @@ class FRMSCalculationService {
     /// Calculate sign-off time using configured minutes after actual IN
     /// - Parameters:
     ///   - inTime: Actual arrival time
+    ///   - isSim: Whether this is a simulator duty (uses 30 min sign-off per FD12.1)
     /// - Returns: Sign-off time
-    func calculateSignOff(inTime: Date) -> Date {
-        let minutesAfter = configuration.signOffMinutesAfterIN
+    func calculateSignOff(inTime: Date, isSim: Bool = false) -> Date {
+        // SIM sign-off is 30 minutes after end (FD12.1)
+        let minutesAfter = isSim ? 30 : configuration.signOffMinutesAfterIN
         let signOffTime = Calendar.current.date(byAdding: .minute, value: minutesAfter, to: inTime) ?? inTime
         return signOffTime
     }
@@ -224,8 +232,9 @@ class FRMSCalculationService {
         }
 
         // Calculate duty time totals
-        let dutyTime7Days = duties7Days.reduce(0.0) { $0 + $1.dutyTime }
-        let dutyTime14Days = duties14Days.reduce(0.0) { $0 + $1.dutyTime }
+        // FD12.1: Simulator duties are factored by 1.5× for cumulative duty time calculations
+        let dutyTime7Days = duties7Days.reduce(0.0) { $0 + ($1.dutyType == .simulator ? $1.dutyTime * 1.5 : $1.dutyTime) }
+        let dutyTime14Days = duties14Days.reduce(0.0) { $0 + ($1.dutyType == .simulator ? $1.dutyTime * 1.5 : $1.dutyTime) }
 
         // Count days off in the flight time period using home base timezone dates
         // (counts unique local calendar days with duty)
@@ -1643,6 +1652,9 @@ class FRMSCalculationService {
             return nil
         }
 
+        // Determine if this is a simulator flight (simTime populated, no blockTime)
+        let isSim = flightSector.blockTimeValue == 0 && flightSector.simTimeValue > 0
+
         // Get flight time from sector
         // For simulator flights, use simTime; otherwise use blockTime
         let flightTime = flightSector.blockTimeValue > 0 ? flightSector.blockTimeValue : flightSector.simTimeValue
@@ -1695,9 +1707,10 @@ class FRMSCalculationService {
                 isFirstFlightOfDay: isFirstFlightOfDay,
                 isPositioning: flightSector.isPositioning,
                 fromAirport: flightSector.fromAirport,
-                toAirport: flightSector.toAirport
+                toAirport: flightSector.toAirport,
+                isSim: isSim
             )
-            signOff = calculateSignOff(inTime: inDate)
+            signOff = calculateSignOff(inTime: inDate, isSim: isSim)
         } else {
             // For flights without OUT/IN times:
             // - Try to use scheduled departure/arrival times
@@ -1732,9 +1745,10 @@ class FRMSCalculationService {
                     isFirstFlightOfDay: isFirstFlightOfDay,
                     isPositioning: flightSector.isPositioning,
                     fromAirport: flightSector.fromAirport,
-                    toAirport: flightSector.toAirport
+                    toAirport: flightSector.toAirport,
+                    isSim: isSim
                 )
-                signOff = calculateSignOff(inTime: adjustedSta)
+                signOff = calculateSignOff(inTime: adjustedSta, isSim: isSim)
             } else if let std = stdDate {
                 // Only have STD, estimate from flight time
                 signOn = calculateSignOn(
@@ -1743,9 +1757,11 @@ class FRMSCalculationService {
                     isFirstFlightOfDay: isFirstFlightOfDay,
                     isPositioning: flightSector.isPositioning,
                     fromAirport: flightSector.fromAirport,
-                    toAirport: flightSector.toAirport
+                    toAirport: flightSector.toAirport,
+                    isSim: isSim
                 )
-                let estimatedDutyMinutes = Int(flightTime * 60) + configuration.signOffMinutesAfterIN
+                let signOffMinutes = isSim ? 30 : configuration.signOffMinutesAfterIN
+                let estimatedDutyMinutes = Int(flightTime * 60) + signOffMinutes
                 signOff = Calendar.current.date(byAdding: .minute, value: estimatedDutyMinutes, to: signOn) ?? signOn
             } else {
                 // No scheduled times available - estimate duty times from the date
@@ -1757,10 +1773,10 @@ class FRMSCalculationService {
                 // Use midnight UTC as sign-on for simplicity
                 signOn = baseDate
 
-                // For simulator flights, use simTime + 1.5 hours as duty time
-                // For other flights, use flight time + 1.5 hours
-                let dutyHours = flightTime + 1.5
-                let dutyMinutes = Int(dutyHours * 60)
+                // SIM duty = simTime + 01:15 (45 min sign-on + 30 min sign-off) per FD12.1
+                // Other flights: use fleet-configured sign-on + sign-off margins
+                let overheadMinutes: Int = isSim ? 75 : (configuration.signOnMinutesBeforeSTD + configuration.signOffMinutesAfterIN)
+                let dutyMinutes = Int(flightTime * 60) + overheadMinutes
                 signOff = Calendar.current.date(byAdding: .minute, value: dutyMinutes, to: signOn) ?? signOn
             }
         }
@@ -1782,7 +1798,7 @@ class FRMSCalculationService {
         let nightTime = flightSector.nightTimeValue
 
         // Duty type
-        let dutyType: DutyType = flightSector.isPositioning ? .deadheading : .operating
+        let dutyType: DutyType = isSim ? .simulator : (flightSector.isPositioning ? .deadheading : .operating)
 
         // Get home base timezone for time classification
         let homeTimeZone = getHomeBaseTimeZone()
