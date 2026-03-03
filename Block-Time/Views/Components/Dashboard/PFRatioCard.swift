@@ -28,10 +28,9 @@ struct PFRatioCard: View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "PF Ratio", icon: "chart.line.uptrend.xyaxis") {
                 Picker("", selection: $selectedMonths) {
+                    Text("3M").tag(3)
                     Text("6M").tag(6)
                     Text("12M").tag(12)
-                    Text("5Y").tag(60)
-                    
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 110)

@@ -122,7 +122,6 @@ struct TopRegistrationsCard: View {
                 Text(reg.aircraftType)
                     .iPadScaledFont(.caption).foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
             // Bar
             GeometryReader { geo in
@@ -139,13 +138,15 @@ struct TopRegistrationsCard: View {
                         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: displayMode)
                 }
             }
-            .frame(width: 70, height: 12)
-
-            VStack(alignment: .trailing, spacing: 1) {
+            .frame(height: 12)
+            .frame(minWidth: 60, maxWidth: .infinity)
+            
+            if displayMode == .hours {
                 Text(String(format: "%.0f hrs", reg.hours))
                     .iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+            } else {
                 Text("\(reg.sectors) sectors")
-                    .iPadScaledFont(.caption).foregroundStyle(.secondary)
+                    .iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
             }
         }
     }

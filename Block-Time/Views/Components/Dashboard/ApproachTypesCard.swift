@@ -128,13 +128,16 @@ struct ApproachTypesCard: View {
             }
             .frame(height: 16)
 
-            HStack(spacing: 4) {
-                Text("\(item.count)")
-                    .iPadScaledFont(.caption).fontWeight(.semibold)
-                Text(String(format: "%.0f%%", item.percentage))
+            Text("\(item.count)")
+                .iPadScaledFont(.caption).fontWeight(.semibold)
+            
+//            HStack(spacing: 4) {
+//                Text("\(item.count)")
+//                    .iPadScaledFont(.caption).fontWeight(.semibold)
+                Text(String(format: "(%.0f%%)", item.percentage))
                     .iPadScaledFont(.caption).foregroundStyle(.secondary)
-            }
-            .frame(width: 54, alignment: .trailing)
+//            }
+            .frame(width: 48, alignment: .trailing)
         }
     }
 }

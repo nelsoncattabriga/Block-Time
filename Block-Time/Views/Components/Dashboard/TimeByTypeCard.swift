@@ -96,7 +96,7 @@ struct TimeByTypeCard: View {
                     // Legend
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(Array(chartData.enumerated()), id: \.element.id) { index, item in
-                            HStack(spacing: 8) {
+                            HStack(spacing: 12) {
                                 RoundedRectangle(cornerRadius: 3)
                                     .fill(fleetColor(at: index))
                                     .frame(width: 10, height: 10)
@@ -108,7 +108,7 @@ struct TimeByTypeCard: View {
                                 Spacer()
 
                                 Text(displayMode == .hours
-                                     ? String(format: "%.0f", item.hours)
+                                     ? String(format: "%.0f hrs", item.hours)
                                      : "\(item.sectors)")
                                     .iPadScaledFont(.caption)
                                     .foregroundStyle(.secondary)

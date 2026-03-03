@@ -95,7 +95,6 @@ struct TopRoutesCard: View {
             Text(route.routeString)
                 .iPadScaledFont(.caption).fontWeight(.semibold)
                 .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
 
             // Bar + count
             GeometryReader { geo in
@@ -108,7 +107,8 @@ struct TopRoutesCard: View {
                         .animation(.spring(response: 0.5, dampingFraction: 0.8), value: route.sectors)
                 }
             }
-            .frame(width: 80, height: 12)
+            .frame(height: 12)
+            .frame(minWidth: 60, maxWidth: .infinity )
 
             Text("\(route.sectors)")
                 .iPadScaledFont(.caption).fontWeight(.bold)
