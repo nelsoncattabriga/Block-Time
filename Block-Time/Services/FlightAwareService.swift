@@ -22,8 +22,8 @@ struct FlightAwareData {
     let destination: String
     var departureTime: String         // Best available departure time - Format: HH:MM UTC
     var arrivalTime: String           // Best available arrival time - Format: HH:MM UTC
-    let scheduledDepartureTime: String?  // STD - Format: HH:MM UTC
-    let scheduledArrivalTime: String?    // STA - Format: HH:MM UTC
+    var scheduledDepartureTime: String?  // STD - Format: HH:MM UTC
+    var scheduledArrivalTime: String?    // STA - Format: HH:MM UTC
     let flightDate: String            // Format: dd/MM/yyyy
 
     // Source tracking — defaults let existing FlightAwareService creation sites compile unchanged
@@ -277,7 +277,19 @@ class FlightAwareService {
                 detailPagePath = "/live/flight/\(flightNumber)/history/\(yyyymmdd)/\(timeHHMMZ)/\(origin)/\(destination)"
             }
 
+            // Determine whether departure is in the past (actual) or future (predicted)
+            let depIsActual: Bool = {
+                let fmt = DateFormatter()
+                fmt.dateFormat = "dd/MM/yyyy HH:mm"
+                fmt.timeZone = TimeZone(secondsFromGMT: 0)
+                if let depDate = fmt.date(from: "\(utcDepDate) \(utcDepTime)") {
+                    return depDate < Date()
+                }
+                return false
+            }()
+
             // Fetch the detail page and extract gate times
+            LogManager.shared.debug("✈️ FA table row: \(origin)→\(destination) utcDep=\(utcDepDate) \(utcDepTime) actual=\(depIsActual), fetching detail: \(detailPagePath!)")
             if let detailData = try? await fetchFlightDetailPageByPath(
                 path: detailPagePath!,
                 targetDate: originalDateString,
@@ -286,6 +298,7 @@ class FlightAwareService {
             ) {
                 return detailData
             } else {
+                LogManager.shared.debug("✈️ FA detail page fetch failed — using table row fallback (actual=\(depIsActual))")
                 // Convert arrival time from local to UTC using destination airport
                 guard let (_, utcArrTime) = convertLocalToUTC(
                     localDate: localDateCell,
@@ -299,7 +312,9 @@ class FlightAwareService {
                         arrivalTime: "00:00",
                         scheduledDepartureTime: nil,
                         scheduledArrivalTime: nil,
-                        flightDate: originalDateString
+                        flightDate: originalDateString,
+                        departureIsActual: depIsActual,
+                        arrivalIsActual: false
                     )
                 }
 
@@ -310,7 +325,9 @@ class FlightAwareService {
                     arrivalTime: utcArrTime,
                     scheduledDepartureTime: nil,
                     scheduledArrivalTime: nil,
-                    flightDate: originalDateString
+                    flightDate: originalDateString,
+                    departureIsActual: depIsActual,
+                    arrivalIsActual: false
                 )
             }
         }
@@ -437,6 +454,11 @@ class FlightAwareService {
                 var landingTime: String?
                 var scheduledGateOutTime: String?
                 var scheduledGateInTime: String?
+                // Epoch timestamps — used to determine whether times are past (actual) or future (predicted)
+                var gateOutEpoch: Int?
+                var takeoffEpoch: Int?
+                var gateInEpoch: Int?
+                var landingEpoch: Int?
 
                 // Extract gate departure time (actual and scheduled)
                 if let gateDepartureTimes = flight["gateDepartureTimes"] as? [String: Any] {
@@ -454,6 +476,7 @@ class FlightAwareService {
                     }
 
                     if let timestamp = epochTimestamp {
+                        gateOutEpoch = timestamp
                         let utcDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
                         let utcFormatter = DateFormatter()
                         utcFormatter.dateFormat = "dd/MM/yyyy HH:mm"
@@ -488,6 +511,7 @@ class FlightAwareService {
                 // Extract takeoff time
                 if let takeoffTimes = flight["takeoffTimes"] as? [String: Any],
                    let actual = takeoffTimes["actual"] as? Int {
+                    takeoffEpoch = actual
                     let utcDate = Date(timeIntervalSince1970: TimeInterval(actual))
                     let utcFormatter = DateFormatter()
                     utcFormatter.dateFormat = "dd/MM/yyyy HH:mm"
@@ -503,6 +527,7 @@ class FlightAwareService {
                 // Extract landing time
                 if let landingTimes = flight["landingTimes"] as? [String: Any],
                    let actual = landingTimes["actual"] as? Int {
+                    landingEpoch = actual
                     let utcDate = Date(timeIntervalSince1970: TimeInterval(actual))
                     let utcFormatter = DateFormatter()
                     utcFormatter.dateFormat = "dd/MM/yyyy HH:mm"
@@ -531,6 +556,7 @@ class FlightAwareService {
                     }
 
                     if let timestamp = epochTimestamp {
+                        gateInEpoch = timestamp
                         let utcDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
                         let utcFormatter = DateFormatter()
                         utcFormatter.dateFormat = "dd/MM/yyyy HH:mm"
@@ -567,6 +593,13 @@ class FlightAwareService {
                 let finalInTime = gateInTime ?? landingTime
 
                 if let outTime = finalOutTime, let inTime = finalInTime {
+                    // A time is only "actual" if its epoch is in the past
+                    let now = Date()
+                    let depEpoch  = gateOutEpoch ?? takeoffEpoch
+                    let arrEpoch  = gateInEpoch  ?? landingEpoch
+                    let depActual = depEpoch.map { Date(timeIntervalSince1970: TimeInterval($0)) < now } ?? false
+                    let arrActual = arrEpoch.map { Date(timeIntervalSince1970: TimeInterval($0)) < now } ?? false
+
                     return FlightAwareData(
                         origin: origin,
                         destination: destination,
@@ -574,7 +607,9 @@ class FlightAwareService {
                         arrivalTime: inTime,
                         scheduledDepartureTime: scheduledGateOutTime,
                         scheduledArrivalTime: scheduledGateInTime,
-                        flightDate: targetDate
+                        flightDate: targetDate,
+                        departureIsActual: depActual,
+                        arrivalIsActual: arrActual
                     )
                 }
             }
@@ -1036,6 +1071,22 @@ class FlightAwareService {
             let formattedDepTime = formatTime(departureTime)
             let formattedArrTime = formatTime(arrivalTime)
 
+            // Times are actual only if the timestamp is in the past
+            let now = Date()
+            let isActual = timestamp.map { Date(timeIntervalSince1970: TimeInterval($0)) < now } ?? false
+
+            let tsDesc: String
+            if let ts = timestamp {
+                let tsDate = Date(timeIntervalSince1970: TimeInterval(ts))
+                let fmt = DateFormatter()
+                fmt.dateFormat = "dd/MM/yyyy HH:mm"
+                fmt.timeZone = TimeZone(secondsFromGMT: 0)
+                tsDesc = "\(fmt.string(from: tsDate))Z (\(isActual ? "past" : "FUTURE"))"
+            } else {
+                tsDesc = "nil"
+            }
+            LogManager.shared.debug("✈️ FA JSON flight: \(origin)→\(destination) dep=\(formattedDepTime) arr=\(formattedArrTime) ts=\(tsDesc) actual=\(isActual)")
+
             allFlights.append(FlightAwareData(
                 origin: origin,
                 destination: destination,
@@ -1043,7 +1094,9 @@ class FlightAwareService {
                 arrivalTime: formattedArrTime,
                 scheduledDepartureTime: nil,
                 scheduledArrivalTime: nil,
-                flightDate: originalDateString
+                flightDate: originalDateString,
+                departureIsActual: isActual,
+                arrivalIsActual: isActual
             ))
         }
 
