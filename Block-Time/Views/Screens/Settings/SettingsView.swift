@@ -568,7 +568,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Time Entry")
+                        Text("Logbook Time Entry")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -632,7 +632,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Flight Times")
+                        Text("Flight Times in")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
