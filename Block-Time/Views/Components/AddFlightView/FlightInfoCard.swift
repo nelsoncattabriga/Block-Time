@@ -196,6 +196,37 @@ struct ModernCapturedDataCard: View {
 
                 VStack(spacing: 8) {
 
+                    // FROM / TO airports
+                    HStack(spacing: 8) {
+                        ModernAirportField(
+                            label: "FROM",
+                            value: Binding(
+                                get: { viewModel.fromAirport },
+                                set: { viewModel.fromAirport = $0 }
+                            ),
+                            icon: "airplane.departure",
+                            useIATACodes: viewModel.useIATACodes,
+                            recentAirports: viewModel.recentAirports,
+                            onAirportSelected: { airport in
+                                viewModel.trackAirportUsage(airport)
+                            }
+                        )
+
+                        ModernAirportField(
+                            label: "TO",
+                            value: Binding(
+                                get: { viewModel.toAirport },
+                                set: { viewModel.toAirport = $0 }
+                            ),
+                            icon: "airplane.arrival",
+                            useIATACodes: viewModel.useIATACodes,
+                            recentAirports: viewModel.recentAirports,
+                            onAirportSelected: { airport in
+                                viewModel.trackAirportUsage(airport)
+                            }
+                        )
+                    }
+
                     // Date picker
                     ModernDatePickerField(
                         label: "UTC DATE",
@@ -232,36 +263,6 @@ struct ModernCapturedDataCard: View {
                             }
                         }
                     )
-
-                    HStack(spacing: 8) {
-                        ModernAirportField(
-                            label: "FROM",
-                            value: Binding(
-                                get: { viewModel.fromAirport },
-                                set: { viewModel.fromAirport = $0 }
-                            ),
-                            icon: "airplane.departure",
-                            useIATACodes: viewModel.useIATACodes,
-                            recentAirports: viewModel.recentAirports,
-                            onAirportSelected: { airport in
-                                viewModel.trackAirportUsage(airport)
-                            }
-                        )
-
-                        ModernAirportField(
-                            label: "TO",
-                            value: Binding(
-                                get: { viewModel.toAirport },
-                                set: { viewModel.toAirport = $0 }
-                            ),
-                            icon: "airplane.arrival",
-                            useIATACodes: viewModel.useIATACodes,
-                            recentAirports: viewModel.recentAirports,
-                            onAirportSelected: { airport in
-                                viewModel.trackAirportUsage(airport)
-                            }
-                        )
-                    }
                 }
 
                 // Flight Times section
