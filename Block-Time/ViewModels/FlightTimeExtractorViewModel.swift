@@ -1039,8 +1039,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
 
         // After populating ACARS data, check for a matching scheduled/future flight
-        // and pre-fill empty fields with data from the roster
-        prefillFromMatchingScheduledFlight()
+        // and pre-fill empty fields with data from the roster.
+        // Skip when editing — the flight is already loaded, no need to search for a match.
+        if !isEditingMode {
+            prefillFromMatchingScheduledFlight()
+        }
     }
 
     /// Search for a matching scheduled flight and pre-fill empty form fields with its data
@@ -2766,6 +2769,24 @@ class FlightTimeExtractorViewModel: ObservableObject {
             LogManager.shared.info("🔀 IN : FlightAware \(fa.arrivalTime) used (AeroDataBox has no actual IN)")
         }
 
+        // ── Scheduled times (STD/STA) ────────────────────────────────────────
+        // ADB is the authoritative source for scheduled times; FA rarely has them.
+        result.scheduledDepartureTime = adb.scheduledDepartureTime ?? fa.scheduledDepartureTime
+        result.scheduledArrivalTime   = adb.scheduledArrivalTime   ?? fa.scheduledArrivalTime
+
+        // ── Clear OUT/IN for future flights ──────────────────────────────────
+        // If the departure is not actual, the flight hasn't happened — clear OUT/IN
+        // so only STD/STA are returned. The app should not populate gate-time fields
+        // from predicted/scheduled data.
+        if !result.departureIsActual {
+            result.departureTime = ""
+            LogManager.shared.info("🔀 OUT cleared (flight not yet departed — use STD \(result.scheduledDepartureTime ?? "nil"))")
+        }
+        if !result.arrivalIsActual {
+            result.arrivalTime = ""
+            LogManager.shared.info("🔀 IN  cleared (flight not yet arrived — use STA \(result.scheduledArrivalTime ?? "nil"))")
+        }
+
         // ── Aircraft registration ────────────────────────────────────────────
         // AeroDataBox is the only source that provides this.
         if let reg = adb.aircraftRegistration, !reg.isEmpty {
@@ -2777,7 +2798,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         result.departureRunwayTime = adb.departureRunwayTime
         result.arrivalRunwayTime   = adb.arrivalRunwayTime
 
-        LogManager.shared.info("🔀 Hybrid result: OUT=\(result.departureTime) (actual=\(result.departureIsActual)), IN=\(result.arrivalTime) (actual=\(result.arrivalIsActual))")
+        LogManager.shared.info("🔀 Hybrid result: OUT=\(result.departureTime.isEmpty ? "nil" : result.departureTime) (actual=\(result.departureIsActual)), IN=\(result.arrivalTime.isEmpty ? "nil" : result.arrivalTime) (actual=\(result.arrivalIsActual)), STD=\(result.scheduledDepartureTime ?? "nil"), STA=\(result.scheduledArrivalTime ?? "nil")")
         return result
     }
 

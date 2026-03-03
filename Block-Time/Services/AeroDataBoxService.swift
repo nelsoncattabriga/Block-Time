@@ -199,9 +199,25 @@ final class AeroDataBoxService {
             LogManager.shared.info("   revisedTime  (IN)   = \(arrRevised   ?? "nil")")
             LogManager.shared.info("   runwayTime  (LDG)   = \(arrRunway    ?? "nil")")
 
-            // revisedTime = actual gate OUT/IN; falls back to scheduledTime if absent
-            let departureIsActual = depRevised != nil
-            let arrivalIsActual   = arrRevised != nil
+            // revisedTime = actual gate OUT/IN only when the flight has actually operated.
+            // For "Expected", "Scheduled", etc., revisedTime is just a prediction — mark as not actual.
+            let departureIsActual: Bool
+            let arrivalIsActual: Bool
+            switch status.lowercased() {
+            case "landed", "arrived":
+                // Flight completed — both times can be actual
+                departureIsActual = depRevised != nil
+                arrivalIsActual   = arrRevised != nil
+            case "departed", "enroute", "en route", "active", "approaching":
+                // Airborne — departure is actual, arrival hasn't happened yet
+                departureIsActual = depRevised != nil
+                arrivalIsActual   = false
+            default:
+                // "Expected", "Scheduled", "Delayed", "Boarding", "CheckIn", "GateClosed", unknown…
+                // No actual operational data yet; revisedTime is a prediction only
+                departureIsActual = false
+                arrivalIsActual   = false
+            }
 
             guard let depRaw = depRevised ?? depScheduled,
                   let arrRaw = arrRevised ?? arrScheduled else {

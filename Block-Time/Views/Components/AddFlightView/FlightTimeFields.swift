@@ -123,8 +123,13 @@ struct ModernTimeField: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 if timeFieldFocused {
+                    Button("Clear") {
+                        value = ""
+                        timeFieldFocused = false
+                    }
+                    .foregroundColor(.red)
                     Spacer()
-                    Button("Done"){
+                    Button("Done") {
                         timeFieldFocused = false
                     }
                     .font(.subheadline.bold())
@@ -269,8 +274,13 @@ struct ModernDecimalTimeField: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 if decimalFieldFocused {
+                    Button("Clear") {
+                        value = ""
+                        decimalFieldFocused = false
+                    }
+                    .foregroundColor(.red)
                     Spacer()
-                    Button("Done"){
+                    Button("Done") {
                         decimalFieldFocused = false
                     }
                     .font(.subheadline.bold())
