@@ -561,6 +561,38 @@ private struct ModernFormatOptionsCard: View {
                 .cornerRadius(8)
 
 
+                // Enter Times In Local Time toggle
+                HStack(spacing: 12) {
+                    Image(systemName: "clock.badge.questionmark")
+                        .foregroundColor(.orange)
+                        .frame(width: 20)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Time Entry")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+
+                        Text(viewModel.enterTimesInLocalTime ? "Enter times in LOCAL time" : "Enter times in UTC")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Picker("", selection: Binding(
+                        get: { viewModel.enterTimesInLocalTime },
+                        set: { viewModel.updateEnterTimesInLocalTime($0) }
+                    )) {
+                        Text("UTC").tag(false)
+                        Text("Local").tag(true)
+                    }
+                    .pickerStyle(.menu)
+                }
+                .padding(12)
+                .background(Color(.systemGray6).opacity(0.5))
+                .cornerRadius(8)
+
                 // Show Times In Picker
                 HStack(spacing: 12) {
                     Image(systemName: "clock.badge.checkmark")

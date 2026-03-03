@@ -99,6 +99,7 @@ struct MigrationSettings: Codable {
     let pfAutoInstrumentMinutes: Int?
     let logbookDestination: String?
     let displayFlightsInLocalTime: Bool?
+    let enterTimesInLocalTime: Bool?
     let useIATACodes: Bool?
     let showTimesInHoursMinutes: Bool?
     let logApproaches: Bool?
@@ -576,6 +577,9 @@ class MigrationImportService {
         }
         if let displayFlightsInLocalTime = settings.displayFlightsInLocalTime {
             ubiquitousStore.set(displayFlightsInLocalTime, forKey: "cloud_displayFlightsInLocalTime")
+        }
+        if let enterTimesInLocalTime = settings.enterTimesInLocalTime {
+            ubiquitousStore.set(enterTimesInLocalTime, forKey: "cloud_enterTimesInLocalTime")
         }
         if let useIATACodes = settings.useIATACodes {
             ubiquitousStore.set(useIATACodes, forKey: "cloud_useIATACodes")

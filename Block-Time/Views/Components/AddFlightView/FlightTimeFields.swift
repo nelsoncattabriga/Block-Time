@@ -10,6 +10,9 @@ struct ModernTimeField: View {
     var airportCode: String = ""
     var showLocalTime: Bool = false
     var useIATACodes: Bool = false
+    /// Optional override hint shown below the field. When set, takes priority over the
+    /// auto-computed local time hint. Use for "= HH:MM UTC" in local-entry mode.
+    var hintText: String? = nil
     @FocusState private var timeFieldFocused: Bool
     var onSave: (() -> Void)? = nil
 
@@ -103,8 +106,12 @@ struct ModernTimeField: View {
                         .submitLabel(.done)
                 }
 
-                // Show local time if available
-                if let localTime = localTimeText {
+                // Show hint: custom override takes priority, then auto local-time hint
+                if let hint = hintText {
+                    Text(hint)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                } else if let localTime = localTimeText {
                     Text(localTime)
                         .font(.subheadline)
                         .foregroundColor(.secondary.opacity(1.0))

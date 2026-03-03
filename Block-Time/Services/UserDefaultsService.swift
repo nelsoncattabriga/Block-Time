@@ -108,6 +108,7 @@ struct AppSettings {
     var showTimesInHoursMinutes: Bool  // Show flight times in HH:MM format instead of decimal
     var selectedFleetID: String  // Selected fleet for filtering
     var decimalRoundingMode: RoundingMode  // Rounding mode for decimal times (block and night)
+    var enterTimesInLocalTime: Bool  // Enter OUT/IN/STD/STA in local airport time instead of UTC
 
 
     static let `default` = AppSettings(
@@ -144,7 +145,8 @@ struct AppSettings {
         recentAirports: [],
         showTimesInHoursMinutes: false,
         selectedFleetID: "B737",
-        decimalRoundingMode: .standard  // Default to standard rounding
+        decimalRoundingMode: .standard,  // Default to standard rounding
+        enterTimesInLocalTime: false
     )
 }
 
@@ -185,6 +187,7 @@ class UserDefaultsService: ObservableObject {
         static let showTimesInHoursMinutes = "showTimesInHoursMinutes"
         static let selectedFleetID = "selectedFleetID"
         static let decimalRoundingMode = "decimalRoundingMode"
+        static let enterTimesInLocalTime = "enterTimesInLocalTime"
         static let onboardingCompleted = "onboardingCompleted"
     }
     
@@ -246,7 +249,8 @@ class UserDefaultsService: ObservableObject {
             recentAirports: userDefaults.stringArray(forKey: Keys.recentAirports) ?? [],
             showTimesInHoursMinutes: userDefaults.bool(forKey: Keys.showTimesInHoursMinutes),
             selectedFleetID: userDefaults.string(forKey: Keys.selectedFleetID) ?? "B737",
-            decimalRoundingMode: roundingMode
+            decimalRoundingMode: roundingMode,
+            enterTimesInLocalTime: userDefaults.bool(forKey: Keys.enterTimesInLocalTime)
         )
     }
 
@@ -279,6 +283,7 @@ class UserDefaultsService: ObservableObject {
         userDefaults.set(settings.showTimesInHoursMinutes, forKey: Keys.showTimesInHoursMinutes)
         userDefaults.set(settings.selectedFleetID, forKey: Keys.selectedFleetID)
         userDefaults.set(settings.decimalRoundingMode.rawValue, forKey: Keys.decimalRoundingMode)
+        userDefaults.set(settings.enterTimesInLocalTime, forKey: Keys.enterTimesInLocalTime)
 
         // Sync to iCloud if enabled
         if syncToCloud {
@@ -438,6 +443,12 @@ class UserDefaultsService: ObservableObject {
     func setDecimalRoundingMode(_ value: RoundingMode) {
         markModificationAndSyncToCloud()
         userDefaults.set(value.rawValue, forKey: Keys.decimalRoundingMode)
+        syncToCloudAfterChange()
+    }
+
+    func setEnterTimesInLocalTime(_ value: Bool) {
+        markModificationAndSyncToCloud()
+        userDefaults.set(value, forKey: Keys.enterTimesInLocalTime)
         syncToCloudAfterChange()
     }
 

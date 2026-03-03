@@ -56,6 +56,7 @@ class CloudKitSettingsSyncService {
         static let pfAutoInstrumentMinutes = "cloud_pfAutoInstrumentMinutes"
         static let logbookDestination = "cloud_logbookDestination"
         static let displayFlightsInLocalTime = "cloud_displayFlightsInLocalTime"
+        static let enterTimesInLocalTime = "cloud_enterTimesInLocalTime"
         static let useIATACodes = "cloud_useIATACodes"
         static let showTimesInHoursMinutes = "cloud_showTimesInHoursMinutes"
         static let logApproaches = "cloud_logApproaches"
@@ -288,6 +289,7 @@ class CloudKitSettingsSyncService {
         ubiquitousStore.set(settings.pfAutoInstrumentMinutes, forKey: CloudKeys.pfAutoInstrumentMinutes)
         ubiquitousStore.set(settings.logbookDestination.rawValue, forKey: CloudKeys.logbookDestination)
         ubiquitousStore.set(settings.displayFlightsInLocalTime, forKey: CloudKeys.displayFlightsInLocalTime)
+        ubiquitousStore.set(settings.enterTimesInLocalTime, forKey: CloudKeys.enterTimesInLocalTime)
         ubiquitousStore.set(settings.useIATACodes, forKey: CloudKeys.useIATACodes)
         ubiquitousStore.set(settings.showTimesInHoursMinutes, forKey: CloudKeys.showTimesInHoursMinutes)
         ubiquitousStore.set(settings.logApproaches, forKey: CloudKeys.logApproaches)
@@ -473,6 +475,11 @@ class CloudKitSettingsSyncService {
            displayLocalTime != localSettings.displayFlightsInLocalTime {
             settings.displayFlightsInLocalTime = displayLocalTime
             changedKeys.insert("displayFlightsInLocalTime")
+        }
+        if let enterLocal = ubiquitousStore.object(forKey: CloudKeys.enterTimesInLocalTime) as? Bool,
+           enterLocal != localSettings.enterTimesInLocalTime {
+            settings.enterTimesInLocalTime = enterLocal
+            changedKeys.insert("enterTimesInLocalTime")
         }
         if let useIATA = ubiquitousStore.object(forKey: CloudKeys.useIATACodes) as? Bool,
            useIATA != localSettings.useIATACodes {
