@@ -105,27 +105,29 @@ struct TakeoffLandingCard: View {
                     .iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
             }
 
-            Text("\(total)")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(color)
+            HStack(alignment: .center, spacing: 10) {
+                Text("\(total)")
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .foregroundStyle(color)
 
-            // Stacked horizontal bar
-            GeometryReader { geo in
-                HStack(spacing: 1) {
-                    if dayPct > 0 {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.yellow.opacity(0.85))
-                            .frame(width: max(0, geo.size.width * dayPct - 0.5))
-                    }
-                    if nightPct > 0 {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.indigo.opacity(0.85))
-                            .frame(width: max(0, geo.size.width * nightPct - 0.5))
+                // Stacked horizontal bar
+                GeometryReader { geo in
+                    HStack(spacing: 1) {
+                        if dayPct > 0 {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.yellow.opacity(0.85))
+                                .frame(width: max(0, geo.size.width * dayPct - 0.5))
+                        }
+                        if nightPct > 0 {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.indigo.opacity(0.85))
+                                .frame(width: max(0, geo.size.width * nightPct - 0.5))
+                        }
                     }
                 }
+                .frame(height: 10)
+                .clipShape(Capsule())
             }
-            .frame(height: 8)
-            .clipShape(Capsule())
 
             VStack(alignment: .leading, spacing: 3) {
                 legendRow(label: "Day",   count: day,   pct: dayPct,   color: .yellow)
@@ -146,7 +148,7 @@ struct TakeoffLandingCard: View {
             Spacer()
             Text("\(count)")
                 .iPadScaledFont(.caption).fontWeight(.semibold)
-            Text(String(format: "%.0f%%", pct * 100))
+            Text(String(format: "(%.0f%%)", pct * 100))
                 .iPadScaledFont(.caption).foregroundStyle(.secondary)
         }
     }
