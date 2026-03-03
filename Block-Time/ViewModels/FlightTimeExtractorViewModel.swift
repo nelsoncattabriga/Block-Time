@@ -84,6 +84,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
     @Published var logbookDestination = LogbookDestination.internalLogbook
     @Published var displayFlightsInLocalTime = false
+    @Published var enterTimesInLocalTime = false
 
     // Editing mode
     @Published var isEditingMode = false
@@ -344,6 +345,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         showSONameFields = settings.showSONameFields  // Load SO fields visibility setting
         pfAutoInstrumentMinutes = settings.pfAutoInstrumentMinutes
         displayFlightsInLocalTime = settings.displayFlightsInLocalTime
+        enterTimesInLocalTime = settings.enterTimesInLocalTime
         useIATACodes = settings.useIATACodes
         logApproaches = settings.logApproaches
         defaultApproachType = settings.defaultApproachType
@@ -410,6 +412,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 pfAutoInstrumentMinutes = settings.pfAutoInstrumentMinutes
             case "displayFlightsInLocalTime":
                 displayFlightsInLocalTime = settings.displayFlightsInLocalTime
+            case "enterTimesInLocalTime":
+                enterTimesInLocalTime = settings.enterTimesInLocalTime
             case "useIATACodes":
                             LogManager.shared.debug("  ✏️ Updating useIATACodes: \(useIATACodes) -> \(settings.useIATACodes)")
                 useIATACodes = settings.useIATACodes
@@ -672,6 +676,27 @@ class FlightTimeExtractorViewModel: ObservableObject {
     func updateDisplayFlightsInLocalTime(_ value: Bool) {
         displayFlightsInLocalTime = value
         userDefaultsService.setDisplayFlightsInLocalTime(value)
+    }
+
+    func updateEnterTimesInLocalTime(_ value: Bool) {
+        enterTimesInLocalTime = value
+        userDefaultsService.setEnterTimesInLocalTime(value)
+    }
+
+    /// UTC offset label for the departure airport when local time entry is active (e.g., "UTC+10").
+    /// Returns empty string if the airport or date is unknown.
+    var outTimezoneLabel: String {
+        guard enterTimesInLocalTime, !fromAirport.isEmpty, !flightDate.isEmpty else { return "" }
+        let icao = AirportService.shared.convertToICAO(fromAirport)
+        return AirportService.shared.getTimezoneOffsetLabel(for: icao, dateString: flightDate)
+    }
+
+    /// UTC offset label for the arrival airport when local time entry is active (e.g., "UTC+11").
+    /// Returns empty string if the airport or date is unknown.
+    var inTimezoneLabel: String {
+        guard enterTimesInLocalTime, !toAirport.isEmpty, !flightDate.isEmpty else { return "" }
+        let icao = AirportService.shared.convertToICAO(toAirport)
+        return AirportService.shared.getTimezoneOffsetLabel(for: icao, dateString: flightDate)
     }
 
     func updateUseIATACodes(_ value: Bool) {
@@ -1575,7 +1600,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             foName: coPilotName,
             so1Name: so1Name.isEmpty ? nil : so1Name,
             so2Name: so2Name.isEmpty ? nil : so2Name,
-            blockTime: blockTime,
+            blockTime: isSimulator ? "0.0" : blockTime,
             nightTime: nightTime,
             p1Time: p1TimeValue,
             p1usTime: p1usTimeValue,
@@ -2382,7 +2407,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 foName: coPilotName,
                 so1Name: so1Name.isEmpty ? nil : so1Name,
                 so2Name: so2Name.isEmpty ? nil : so2Name,
-                blockTime: blockTimeCalculated,
+                blockTime: isSimulator ? "0.0" : blockTimeCalculated,
                 nightTime: nightTime,
                 p1Time: p1TimeValue,
                 p1usTime: p1usTimeValue,
@@ -2435,7 +2460,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 foName: coPilotName,
                 so1Name: so1Name.isEmpty ? nil : so1Name,
                 so2Name: so2Name.isEmpty ? nil : so2Name,
-                blockTime: blockTimeCalculated,
+                blockTime: isSimulator ? "0.0" : blockTimeCalculated,
                 nightTime: nightTime,
                 p1Time: p1TimeValue,
                 p1usTime: p1usTimeValue,

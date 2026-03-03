@@ -38,7 +38,7 @@ struct Block_TimeApp: App {
     }
 
     private func performSimulatorFlightMigration() {
-        let migrationKey = "simulatorFlightMigrationCompleted"
+        let migrationKey = "simulatorFlightMigrationV2Completed"
 
         // Check if migration already completed
         guard !UserDefaults.standard.bool(forKey: migrationKey) else {

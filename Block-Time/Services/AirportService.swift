@@ -145,6 +145,21 @@ class AirportService {
         return TimeZone(secondsFromGMT: Int(totalOffset * 3600))
     }
 
+    /// Returns a UTC offset label for an airport on a given date, e.g. "UTC+10", "UTC+11", "UTC-5"
+    /// Accepts the flight date as a "dd/MM/yyyy" string for convenience.
+    func getTimezoneOffsetLabel(for icaoCode: String, dateString: String) -> String {
+        guard let date = cachedDateFormatter.date(from: dateString) else { return "Local" }
+        guard let tz = getTimeZone(for: icaoCode, on: date) else { return "Local" }
+        let offsetSeconds = tz.secondsFromGMT()
+        let offsetHours = offsetSeconds / 3600
+        let offsetMinutes = abs(offsetSeconds % 3600) / 60
+        if offsetMinutes == 0 {
+            return "UTC\(offsetHours >= 0 ? "+" : "")\(offsetHours)"
+        } else {
+            return "UTC\(offsetHours >= 0 ? "+" : "")\(offsetHours):\(String(format: "%02d", offsetMinutes))"
+        }
+    }
+
     /// Check if an airport is in Australia
     /// - Parameter code: Airport ICAO or IATA code
     /// - Returns: true if the airport is in Australia (ICAO starts with YB, YM, YP, or YS)

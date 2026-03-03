@@ -1,0 +1,30 @@
+Block-Time
+
+To Implement
+
+
+No, the SH roster import does not currently find simulator duties.                                                                                  
+                                                                                                                                                      
+  Here's why:                                                                                                                                         
+                                                                                                                                                      
+  The parser (RosterParserService.swift) only reads the Pattern Details section (the second half of the roster starting at line 64), which contains   
+  individual flight legs formatted like:                                                                                                              
+  09Nov       503  BNE  0520 SYD  0756  73H   1:36          
+                                                                                                                                                      
+  The SIM duties appear in the main duty schedule at the top (lines 13–51), formatted completely differently:                                         
+  08 Sat  SIM06CB(T)                              0615 1130  7:52  4:00       AS20                                                                    
+                                                                                                                                                      
+  The parser's regex pattern (^(\d{2}\w{3})\s+(P)?\s*(\d{3,4})\s+([A-Z]{3})\s+(\d{4})...) requires a date like 09Nov, a flight number (3-4 digits),
+  and IATA airport codes — none of which exist on SIM duty lines. These lines are also absent from the Pattern Details section entirely (SIM duties
+  don't appear there at all).
+
+  What would be needed to fix it:
+  - Parse the top duty schedule section (between the --- separators and "Global Preferences") separately
+  - Detect lines where the Duty(Role) column starts with SIM (e.g., SIM06CB(T))
+  - Extract: date (08 Sat), SIM flight number (06CB), sign-on (0615), sign-off (1130), credit time (4:00)
+  - Import these as simulator entries with the base as both departure and arrival airport
+
+  Would you like me to implement SIM duty parsing for SH rosters?
+
+
+

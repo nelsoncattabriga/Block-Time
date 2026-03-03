@@ -80,6 +80,61 @@ struct ModernCapturedDataCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
     @Environment(CloudKitSettingsSyncService.self) private var cloudKitService
 
+    // MARK: - Local Time Entry Bindings
+    // The ViewModel always stores times as UTC. When enterTimesInLocalTime is ON,
+    // these bindings convert UTC→local for display and local→UTC on set.
+    // ACARS capture (which writes UTC directly to the ViewModel) works transparently.
+
+    private func localTimeBinding(utcTime: Binding<String>, airportCode: String) -> Binding<String> {
+        Binding(
+            get: {
+                // Only convert complete "HH:MM" values — pass partial input straight through
+                // to avoid AirportService mis-parsing e.g. "023" as 0h 23m.
+                let stored = utcTime.wrappedValue
+                guard viewModel.enterTimesInLocalTime,
+                      !airportCode.isEmpty,
+                      stored.count == 5, stored.contains(":") else {
+                    return stored
+                }
+                let icao = AirportService.shared.convertToICAO(airportCode)
+                let local = AirportService.shared.convertToLocalTime(
+                    utcDateString: viewModel.flightDate,
+                    utcTimeString: stored,
+                    airportICAO: icao
+                )
+                guard local.count == 4 else { return stored }
+                return "\(local.prefix(2)):\(local.suffix(2))"
+            },
+            set: { newValue in
+                guard viewModel.enterTimesInLocalTime,
+                      !airportCode.isEmpty,
+                      !viewModel.flightDate.isEmpty,
+                      newValue.count == 5, newValue.contains(":") else {
+                    // Partial input or no airport — store as-is without conversion
+                    utcTime.wrappedValue = newValue
+                    return
+                }
+                let icao = AirportService.shared.convertToICAO(airportCode)
+                utcTime.wrappedValue = AirportService.shared.convertFromLocalToUTCTime(
+                    localDateString: viewModel.flightDate,
+                    localTimeString: newValue,
+                    airportICAO: icao
+                )
+            }
+        )
+    }
+
+    private func timeFieldLabel(_ base: String, tzLabel: String) -> String {
+        base
+    }
+
+    private func utcHintText(utcTime: String, tzLabel: String) -> String? {
+        guard viewModel.enterTimesInLocalTime,
+              !tzLabel.isEmpty,
+              utcTime.count == 5, utcTime.contains(":") else { return nil }
+        return "\(utcTime.replacingOccurrences(of: ":", with: "")) UTC"
+    }
+
     private var flightNumberPlaceholder: String {
         let baseNumber = "123"
         let leadingZeroNumber = "0123"
@@ -196,43 +251,7 @@ struct ModernCapturedDataCard: View {
 
                 VStack(spacing: 8) {
 
-                    // Date picker
-                    ModernDatePickerField(
-                        label: "UTC DATE",
-                        dateString: $viewModel.flightDate,
-                        icon: "calendar",
-                        airportCode: viewModel.fromAirport,
-                        timeString: viewModel.outTime,
-                        showLocalDate: viewModel.displayFlightsInLocalTime,
-                        useIATACodes: viewModel.useIATACodes
-                    )
-
-                    // Flight Number field with search button
-                    ModernFlightNumberField(
-                        label: viewModel.isSimulator ? "SIM #" : "FLIGHT #",
-                        value: Binding(
-                            get: { viewModel.flightNumber },
-                            set: { viewModel.updateFlightNumber($0) }
-                        ),
-                        placeholder: flightNumberPlaceholder,
-                        icon: "airplane.ticket",
-                        isUppercase: true,
-                        keyboardType: (UIDevice.current.userInterfaceIdiom == .pad || viewModel.isSimulator) ? .numbersAndPunctuation : .numbersAndPunctuation,
-                        canSearch: canSearchFlight,
-                        onSearch: {
-                            viewModel.fetchFlightAwareData()
-                        },
-                        onFocus: {
-                            // Auto-insert airline prefix when field is tapped if empty
-                            // But not for simulator flights (allows custom sim flight numbers like SIM06B)
-                            if viewModel.flightNumber.isEmpty &&
-                               viewModel.includeAirlinePrefixInFlightNumber &&
-                               !viewModel.isSimulator {
-                                viewModel.updateFlightNumber(viewModel.airlinePrefix)
-                            }
-                        }
-                    )
-
+                    // FROM / TO airports
                     HStack(spacing: 8) {
                         ModernAirportField(
                             label: "FROM",
@@ -262,11 +281,48 @@ struct ModernCapturedDataCard: View {
                             }
                         )
                     }
+
+                    // Date picker
+                    ModernDatePickerField(
+                        label: viewModel.enterTimesInLocalTime ? "LOCAL DATE" : "UTC DATE",
+                        dateString: $viewModel.flightDate,
+                        icon: "calendar",
+                        airportCode: viewModel.fromAirport,
+                        timeString: viewModel.outTime,
+                        showLocalDate: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
+                        useIATACodes: viewModel.useIATACodes
+                    )
+
+                    // Flight Number field with search button
+                    ModernFlightNumberField(
+                        label: viewModel.isSimulator ? "SIM #" : "FLIGHT #",
+                        value: Binding(
+                            get: { viewModel.flightNumber },
+                            set: { viewModel.updateFlightNumber($0) }
+                        ),
+                        placeholder: flightNumberPlaceholder,
+                        icon: "airplane.ticket",
+                        isUppercase: true,
+                        keyboardType: (UIDevice.current.userInterfaceIdiom == .pad || viewModel.isSimulator) ? .numbersAndPunctuation : .numbersAndPunctuation,
+                        canSearch: canSearchFlight,
+                        onSearch: {
+                            viewModel.fetchFlightAwareData()
+                        },
+                        onFocus: {
+                            // Auto-insert airline prefix when field is tapped if empty
+                            // But not for simulator flights (allows custom sim flight numbers like SIM06B)
+                            if viewModel.flightNumber.isEmpty &&
+                               viewModel.includeAirlinePrefixInFlightNumber &&
+                               !viewModel.isSimulator {
+                                viewModel.updateFlightNumber(viewModel.airlinePrefix)
+                            }
+                        }
+                    )
                 }
 
                 // Flight Times section
                 HStack {
-                    Text("Flight Times (UTC)")
+                    Text(viewModel.enterTimesInLocalTime ? "Flight Times (LOCAL)" : "Flight Times (UTC)")
                         .font(.footnote.bold())
                         .foregroundColor(.primary.opacity(0.8))
                     Spacer()
@@ -275,68 +331,80 @@ struct ModernCapturedDataCard: View {
                 VStack(spacing: 8) {
                     HStack(spacing: 8) {
                         ModernTimeField(
-                            label: "STD",
-                            value: Binding(
-                                get: { viewModel.scheduledDeparture },
-                                set: { viewModel.scheduledDeparture = $0 }
+                            label: timeFieldLabel("STD", tzLabel: viewModel.outTimezoneLabel),
+                            value: localTimeBinding(
+                                utcTime: Binding(
+                                    get: { viewModel.scheduledDeparture },
+                                    set: { viewModel.scheduledDeparture = $0 }
+                                ),
+                                airportCode: viewModel.fromAirport
                             ),
                             icon: "calendar.badge.clock",
                             isReadOnly: false,
                             dateString: viewModel.flightDate,
                             airportCode: viewModel.fromAirport,
-                            showLocalTime: viewModel.displayFlightsInLocalTime,
+                            showLocalTime: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                             useIATACodes: viewModel.useIATACodes,
-                            onSave: {
-                                // No recalculation needed for scheduled times
-                            }
+                            hintText: utcHintText(utcTime: viewModel.scheduledDeparture, tzLabel: viewModel.outTimezoneLabel),
+                            onSave: {}
                         )
 
                         ModernTimeField(
-                            label: "STA",
-                            value: Binding(
-                                get: { viewModel.scheduledArrival },
-                                set: { viewModel.scheduledArrival = $0 }
+                            label: timeFieldLabel("STA", tzLabel: viewModel.inTimezoneLabel),
+                            value: localTimeBinding(
+                                utcTime: Binding(
+                                    get: { viewModel.scheduledArrival },
+                                    set: { viewModel.scheduledArrival = $0 }
+                                ),
+                                airportCode: viewModel.toAirport
                             ),
                             icon: "calendar.badge.clock",
                             isReadOnly: false,
                             dateString: viewModel.flightDate,
                             airportCode: viewModel.toAirport,
-                            showLocalTime: viewModel.displayFlightsInLocalTime,
+                            showLocalTime: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                             useIATACodes: viewModel.useIATACodes,
-                            onSave: {
-                                // No recalculation needed for scheduled times
-                            }
+                            hintText: utcHintText(utcTime: viewModel.scheduledArrival, tzLabel: viewModel.inTimezoneLabel),
+                            onSave: {}
                         )
                     }
 
                     HStack(spacing: 8) {
                         ModernTimeField(
-                            label: "OUT",
-                            value: Binding(
-                                get: { viewModel.outTime },
-                                set: { viewModel.outTime = $0 }
+                            label: timeFieldLabel("OUT", tzLabel: viewModel.outTimezoneLabel),
+                            value: localTimeBinding(
+                                utcTime: Binding(
+                                    get: { viewModel.outTime },
+                                    set: { viewModel.outTime = $0 }
+                                ),
+                                airportCode: viewModel.fromAirport
                             ),
                             icon: "clock",
                             isReadOnly: false,
                             dateString: viewModel.flightDate,
                             airportCode: viewModel.fromAirport,
-                            showLocalTime: viewModel.displayFlightsInLocalTime,
+                            showLocalTime: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                             useIATACodes: viewModel.useIATACodes,
+                            hintText: utcHintText(utcTime: viewModel.outTime, tzLabel: viewModel.outTimezoneLabel),
                             onSave: { viewModel.recalculateTimesAfterManualEdit() }
                         )
 
                         ModernTimeField(
-                            label: "IN",
-                            value: Binding(
-                                get: { viewModel.inTime },
-                                set: { viewModel.inTime = $0 }
+                            label: timeFieldLabel("IN", tzLabel: viewModel.inTimezoneLabel),
+                            value: localTimeBinding(
+                                utcTime: Binding(
+                                    get: { viewModel.inTime },
+                                    set: { viewModel.inTime = $0 }
+                                ),
+                                airportCode: viewModel.toAirport
                             ),
                             icon: "clock",
                             isReadOnly: false,
                             dateString: viewModel.flightDate,
                             airportCode: viewModel.toAirport,
-                            showLocalTime: viewModel.displayFlightsInLocalTime,
+                            showLocalTime: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                             useIATACodes: viewModel.useIATACodes,
+                            hintText: utcHintText(utcTime: viewModel.inTime, tzLabel: viewModel.inTimezoneLabel),
                             onSave: { viewModel.recalculateTimesAfterManualEdit() }
                         )
                     }
