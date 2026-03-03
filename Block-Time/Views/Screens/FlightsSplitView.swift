@@ -15,6 +15,7 @@ struct FlightsSplitView: View {
     @State private var isAddingNewFlight: Bool = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
     @State private var isSelectMode: Bool = false
+    @State private var showingDiscardAlert: Bool = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
 
@@ -68,13 +69,32 @@ struct FlightsSplitView: View {
                             .toolbar {
                                 ToolbarItem(placement: .navigationBarTrailing) {
                                     Button {
-                                        selectedFlight = nil
-                                        viewModel.exitEditingMode()
+                                        if viewModel.hasUnsavedChanges {
+                                            showingDiscardAlert = true
+                                        } else {
+                                            selectedFlight = nil
+                                            viewModel.exitEditingMode()
+                                        }
                                     } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.secondary)
+                                        Text("Done")
+                                            .fontWeight(.semibold)
                                     }
                                 }
+                            }
+                            .alert("Save Changes?", isPresented: $showingDiscardAlert) {
+                                Button("Save") {
+                                    if viewModel.updateExistingFlight() {
+                                        selectedFlight = nil
+                                        viewModel.exitEditingMode()
+                                    }
+                                }
+                                Button("Discard", role: .destructive) {
+                                    selectedFlight = nil
+                                    viewModel.exitEditingMode()
+                                }
+                                Button("Cancel", role: .cancel) { }
+                            } message: {
+                                Text(viewModel.changesSummary)
                             }
                             .onAppear {
 //                                        LogManager.shared.debug("Detail view appeared for flight: \(flight.flightNumberFormatted)")
