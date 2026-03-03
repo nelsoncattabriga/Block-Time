@@ -632,7 +632,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Flight Times in")
+                        Text("Flight Times")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
