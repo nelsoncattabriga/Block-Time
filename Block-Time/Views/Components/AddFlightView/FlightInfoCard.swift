@@ -124,6 +124,41 @@ struct ModernCapturedDataCard: View {
         )
     }
 
+    // Converts the stored UTC date to the local departure date for display, and
+    // stores the user-picked local date directly (time bindings use flightDate as
+    // the local date reference when calling convertFromLocalToUTCTime).
+    private func localDateBinding() -> Binding<String> {
+        Binding(
+            get: {
+                guard viewModel.enterTimesInLocalTime,
+                      !viewModel.fromAirport.isEmpty,
+                      !viewModel.flightDate.isEmpty else {
+                    return viewModel.flightDate
+                }
+                // Use the stored UTC out time as the reference so DST is evaluated
+                // correctly. Fall back through STD, then "11:00" (noon avoids midnight
+                // crossings for all Australian UTC offsets of +8 to +11).
+                let timeRef: String
+                if viewModel.outTime.count == 5, viewModel.outTime.contains(":") {
+                    timeRef = viewModel.outTime
+                } else if viewModel.scheduledDeparture.count == 5, viewModel.scheduledDeparture.contains(":") {
+                    timeRef = viewModel.scheduledDeparture
+                } else {
+                    timeRef = "11:00"
+                }
+                let icao = AirportService.shared.convertToICAO(viewModel.fromAirport)
+                return AirportService.shared.convertToLocalDate(
+                    utcDateString: viewModel.flightDate,
+                    utcTimeString: timeRef,
+                    airportICAO: icao
+                )
+            },
+            set: { newLocalDate in
+                viewModel.flightDate = newLocalDate
+            }
+        )
+    }
+
     private func timeFieldLabel(_ base: String, tzLabel: String) -> String {
         base
     }
@@ -285,7 +320,7 @@ struct ModernCapturedDataCard: View {
                     // Date picker
                     ModernDatePickerField(
                         label: viewModel.enterTimesInLocalTime ? "LOCAL DATE" : "UTC DATE",
-                        dateString: $viewModel.flightDate,
+                        dateString: localDateBinding(),
                         icon: "calendar",
                         airportCode: viewModel.fromAirport,
                         timeString: viewModel.outTime,
