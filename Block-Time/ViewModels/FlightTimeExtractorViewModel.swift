@@ -683,6 +683,21 @@ class FlightTimeExtractorViewModel: ObservableObject {
         userDefaultsService.setEnterTimesInLocalTime(value)
     }
 
+    /// The UTC date used for storage and change-detection comparisons.
+    /// When enterTimesInLocalTime is on, flightDate holds the local departure date,
+    /// so we convert back to UTC here. Otherwise returns flightDate unchanged.
+    var flightDateForStorage: String {
+        guard enterTimesInLocalTime, !fromAirport.isEmpty, !flightDate.isEmpty else {
+            return flightDate
+        }
+        let icao = AirportService.shared.convertToICAO(fromAirport)
+        return AirportService.shared.convertFromLocalToUTCDate(
+            localDateString: flightDate,
+            localTimeString: "00:00",
+            airportICAO: icao
+        )
+    }
+
     /// UTC offset label for the departure airport when local time entry is active (e.g., "UTC+10").
     /// Returns empty string if the airport or date is unknown.
     var outTimezoneLabel: String {
@@ -1347,7 +1362,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let databaseService = FlightDatabaseService.shared  // Use singleton
 
         let newFlight = FlightSector(
-            date: flightDate,
+            date: flightDateForStorage,
             flightNumber: formattedFlightNumber,
             aircraftReg: aircraftReg,
             aircraftType: aircraftType, //"B738", // Default - you might want to make this configurable
@@ -1522,6 +1537,26 @@ class FlightTimeExtractorViewModel: ObservableObject {
         scheduledDeparture = sector.scheduledDeparture
         scheduledArrival = sector.scheduledArrival
 
+        // Convert stored UTC date to local departure date once when in local entry mode.
+        // This avoids a cascade bug where converting at the SwiftUI Binding layer would
+        // re-convert on every render cycle (UTC→local→UTC→local...).
+        if enterTimesInLocalTime, !fromAirport.isEmpty {
+            let icao = AirportService.shared.convertToICAO(fromAirport)
+            let timeRef: String
+            if outTime.count == 5, outTime.contains(":") {
+                timeRef = outTime
+            } else if !scheduledDeparture.isEmpty {
+                timeRef = scheduledDeparture
+            } else {
+                timeRef = "11:00"
+            }
+            flightDate = AirportService.shared.convertToLocalDate(
+                utcDateString: flightDate,
+                utcTimeString: timeRef,
+                airportICAO: icao
+            )
+        }
+
         // If the loaded flight has any non-zero takeoff/landing values,
         // mark as manually edited to prevent automatic recalculation.
         // To allow automatic updating, set each of the takeoff/landing values to 0.
@@ -1590,7 +1625,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         let updatedFlight = FlightSector(
             id: sectorID,
-            date: flightDate,
+            date: flightDateForStorage,
             flightNumber: formattedFlightNumber,
             aircraftReg: aircraftReg,
             aircraftType: aircraftType,
@@ -1661,7 +1696,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // Check if original flight was a simulator flight
         let originalWasSimulator = (Double(original.simTime) ?? 0.0) > 0.0
 
-        return flightDate != original.date ||
+        return flightDateForStorage != original.date ||
                flightNumber != original.flightNumber ||
                aircraftReg != original.aircraftReg ||
                aircraftType != original.aircraftType ||
@@ -1698,8 +1733,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         var changes: [String] = []
 
-        if flightDate != original.date {
-            changes.append("Date: \(original.date) → \(flightDate)")
+        if flightDateForStorage != original.date {
+            changes.append("Date: \(original.date) → \(flightDateForStorage)")
         }
 
         if flightNumber != original.flightNumber {
