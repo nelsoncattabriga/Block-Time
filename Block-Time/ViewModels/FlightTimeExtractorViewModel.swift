@@ -2696,12 +2696,15 @@ class FlightTimeExtractorViewModel: ObservableObject {
         statusColor = .blue
         HapticManager.shared.impact(.medium)
 
-        LogManager.shared.info("🔍 Flight lookup: FA=\(flightAwareCode), ADB=\(iataFlightNumber), utcDate=\(flightDate)")
+        // FlightAware always expects a UTC date. When enterTimesInLocalTime is on,
+        // flightDate holds the local date — flightDateForStorage converts it back to UTC.
+        let utcDateForSearch = flightDateForStorage
+        LogManager.shared.info("🔍 Flight lookup: FA=\(flightAwareCode), ADB=\(iataFlightNumber), utcDate=\(utcDateForSearch) (flightDate=\(flightDate))")
 
         Task {
             // Step 1: Fetch FlightAware first — its result gives us the departure ICAO
             // and UTC departure time needed to compute the correct AeroDataBox local date.
-            let faResults = await fetchFromFlightAware(code: flightAwareCode, date: flightDate)
+            let faResults = await fetchFromFlightAware(code: flightAwareCode, date: utcDateForSearch)
 
             // Step 2: Derive the local departure date for AeroDataBox.
             // AeroDataBox uses dateLocalRole=Departure, so it expects the LOCAL date at the
@@ -2716,9 +2719,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 adbLocalDate = localDate
                 LogManager.shared.info("🔍 ADB local date: \(localDate) (derived from \(firstFA.origin) UTC \(firstFA.flightDate) \(firstFA.departureTime))")
             } else {
-                // No FA result — use the user's UTC date as best available guess
+                // No FA result — fall back to flightDate.
+                // In local mode flightDate IS the local date (correct for ADB).
+                // In UTC mode it's the UTC date (approximate, but UTC mode always finds FA results).
                 adbLocalDate = flightDate
-                LogManager.shared.info("🔍 ADB local date: \(flightDate) (UTC fallback — no FA result to derive from)")
+                LogManager.shared.info("🔍 ADB local date: \(flightDate) (fallback — no FA result to derive from)")
             }
 
             // Step 3: Fetch AeroDataBox with the precise local departure date
