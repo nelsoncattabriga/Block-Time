@@ -686,14 +686,49 @@ class FlightTimeExtractorViewModel: ObservableObject {
     /// The UTC date used for storage and change-detection comparisons.
     /// When enterTimesInLocalTime is on, flightDate holds the local departure date,
     /// so we convert back to UTC here. Otherwise returns flightDate unchanged.
+    ///
+    /// Uses the UTC outTime (adjusted to approximate local time via base offset) as the
+    /// conversion reference so the UTC date is correct for both same-day and cross-day
+    /// flights. Using "00:00" local would be wrong for flights where UTC date = local date
+    /// (e.g., 01:00 UTC in AEDT+11 is 12:00 local — midnight local maps to previous UTC day).
     var flightDateForStorage: String {
         guard enterTimesInLocalTime, !fromAirport.isEmpty, !flightDate.isEmpty else {
             return flightDate
         }
         let icao = AirportService.shared.convertToICAO(fromAirport)
+
+        // Pick the best available UTC departure time reference.
+        let utcTimeRef: String
+        if outTime.count == 5, outTime.contains(":") {
+            utcTimeRef = outTime
+        } else if !scheduledDeparture.isEmpty {
+            utcTimeRef = scheduledDeparture  // "HHMM" accepted by convertFromLocalToUTCDate
+        } else {
+            utcTimeRef = "11:00"
+        }
+
+        // Compute approximate local departure time = UTC time + base offset (hours).
+        // convertFromLocalToUTCDate applies DST internally, so we only need this
+        // to determine which calendar day the local date falls on.
+        guard let baseOffset = AirportService.shared.getTimezoneOffset(for: icao) else {
+            return flightDate
+        }
+        let cleanTime = utcTimeRef.replacingOccurrences(of: ":", with: "")
+        let localTimeRef: String
+        if cleanTime.count >= 4,
+           let utcHour = Int(cleanTime.prefix(2)),
+           let utcMin = Int(cleanTime.suffix(2)) {
+            let utcMins = utcHour * 60 + utcMin
+            let offsetMins = Int(baseOffset * 60)
+            let localMins = ((utcMins + offsetMins) % 1440 + 1440) % 1440
+            localTimeRef = String(format: "%02d:%02d", localMins / 60, localMins % 60)
+        } else {
+            localTimeRef = "11:00"
+        }
+
         return AirportService.shared.convertFromLocalToUTCDate(
             localDateString: flightDate,
-            localTimeString: "00:00",
+            localTimeString: localTimeRef,
             airportICAO: icao
         )
     }
