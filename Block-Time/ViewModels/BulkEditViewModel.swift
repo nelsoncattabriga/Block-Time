@@ -478,7 +478,7 @@ class BulkEditViewModel: ObservableObject {
                 switch operation {
                 case .add:
                     let uppercasePrefix = prefix.uppercased()
-                    if !currentReg.uppercased().hasPrefix(uppercasePrefix) {
+                    if !currentReg.isEmpty && !currentReg.uppercased().hasPrefix(uppercasePrefix) {
                         updated.aircraftReg = uppercasePrefix + currentReg
                     }
 
