@@ -370,33 +370,33 @@ class FlightDatabaseService: ObservableObject {
         return success
     }
 
-    /// Update multiple flights with selective field updates
+    /// Update multiple flights on a background context to avoid blocking the UI.
     /// - Parameters:
     ///   - updates: Dictionary mapping flight UUIDs to updated FlightSector objects
     /// - Returns: True if all updates succeeded, false otherwise
-    func updateFlightsBulk(_ updates: [UUID: FlightSector]) -> Bool {
-        var success = true
+    func updateFlightsBulk(_ updates: [UUID: FlightSector]) async -> Bool {
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
 
-        viewContext.performAndWait {
-            // Fetch all flights that need updating
-            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-            request.predicate = NSPredicate(
-                format: "id IN %@",
-                Array(updates.keys)
-            )
+        do {
+            try await context.perform {
+                // Local formatter — DateFormatter is not thread-safe, must not share with main thread
+                let formatter = DateFormatter()
+                formatter.dateFormat = "dd/MM/yyyy"
+                formatter.locale = Locale(identifier: "en_US_POSIX")
+                formatter.timeZone = TimeZone(secondsFromGMT: 0)
 
-            do {
-                let flights = try viewContext.fetch(request)
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "id IN %@", Array(updates.keys))
+
+                let flights = try context.fetch(request)
                 LogManager.shared.info("Database: Bulk updating \(flights.count) flights")
 
                 for flight in flights {
                     guard let id = flight.id,
-                          let updatedSector = updates[id] else {
-                        continue
-                    }
+                          let updatedSector = updates[id] else { continue }
 
-                    // Update all fields from the updated sector
-                    flight.date = dateFormatter.date(from: updatedSector.date)
+                    flight.date = formatter.date(from: updatedSector.date)
                     flight.flightNumber = updatedSector.flightNumber
                     flight.aircraftReg = updatedSector.aircraftReg
                     flight.aircraftType = updatedSector.aircraftType
@@ -432,25 +432,22 @@ class FlightDatabaseService: ObservableObject {
                     flight.modifiedAt = Date()
                 }
 
-                // Save all updates in one transaction
-                try viewContext.save()
-
-                // Post notification for UI refresh
-                NotificationCenter.default.post(
-                    name: .flightDataChanged,
-                    object: nil
-                )
-
+                // Single transaction for all records
+                try context.save()
                 LogManager.shared.info("Database: Successfully bulk updated \(flights.count) flights")
-
-            } catch {
-                viewContext.rollback()
-                success = false
-                LogManager.shared.error("Database: Bulk update failed - \(error.localizedDescription)")
             }
-        }
 
-        return success
+            // viewContext merges automatically (automaticallyMergesChangesFromParent = true)
+            // Post notification on main thread so observers update correctly
+            await MainActor.run {
+                NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+            }
+            return true
+
+        } catch {
+            LogManager.shared.error("Database: Bulk update failed - \(error.localizedDescription)")
+            return false
+        }
     }
 
     /// Find a scheduled flight (with zero block time) matching the given flight parameters

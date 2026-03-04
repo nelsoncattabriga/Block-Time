@@ -1023,46 +1023,27 @@ private struct FlightsListContent: View {
     private func performBulkUpdate(_ updates: [UUID: FlightSector]) {
         guard !updates.isEmpty else { return }
 
-        // Temporarily disable CloudKit sync for cleaner bulk operation
+        // Disable CloudKit sync before dispatching background work
         let cloudKitWasEnabled = databaseService.disableCloudKitSync()
 
-        if databaseService.updateFlightsBulk(updates) {
-            // Re-enable CloudKit sync if it was enabled
-            if cloudKitWasEnabled {
-                databaseService.enableCloudKitSync()
-            }
-
-            // Update local state
-            for (id, updatedFlight) in updates {
-                if let index = filteredFlightSectors.firstIndex(where: { $0.id == id }) {
-                    filteredFlightSectors[index] = updatedFlight
+        Task {
+            let success = await databaseService.updateFlightsBulk(updates)
+            // Task inherits @MainActor from the calling SwiftUI context,
+            // so all UI updates below run on the main thread.
+            if success {
+                if cloudKitWasEnabled { databaseService.enableCloudKitSync() }
+                // Update selectedFlight if it was one of the edited flights (O(1) dict lookup)
+                if let currentId = selectedFlight?.id, let updated = updates[currentId] {
+                    selectedFlight = updated
                 }
-                if let index = allFlightSectors.firstIndex(where: { $0.id == id }) {
-                    allFlightSectors[index] = updatedFlight
-                }
-
-                // Update selectedFlight if it was edited
-                if selectedFlight?.id == id {
-                    selectedFlight = updatedFlight
-                }
+                selectedFlightsForDeletion.removeAll()
+                isSelectMode = false
+                HapticManager.shared.notification(.success)
+                loadFlights()
+            } else {
+                if cloudKitWasEnabled { databaseService.enableCloudKitSync() }
+                HapticManager.shared.notification(.error)
             }
-
-            // Clear selection and exit select mode
-            selectedFlightsForDeletion.removeAll()
-            isSelectMode = false
-
-            // Success haptic
-            HapticManager.shared.notification(.success)
-
-            // Reload to ensure consistency
-            loadFlights()
-
-        } else {
-            // Re-enable CloudKit sync even on error
-            if cloudKitWasEnabled {
-                databaseService.enableCloudKitSync()
-            }
-            HapticManager.shared.notification(.error)
         }
     }
 
