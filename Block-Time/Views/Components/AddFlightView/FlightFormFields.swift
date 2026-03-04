@@ -9,35 +9,55 @@ struct ModernDatePickerField: View {
     var timeString: String = ""
     var showLocalDate: Bool = false
     var useIATACodes: Bool = false
-    @State private var selectedDate = Date()
+    @State private var selectedDate: Date
+    @State private var showingPicker = false
 
-    private let dateFormatter: DateFormatter = {
+    // Storage format used for reading/writing dateString.
+    // Static so it is accessible in init before self is fully initialised.
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.locale = Locale(identifier: "en_AU")
         return formatter
     }()
+
+    // Display format shown on the button label ("10 Mar 2026").
+    private static let displayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM yyyy"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.locale = Locale(identifier: "en_AU")
+        return formatter
+    }()
+
+    init(label: String, dateString: Binding<String>, icon: String,
+         airportCode: String = "", timeString: String = "",
+         showLocalDate: Bool = false, useIATACodes: Bool = false) {
+        self.label = label
+        self._dateString = dateString
+        self.icon = icon
+        self.airportCode = airportCode
+        self.timeString = timeString
+        self.showLocalDate = showLocalDate
+        self.useIATACodes = useIATACodes
+        self._showingPicker = State(initialValue: false)
+        let initial = Self.dateFormatter.date(from: dateString.wrappedValue) ?? Date()
+        self._selectedDate = State(initialValue: initial)
+    }
 
     // Calculate local date for display
     private var localDate: Date? {
         guard showLocalDate,
               !dateString.isEmpty,
-              !airportCode.isEmpty else {
-            return nil
-        }
-
-        // Use the provided time, or a time near midnight to show potential date changes
-        // Using 01:00 instead of 12:00 to better show date differences across timezones
+              !airportCode.isEmpty else { return nil }
         let timeToUse = !timeString.isEmpty ? timeString : "01:00"
-
         let localDateString = AirportService.shared.convertToLocalDate(
             utcDateString: dateString,
             utcTimeString: timeToUse,
             airportICAO: airportCode
         )
-
-        return dateFormatter.date(from: localDateString)
+        return Self.dateFormatter.date(from: localDateString)
     }
 
     var body: some View {
@@ -46,58 +66,65 @@ struct ModernDatePickerField: View {
                 .foregroundColor(.blue)
                 .frame(width: 20)
 
-            // UTC Date
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
                     .foregroundColor(.secondary)
 
-                DatePicker("", selection: $selectedDate, displayedComponents: .date)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .environment(\.locale, Locale(identifier: "en_AU"))
-                    .environment(\.timeZone, .gmt)
-                    .onChange(of: selectedDate) { _, newDate in
-                        dateString = dateFormatter.string(from: newDate)
-                    }
+                // Custom button so we fully control the date label text.
+                // The compact DatePicker renders its own button label using an
+                // internal iOS locale format we cannot override (inconsistent on iOS 26).
+                Button {
+                    showingPicker = true
+                } label: {
+                    Text(Self.displayFormatter.string(from: selectedDate))
+                        .font(.subheadline.bold())
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(.plain)
             }
 
             Spacer()
 
-            // Local Date (side by side) - read-only display
+            // Local Date read-only display
             if let localDateValue = localDate {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Local Date")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
-
-                    DatePicker("", selection: .constant(localDateValue), displayedComponents: .date)
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
-                        .environment(\.locale, Locale(identifier: "en_AU"))
-                        .disabled(true)
+                    Text(Self.displayFormatter.string(from: localDateValue))
+                        .font(.subheadline.bold())
+                        .foregroundColor(.secondary)
                 }
             }
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
         .cornerRadius(8)
+        .sheet(isPresented: $showingPicker) {
+            VStack(spacing: 0) {
+                DatePicker("", selection: $selectedDate, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .environment(\.locale, Locale(identifier: "en_AU"))
+                    .environment(\.timeZone, .gmt)
+                    .padding(.horizontal)
+                    .onChange(of: selectedDate) { _, newDate in
+                        dateString = Self.dateFormatter.string(from: newDate)
+                        showingPicker = false
+                    }
+            }
+            .presentationDetents([.height(420)])
+            .presentationDragIndicator(.visible)
+        }
         .onAppear {
-            if !dateString.isEmpty, let date = dateFormatter.date(from: dateString) {
-                selectedDate = date
-            } else {
-                // Set to today's UTC date if empty
-                let utcDateFormatter = DateFormatter()
-                utcDateFormatter.dateFormat = "dd/MM/yyyy"
-                utcDateFormatter.timeZone = TimeZone(abbreviation: "UTC")
-                let utcDate = Date()
-                selectedDate = utcDate
-                dateString = utcDateFormatter.string(from: utcDate)
+            if dateString.isEmpty {
+                selectedDate = Date()
+                dateString = Self.dateFormatter.string(from: Date())
             }
         }
         .onChange(of: dateString) { _, newDateString in
-            // Sync selectedDate when dateString changes externally (e.g., from ACARS)
-            if let date = dateFormatter.date(from: newDateString) {
+            // Keep selectedDate in sync when dateString changes externally (e.g. ACARS)
+            if let date = Self.dateFormatter.date(from: newDateString) {
                 selectedDate = date
             }
         }
