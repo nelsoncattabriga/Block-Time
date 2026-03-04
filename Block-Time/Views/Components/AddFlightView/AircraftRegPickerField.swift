@@ -372,6 +372,7 @@ struct AircraftRegPickerSheet: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
+                        HapticManager.shared.impact(.medium)
                         onDismiss()
                     }
                 }

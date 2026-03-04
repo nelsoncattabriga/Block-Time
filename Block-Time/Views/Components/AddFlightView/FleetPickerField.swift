@@ -191,6 +191,7 @@ struct FleetPickerSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
+                        HapticManager.shared.impact(.medium)
                         onDismiss()
                     }
                 }

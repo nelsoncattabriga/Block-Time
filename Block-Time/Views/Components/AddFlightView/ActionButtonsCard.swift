@@ -92,6 +92,7 @@ struct ModernActionButtonsCard: View {
                             color: .gray,
                             isEnabled: true,
                             action: {
+                                HapticManager.shared.impact(.medium)
                                 viewModel.exitEditingMode()
                                 dismiss()
                             }
