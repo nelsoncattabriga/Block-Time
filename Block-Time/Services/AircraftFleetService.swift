@@ -15,13 +15,33 @@ struct Aircraft: Codable, Identifiable, Hashable {
     let type: String
     let fullRegistration: String
     
+    /// Standard init for preset fleet aircraft — registration stored without "VH-" prefix.
     init(registration: String, type: String) {
-        self.id = registration // Use registration as ID for consistency
+        self.id = registration
         self.registration = registration
         self.type = type
         self.fullRegistration = "VH-\(registration)"
     }
-    
+
+    /// Init for user-entered custom registrations.
+    /// - If the input starts with "VH-", stores the short form so the showFullReg toggle works normally.
+    /// - Otherwise (e.g. "B738SIM"), stores as-is with no "VH-" prepended.
+    init(customRegistration rawInput: String, type: String) {
+        let upper = rawInput.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if upper.hasPrefix("VH-") {
+            let short = String(upper.dropFirst(3))
+            self.id = short
+            self.registration = short
+            self.fullRegistration = upper
+        } else {
+            // Non-VH registration (sim, foreign, custom) — display identically regardless of showFullReg
+            self.id = upper
+            self.registration = upper
+            self.fullRegistration = upper
+        }
+        self.type = type
+    }
+
     func displayRegistration(showFullReg: Bool) -> String {
         return showFullReg ? fullRegistration : registration
     }
