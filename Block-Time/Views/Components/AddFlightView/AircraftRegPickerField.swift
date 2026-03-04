@@ -384,6 +384,7 @@ struct AircraftRegPickerSheet: View {
             AddAircraftSheet(
                 selectedReg: $selectedReg,
                 selectedType: $selectedType,
+                showFullReg: showFullReg,
                 fleetService: fleetService,
                 onDismiss: {
                     showingAddAircraftSheet = false
@@ -402,6 +403,7 @@ struct AircraftRegPickerSheet: View {
 private struct AddAircraftSheet: View {
     @Binding var selectedReg: String
     @Binding var selectedType: String
+    let showFullReg: Bool
     @ObservedObject var fleetService: AircraftFleetService
     let onDismiss: () -> Void
     @Environment(\.dismiss) var dismiss
@@ -422,7 +424,7 @@ private struct AddAircraftSheet: View {
                         Text("Registration")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        TextField("e.g., VH-ABC", text: $newAircraftReg)
+                        TextField("e.g., VH-ABC or B738SIM", text: $newAircraftReg)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocapitalization(.allCharacters)
                             .focused($focusedField, equals: .registration)
@@ -477,24 +479,21 @@ private struct AddAircraftSheet: View {
     private func saveAircraft() {
         guard !newAircraftReg.isEmpty && !newAircraftType.isEmpty else { return }
 
-        let trimmedReg = newAircraftReg.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let trimmedType = newAircraftType.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
 
-        // Create new aircraft
-        let aircraft = Aircraft(registration: trimmedReg, type: trimmedType)
+        // Use customRegistration init: handles "VH-ABC" (strips prefix for toggle support)
+        // and non-VH entries like "B738SIM" (stored as-is, never gets "VH-" prepended).
+        let aircraft = Aircraft(customRegistration: newAircraftReg, type: trimmedType)
 
-        // Save to database
         let success = fleetService.saveAircraft(aircraft)
 
         if success {
-            // Update the selected values
-            selectedReg = trimmedReg
-            selectedType = trimmedType
-
+            // Set selectedReg to the display form so it matches what the picker shows
+            selectedReg = aircraft.displayRegistration(showFullReg: showFullReg)
+            selectedType = aircraft.type
             HapticManager.shared.impact(.medium)
-//            print("Aircraft added and saved: \(trimmedReg) - \(trimmedType)")
         } else {
-                    LogManager.shared.debug("Failed to save aircraft")
+            LogManager.shared.debug("Failed to save aircraft")
         }
 
         onDismiss()

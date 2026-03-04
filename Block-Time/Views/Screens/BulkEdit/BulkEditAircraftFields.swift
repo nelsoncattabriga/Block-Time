@@ -44,7 +44,15 @@ struct BulkEditAircraftRegField: View {
             .cornerRadius(8)
             .sheet(isPresented: $showingPicker) {
                 BulkEditAircraftPickerSheet(
-                    selectedReg: $textValue,
+                    selectedReg: Binding(
+                        get: { textValue },
+                        set: { newValue in
+                            textValue = newValue
+                            if !newValue.isEmpty {
+                                fieldState = .value(newValue)
+                            }
+                        }
+                    ),
                     selectedType: Binding(
                         get: {
                             if case .value(let type) = aircraftTypeFieldState {
@@ -61,7 +69,6 @@ struct BulkEditAircraftRegField: View {
                     showFullReg: showFullReg,
                     onDismiss: {
                         showingPicker = false
-                        fieldState = .value(textValue)
                     }
                 )
             }

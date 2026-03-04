@@ -523,7 +523,7 @@ private struct ModernFormatOptionsCard: View {
                     .padding(.horizontal, 8)
 
                 ModernToggleRow(
-                    title: "Leading Zeros in Flt No",
+                    title: "Preserve Leading Zeros in Flt No",
                     subtitle: "0405 vs 405",
                     isOn: Binding(
                         get: { viewModel.includeLeadingZeroInFlightNumber },

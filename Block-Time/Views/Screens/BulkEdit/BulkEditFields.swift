@@ -283,9 +283,8 @@ struct BulkEditTextEditor: View {
                 .onAppear {
                     if case .value(let val) = fieldState {
                         textValue = val
-                    } else if fieldState.isMixed {
-                        textValue = "(Mixed)"
                     }
+                    // When .mixed, leave textValue empty — the overlay placeholder shows "(Mixed)"
                 }
 
             if textValue.isEmpty || textValue == "(Mixed)" {
