@@ -69,6 +69,8 @@ struct BulkEditTextField: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
             )
+            .contentShape(Rectangle())
+            .onTapGesture { isFocused = true }
             .onChange(of: textValue) { _, newValue in
                 let formattedValue = isTimeField ? applyTimeFormatting(newValue) : newValue
                 textValue = formattedValue
@@ -126,6 +128,8 @@ struct BulkEditOptionalTextField: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
             )
+            .contentShape(Rectangle())
+            .onTapGesture { isFocused = true }
             .onChange(of: textValue) { _, newValue in
                 fieldState = .value(newValue.isEmpty ? nil : newValue)
             }
@@ -174,6 +178,8 @@ struct BulkEditIntField: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
             )
+            .contentShape(Rectangle())
+            .onTapGesture { isFocused = true }
             .onChange(of: textValue) { _, newValue in
                 if let intValue = Int(newValue) {
                     fieldState = .value(intValue)
