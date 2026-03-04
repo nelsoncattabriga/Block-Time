@@ -393,8 +393,14 @@ struct FlightsView: View {
                     filterTypeSummary: $filterViewModel.filterTypeSummary,
                     filterKeywordSearch: $filterViewModel.filterKeywordSearch,
                     selectedDateRange: $filterViewModel.selectedDateRange,
-                    onApply: applyFilters,
-                    onClear: clearFilters
+                    onApply: {
+                        applyFilters()
+                        showingFilterSheet = false
+                    },
+                    onClear: {
+                        clearFilters()
+                        showingFilterSheet = false
+                    }
                 )
             }
             .onAppear {
@@ -818,8 +824,6 @@ struct FlightsView: View {
                         filterViewModel.filterNoCrewNames ||
                         filterViewModel.filterNoFlightNumber ||
                         filterViewModel.filterTypeSummary
-
-        showingFilterSheet = false
 
         // Scroll to top when filters are active
         if isFilterActive {
