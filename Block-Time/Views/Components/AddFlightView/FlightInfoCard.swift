@@ -187,7 +187,7 @@ struct ModernCapturedDataCard: View {
                         if viewModel.isSimulator || viewModel.isPositioning {
                             viewModel.isSimulator = false
                             viewModel.isPositioning = false
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                         }
                     }) {
                         Text("FLT")
@@ -212,7 +212,7 @@ struct ModernCapturedDataCard: View {
                             viewModel.so1Name = ""  // Clear SO1 name for positioning flights
                             viewModel.so2Name = ""  // Clear SO2 name for positioning flights
                             viewModel.isPilotFlying = false  // Clear PF for positioning flights
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                         }
                     }) {
                         Text("PAX")
@@ -228,7 +228,7 @@ struct ModernCapturedDataCard: View {
                         if !viewModel.isSimulator {
                             viewModel.isSimulator = true
                             viewModel.isPositioning = false
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                         }
                     }) {
                         Text("SIM")

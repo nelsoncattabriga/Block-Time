@@ -401,7 +401,7 @@ struct ModernFlightNumberField: View {
             Button(action: {
                 textFieldFocused = false  // Dismiss keyboard
                 onSearch?()
-                HapticManager.shared.impact(.light)
+                HapticManager.shared.impact(.medium)
             }) {
                 ZStack {
                     VStack{
@@ -434,7 +434,7 @@ struct ModernFlightNumberField: View {
                     if UIDevice.current.userInterfaceIdiom == .phone && keyboardType == .numbersAndPunctuation {
                         Button(action: {
                             useAlphanumericKeyboard.toggle()
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                             // Refocus to apply keyboard change
                             textFieldFocused = false
                             Task { @MainActor in
