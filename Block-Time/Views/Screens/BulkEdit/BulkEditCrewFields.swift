@@ -47,6 +47,7 @@ struct BulkEditCrewField: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -123,6 +124,7 @@ struct BulkEditOptionalCrewField: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
             }

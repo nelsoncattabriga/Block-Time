@@ -37,6 +37,7 @@ struct BulkEditAircraftRegField: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             .padding(10)
@@ -433,6 +434,7 @@ struct BulkEditAircraftTypeField: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             .padding(10)
