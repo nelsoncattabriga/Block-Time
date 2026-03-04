@@ -16,7 +16,7 @@ struct ModernTogglesSection: View {
                         Button(action: {
                             if !viewModel.isPositioning {
                                 viewModel.isPilotFlying = true
-                                HapticManager.shared.impact(.light)
+                                HapticManager.shared.impact(.medium)
                                 // When PF is turned on, restore default approach type if set
                                 if !viewModel.isEditingMode && viewModel.logApproaches && viewModel.defaultApproachType != nil {
                                     viewModel.updateSelectedApproachType(viewModel.defaultApproachType)
@@ -38,7 +38,7 @@ struct ModernTogglesSection: View {
                         Button(action: {
                             if !viewModel.isPositioning {
                                 viewModel.isPilotFlying = false
-                                HapticManager.shared.impact(.light)
+                                HapticManager.shared.impact(.medium)
                             }
                         }) {
                             Text("PM")
@@ -82,7 +82,7 @@ struct ModernTogglesSection: View {
                     Button(action: {
                         if !viewModel.isPositioning {
                             viewModel.selectedTimeCredit = .p1
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                         }
                     }) {
                         Text("P1")
@@ -104,7 +104,7 @@ struct ModernTogglesSection: View {
                     Button(action: {
                         if !viewModel.isPositioning {
                             viewModel.selectedTimeCredit = .p1us
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                         }
                     }) {
                         Text("ICUS")
@@ -126,7 +126,7 @@ struct ModernTogglesSection: View {
                     Button(action: {
                         if !viewModel.isPositioning {
                             viewModel.selectedTimeCredit = .p2
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                         }
                     }) {
                         Text("P2")
@@ -237,7 +237,7 @@ struct ModernToggle: View {
                 .disabled(isDisabled)
                 .opacity(isDisabled ? 0.5 : 1.0)
                 .onChange(of: isOn) {
-                    HapticManager.shared.impact(.light) // Light haptic for toggle
+                    HapticManager.shared.impact(.medium) // Light haptic for toggle
                 }
         }
     }
@@ -266,7 +266,7 @@ struct ModernApproachToggle: View {
             Button(action: {
                 if !isDisabled {
                     showingPicker = true
-                    HapticManager.shared.impact(.light)
+                    HapticManager.shared.impact(.medium)
                 }
             }) {
                 HStack(spacing: 4) {

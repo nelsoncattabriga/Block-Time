@@ -121,7 +121,7 @@ struct CrewNamePickerSheet: View {
                         HStack(spacing: 12) {
                             // Use current search text button
                             Button(action: {
-                                HapticManager.shared.impact(.light)
+                                HapticManager.shared.impact(.medium)
                                 let trimmedName = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
                                 selectedName = trimmedName
                                 onNameAdded(trimmedName)
@@ -175,7 +175,7 @@ struct CrewNamePickerSheet: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !selectedName.isEmpty {
                         Button("Clear Name") {
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                             selectedName = ""
                             onDismiss()
                         }
@@ -185,6 +185,7 @@ struct CrewNamePickerSheet: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
+                        HapticManager.shared.impact(.medium)
                         onDismiss()
                     }
                 }
@@ -214,7 +215,7 @@ struct CrewNamesList: View {
                 Section(header: Text("Recently Used")) {
                     ForEach(filteredRecentNames, id: \.self) { name in
                         Button(action: {
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                             onNameSelected(name)
                         }) {
                             HStack {
@@ -243,7 +244,7 @@ struct CrewNamesList: View {
                     ForEach(filteredNames, id: \.self) { name in
                         HStack(spacing: 0) {
                             Button(action: {
-                                HapticManager.shared.impact(.light)
+                                HapticManager.shared.impact(.medium)
                                 onNameSelected(name)
                             }) {
                                 HStack {

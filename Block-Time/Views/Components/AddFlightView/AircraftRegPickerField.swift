@@ -16,7 +16,7 @@ struct AircraftRegPickerField: View {
                 .frame(width: 80, alignment: .leading)
             
             Button(action: {
-                HapticManager.shared.impact(.light)
+                HapticManager.shared.impact(.medium)
                 showingRegPicker = true
             }) {
                 HStack {
@@ -267,7 +267,7 @@ struct AircraftRegPickerSheet: View {
                                 }
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    HapticManager.shared.impact(.light)
+                                    HapticManager.shared.impact(.medium)
                                     selectedReg = displayReg
                                     selectedType = aircraft.type
                                     onDismiss()
@@ -303,7 +303,7 @@ struct AircraftRegPickerSheet: View {
                                 }
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    HapticManager.shared.impact(.light)
+                                    HapticManager.shared.impact(.medium)
                                             LogManager.shared.debug("Tapped aircraft: \(aircraft.registration), displayReg: \(displayReg)")
                                     selectedReg = displayReg
                                     selectedType = aircraft.type
@@ -361,7 +361,7 @@ struct AircraftRegPickerSheet: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !selectedReg.isEmpty {
                         Button("Clear Rego") {
-                            HapticManager.shared.impact(.light)
+                            HapticManager.shared.impact(.medium)
                             selectedReg = ""
                             selectedType = ""
                             onDismiss()
@@ -372,6 +372,7 @@ struct AircraftRegPickerSheet: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
+                        HapticManager.shared.impact(.medium)
                         onDismiss()
                     }
                 }

@@ -42,6 +42,7 @@ struct ModernActionButtonsCard: View {
                         isEnabled: viewModel.hasUnsavedChanges && purchaseService.canAddFlight,
                         action: {
                             if viewModel.updateExistingFlight() {
+                                HapticManager.shared.notification(.success)
                                 // Show success notification
                                 successMessage = "Flight Updated"
                                 withAnimation {
@@ -76,6 +77,7 @@ struct ModernActionButtonsCard: View {
                         color: .red,
                         isEnabled: true,
                         action: {
+                            HapticManager.shared.notification(.warning)
                             print("🗑️ Delete button tapped")
                             showingDeleteAlert = true
                             print("🗑️ showingDeleteAlert set to: \(showingDeleteAlert)")
@@ -91,6 +93,7 @@ struct ModernActionButtonsCard: View {
                             color: .gray,
                             isEnabled: true,
                             action: {
+                                HapticManager.shared.impact(.medium)
                                 viewModel.exitEditingMode()
                                 dismiss()
                             }
@@ -140,7 +143,10 @@ struct ModernActionButtonsCard: View {
                         icon: "arrow.clockwise",
                         color: .red,
                         isEnabled: true,
-                        action: viewModel.resetAllFields
+                        action: {
+                            HapticManager.shared.notification(.warning)
+                            viewModel.resetAllFields()
+                        }
                     )
                 }
             }

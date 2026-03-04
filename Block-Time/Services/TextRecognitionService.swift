@@ -360,32 +360,34 @@ class TextRecognitionService: ObservableObject {
     }
     
     private func extractInTime(from text: String) -> String {
+        // D = digit class including slashed-zero variants OCR'd from the B737 FMC (Ø, ø, O, o)
+        let d = "[\\dØøOo]"
         let inPatterns: [NSRegularExpression] = [
             // SPECIAL CASE: ON and IN on consecutive lines followed by TWO times (capture second time for IN)
             // Pattern: ON\n IN\n HH:MM\n HH:MM - we want the second HH:MM
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*\\d{2}:\\d{2}\\s*\\n\\s*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*\(d){2}:\(d){2}\\s*\\n\\s*(\(d){2}:\(d){2})"),
             // Also handle with OCR errors in first time (8 instead of 0)
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*[8\\d]{2}:[\\d]{2}\\s*\\n\\s*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*[8\(d)]{2}:[\(d)]{2}\\s*\\n\\s*(\(d){2}:\(d){2})"),
             // Stricter: only spaces/tabs on same line (not newlines)
-            try! NSRegularExpression(pattern: "IN[ \\t]+(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "IN[ \\t]+(\(d){2}:\(d){2})"),
             // Allow one newline but time must be within 5 spaces
-            try! NSRegularExpression(pattern: "IN\\s*\\n[ \\t]{0,5}(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "IN\\s*\\n[ \\t]{0,5}(\(d){2}:\(d){2})"),
             // Colon/dash/dot separator on same line
-            try! NSRegularExpression(pattern: "IN[ \\t]*[:\\-\\.]?[ \\t]*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "IN[ \\t]*[:\\-\\.]?[ \\t]*(\(d){2}:\(d){2})"),
             // One newline with up to 10 chars, then another newline and time
-            try! NSRegularExpression(pattern: "IN\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "IN\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
             // Newline with colon prefix
-            try! NSRegularExpression(pattern: "IN\\s*\\n\\s*:\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "IN\\s*\\n\\s*:\\s*(\(d){2})"),
             // Newline with semicolon/period prefix
-            try! NSRegularExpression(pattern: "IN\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "IN\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
             // More restrictive: max 10 non-digit chars between IN and time
-            try! NSRegularExpression(pattern: "IN[^\\d]{0,10}(\\d{2})[ \\t]*[:\\-;\\.]?[ \\t]*(\\d{2})"),
+            try! NSRegularExpression(pattern: "IN[^\(d)]{0,10}(\(d){2})[ \\t]*[:\\-;\\.]?[ \\t]*(\(d){2})"),
             // Strict: max 10 chars between IN and HH:MM
-            try! NSRegularExpression(pattern: "IN[^\\d]{0,10}(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "IN[^\(d)]{0,10}(\(d){2}:\(d){2})"),
             // Hour and minute on separate lines after IN
-            try! NSRegularExpression(pattern: "IN\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "IN\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
             // Fallback: allow up to 30 chars but prefer earlier matches
-            try! NSRegularExpression(pattern: "IN.{0,30}?(\\d{2}:\\d{2})")
+            try! NSRegularExpression(pattern: "IN.{0,30}?(\(d){2}:\(d){2})")
         ]
 
         return extractTimeWithPatterns(inPatterns, from: text, timeType: "IN")

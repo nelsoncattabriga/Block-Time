@@ -262,6 +262,7 @@ struct BulkEditSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
+                        HapticManager.shared.impact(.medium)
                         if bulkEditViewModel.hasModifications {
                             showingDiscardAlert = true
                         } else {

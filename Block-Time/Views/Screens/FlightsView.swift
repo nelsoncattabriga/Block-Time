@@ -201,7 +201,7 @@ struct FlightsView: View {
 
                         // Delete button
                         Button(action: {
-                            HapticManager.shared.impact(.medium)
+                            HapticManager.shared.notification(.warning)
                             showingBulkDeleteAlert = true
                         }) {
                             HStack(spacing: 8) {
