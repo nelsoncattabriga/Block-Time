@@ -230,6 +230,7 @@ struct CrewNamesList: View {
                                         .foregroundColor(.blue)
                                 }
                             }
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -256,6 +257,7 @@ struct CrewNamesList: View {
                                             .foregroundColor(.blue)
                                     }
                                 }
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(PlainButtonStyle())
 

@@ -230,6 +230,7 @@ struct BulkEditAircraftPickerSheet: View {
                                                 .foregroundColor(.blue)
                                         }
                                     }
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
