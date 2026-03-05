@@ -397,10 +397,6 @@ private struct ModernDefaultCrewNamesCard: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
-
-//                            Text(viewModel.foPilotFlyingCredit == .p1us ? "ICUS" : "P2")
-//                                .font(.caption)
-//                                .foregroundColor(.secondary)
                         }
 
                         Spacer()
@@ -455,8 +451,9 @@ private struct ModernDefaultCrewNamesCard: View {
                     )
                 }
 
-//                Divider()
-//                    .padding(.horizontal, 8)
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
 
                 ModernToggleRow(
                     title: "Log S/O Names",
@@ -537,6 +534,7 @@ private struct ModernOpsDataCard: View {
 
                 Divider()
                     .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
 
                 // Log Approaches Toggle
                 ModernToggleRow(
@@ -645,7 +643,7 @@ private struct ModernFormatOptionsCard: View {
                 
                 
                 ModernToggleRow(
-                    title: "Long A/C Registration",
+                    title: "Full A/C Registration",
                     subtitle: "VH-ABC vs ABC",
                     isOn: Binding(
                         get: { viewModel.showFullAircraftReg },
@@ -657,7 +655,7 @@ private struct ModernFormatOptionsCard: View {
 
 
                 ModernToggleRow(
-                    title: "Preserve Leading Zeros in Flt No",
+                    title: "Preserve Leading Zeros in Captured Flt No",
                     subtitle: "0405 vs 405",
                     isOn: Binding(
                         get: { viewModel.includeLeadingZeroInFlightNumber },
@@ -667,6 +665,10 @@ private struct ModernFormatOptionsCard: View {
                     icon: "number"
                 )
 
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                
                 // Airport ID Picker
                 HStack(spacing: 12) {
                     Image(systemName: "airplane.circle")
@@ -699,6 +701,10 @@ private struct ModernFormatOptionsCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
+                
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
 
                 // Enter Times In Local Time toggle
                 HStack(spacing: 12) {
@@ -707,7 +713,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Logbook Time Entry")
+                        Text("Times Entered In")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -739,7 +745,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Logbook Displays")
+                        Text("Times Shown In")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -771,7 +777,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Flight Times")
+                        Text("Flight Times Displayed As")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
