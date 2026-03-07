@@ -403,85 +403,90 @@ class TextRecognitionService: ObservableObject {
     }
 
     private func extractOffTime(from text: String) -> String {
+        let d = "[\\dØøOo]"
         let offPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "OFF\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*:\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF[^\\d]{0,10}(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF.{0,30}?(\\d{2}:\\d{2})")
+            try! NSRegularExpression(pattern: "OFF\\s+(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*[:\\-\\.]?\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*:\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF[^\(d)]{0,20}(\(d){2})\\s*[:\\-;\\.]?\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF[^\(d)]{0,10}(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF.{0,30}?(\(d){2}:\(d){2})"),
+            // Relaxed: $ or other OCR noise as leading digit
+            try! NSRegularExpression(pattern: "OFF\\s+([\\$\(d)][\(d)]:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*([\\$\(d)][\(d)]:\(d){2})")
         ]
 
         return extractTimeWithPatterns(offPatterns, from: text, timeType: "OFF")
     }
 
     private func extractOnTime(from text: String) -> String {
+        let d = "[\\dØøOo]"
         let onPatterns: [NSRegularExpression] = [
             // SPECIAL CASE: ON and IN on consecutive lines followed by TWO times (capture first time for ON)
-            // Pattern: ON\n IN\n HH:MM\n HH:MM - we want the first HH:MM
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*([8\\d]{2}:[\\d]{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*([8\(d)]{2}:[\(d)]{2})"),
             // Stricter: only spaces/tabs on same line (not newlines)
-            try! NSRegularExpression(pattern: "ON[ \\t]+(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON[ \\t]+(\(d){2}:\(d){2})"),
             // Allow one newline but time must be within 5 spaces
-            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}(\(d){2}:\(d){2})"),
             // Colon/dash/dot separator on same line
-            try! NSRegularExpression(pattern: "ON[ \\t]*[:\\-\\.]?[ \\t]*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON[ \\t]*[:\\-\\.]?[ \\t]*(\(d){2}:\(d){2})"),
             // One newline with up to 10 chars, then another newline and time
-            try! NSRegularExpression(pattern: "ON\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
             // Newline with colon prefix
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*:\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*:\\s*(\(d){2})"),
             // Newline with semicolon/period prefix
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
             // More restrictive: max 10 non-digit chars between ON and time
-            try! NSRegularExpression(pattern: "ON[^\\d]{0,10}(\\d{2})[ \\t]*[:\\-;\\.]?[ \\t]*(\\d{2})"),
+            try! NSRegularExpression(pattern: "ON[^\(d)]{0,10}(\(d){2})[ \\t]*[:\\-;\\.]?[ \\t]*(\(d){2})"),
             // Strict: max 10 chars between ON and HH:MM
-            try! NSRegularExpression(pattern: "ON[^\\d]{0,10}(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON[^\(d)]{0,10}(\(d){2}:\(d){2})"),
             // Hour and minute on separate lines after ON
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
             // Fallback: allow up to 30 chars but prefer earlier matches
-            try! NSRegularExpression(pattern: "ON.{0,30}?(\\d{2}:\\d{2})"),
-            // Relaxed patterns for OCR errors ($ or other chars instead of digits)
-            try! NSRegularExpression(pattern: "ON[ \\t]+([\\$\\d]{1,2}:[\\d]{2})"),
-            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}([\\$\\d]{1,2}:[\\d]{2})")
+            try! NSRegularExpression(pattern: "ON.{0,30}?(\(d){2}:\(d){2})"),
+            // Relaxed: $ or other OCR noise as leading digit
+            try! NSRegularExpression(pattern: "ON[ \\t]+([\\$\(d)]{1,2}:[\(d)]{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}([\\$\(d)]{1,2}:[\(d)]{2})")
         ]
 
         return extractTimeWithPatterns(onPatterns, from: text, timeType: "ON")
     }
-    
-    
+
     private func extractBlockTime(from text: String) -> String {
+        let d = "[\\dØøOo]"
         let blockPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "BLK\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*:\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK[^\\d]{0,10}(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK.{0,30}?(\\d{2}:\\d{2})")
+            try! NSRegularExpression(pattern: "BLK\\s+(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*[:\\-\\.]?\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*:\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK[^\(d)]{0,20}(\(d){2})\\s*[:\\-;\\.]?\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK[^\(d)]{0,10}(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK.{0,30}?(\(d){2}:\(d){2})")
         ]
 
         return extractTimeWithPatterns(blockPatterns, from: text, timeType: "BLOCK")
     }
 
     private func extractFlightTime(from text: String) -> String {
+        let d = "[\\dØøOo]"
         let flightPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "FLT\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*:\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT[^\\d]{0,10}(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT.{0,30}?(\\d{2}:\\d{2})")
+            try! NSRegularExpression(pattern: "FLT\\s+(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*[:\\-\\.]?\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*:\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT[^\(d)]{0,20}(\(d){2})\\s*[:\\-;\\.]?\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT[^\(d)]{0,10}(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT.{0,30}?(\(d){2}:\(d){2})")
         ]
 
         return extractTimeWithPatterns(flightPatterns, from: text, timeType: "FLT")
