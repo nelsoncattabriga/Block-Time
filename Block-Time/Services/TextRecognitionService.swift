@@ -47,6 +47,7 @@ struct PartialExtractionError: LocalizedError {
 enum FleetType {
     case b737
     case b787
+    case a330   // auto-detects screen vs printer format
 }
 
 // MARK: - Text Recognition Service
@@ -59,7 +60,13 @@ class TextRecognitionService: ObservableObject {
     ///   - image: The image to extract text from
     ///   - fleetType: The aircraft fleet type (B737 or B787) to determine parsing strategy
     func extractFlightData(from image: UIImage, fleetType: FleetType = .b737) async throws -> FlightData {
-        LogManager.shared.info("Starting text recognition for \(fleetType == .b737 ? "B737" : "B787") ACARS image")
+        let fleetName: String
+        switch fleetType {
+        case .b737: fleetName = "B737"
+        case .b787: fleetName = "B787"
+        case .a330: fleetName = "A330"
+        }
+        LogManager.shared.info("Starting text recognition for \(fleetName) ACARS image")
 
         guard let cgImage = image.cgImage else {
             LogManager.shared.error("Failed to convert UIImage to CGImage for text recognition")
@@ -89,6 +96,8 @@ class TextRecognitionService: ObservableObject {
                         flightData = try self.processTextRecognitionResults(results)
                     case .b787:
                         flightData = try self.processB787TextRecognitionResults(results)
+                    case .a330:
+                        flightData = try self.processA330TextRecognitionResults(results)
                     }
                     LogManager.shared.info("Successfully extracted flight data: \(flightData.flightNumber) \(flightData.fromAirport)-\(flightData.toAirport)")
                     continuation.resume(returning: flightData)
@@ -394,88 +403,127 @@ class TextRecognitionService: ObservableObject {
     }
 
     private func extractOffTime(from text: String) -> String {
+        let d = "[\\dØøOo]"
         let offPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "OFF\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*:\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF[^\\d]{0,10}(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "OFF.{0,30}?(\\d{2}:\\d{2})")
+            try! NSRegularExpression(pattern: "OFF\\s+(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*[:\\-\\.]?\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*:\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF[^\(d)]{0,20}(\(d){2})\\s*[:\\-;\\.]?\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF[^\(d)]{0,10}(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF.{0,30}?(\(d){2}:\(d){2})"),
+            // Relaxed: $ or other OCR noise as leading digit
+            try! NSRegularExpression(pattern: "OFF\\s+([\\$\(d)][\(d)]:\(d){2})"),
+            try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*([\\$\(d)][\(d)]:\(d){2})")
         ]
 
         return extractTimeWithPatterns(offPatterns, from: text, timeType: "OFF")
     }
 
     private func extractOnTime(from text: String) -> String {
+        let d = "[\\dØøOo]"
         let onPatterns: [NSRegularExpression] = [
             // SPECIAL CASE: ON and IN on consecutive lines followed by TWO times (capture first time for ON)
-            // Pattern: ON\n IN\n HH:MM\n HH:MM - we want the first HH:MM
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*([8\\d]{2}:[\\d]{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*([8\(d)]{2}:[\(d)]{2})"),
             // Stricter: only spaces/tabs on same line (not newlines)
-            try! NSRegularExpression(pattern: "ON[ \\t]+(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON[ \\t]+(\(d){2}:\(d){2})"),
             // Allow one newline but time must be within 5 spaces
-            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}(\(d){2}:\(d){2})"),
             // Colon/dash/dot separator on same line
-            try! NSRegularExpression(pattern: "ON[ \\t]*[:\\-\\.]?[ \\t]*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON[ \\t]*[:\\-\\.]?[ \\t]*(\(d){2}:\(d){2})"),
             // One newline with up to 10 chars, then another newline and time
-            try! NSRegularExpression(pattern: "ON\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
             // Newline with colon prefix
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*:\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*:\\s*(\(d){2})"),
             // Newline with semicolon/period prefix
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
             // More restrictive: max 10 non-digit chars between ON and time
-            try! NSRegularExpression(pattern: "ON[^\\d]{0,10}(\\d{2})[ \\t]*[:\\-;\\.]?[ \\t]*(\\d{2})"),
+            try! NSRegularExpression(pattern: "ON[^\(d)]{0,10}(\(d){2})[ \\t]*[:\\-;\\.]?[ \\t]*(\(d){2})"),
             // Strict: max 10 chars between ON and HH:MM
-            try! NSRegularExpression(pattern: "ON[^\\d]{0,10}(\\d{2}:\\d{2})"),
+            try! NSRegularExpression(pattern: "ON[^\(d)]{0,10}(\(d){2}:\(d){2})"),
             // Hour and minute on separate lines after ON
-            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
             // Fallback: allow up to 30 chars but prefer earlier matches
-            try! NSRegularExpression(pattern: "ON.{0,30}?(\\d{2}:\\d{2})"),
-            // Relaxed patterns for OCR errors ($ or other chars instead of digits)
-            try! NSRegularExpression(pattern: "ON[ \\t]+([\\$\\d]{1,2}:[\\d]{2})"),
-            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}([\\$\\d]{1,2}:[\\d]{2})")
+            try! NSRegularExpression(pattern: "ON.{0,30}?(\(d){2}:\(d){2})"),
+            // Relaxed: $ or other OCR noise as leading digit
+            try! NSRegularExpression(pattern: "ON[ \\t]+([\\$\(d)]{1,2}:[\(d)]{2})"),
+            try! NSRegularExpression(pattern: "ON\\s*\\n[ \\t]{0,5}([\\$\(d)]{1,2}:[\(d)]{2})")
         ]
 
         return extractTimeWithPatterns(onPatterns, from: text, timeType: "ON")
     }
-    
-    
+
     private func extractBlockTime(from text: String) -> String {
+        let d = "[\\dØøOo]"
         let blockPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "BLK\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*:\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK[^\\d]{0,10}(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "BLK.{0,30}?(\\d{2}:\\d{2})")
+            try! NSRegularExpression(pattern: "BLK\\s+(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*[:\\-\\.]?\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*:\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK[^\(d)]{0,20}(\(d){2})\\s*[:\\-;\\.]?\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK[^\(d)]{0,10}(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "BLK.{0,30}?(\(d){2}:\(d){2})")
         ]
 
         return extractTimeWithPatterns(blockPatterns, from: text, timeType: "BLOCK")
     }
 
     private func extractFlightTime(from text: String) -> String {
+        let d = "[\\dØøOo]"
         let flightPatterns: [NSRegularExpression] = [
-            try! NSRegularExpression(pattern: "FLT\\s+(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*[:\\-\\.]?\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n[^\\n]{0,10}\\n\\s*(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*:\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*[;\\.]\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT[^\\d]{0,20}(\\d{2})\\s*[:\\-;\\.]?\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT[^\\d]{0,10}(\\d{2}:\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\\d{2})\\s*\\n\\s*(\\d{2})"),
-            try! NSRegularExpression(pattern: "FLT.{0,30}?(\\d{2}:\\d{2})")
+            try! NSRegularExpression(pattern: "FLT\\s+(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*[:\\-\\.]?\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*:\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*[;\\.]\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT[^\(d)]{0,20}(\(d){2})\\s*[:\\-;\\.]?\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT[^\(d)]{0,10}(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\(d){2})\\s*\\n\\s*(\(d){2})"),
+            try! NSRegularExpression(pattern: "FLT.{0,30}?(\(d){2}:\(d){2})")
         ]
 
         return extractTimeWithPatterns(flightPatterns, from: text, timeType: "FLT")
+    }
+
+    // MARK: - Shared Parser Infrastructure
+
+    /// Generic label-based time extractor shared by all parsers.
+    /// Builds patterns from strict (same-line) to relaxed (multi-line, OCR noise),
+    /// then delegates to extractTimeWithPatterns for footer filtering and smartCorrectTime.
+    private func extractTimeField(label: String, from text: String) -> String {
+        let d = "[\\dØøOo]"
+        let esc = NSRegularExpression.escapedPattern(for: label)
+        let patterns: [NSRegularExpression] = [
+            // Strict: label + whitespace + HH:MM on same line (with OCR noise)
+            try! NSRegularExpression(pattern: "\\b\(esc)\\b\\s+(\(d){1,2}:\(d){2})"),
+            // Label then HH:MM on the next line (common with thermal printer OCR)
+            try! NSRegularExpression(pattern: "\\b\(esc)\\b\\s*\\n\\s*(\(d){1,2}:\(d){2})"),
+            // Optional separator (colon/dash/dot) on same line
+            try! NSRegularExpression(pattern: "\\b\(esc)\\b\\s*[:\\-\\.]?\\s*(\(d){1,2}:\(d){2})"),
+            // Label + newline + short junk line + HH:MM
+            try! NSRegularExpression(pattern: "\\b\(esc)\\b\\s*\\n[^\\n]{0,10}\\n\\s*(\(d){1,2}:\(d){2})"),
+            // Relaxed fallback: up to 30 chars between label and time
+            try! NSRegularExpression(pattern: "\\b\(esc)\\b.{0,30}?(\(d){2}:\(d){2})")
+        ]
+        return extractTimeWithPatterns(patterns, from: text, timeType: label)
+    }
+
+    /// Shared partial-extraction reporter used by all parsers.
+    /// Throws PartialExtractionError (with partial data attached) if missingFields is non-empty.
+    private func throwIfMissingCritical(_ missingFields: [String], partialData: FlightData) throws {
+        guard !missingFields.isEmpty else { return }
+        LogManager.shared.debug("Partial extraction — missing: \(missingFields.joined(separator: ", "))")
+        throw PartialExtractionError(
+            message: "Could not extract: \(missingFields.joined(separator: ", ")). Please verify and fill in missing fields.",
+            partialData: partialData
+        )
     }
 
     private func extractTimeWithPatterns(_ patterns: [NSRegularExpression], from text: String, timeType: String) -> String {
@@ -1052,14 +1100,8 @@ class TextRecognitionService: ObservableObject {
         let onTime = extractB787CurrentFlightTime(from: recognizedText, timeType: "ON")
         let flightDetails = extractB787FlightDetails(from: recognizedText)
 
-        // Build list of missing fields for user feedback
-        var missingFields: [String] = []
-        if outTime.isEmpty { missingFields.append("OUT time") }
-        if inTime.isEmpty { missingFields.append("IN time") }
-        if !outTime.isEmpty && !isValidTimeFormat(outTime) { missingFields.append("valid OUT time") }
-        if !inTime.isEmpty && !isValidTimeFormat(inTime) { missingFields.append("valid IN time") }
+        validateAndCorrectTimeSequence(out: outTime, off: offTime, on: onTime, in: inTime)
 
-        // Return partial data even if some fields are missing
         let flightData = FlightData(
             outTime: outTime,
             inTime: inTime,
@@ -1074,11 +1116,12 @@ class TextRecognitionService: ObservableObject {
             fullDate: flightDetails.fullDate
         )
 
-        // If we have missing critical fields, throw error but it will be caught with partial data
-        if !missingFields.isEmpty {
-                    LogManager.shared.debug("B787 Partial extraction - missing: \(missingFields.joined(separator: ", "))")
-            throw PartialExtractionError(message: "Could not extract: \(missingFields.joined(separator: ", ")). Please verify and fill in missing fields.", partialData: flightData)
-        }
+        var missingFields: [String] = []
+        if outTime.isEmpty { missingFields.append("OUT time") }
+        if inTime.isEmpty { missingFields.append("IN time") }
+        if !outTime.isEmpty && !isValidTimeFormat(outTime) { missingFields.append("valid OUT time") }
+        if !inTime.isEmpty && !isValidTimeFormat(inTime) { missingFields.append("valid IN time") }
+        try throwIfMissingCritical(missingFields, partialData: flightData)
 
         return flightData
     }
@@ -1208,6 +1251,208 @@ class TextRecognitionService: ObservableObject {
         }
 
         return (flightNumber, fullDate, aircraftRegistration)
+    }
+
+    // MARK: - A330 Parser
+
+    private func processA330TextRecognitionResults(_ results: [VNRecognizedTextObservation]) throws -> FlightData {
+        let recognizedText = results.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+        LogManager.shared.debug("A330 Recognized text: \(recognizedText)")
+
+        if recognizedText.contains("ACARS-BEGIN") || recognizedText.contains("ACARS BEGIN") {
+            LogManager.shared.debug("✓ Detected A330 printer format")
+            return try parseA330PrinterFormat(from: recognizedText)
+        } else {
+            LogManager.shared.debug("✓ Detected A330 ACARS screen format — using B737 parser")
+            return try processTextRecognitionResults(results)
+        }
+    }
+
+    private func parseA330PrinterFormat(from text: String) throws -> FlightData {
+        // Registration: e.g. "VH-QPD" → "QPD"
+        var aircraftRegistration: String? = nil
+        let regPattern = try! NSRegularExpression(pattern: #"\.?VH-([A-Z]{3})"#)
+        if let m = regPattern.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
+            aircraftRegistration = String(text[Range(m.range(at: 1), in: text)!])
+        }
+
+        // Flight number + day-of-month: e.g. "QFA0127/03" or "QFA0127'03" (OCR artifact for /)
+        // The /DD suffix is the LOCAL departure date (not the UTC print date).
+        var flightNumber = ""
+        var dayOfMonth: String? = nil
+        let flightPattern = try! NSRegularExpression(pattern: #"QFA(\d{1,4})[^0-9A-Z](\d{1,2})"#)
+        if let m = flightPattern.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
+            flightNumber = String(text[Range(m.range(at: 1), in: text)!])
+            if m.range(at: 2).location != NSNotFound, let dayRange = Range(m.range(at: 2), in: text) {
+                dayOfMonth = String(text[dayRange])
+            }
+        }
+        LogManager.shared.debug("A330 printer: flight=\(flightNumber) dayOfMonth=\(dayOfMonth ?? "nil")")
+
+        // Airports: ICAO pair separated by "/" or space (OCR often reads "/" as space)
+        var fromAirport = ""
+        var toAirport = ""
+        let icaoPattern = try! NSRegularExpression(pattern: #"\b([A-Z]{4})[/ ]([A-Z]{4})\b"#)
+        if let m = icaoPattern.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
+            fromAirport = String(text[Range(m.range(at: 1), in: text)!])
+            toAirport   = String(text[Range(m.range(at: 2), in: text)!])
+        }
+
+        // Times: use columnar scanner (labels and values are in separate sections of the printout).
+        // Falls back to label-adjacent extraction if columnar detection fails.
+        var outTime = "", offTime = "", onTime = "", inTime = "", blockTime = ""
+        if let times = extractA330PrinterTimes(from: text) {
+            outTime   = times.out
+            offTime   = times.off
+            onTime    = times.on
+            inTime    = times.inTime
+            blockTime = times.block
+        } else {
+            LogManager.shared.debug("A330 printer: columnar scan failed, falling back to label-adjacent extraction")
+            outTime   = extractTimeField(label: "OUT",   from: text)
+            offTime   = extractTimeField(label: "OFF",   from: text)
+            onTime    = extractTimeField(label: "ON",    from: text)
+            inTime    = extractTimeField(label: "IN",    from: text)
+            blockTime = extractTimeField(label: "BLOCK", from: text)
+        }
+
+        validateAndCorrectTimeSequence(out: outTime, off: offTime, on: onTime, in: inTime, fltTime: "", blkTime: blockTime)
+
+        LogManager.shared.debug("A330 printer parsed — flight:\(flightNumber) \(fromAirport)-\(toAirport) OUT:\(outTime) OFF:\(offTime) ON:\(onTime) IN:\(inTime) BLK:\(blockTime) day:\(dayOfMonth ?? "nil") reg:\(aircraftRegistration ?? "nil")")
+
+        let flightData = FlightData(
+            outTime: outTime,
+            inTime: inTime,
+            offTime: offTime,
+            onTime: onTime,
+            blockTime: blockTime,
+            flightNumber: flightNumber,
+            fromAirport: fromAirport,
+            toAirport: toAirport,
+            dayOfMonth: dayOfMonth,
+            aircraftRegistration: aircraftRegistration,
+            fullDate: nil
+        )
+
+        var missingFields: [String] = []
+        if outTime.isEmpty { missingFields.append("OUT time") }
+        if inTime.isEmpty { missingFields.append("IN time") }
+        if !outTime.isEmpty && !isValidTimeFormat(outTime) { missingFields.append("valid OUT time") }
+        if !inTime.isEmpty && !isValidTimeFormat(inTime) { missingFields.append("valid IN time") }
+        try throwIfMissingCritical(missingFields, partialData: flightData)
+
+        return flightData
+    }
+
+    /// Columnar time extractor for the A330 thermal printer format.
+    ///
+    /// The printout has two columns which OCR reads sequentially:
+    ///   Left column:  [BLOCK / OUT / ON] labels, then their values further down
+    ///   Right column: [NIGHT? / OFF / IN] labels, then their values further down
+    ///
+    /// In the OCR output the value cluster for the left group appears between the
+    /// last left-column label and the first right-column label.  Any leading times
+    /// in that cluster (e.g. a REPORT time) are skipped; the last 3 are BLOCK/OUT/ON.
+    ///
+    /// For the right group, if a NIGHT label was present its value (night-hours)
+    /// is the first time after the label block and is skipped; the next two are OFF/IN.
+    private func extractA330PrinterTimes(from text: String) -> (block: String, out: String, off: String, on: String, inTime: String)? {
+        let lines = text.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+
+        // Match an entire trimmed line that is a time "HH:MM" (handles OCR space "00: 38")
+        let timeRegex = try! NSRegularExpression(pattern: #"^(\d{1,2}):\s*(\d{2})$"#)
+
+        func parseLine(_ line: String) -> String? {
+            guard let m = timeRegex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)),
+                  let r1 = Range(m.range(at: 1), in: line),
+                  let r2 = Range(m.range(at: 2), in: line) else { return nil }
+            return smartCorrectTime("\(String(line[r1])):\(String(line[r2]))")
+        }
+
+        // Find the first line index whose trimmed content equals the label (or starts with it
+        // followed by a non-letter, to catch minor OCR additions like trailing colons)
+        func firstIndex(of label: String) -> Int? {
+            lines.firstIndex(where: { line in
+                line == label ||
+                (line.hasPrefix(label) && line.count > label.count && !line[line.index(line.startIndex, offsetBy: label.count)].isLetter)
+            })
+        }
+
+        guard let blockIdx = firstIndex(of: "BLOCK"),
+              let outIdx   = firstIndex(of: "OUT"),
+              let onIdx    = firstIndex(of: "ON"),
+              let offIdx   = firstIndex(of: "OFF"),
+              let inIdx    = firstIndex(of: "IN") else {
+            LogManager.shared.debug("A330 printer columnar: missing required label(s) — cannot use columnar scanner")
+            return nil
+        }
+
+        // NIGHT label marks a "night hours" value that leads the right-group values
+        let nightIdx = firstIndex(of: "NIGHT")
+
+        // Left group: labels end at the last of BLOCK/OUT/ON
+        let leftEnd = max(blockIdx, outIdx, onIdx)
+        // Right group: starts at the earliest of NIGHT/OFF (whichever appears first)
+        let rightStart = nightIdx.map { min($0, offIdx) } ?? offIdx
+        // Right group: labels end at the last of NIGHT/OFF/IN
+        let rightEnd = max(offIdx, inIdx, nightIdx ?? 0)
+
+        guard leftEnd < rightStart else {
+            LogManager.shared.debug("A330 printer columnar: left/right label groups overlap — cannot use columnar scanner")
+            return nil
+        }
+
+        // Collect times in the left-group value region (between the two label blocks)
+        var leftTimes: [String] = []
+        for i in (leftEnd + 1)..<rightStart {
+            if let t = parseLine(lines[i]) { leftTimes.append(t) }
+        }
+
+        guard leftTimes.count >= 3 else {
+            LogManager.shared.debug("A330 printer columnar: found \(leftTimes.count) left-group times (need ≥3)")
+            return nil
+        }
+        // Any leading times (e.g. REPORT time) precede the actual values; take the LAST 3
+        let blockTime = leftTimes[leftTimes.count - 3]
+        let outTime   = leftTimes[leftTimes.count - 2]
+        let onTime    = leftTimes[leftTimes.count - 1]
+
+        // Collect times after the right-group label block
+        var rightTimes: [String] = []
+        for i in (rightEnd + 1)..<lines.count {
+            if let t = parseLine(lines[i]) { rightTimes.append(t) }
+        }
+
+        // If NIGHT label was present, its value is the first right-group time — skip it
+        let skip = nightIdx != nil ? 1 : 0
+        guard rightTimes.count >= skip + 2 else {
+            LogManager.shared.debug("A330 printer columnar: found \(rightTimes.count) right-group times (need ≥\(skip + 2))")
+            return nil
+        }
+        let offTime = rightTimes[skip]
+        let inTime  = rightTimes[skip + 1]
+
+        LogManager.shared.debug("A330 printer columnar — BLOCK:\(blockTime) OUT:\(outTime) ON:\(onTime) OFF:\(offTime) IN:\(inTime)")
+        return (block: blockTime, out: outTime, off: offTime, on: onTime, inTime: inTime)
+    }
+
+    private func monthNumber(from abbreviation: String) -> Int? {
+        switch abbreviation.uppercased() {
+        case "JAN": return 1
+        case "FEB": return 2
+        case "MAR": return 3
+        case "APR": return 4
+        case "MAY": return 5
+        case "JUN": return 6
+        case "JUL": return 7
+        case "AUG": return 8
+        case "SEP": return 9
+        case "OCT": return 10
+        case "NOV": return 11
+        case "DEC": return 12
+        default: return nil
+        }
     }
 }
 

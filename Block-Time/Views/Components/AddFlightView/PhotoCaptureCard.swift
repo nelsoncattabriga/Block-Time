@@ -8,14 +8,26 @@ struct ModernPhotoCaptureCard: View {
 
     private var cardTitle: String {
         switch fleetType {
-        case "B787": return "Capture 787 Print Out"
-        case "A330": return "Capture A330 ACARS Data"
-        default: return "Capture 737 ACARS Data"
+        case "B787": return "787 Capture"
+        case "A330": return "A330 Capture"
+        default: return "737 Capture"
         }
     }
 
     private var cameraButtonTitle: String {
-        fleetType == "B787" ? "From PRINTER" : "From ACARS"
+        switch fleetType {
+        case "B787": return "PRINTER"
+        case "A330": return "ACARS or PRINTER"
+        default:     return "ACARS"
+        }
+    }
+
+    private var cameraButtonSubtitle: String {
+        switch fleetType {
+        case "B787": return "ACARS Printout"
+        case "A330": return "CURRENT-FLT Screen or Printout"
+        default:     return "CURRENT-FLT Screen"
+        }
     }
 
     var body: some View {
@@ -33,23 +45,23 @@ struct ModernPhotoCaptureCard: View {
                 Spacer()
             }
 
-            HStack(spacing: 12) {
-                ModernButton(
-                    title: cameraButtonTitle,
-                    subtitle: "Camera",
-                    icon: "camera",
-                    color: .blue,
-                    action: viewModel.showCamera
-                )
+            ModernButton(
+                title: cameraButtonTitle,
+                subtitle: cameraButtonSubtitle,
+                icon: "camera",
+                color: .blue,
+                action: viewModel.showCamera
+            )
 
-                PhotosPicker(selection: $viewModel.selectedPhotoItem) {
-                    ModernButtonContent(
-                        title: "From Photos",
-                        subtitle: "Library",
-                        icon: "photo.on.rectangle",
-                        color: .purple
-                    )
+            PhotosPicker(selection: $viewModel.selectedPhotoItem) {
+                HStack(spacing: 6) {
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.subheadline)
+                    Text("Photos Library")
+                        .font(.subheadline)
                 }
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(16)
@@ -89,7 +101,7 @@ struct ModernButtonContent: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.title)
                 .foregroundColor(color)
 
             VStack(spacing: 2) {
@@ -99,7 +111,7 @@ struct ModernButtonContent: View {
                     .foregroundColor(.primary)
 
                 Text(subtitle)
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundColor(.secondary)
             }
         }

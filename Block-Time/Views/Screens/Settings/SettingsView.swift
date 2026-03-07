@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 // MARK: - Settings Category Enum
 enum SettingsCategory: String, CaseIterable, Identifiable {
-    case crew = "Crew Settings"
+    case crew = "Crew & Ops Data"
     case flightInfo = "Flight Information"
     case frms = "FRMS"
     case backups = "Backup & Sync"
@@ -41,7 +41,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .appearance: return "Display Themes and Colours"
-        case .crew: return "Default Crew Settings"
+        case .crew: return "Crew Defaults & Operations"
         case .flightInfo: return "Flight Data Formatting"
         case .frms: return "Fatigue Risk Management System"
         case .backups: return "iCloud Sync & Backups"
@@ -263,6 +263,7 @@ struct PersonalCrewSettingsView: View {
         ScrollView {
             VStack(spacing: 16) {
                 ModernDefaultCrewNamesCard(viewModel: viewModel)
+                ModernOpsDataCard(viewModel: viewModel)
 
                 Spacer(minLength: 20)
             }
@@ -277,7 +278,7 @@ struct PersonalCrewSettingsView: View {
                     .ignoresSafeArea()
             }
         )
-        .navigationTitle("Crew Settings")
+        .navigationTitle("Crew & Ops Data")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -401,10 +402,6 @@ private struct ModernDefaultCrewNamesCard: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
-
-//                            Text(viewModel.foPilotFlyingCredit == .p1us ? "ICUS" : "P2")
-//                                .font(.caption)
-//                                .foregroundColor(.secondary)
                         }
 
                         Spacer()
@@ -461,6 +458,7 @@ private struct ModernDefaultCrewNamesCard: View {
 
                 Divider()
                     .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
 
                 ModernToggleRow(
                     title: "Log S/O Names",
@@ -472,6 +470,125 @@ private struct ModernDefaultCrewNamesCard: View {
                     color: .blue,
                     icon: "person.2.badge.key"
                 )
+            }
+        }
+        .padding(16)
+        .background(.thinMaterial)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
+private struct ModernOpsDataCard: View {
+    @ObservedObject var viewModel: FlightTimeExtractorViewModel
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "slider.horizontal.3")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+
+                Text("Operations")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+
+                Spacer()
+            }
+
+            VStack(spacing: 12) {
+
+                // Instrument Time when PF
+                HStack {
+                    Image(systemName: "gauge.with.dots.needle.67percent")
+                        .foregroundColor(.blue)
+                        .frame(width: 20)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Inst Time when PF")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+
+                        Text("\(viewModel.pfAutoInstrumentMinutes) minutes")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Picker("", selection: Binding(
+                        get: { viewModel.pfAutoInstrumentMinutes },
+                        set: { viewModel.updatePFAutoInstrumentMinutes($0) }
+                    )) {
+                        Text("None").tag(0)
+                        Text("15 min").tag(15)
+                        Text("30 min").tag(30)
+                        Text("45 min").tag(45)
+                        Text("60 min").tag(60)
+                    }
+                    .pickerStyle(.menu)
+                }
+                .padding(12)
+                .background(Color(.systemGray6).opacity(0.5))
+                .cornerRadius(8)
+
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+
+                // Log Approaches Toggle
+                ModernToggleRow(
+                    title: "Log Approaches",
+                    subtitle: "ILS, GLS, AIII...",
+                    isOn: Binding(
+                        get: { viewModel.logApproaches },
+                        set: { viewModel.updateLogApproaches($0) }
+                    ),
+                    color: .blue,
+                    icon: "airplane.arrival"
+                )
+
+                // Default Approach Type Picker (only show when Log Approaches is enabled)
+                if viewModel.logApproaches {
+                    HStack {
+                        Image(systemName: "location.north.line")
+                            .foregroundColor(.blue)
+                            .frame(width: 20)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Default Approach")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+
+                            Text(viewModel.defaultApproachType ?? "Nil")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Picker("", selection: Binding(
+                            get: { viewModel.defaultApproachType },
+                            set: { viewModel.updateDefaultApproachType($0) }
+                        )) {
+                            Text("Nil").tag(nil as String?)
+                            Text("ILS").tag("ILS" as String?)
+                            Text("GLS").tag("GLS" as String?)
+                            Text("RNP").tag("RNP" as String?)
+                            Text("AIII").tag("AIII" as String?)
+                            Text("NPA").tag("NPA" as String?)
+                        }
+                        .pickerStyle(.menu)
+                    }
+                    .padding(12)
+                    .background(Color(.systemGray6).opacity(0.5))
+                    .cornerRadius(8)
+                }
             }
         }
         .padding(16)
@@ -508,8 +625,30 @@ private struct ModernFormatOptionsCard: View {
                 // Fleet Selector
                 ModernFleetSelectorRow(viewModel: viewModel)
 
+                
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                
+                ModernAirlinePrefixRow(
+                    isEnabled: Binding(
+                        get: { viewModel.includeAirlinePrefixInFlightNumber },
+                        set: { viewModel.updateIncludeAirlinePrefixInFlightNumber($0) }
+                    ),
+                    prefix: Binding(
+                        get: { viewModel.airlinePrefix },
+                        set: { viewModel.updateAirlinePrefix($0) }
+                    ),
+                    isCustomSelected: Binding(
+                        get: { viewModel.isCustomAirlinePrefix },
+                        set: { viewModel.updateIsCustomAirlinePrefix($0) }
+                    ),
+                    color: .orange
+                )
+                
+                
                 ModernToggleRow(
-                    title: "Long A/C Registration",
+                    title: "Full A/C Registration",
                     subtitle: "VH-ABC vs ABC",
                     isOn: Binding(
                         get: { viewModel.showFullAircraftReg },
@@ -519,11 +658,9 @@ private struct ModernFormatOptionsCard: View {
                     icon: "airplane"
                 )
 
-                Divider()
-                    .padding(.horizontal, 8)
 
                 ModernToggleRow(
-                    title: "Preserve Leading Zeros in Flt No",
+                    title: "Preserve Leading Zeros in Captured Flt No",
                     subtitle: "0405 vs 405",
                     isOn: Binding(
                         get: { viewModel.includeLeadingZeroInFlightNumber },
@@ -533,6 +670,10 @@ private struct ModernFormatOptionsCard: View {
                     icon: "number"
                 )
 
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                
                 // Airport ID Picker
                 HStack(spacing: 12) {
                     Image(systemName: "airplane.circle")
@@ -565,6 +706,10 @@ private struct ModernFormatOptionsCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
+                
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
 
                 // Enter Times In Local Time toggle
                 HStack(spacing: 12) {
@@ -573,7 +718,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Logbook Time Entry")
+                        Text("Times Entered In")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -605,7 +750,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Logbook Displays")
+                        Text("Times Shown In")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -637,7 +782,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Flight Times")
+                        Text("Flight Times Displayed As")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
@@ -694,110 +839,7 @@ private struct ModernFormatOptionsCard: View {
                     .cornerRadius(8)
                 }
 
-                ModernAirlinePrefixRow(
-                    isEnabled: Binding(
-                        get: { viewModel.includeAirlinePrefixInFlightNumber },
-                        set: { viewModel.updateIncludeAirlinePrefixInFlightNumber($0) }
-                    ),
-                    prefix: Binding(
-                        get: { viewModel.airlinePrefix },
-                        set: { viewModel.updateAirlinePrefix($0) }
-                    ),
-                    isCustomSelected: Binding(
-                        get: { viewModel.isCustomAirlinePrefix },
-                        set: { viewModel.updateIsCustomAirlinePrefix($0) }
-                    ),
-                    color: .orange
-                )
-
-                Divider()
-                    .padding(.horizontal, 8)
-
-                // Instrument Time when PF
-                HStack {
-                    Image(systemName: "gauge.with.dots.needle.67percent")
-                        .foregroundColor(.orange)
-                        .frame(width: 20)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Inst Time when PF")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
-
-                        Text("\(viewModel.pfAutoInstrumentMinutes) minutes")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    Picker("", selection: Binding(
-                        get: { viewModel.pfAutoInstrumentMinutes },
-                        set: { viewModel.updatePFAutoInstrumentMinutes($0) }
-                    )) {
-                        Text("None").tag(0)
-                        Text("15 min").tag(15)
-                        Text("30 min").tag(30)
-                        Text("45 min").tag(45)
-                        Text("60 min").tag(60)
-                    }
-                    .pickerStyle(.menu)
-                }
-                .padding(12)
-                .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
-
-                Divider()
-                    .padding(.horizontal, 8)
-
-                // Log Approaches Toggle
-                ModernToggleRow(
-                    title: "Log Approaches",
-                    subtitle: "ILS,GLS, AIII...",
-                    isOn: Binding(
-                        get: { viewModel.logApproaches },
-                        set: { viewModel.updateLogApproaches($0) }
-                    ),
-                    color: .orange,
-                    icon: "airplane.arrival"
-                )
-
-                // Default Approach Type Picker (only show when Log Approaches is enabled)
-                if viewModel.logApproaches {
-                    HStack {
-                        Image(systemName: "location.north.line")
-                            .foregroundColor(.orange)
-                            .frame(width: 20)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Default Approach")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.primary)
-
-                            Text(viewModel.defaultApproachType ?? "Nil")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Spacer()
-
-                        Picker("", selection: Binding(
-                            get: { viewModel.defaultApproachType },
-                            set: { viewModel.updateDefaultApproachType($0) }
-                        )) {
-                            Text("Nil").tag(nil as String?)
-                            Text("ILS").tag("ILS" as String?)
-                            Text("GLS").tag("GLS" as String?)
-                            Text("RNP").tag("RNP" as String?)
-                            Text("AIII").tag("AIII" as String?)
-                            Text("NPA").tag("NPA" as String?)
-                        }
-                        .pickerStyle(.menu)
-                    }
-                    .padding(12)
-                    .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
-                }
+               
 
             }
         }
