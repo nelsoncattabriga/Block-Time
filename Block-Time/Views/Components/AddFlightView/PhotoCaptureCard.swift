@@ -8,17 +8,17 @@ struct ModernPhotoCaptureCard: View {
 
     private var cardTitle: String {
         switch fleetType {
-        case "B787": return "Capture 787 Data"
-        case "A330": return "Capture A330 Data"
-        default: return "Capture 737 Data"
+        case "B787": return "787 Capture"
+        case "A330": return "A330 Capture"
+        default: return "737 Capture"
         }
     }
 
     private var cameraButtonTitle: String {
         switch fleetType {
-        case "B787": return "From PRINTER"
-        case "A330": return "From ACARS or PRINTER"
-        default:     return "From ACARS"
+        case "B787": return "PRINTER"
+        case "A330": return "ACARS or PRINTER"
+        default:     return "ACARS"
         }
     }
 
@@ -57,7 +57,7 @@ struct ModernPhotoCaptureCard: View {
                 HStack(spacing: 6) {
                     Image(systemName: "photo.on.rectangle")
                         .font(.subheadline)
-                    Text("from Photos Library")
+                    Text("Photos Library")
                         .font(.subheadline)
                 }
                 .foregroundColor(.secondary)
@@ -101,7 +101,7 @@ struct ModernButtonContent: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.title)
                 .foregroundColor(color)
 
             VStack(spacing: 2) {
@@ -111,7 +111,7 @@ struct ModernButtonContent: View {
                     .foregroundColor(.primary)
 
                 Text(subtitle)
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundColor(.secondary)
             }
         }
