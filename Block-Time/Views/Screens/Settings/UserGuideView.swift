@@ -117,6 +117,7 @@ private struct GuideWebView: UIViewRepresentable {
     @Binding var canGoForward: Bool
     @Binding var estimatedProgress: Double
     @Binding var loadError: Error?
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -129,6 +130,7 @@ private struct GuideWebView: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
+        webView.overrideUserInterfaceStyle = colorScheme == .dark ? .dark : .light
 
         context.coordinator.startObserving(webView)
         navigator.attach(webView)
@@ -139,6 +141,7 @@ private struct GuideWebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.parent = self
+        webView.overrideUserInterfaceStyle = colorScheme == .dark ? .dark : .light
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
