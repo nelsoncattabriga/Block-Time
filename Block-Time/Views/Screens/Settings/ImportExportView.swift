@@ -219,7 +219,7 @@ struct ImportExportView: View {
                     showingRosterImport = true
                 }
 
-                Divider()
+                //Divider()
                 // Add Aircraft Summary
                 ActionButton(
                     title: "Add Aircraft Summary",
@@ -286,18 +286,18 @@ struct ImportExportView: View {
                     showingExportView = true
                 }
 
-                Divider()
+//                Divider()
 
-                // Migration Import from Logger
-                ActionButton(
-                    title: "Import from Logger",
-                    subtitle: "App migration from Logger",
-                    icon: "square.and.arrow.down.fill",
-                    color: .orange,
-                    isLoading: false
-                ) {
-                    showingMigrationImport = true
-                }
+//                // Migration Import from Logger
+//                ActionButton(
+//                    title: "Import from Logger",
+//                    subtitle: "App migration from Logger",
+//                    icon: "square.and.arrow.down.fill",
+//                    color: .orange,
+//                    isLoading: false
+//                ) {
+//                    showingMigrationImport = true
+//                }
             }
         }
         .padding(16)
