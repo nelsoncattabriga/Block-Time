@@ -53,6 +53,7 @@ class FlightDatabaseService: ObservableObject {
     // MARK: - Rate limiting for remote store changes
     private var lastRemoteStoreChangeTime: Date?
     private let remoteStoreChangeMinInterval: TimeInterval = 1.0 // 1 second minimum between processing
+    private var remoteChangeSyncSettleTimer: Timer?
 
     private init() {
         setupCloudKitNotifications()
@@ -2275,7 +2276,22 @@ class FlightDatabaseService: ObservableObject {
 
         LogManager.shared.debug("FlightDatabaseService: Remote store change detected - posting debounced notification")
         DispatchQueue.main.async {
+            // Show spinner while data arrives — critical on fresh installs where the
+            // 134422 CloudKit error kills import events and isSyncing is never set.
+            self.isSyncing = true
             self.postDebouncedFlightDataChangedNotification()
+
+            // Settle timer: clear spinner and record lastSyncDate once remote changes stop
+            // arriving. 5 seconds gives import events (if they fire) time to complete their
+            // own cleanup first; this is the sole path on fresh-install 134422 scenarios.
+            self.remoteChangeSyncSettleTimer?.invalidate()
+            self.remoteChangeSyncSettleTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
+                guard let self else { return }
+                if !self.isImportingFromCloudKit {
+                    self.isSyncing = false
+                    self.lastSyncDate = Date()
+                }
+            }
         }
     }
 
