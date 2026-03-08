@@ -8,7 +8,6 @@
 import Foundation
 import CoreData
 import SwiftUI
-import Network
 import CloudKit
 import Combine
 
@@ -56,7 +55,6 @@ class FlightDatabaseService: ObservableObject {
     private let remoteStoreChangeMinInterval: TimeInterval = 1.0 // 1 second minimum between processing
 
     private init() {
-        // Set up CloudKit sync notifications
         setupCloudKitNotifications()
     } // Prevent multiple instances
     
@@ -70,15 +68,21 @@ class FlightDatabaseService: ObservableObject {
     }()
     
     // MARK: - Core Data Stack
+    // The original lazy var had Thread.sleep(0.1) inside for NWPathMonitor, which created
+    // a 100ms race window where a concurrent thread could also enter the initializer.
+    // Fix: remove the sleep. Without it the initializer completes in microseconds and
+    // there is no meaningful race window. If a concurrent access still races (extremely
+    // unlikely), the "already registered" CloudKit error is handled gracefully below —
+    // far better than the deadlock produced by an NSLock approach (loadPersistentStores
+    // needs the main thread internally, so locking on a background thread and blocking
+    // the main thread waiting for that lock causes a mutual deadlock).
     lazy var persistentContainer: NSPersistentCloudKitContainer = {
         let container = NSPersistentCloudKitContainer(name: "FlightDataModel")
 
-        // Configure CloudKit container options
         guard let description = container.persistentStoreDescriptions.first else {
             fatalError("Failed to retrieve a persistent store description.")
         }
 
-        // Log which CloudKit environment will be used
         #if DEBUG
         let environment = "DEVELOPMENT"
         #else
@@ -86,77 +90,49 @@ class FlightDatabaseService: ObservableObject {
         #endif
         LogManager.shared.debug("CloudKit: Environment - \(environment)")
 
-        // Enable remote change notifications
         description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
-
-        // Enable history tracking (required for CloudKit sync)
         description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
 
-        // Check if network is available before enabling CloudKit
-        // This prevents blocking when offline
-        let networkMonitor = NWPathMonitor()
-        let monitorQueue = DispatchQueue(label: "NetworkCheck")
-        var networkAvailable = false
-
-        networkMonitor.pathUpdateHandler = { path in
-            networkAvailable = (path.status == .satisfied)
-        }
-        networkMonitor.start(queue: monitorQueue)
-
-        // Give it a moment to check
-        Thread.sleep(forTimeInterval: 0.1)
-        networkMonitor.cancel()
-
-        // Only enable CloudKit if network is available OR iCloud is already configured
-        // This prevents the blocking behavior when starting offline
-        if networkAvailable || FileManager.default.ubiquityIdentityToken != nil {
-            LogManager.shared.debug("CloudKit: Network available - enabling sync")
-
-            let containerOptions = NSPersistentCloudKitContainerOptions(
+        // Enable CloudKit if the user has an iCloud account.
+        // NSPersistentCloudKitContainer handles offline gracefully on its own.
+        // NWPathMonitor + Thread.sleep(0.1) removed — the sleep was the source of the
+        // race window that caused duplicate container initialisation.
+        if FileManager.default.ubiquityIdentityToken != nil {
+            LogManager.shared.debug("CloudKit: iCloud available - enabling sync")
+            description.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(
                 containerIdentifier: "iCloud.com.thezoolab.blocktime"
             )
-
-            description.cloudKitContainerOptions = containerOptions
         } else {
-            LogManager.shared.warning("CloudKit: Network unavailable - disabling for this launch")
-            // Disable CloudKit sync for this session
+            LogManager.shared.warning("CloudKit: iCloud account not available - disabling sync")
             description.cloudKitContainerOptions = nil
         }
 
-        container.loadPersistentStores { storeDescription, error in
+        container.loadPersistentStores { _, error in
             if let error = error as NSError? {
                 LogManager.shared.error("Core Data: Failed to load - \(error.localizedDescription)")
                 LogManager.shared.error("Core Data: Error details - \(error.userInfo)")
-
-                // Check if this is a CloudKit network error
                 if error.domain == NSCocoaErrorDomain || error.domain == "CKErrorDomain" {
                     LogManager.shared.warning("CloudKit: Sync may be unavailable - continuing with local storage")
                     DispatchQueue.main.async {
                         self.lastSyncError = error
                     }
                 }
-            } else {
-//                LogManager.shared.info("Core Data store loaded successfully")
             }
         }
 
-        // Automatically merge changes from CloudKit
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
 
-        // Initialize CloudKit schema in development (asynchronously)
         #if DEBUG
         LogManager.shared.debug("CloudKit Schema: Auto-initialization ENABLED (Development)")
-        if networkAvailable {
-            DispatchQueue.global(qos: .utility).async {
-                do {
-                    try container.initializeCloudKitSchema(options: [])
-                    LogManager.shared.debug("CloudKit Schema: Initialized in Development environment")
-                } catch {
-                    let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: error)
-                    LogManager.shared.error("CloudKit Schema: \(errorInfo.message) - \(errorInfo.suggestion)")
-                    LogManager.shared.debug("  Technical: \(error.localizedDescription)")
-                }
+        DispatchQueue.global(qos: .utility).async {
+            do {
+                try container.initializeCloudKitSchema(options: [])
+                LogManager.shared.debug("CloudKit Schema: Initialized in Development environment")
+            } catch {
+                let errorInfo = CloudKitErrorHelper.userFriendlyMessage(for: error)
+                LogManager.shared.error("CloudKit Schema: \(errorInfo.message) - \(errorInfo.suggestion)")
+                LogManager.shared.debug("  Technical: \(error.localizedDescription)")
             }
         }
         #else
@@ -2319,6 +2295,12 @@ class FlightDatabaseService: ObservableObject {
             let source = isImportingFromCloudKit ? "CloudKit import" : "batch import"
             LogManager.shared.debug("FlightDatabaseService: Context saved during \(source): +\(insertedObjects.count) ~\(updatedObjects.count) -\(deletedObjects.count)")
             DispatchQueue.main.async {
+                // Data arriving in the store is ground truth that sync is working.
+                // Import events on a fresh install often carry partial errors, preventing
+                // lastSyncDate from being set via handleCloudKitImport.
+                if self.isImportingFromCloudKit {
+                    self.lastSyncDate = Date()
+                }
                 self.postDebouncedFlightDataChangedNotification()
             }
         } else {
@@ -2354,15 +2336,22 @@ class FlightDatabaseService: ObservableObject {
                     self.isImportingFromCloudKit = true
                     self.isSyncing = true
                 } else {
-                    // Import finished - clear flag
+                    // Import finished - clear importing flag
                     self.isImportingFromCloudKit = false
-                    self.isSyncing = false
+
+                    // Keep isSyncing = true until the initial bulk download settles.
+                    // Without this, isSyncing toggles off between batches so the spinner
+                    // disappears mid-sync on a fresh install.
+                    if self.hasCompletedInitialSetup {
+                        self.isSyncing = false
+                    }
 
                     // Mark that we've completed the initial setup/import after a delay
                     // This allows for any trailing remote store change notifications to settle
                     self.initialSetupTimer?.invalidate()
                     self.initialSetupTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
                         self.hasCompletedInitialSetup = true
+                        self.isSyncing = false
                     }
                 }
 

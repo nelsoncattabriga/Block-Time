@@ -18,33 +18,6 @@ struct Block_TimeApp: App {
     init() {
         // Reset debug mode to off every app launch
         UserDefaults.standard.set(false, forKey: "debugModeEnabled")
-
-        // Run one-time simulator flight migration
-        performSimulatorFlightMigration()
-    }
-
-    private func performSimulatorFlightMigration() {
-        let migrationKey = "simulatorFlightMigrationV2Completed"
-
-        // Check if migration already completed
-        guard !UserDefaults.standard.bool(forKey: migrationKey) else {
-            return
-        }
-
-        LogManager.shared.info("Running simulator flight migration...")
-        let result = FlightDatabaseService.shared.migrateSimulatorFlights()
-
-        // Store results
-        UserDefaults.standard.set(true, forKey: migrationKey)
-        UserDefaults.standard.set(result.migratedCount, forKey: "simulatorFlightMigrationCount")
-        UserDefaults.standard.set(result.summary, forKey: "simulatorFlightMigrationSummary")
-
-        LogManager.shared.info("Simulator flight migration complete: \(result.migratedCount) flights migrated")
-
-        // Post notification to refresh views if any flights were migrated
-        if result.migratedCount > 0 {
-            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
-        }
     }
 
     var body: some Scene {
