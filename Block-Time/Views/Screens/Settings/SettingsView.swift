@@ -1752,7 +1752,6 @@ struct ModernCloudKitSyncCard: View {
                         icon: "airplane",
                         isSyncing: databaseService.isSyncing,
                         lastSync: databaseService.lastSyncDate,
-                        lastChange: nil,
                         error: databaseService.lastSyncError
                     )
 
@@ -1762,7 +1761,6 @@ struct ModernCloudKitSyncCard: View {
                         icon: "gearshape",
                         isSyncing: settingsService.isSyncing,
                         lastSync: settingsService.lastSyncDate,
-                        lastChange: settingsService.lastChangeDate,
                         error: settingsService.lastSyncError
                     )
 
@@ -1849,8 +1847,8 @@ struct ModernCloudKitSyncCard: View {
     }
 
     @ViewBuilder
-    private func syncDetailRow(title: String, icon: String, isSyncing: Bool, lastSync: Date?, lastChange: Date? = nil, error: Error?) -> some View {
-        SyncDetailRowView(title: title, icon: icon, isSyncing: isSyncing, lastSync: lastSync, lastChange: lastChange, error: error, detailedSyncError: databaseService.detailedSyncError)
+    private func syncDetailRow(title: String, icon: String, isSyncing: Bool, lastSync: Date?, error: Error?) -> some View {
+        SyncDetailRowView(title: title, icon: icon, isSyncing: isSyncing, lastSync: lastSync, error: error, detailedSyncError: databaseService.detailedSyncError)
     }
 }
 
@@ -1860,7 +1858,6 @@ private struct SyncDetailRowView: View {
     let icon: String
     let isSyncing: Bool
     let lastSync: Date?
-    let lastChange: Date?
     let error: Error?
     let detailedSyncError: DetailedSyncError?
 
@@ -2081,16 +2078,6 @@ private struct SyncDetailRowView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    if let changeDate = lastChange, changeDate != date {
-                        HStack(spacing: 4) {
-                            Image(systemName: "pencil.circle.fill")
-                                .foregroundStyle(.blue)
-                                .font(.footnote)
-                            Text("Last changed \(changeDate.formatted(.relative(presentation: .named)))")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
                 }
             } else {
                 HStack(spacing: 4) {
