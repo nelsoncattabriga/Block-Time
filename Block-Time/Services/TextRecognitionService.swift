@@ -9,7 +9,6 @@ import Vision
 import UIKit
 import Foundation
 import ImageIO
-import Combine
 
 // MARK: - Data Models
 struct FlightData {
@@ -51,7 +50,7 @@ enum FleetType {
 }
 
 // MARK: - Text Recognition Service
-class TextRecognitionService: ObservableObject {
+class TextRecognitionService {
 
     // MARK: - Public Methods
 

@@ -10,7 +10,7 @@ import SwiftUI
 
 struct FlightsSplitView: View {
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject var filterViewModel: FlightsFilterViewModel
+    @Bindable var filterViewModel: FlightsFilterViewModel
     @State private var selectedFlight: FlightSector?
     @State private var isAddingNewFlight: Bool = false
     @State private var showingPaywall = false
@@ -143,7 +143,7 @@ struct FlightsSplitView: View {
 // MARK: - Flights List Content (Extracted for reuse)
 private struct FlightsListContent: View {
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject var filterViewModel: FlightsFilterViewModel
+    @Bindable var filterViewModel: FlightsFilterViewModel
     @Binding var selectedFlight: FlightSector?
     @Binding var isAddingNewFlight: Bool
     @Binding var isSelectMode: Bool

@@ -7,10 +7,9 @@
 import Foundation
 import UIKit
 import Photos
-import Combine
 
 // MARK: - Photo Saving Service (iOS 14+ Compatible)
-class PhotoSavingService: ObservableObject {
+class PhotoSavingService {
     
     enum PhotoSavingError: LocalizedError {
         case noPermission

@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - Wrapper for iPad to inject filter view model
 struct FlightsViewWithFilter: View {
-    @ObservedObject var filterViewModel: FlightsFilterViewModel
+    @Bindable var filterViewModel: FlightsFilterViewModel
 
     var body: some View {
         FlightsView(filterViewModel: filterViewModel)
@@ -28,10 +28,10 @@ struct FlightsView: View {
     @State private var showingFilterSheet = false
     @State private var selectedFlight: FlightSector?
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
-    @ObservedObject var filterViewModel: FlightsFilterViewModel
+    @Bindable var filterViewModel: FlightsFilterViewModel
 
     init(filterViewModel: FlightsFilterViewModel? = nil) {
-        _filterViewModel = ObservedObject(wrappedValue: filterViewModel ?? FlightsFilterViewModel())
+        _filterViewModel = Bindable(filterViewModel ?? FlightsFilterViewModel())
     }
 
     // Cached date formatter for performance

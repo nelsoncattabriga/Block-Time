@@ -14,7 +14,7 @@ struct Block_TimeApp: App {
     @State private var themeService = ThemeService.shared
     @State private var cloudKitService = CloudKitSettingsSyncService.shared
     @State private var purchaseService = PurchaseService.shared
-    @ObservedObject private var appState = AppState.shared
+    @State private var appState = AppState.shared
 
     init() {
         // Reset debug mode to off every app launch

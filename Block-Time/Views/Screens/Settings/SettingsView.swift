@@ -1544,7 +1544,7 @@ struct ShareSheetWrapper: UIViewControllerRepresentable {
 // MARK: - Fleet Selector Row
 private struct ModernFleetSelectorRow: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @StateObject private var fleetService = AircraftFleetService.shared
+    private let fleetService = AircraftFleetService.shared
     @State private var availableFleets: [Fleet] = []
     @State private var selectedFleet: Fleet?
 

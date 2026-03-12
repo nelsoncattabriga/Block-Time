@@ -90,7 +90,7 @@ struct BulkEditAircraftPickerSheet: View {
     let showFullReg: Bool
     let onDismiss: () -> Void
 
-    @StateObject private var fleetService = AircraftFleetService.shared
+    private let fleetService = AircraftFleetService.shared
     @State private var availableFleets: [Fleet] = []
     @State private var selectedFleet: Fleet?
     @State private var otherFleets: [Fleet] = []
@@ -300,7 +300,7 @@ struct BulkEditAircraftPickerSheet: View {
 struct BulkEditAddAircraftSheet: View {
     @Binding var selectedReg: String
     @Binding var selectedType: String
-    @ObservedObject var fleetService: AircraftFleetService
+    var fleetService: AircraftFleetService
     let onDismiss: () -> Void
     @Environment(\.dismiss) var dismiss
 

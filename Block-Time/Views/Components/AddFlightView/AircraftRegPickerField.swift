@@ -66,7 +66,7 @@ struct AircraftRegPickerSheet: View {
     var recentAircraftRegs: [String] = []
     let onDismiss: () -> Void
 
-    @StateObject private var fleetService = AircraftFleetService.shared
+    private let fleetService = AircraftFleetService.shared
     @State private var availableFleets: [Fleet] = []
     @State private var selectedFleet: Fleet?
     @State private var otherFleets: [Fleet] = []
@@ -404,7 +404,7 @@ private struct AddAircraftSheet: View {
     @Binding var selectedReg: String
     @Binding var selectedType: String
     let showFullReg: Bool
-    @ObservedObject var fleetService: AircraftFleetService
+    var fleetService: AircraftFleetService
     let onDismiss: () -> Void
     @Environment(\.dismiss) var dismiss
 

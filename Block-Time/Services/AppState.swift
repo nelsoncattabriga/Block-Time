@@ -7,14 +7,15 @@
 
 import Foundation
 import SwiftUI
-import Combine
 
 /// Global app state for coordinating between Block_TimeApp and MainTabView
-class AppState: ObservableObject {
+@Observable
+@MainActor
+final class AppState {
     static let shared = AppState()
 
     /// Tracks if a file is currently being opened/imported
-    @Published var isHandlingFileImport = false
+    var isHandlingFileImport = false
 
     private init() {}
 }

@@ -15,10 +15,10 @@ enum FlightDestination: Hashable {
 
 struct MainTabView: View {
     @StateObject private var viewModel = FlightTimeExtractorViewModel()
-    @StateObject private var flightsFilterViewModel = FlightsFilterViewModel()
+    @State private var flightsFilterViewModel = FlightsFilterViewModel()
     @State private var frmsViewModel = FRMSViewModel()
-    @StateObject private var userDefaultsService = UserDefaultsService()
-    @ObservedObject private var appState = AppState.shared
+    @State private var userDefaultsService = UserDefaultsService()
+    @State private var appState = AppState.shared
     @State private var selectedTab = 0
     @State private var showingOnboarding = false
     @State private var showingOnboardingFlow = false

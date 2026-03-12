@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 
 struct MigrationImportView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var userDefaultsService = UserDefaultsService()
+    @State private var userDefaultsService = UserDefaultsService()
 
     // Optional preselected file URL (for "Open in Block-Time" feature)
     let preselectedFileURL: URL?

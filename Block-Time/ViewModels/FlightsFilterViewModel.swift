@@ -6,31 +6,32 @@
 //
 
 import SwiftUI
-import Combine
 
-class FlightsFilterViewModel: ObservableObject {
-    @Published var filterStartDate: Date = Date.distantPast
-    @Published var filterEndDate: Date = Date.distantFuture
-    @Published var filterAircraftType: String = ""
-    @Published var filterAircraftReg: String = ""
-    @Published var filterCaptainName: String = ""
-    @Published var filterFOName: String = ""
-    @Published var filterSOName: String = ""
-    @Published var filterFromAirport: String = ""
-    @Published var filterToAirport: String = ""
-    @Published var filterFlightNumber: String = ""
-    @Published var filterPilotFlyingOnly: Bool = false
-    @Published var filterApproachType: String? = nil  // nil = no filter, "AIII", "RNP", "ILS", "GLS", "NPA"
-    @Published var filterContainsRemarks: Bool = false
-    @Published var filterSimulator: Bool = false
-    @Published var filterPositioning: Bool = false
-    @Published var filterNoBlockTime: Bool = false
-    @Published var filterNoCrewNames: Bool = false
-    @Published var filterNoFlightNumber: Bool = false
-    @Published var filterTypeSummary: Bool = false
-    @Published var filterKeywordSearch: String = ""
-    @Published var selectedDateRange: FlightsView.DateRangeOption = .allFlights
-    @Published var sortOrderReversed: Bool = false
+@Observable
+@MainActor
+final class FlightsFilterViewModel {
+    var filterStartDate: Date = Date.distantPast
+    var filterEndDate: Date = Date.distantFuture
+    var filterAircraftType: String = ""
+    var filterAircraftReg: String = ""
+    var filterCaptainName: String = ""
+    var filterFOName: String = ""
+    var filterSOName: String = ""
+    var filterFromAirport: String = ""
+    var filterToAirport: String = ""
+    var filterFlightNumber: String = ""
+    var filterPilotFlyingOnly: Bool = false
+    var filterApproachType: String? = nil  // nil = no filter, "AIII", "RNP", "ILS", "GLS", "NPA"
+    var filterContainsRemarks: Bool = false
+    var filterSimulator: Bool = false
+    var filterPositioning: Bool = false
+    var filterNoBlockTime: Bool = false
+    var filterNoCrewNames: Bool = false
+    var filterNoFlightNumber: Bool = false
+    var filterTypeSummary: Bool = false
+    var filterKeywordSearch: String = ""
+    var selectedDateRange: FlightsView.DateRangeOption = .allFlights
+    var sortOrderReversed: Bool = false
 
     func clearFilters() {
         filterStartDate = Date.distantPast

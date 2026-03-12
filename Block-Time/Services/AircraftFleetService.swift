@@ -6,7 +6,6 @@
 
 import Foundation
 import CoreData
-import Combine
 
 // MARK: - Aircraft Model
 struct Aircraft: Codable, Identifiable, Hashable {
@@ -61,7 +60,8 @@ struct Fleet: Identifiable, Hashable {
 }
 
 // MARK: - Aircraft Fleet Service
-class AircraftFleetService: ObservableObject {
+@Observable
+class AircraftFleetService {
 
     // MARK: - Singleton
     static let shared = AircraftFleetService()
@@ -298,7 +298,6 @@ class AircraftFleetService: ObservableObject {
         do {
             try viewContext.save()
 //            print("Aircraft saved successfully: \(aircraft.registration)")
-            objectWillChange.send()
             return true
         } catch {
             LogManager.shared.error("Error saving aircraft: \(error.localizedDescription)")
@@ -342,7 +341,6 @@ class AircraftFleetService: ObservableObject {
             viewContext.delete(entity)
             try viewContext.save()
 //            LogManager.shared.info("Aircraft deleted successfully: \(aircraft.registration)")
-            objectWillChange.send()
             return true
         } catch {
             LogManager.shared.error("Error deleting aircraft: \(error.localizedDescription)")

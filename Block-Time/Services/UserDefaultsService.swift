@@ -5,7 +5,6 @@
 
 
 import Foundation
-import Combine
 
 
 enum LogbookDestination: String, CaseIterable {
@@ -151,7 +150,7 @@ struct AppSettings {
 }
 
 // MARK: - UserDefaults Service (Updated)
-class UserDefaultsService: ObservableObject {
+class UserDefaultsService {
     
     private enum Keys {
         static let aircraftReg = "aircraftReg"
