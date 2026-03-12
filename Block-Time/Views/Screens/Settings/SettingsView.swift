@@ -1197,7 +1197,8 @@ private struct ModernDataImportCard: View {
         isExporting = true
 
         // Small delay to show the progress indicator
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        Task {
+            try? await Task.sleep(for: .milliseconds(100))
             let flights = FlightDatabaseService.shared.fetchAllFlights()
 
             if flights.isEmpty {

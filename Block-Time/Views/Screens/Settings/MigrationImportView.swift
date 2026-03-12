@@ -547,14 +547,14 @@ struct MigrationImportView: View {
                     try FileManager.default.copyItem(at: sourceURL, to: tempFile)
 
                     // Store the temp file URL (we own this, no security scoping needed)
-                    DispatchQueue.main.async {
+                    Task { @MainActor in
                         self.selectedFileURL = tempFile
                         LogManager.shared.info("📁 Selected migration file: \(url.lastPathComponent)")
                         LogManager.shared.debug("📁 Copied to temp: \(tempFile.path)")
                     }
 
                 } catch {
-                    DispatchQueue.main.async {
+                    Task { @MainActor in
                         self.importError = "Failed to copy migration file: \(error.localizedDescription)"
                         LogManager.shared.error("File copy error: \(error)")
                     }
@@ -634,7 +634,7 @@ struct MigrationImportView: View {
             fileURL: fileURL,
             replaceExisting: replaceExisting
         ) { result in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 isImporting = false
 
                 // Clean up temp file

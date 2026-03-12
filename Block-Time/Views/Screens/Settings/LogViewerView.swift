@@ -164,7 +164,8 @@ struct LogViewerView: View {
                         .onAppear {
                             // Scroll to bottom on appear
                             if !filteredLines.isEmpty {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                Task {
+                                    try? await Task.sleep(for: .milliseconds(100))
                                     withAnimation {
                                         proxy.scrollTo(filteredLines.count - 1, anchor: .bottom)
                                     }
@@ -247,18 +248,15 @@ struct LogViewerView: View {
 
     private func loadLogs() {
         isLoading = true
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task {
             let content = LogManager.shared.getCurrentLogContent() ?? "No logs available"
             let size = LogManager.shared.getLogFileSize()
             let lineCount = content.components(separatedBy: "\n").count
-
-            DispatchQueue.main.async {
-                self.logContent = content
-                self.logFileSize = size
-                self.totalLineCount = lineCount
-                self.applyFilters()
-                self.isLoading = false
-            }
+            logContent = content
+            logFileSize = size
+            totalLineCount = lineCount
+            applyFilters()
+            isLoading = false
         }
     }
 

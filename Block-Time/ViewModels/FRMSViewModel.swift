@@ -85,7 +85,7 @@ class FRMSViewModel {
             // Reload configuration from UserDefaults (already updated by CloudKitSettingsSyncService)
             if let savedData = UserDefaults.standard.data(forKey: userDefaultsKey),
                let savedConfig = try? JSONDecoder().decode(FRMSConfiguration.self, from: savedData) {
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.configuration = savedConfig
                     LogManager.shared.debug("FRMSViewModel: Configuration updated from iCloud sync")
                 }

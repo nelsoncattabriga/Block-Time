@@ -320,21 +320,16 @@ struct SupportView: View {
         recalculateResult = nil
         HapticManager.shared.impact(.medium)
 
-        // Perform recalculation in background
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task {
             let result = FlightDatabaseService.shared.recalculateAllBlockTimes()
+            isRecalculating = false
+            recalculateResult = "✅ Updated: \(result.success) | Skipped: \(result.skipped) | Errors: \(result.errors)"
+            HapticManager.shared.notification(.success)
 
-            DispatchQueue.main.async {
-                isRecalculating = false
-                recalculateResult = "✅ Updated: \(result.success) | Skipped: \(result.skipped) | Errors: \(result.errors)"
-                HapticManager.shared.notification(.success)
-
-                // Clear result after 10 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-                    withAnimation {
-                        recalculateResult = nil
-                    }
-                }
+            // Clear result after 10 seconds
+            try? await Task.sleep(for: .seconds(10))
+            withAnimation {
+                recalculateResult = nil
             }
         }
     }

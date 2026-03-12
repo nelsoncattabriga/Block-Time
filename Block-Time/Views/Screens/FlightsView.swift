@@ -161,7 +161,8 @@ struct FlightsView: View {
                         }
                         .onChange(of: shouldScrollToTop) { _, newValue in
                             if newValue, let firstFlight = filteredFlightSectors.first {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                Task {
+                                    try? await Task.sleep(for: .milliseconds(100))
                                     withAnimation(.easeInOut(duration: 0.3)) {
                                         proxy.scrollTo(firstFlight.id, anchor: .top)
                                     }
@@ -329,7 +330,8 @@ struct FlightsView: View {
                                         showSearchBar = true
                                     }
                                     // Delay focus slightly to ensure the text field is rendered
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    Task {
+                                        try? await Task.sleep(for: .milliseconds(100))
                                         isSearchFieldFocused = true
                                     }
                                 }
@@ -1072,7 +1074,8 @@ struct FlightsView: View {
 
             // Scroll to the target flight
             // Use delay to ensure LazyVStack has rendered items
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            Task {
+                try? await Task.sleep(for: .milliseconds(300))
                 withAnimation(.easeInOut(duration: 0.2)) {
                     proxy.scrollTo(targetFlight.id, anchor: .center)
                 }

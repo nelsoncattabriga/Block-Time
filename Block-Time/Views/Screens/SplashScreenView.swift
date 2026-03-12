@@ -90,15 +90,13 @@ struct SplashScreenView: View {
             // before the persistent container is ready (caused blank screen on first launch).
             let migrationKey = "simulatorFlightMigrationV2Completed"
             guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
-            DispatchQueue.global(qos: .utility).async {
+            Task {
                 let result = FlightDatabaseService.shared.migrateSimulatorFlights()
-                DispatchQueue.main.async {
-                    UserDefaults.standard.set(true, forKey: migrationKey)
-                    UserDefaults.standard.set(result.migratedCount, forKey: "simulatorFlightMigrationCount")
-                    UserDefaults.standard.set(result.summary, forKey: "simulatorFlightMigrationSummary")
-                    if result.migratedCount > 0 {
-                        NotificationCenter.default.post(name: .flightDataChanged, object: nil)
-                    }
+                UserDefaults.standard.set(true, forKey: migrationKey)
+                UserDefaults.standard.set(result.migratedCount, forKey: "simulatorFlightMigrationCount")
+                UserDefaults.standard.set(result.summary, forKey: "simulatorFlightMigrationSummary")
+                if result.migratedCount > 0 {
+                    NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             }
         }

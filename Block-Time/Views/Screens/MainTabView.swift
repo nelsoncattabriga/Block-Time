@@ -80,13 +80,15 @@ struct MainTabView: View {
             OnboardingWelcomeView(
                 onImportFromLogger: {
                     showingOnboarding = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    Task {
+                        try? await Task.sleep(for: .seconds(0.3))
                         showingMigrationImport = true
                     }
                 },
                 onSetupManually: {
                     showingOnboarding = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    Task {
+                        try? await Task.sleep(for: .seconds(0.3))
                         showingOnboardingFlow = true
                     }
                 }
@@ -123,7 +125,8 @@ struct MainTabView: View {
 
             // Show onboarding on first launch (but not if handling a file import)
             if !userDefaultsService.onboardingCompleted && !appState.isHandlingFileImport {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                Task {
+                    try? await Task.sleep(for: .seconds(0.5))
                     showingOnboarding = true
                 }
             }

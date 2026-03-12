@@ -140,7 +140,8 @@ struct FilterCrewPickerSheet: View {
             // Pre-populate search with current selection
             searchText = selectedName
             // Auto-focus search field when sheet appears
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            Task {
+                try? await Task.sleep(for: .milliseconds(500))
                 isSearchFieldFocused = true
             }
         }

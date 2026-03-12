@@ -87,7 +87,8 @@ struct ImportExportView: View {
                 set: { isPresented in
                     //print("📁 fileImporter isPresented setter called with: \(isPresented), current activeFilePickerMode: \(String(describing: activeFilePickerMode))")
                     if !isPresented {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(100))
                       //      print("📁 Delayed clear of activeFilePickerMode in setter")
                             if activeFilePickerMode != nil {
                         //        print("📁 Result handler didn't clear it, so clearing now")
