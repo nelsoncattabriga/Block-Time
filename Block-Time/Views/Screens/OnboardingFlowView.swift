@@ -34,7 +34,7 @@ struct OnboardingFlowView: View {
             .navigationTitle("Step \(currentStep + 1) of \(steps.count)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Back") {
                         withAnimation {
                             if currentStep > 0 {
@@ -45,7 +45,7 @@ struct OnboardingFlowView: View {
                     .disabled(currentStep == 0)
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(currentStep == steps.count - 1 ? "Complete Setup" : "Next") {
                         withAnimation {
                             if currentStep < steps.count - 1 {

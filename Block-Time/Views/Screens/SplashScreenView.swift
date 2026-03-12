@@ -43,19 +43,19 @@ struct SplashScreenView: View {
                     } else {
                         Image(systemName: "airplane.circle.fill")
                             .font(.system(size: 120))
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                     }
 
                     Text("Block-Time")
                         .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
+                        .bold()
+                        .foregroundStyle(.secondary)
 
                     if !purchaseService.isPro {
                         Text("30 DAY TRIAL")
                             .font(.headline)
                             .fontWeight(.heavy)
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundStyle(.white.opacity(0.9))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 4)
                             .background(Color.secondary.opacity(0.75), in: Capsule())
@@ -63,7 +63,7 @@ struct SplashScreenView: View {
 
                     Text(appVersion)
                         .font(.subheadline.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .scaleEffect(scale)
                 .opacity(opacity)

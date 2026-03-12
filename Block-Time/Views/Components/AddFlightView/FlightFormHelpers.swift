@@ -8,17 +8,17 @@ struct SuccessNotificationBanner: View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.title2)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
 
             Text(message)
                 .font(.subheadline)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(Color.green)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
     }
 }
@@ -36,7 +36,7 @@ struct FlightAwareLookupProgressView: View {
                 // FlightAware logo or airplane icon
                 Image(systemName: "airplane.path.dotted")
                     .font(.system(size: 50))
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
 
                 // Loading indicator
                 ProgressView()
@@ -45,11 +45,11 @@ struct FlightAwareLookupProgressView: View {
 
                 Text("Searching online...")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .padding(32)
             .background(.ultraThinMaterial)
-            .cornerRadius(20)
+            .clipShape(.rect(cornerRadius: 20))
             .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
         }
         .transition(.opacity)

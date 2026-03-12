@@ -153,7 +153,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
             .font(.subheadline)
-            .fontWeight(.bold)
+            .bold()
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 4)
@@ -171,8 +171,8 @@ struct AdaptiveCumulativeLimitsLayout: View {
                 HStack {
                     Text(title)
                         .iPadScaledFont(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
+                        .bold()
+                        .foregroundStyle(.secondary)
 
                     Spacer()
 
@@ -184,12 +184,12 @@ struct AdaptiveCumulativeLimitsLayout: View {
                 HStack(alignment: .lastTextBaseline, spacing: 4) {
                     Text(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(current) : String(format: "%.1f", current))
                         .iPadScaledFont(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+                        .bold()
+                        .foregroundStyle(.primary)
 
                     Text("/ \(Int(limit)) \(unit)")
                         .iPadScaledFont(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 ProgressView(value: min(current, limit), total: limit)
@@ -198,7 +198,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                 if let note {
                     Text(note)
                         .iPadScaledFont(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(16)
@@ -213,8 +213,8 @@ struct AdaptiveCumulativeLimitsLayout: View {
             HStack {
                 Text("Days Off (\(periodDays) Days)")
                     .iPadScaledFont(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.secondary)
+                    .bold()
+                    .foregroundStyle(.secondary)
 
                 Spacer()
 
@@ -226,12 +226,12 @@ struct AdaptiveCumulativeLimitsLayout: View {
             HStack(alignment: .lastTextBaseline, spacing: 4) {
                 Text("\(daysOff)")
                     .iPadScaledFont(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .bold()
+                    .foregroundStyle(.primary)
 
                 Text("/ \(required) days")
                     .iPadScaledFont(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
 
             // Spacer to match the height of ProgressView in buildLimitCard
@@ -253,8 +253,8 @@ struct AdaptiveCumulativeLimitsLayout: View {
                 HStack {
                     Text("Consecutive Duties")
                         .iPadScaledFont(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
+                        .bold()
+                        .foregroundStyle(.secondary)
 
                     Spacer()
 
@@ -269,7 +269,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveDuties)")
                                     .font(.headline)
-                                    .fontWeight(.bold)
+                                    .bold()
                                     .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
                                 Text("/\(maxConsec)")
                                     .font(.subheadline)
@@ -286,7 +286,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.dutyDaysIn11Days)")
                                     .font(.headline)
-                                    .fontWeight(.bold)
+                                    .bold()
                                     .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
                                 Text("/\(maxDuty11)")
                                     .font(.subheadline)
@@ -303,7 +303,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveEarlyStarts)")
                                     .font(.headline)
-                                    .fontWeight(.bold)
+                                    .bold()
                                     .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
                                 Text("/\(maxEarly)")
                                     .font(.subheadline)
@@ -320,7 +320,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveLateNights)")
                                     .font(.headline)
-                                    .fontWeight(.bold)
+                                    .bold()
                                     .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
                                 Text("/\(maxLate)")
                                     .font(.subheadline)

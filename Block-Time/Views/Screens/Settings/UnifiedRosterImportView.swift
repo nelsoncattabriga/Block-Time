@@ -49,11 +49,11 @@ struct UnifiedRosterImportView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 60))
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
 
                     Text("Import Roster")
                         .font(.title2)
-                        .fontWeight(.bold)
+                        .bold()
 
                 }
                 .padding(.top)
@@ -67,7 +67,7 @@ struct UnifiedRosterImportView: View {
                     Text("Choose an Import Method")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .textCase(.uppercase)
                         .padding(.horizontal)
 
@@ -112,7 +112,7 @@ struct UnifiedRosterImportView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                         }
                         .disabled(isProcessing)
                     }
@@ -136,7 +136,7 @@ struct UnifiedRosterImportView: View {
                         PasteOnlyTextView(text: $pastedRoster)
                             .frame(minHeight: 130)
                             .background(Color(.systemBackground))
-                            .cornerRadius(8)
+                            .clipShape(.rect(cornerRadius: 8))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(Color.gray.opacity(0.3), lineWidth: 1)
@@ -157,7 +157,7 @@ struct UnifiedRosterImportView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
-                                .foregroundColor(.teal)
+                                .foregroundStyle(.teal)
                             }
                             .disabled(isProcessing || pastedRoster.isEmpty)
 
@@ -171,7 +171,7 @@ struct UnifiedRosterImportView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                             }
                             .disabled(pastedRoster.isEmpty)
                         }
@@ -184,7 +184,7 @@ struct UnifiedRosterImportView: View {
             .navigationTitle("Import Roster")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
@@ -371,24 +371,24 @@ private struct ImportNoticeBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
                 .font(.subheadline)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("webCIS Roster File Required")
                     .font(.subheadline)
-                    .fontWeight(.bold)
+                    .bold()
 
                 Text("Import will only work with the file **EMAILED** from webCIS via **SEND MY ROSTER**")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding()
         .background(Color.orange.opacity(0.1))
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.orange.opacity(0.45), lineWidth: 1)
@@ -433,13 +433,13 @@ private struct ImportMethodCard<Action: View>: View {
                         .frame(width: 36, height: 36)
                     Image(systemName: icon)
                         .font(.headline)
-                        .foregroundColor(iconColor)
+                        .foregroundStyle(iconColor)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(.subheadline)
-                        .fontWeight(.bold)
+                        .bold()
                 }
 
                 Spacer()
@@ -453,7 +453,7 @@ private struct ImportMethodCard<Action: View>: View {
                         Text("\(index + 1)")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(iconColor)
+                            .foregroundStyle(iconColor)
                             .frame(width: 20, height: 20)
                             .background(iconColor.opacity(0.12))
                             .clipShape(Circle())
@@ -461,7 +461,7 @@ private struct ImportMethodCard<Action: View>: View {
                         Text(step)
                             .font(.subheadline)
                             //.fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Spacer(minLength: 0)
@@ -473,8 +473,8 @@ private struct ImportMethodCard<Action: View>: View {
             action
         }
         .padding()
-        .background(Color(.secondarySystemBackground).overlay(iconColor.opacity(0.05)))
-        .cornerRadius(14)
+        .background(Color(.secondarySystemBackground).overlay { iconColor.opacity(0.05) })
+        .clipShape(.rect(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(
@@ -499,26 +499,26 @@ private struct UnifiedRosterImportResultView: View {
                     if result.imported > 0 && result.errors == 0 {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                     } else if result.imported > 0 {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                     } else {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(.red)
+                            .foregroundStyle(.red)
                     }
 
                     // Summary
                     VStack(spacing: 8) {
                         Text("Import Summary")
                             .font(.title2)
-                            .fontWeight(.bold)
+                            .bold()
 
                         Text(summaryText)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
 
@@ -573,7 +573,7 @@ private struct UnifiedRosterImportResultView: View {
             .navigationTitle("Import Complete")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         onDone()
                     }
@@ -607,25 +607,25 @@ private struct ImportStatCard: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(color)
+                .foregroundStyle(color)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
                     .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .bold()
+                    .foregroundStyle(.primary)
 
                 Text(label)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
         }
         .padding()
         .background(color.opacity(0.1))
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
     }
 }
 
@@ -645,7 +645,7 @@ private struct FlightSummaryRow: View {
 
                 Text(formatDate(flight.date))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 12) {
@@ -655,7 +655,7 @@ private struct FlightSummaryRow: View {
 
                 Image(systemName: "arrow.right")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 Text(flight.arrivalAirport)
                     .font(.caption)
@@ -665,27 +665,27 @@ private struct FlightSummaryRow: View {
 
                 Text(flight.aircraftType)
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color(.systemGray5))
-                    .cornerRadius(4)
+                    .clipShape(.rect(cornerRadius: 4))
 
                 if flight.isPositioning {
                     Text("P")
                         .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.orange)
+                        .bold()
+                        .foregroundStyle(.orange)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Color.orange.opacity(0.2))
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
             }
         }
         .padding()
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .padding(.horizontal)
     }
 

@@ -49,7 +49,7 @@ struct RecencyCard: View {
                     .iPadScaledFont(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
-                    //.foregroundColor(recencyStatus.color)
+                    //.foregroundStyle(recencyStatus.color)
 
                 // Progress bar
                     ProgressView(value: min(Double(recencyStatus.daysRemaining) / Double(recencyDays), 1.0))

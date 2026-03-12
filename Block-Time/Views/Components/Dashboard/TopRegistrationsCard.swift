@@ -118,7 +118,7 @@ struct TopRegistrationsCard: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(reg.registration)
-                    .iPadScaledFont(.caption).fontWeight(.bold).foregroundStyle(.primary)
+                    .iPadScaledFont(.caption).bold().foregroundStyle(.primary)
                 Text(reg.aircraftType)
                     .iPadScaledFont(.caption).foregroundStyle(.secondary)
             }

@@ -30,7 +30,7 @@ struct LogbookSettingsView: View {
                         if !isEditMode {
                             Text("Long press cards to rearrange")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .padding(.top)
                         }
 
@@ -65,18 +65,18 @@ struct LogbookSettingsView: View {
                                     VStack(spacing: 12) {
                                         Image(systemName: "plus.circle.fill")
                                             .font(.system(size: 40))
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
 
                                         Text("Add Card")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 120)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
                                             .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5]))
-                                            .foregroundColor(Color.blue.opacity(0.3))
+                                            .foregroundStyle(Color.blue.opacity(0.3))
                                     )
                                 }
                             }
@@ -87,14 +87,14 @@ struct LogbookSettingsView: View {
                         // Card count
                         Text("\(settings.selectedCards.count) cards")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
             .navigationTitle("Dashboard Layout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if isEditMode {
                         Button("Done") {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -105,7 +105,7 @@ struct LogbookSettingsView: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
@@ -133,7 +133,7 @@ struct DashboardPreviewCard: View {
                 HStack {
                     Image(systemName: cardType.icon)
                         .font(.headline)
-                        .foregroundColor(cardType.color)
+                        .foregroundStyle(cardType.color)
 
                     Spacer()
                 }
@@ -143,7 +143,7 @@ struct DashboardPreviewCard: View {
                 Text(cardType.displayName)
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .lineLimit(2)
             }
             .padding(12)
@@ -170,7 +170,7 @@ struct DashboardPreviewCard: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                         .background(
                             Circle()
                                 .fill(Color(.systemBackground))
@@ -232,13 +232,13 @@ struct AddCardSheet: View {
                                 HStack {
                                     Image(systemName: cardType.icon)
                                         .font(.headline)
-                                        .foregroundColor(cardType.color)
+                                        .foregroundStyle(cardType.color)
 
                                     Spacer()
 
                                     Image(systemName: "plus.circle.fill")
                                         .font(.title3)
-                                        .foregroundColor(.green)
+                                        .foregroundStyle(.green)
                                 }
 
                                 Spacer()
@@ -246,7 +246,7 @@ struct AddCardSheet: View {
                                 Text(cardType.displayName)
                                     .font(.caption)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                     .lineLimit(2)
                             }
                             .padding(12)
@@ -270,7 +270,7 @@ struct AddCardSheet: View {
             .navigationTitle("Add Card")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }

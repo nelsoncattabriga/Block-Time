@@ -122,7 +122,7 @@ struct AircraftSummarySheet: View {
                                     Text("Date")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
 
                                     DatePicker(
                                         "Summary Date",
@@ -138,7 +138,7 @@ struct AircraftSummarySheet: View {
                                     Text("Aircraft Type")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
 
                                     TextField("e.g. B738", text: $aircraftType)
                                         .textCase(.uppercase)
@@ -147,7 +147,7 @@ struct AircraftSummarySheet: View {
                                         .font(.body)
                                         .padding(10)
                                         .background(Color(.secondarySystemBackground))
-                                        .cornerRadius(8)
+                                        .clipShape(.rect(cornerRadius: 8))
                                 }
                             }
                         }
@@ -173,11 +173,11 @@ struct AircraftSummarySheet: View {
                                     .padding(8)
                                     .scrollContentBackground(.hidden)
                                     .background(Color(.secondarySystemBackground))
-                                    .cornerRadius(8)
+                                    .clipShape(.rect(cornerRadius: 8))
 
                                 if remarks.isEmpty {
                                     Text("Enter remarks...")
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 16)
                                         .allowsHitTesting(false)
@@ -196,7 +196,7 @@ struct AircraftSummarySheet: View {
             .navigationTitle(isEditMode ? "Edit Summary" : "Add Summary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         if hasModifications {
                             showingDiscardAlert = true
@@ -206,7 +206,7 @@ struct AircraftSummarySheet: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(isEditMode ? "Save" : "Add") {
                         saveEntry()
                     }
@@ -249,8 +249,8 @@ struct AircraftSummarySheet: View {
             .frame(maxWidth: .infinity)
             .padding()
             .background(Color.red.opacity(0.12))
-            .foregroundColor(.red)
-            .cornerRadius(10)
+            .foregroundStyle(.red)
+            .clipShape(.rect(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.red.opacity(0.4), lineWidth: 1)
@@ -335,7 +335,7 @@ private struct SummaryTimeField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             TextField("0.0", text: $value)
                 .keyboardType(.decimalPad)
@@ -343,7 +343,7 @@ private struct SummaryTimeField: View {
                 .font(.body)
                 .padding(10)
                 .background(Color(.secondarySystemBackground))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)

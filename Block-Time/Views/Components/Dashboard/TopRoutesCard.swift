@@ -111,7 +111,7 @@ struct TopRoutesCard: View {
             .frame(minWidth: 60, maxWidth: .infinity )
 
             Text("\(route.sectors)")
-                .iPadScaledFont(.caption).fontWeight(.bold)
+                .iPadScaledFont(.caption).bold()
                 .foregroundStyle(.secondary)
         }
     }

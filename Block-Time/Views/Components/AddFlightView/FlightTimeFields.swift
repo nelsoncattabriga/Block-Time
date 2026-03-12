@@ -70,23 +70,23 @@ struct ModernTimeField: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(isReadOnly ? .gray : .blue)
+                .foregroundStyle(isReadOnly ? .gray : .blue)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 if isReadOnly {
                     HStack {
                         Text(value.isEmpty ? "--:--" : value)
                             .font(.subheadline.bold())
-                            .foregroundColor(value.isEmpty ? .secondary : .primary)
+                            .foregroundStyle(value.isEmpty ? .secondary : .primary)
                         Spacer()
                         Image(systemName: "lock.fill")
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                     }
                 } else {
                     TextField("HH:MM", text: $value)
@@ -110,17 +110,17 @@ struct ModernTimeField: View {
                 if let hint = hintText {
                     Text(hint)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 } else if let localTime = localTimeText {
                     Text(localTime)
                         .font(.subheadline)
-                        .foregroundColor(.secondary.opacity(1.0))
+                        .foregroundStyle(.secondary.opacity(1.0))
                 }
             }
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .contentShape(Rectangle())
         .onTapGesture {
             if !isReadOnly {
@@ -134,7 +134,7 @@ struct ModernTimeField: View {
                         value = ""
                         timeFieldFocused = false
                     }
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                     Spacer()
                     Button("Done") {
                         timeFieldFocused = false
@@ -221,23 +221,23 @@ struct ModernDecimalTimeField: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(isReadOnly ? .gray : .blue)
+                .foregroundStyle(isReadOnly ? .gray : .blue)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 if isReadOnly {
                     HStack {
                         Text(displayValue)
                             .font(.subheadline.bold())
-                            .foregroundColor(value.isEmpty ? .secondary : .primary)
+                            .foregroundStyle(value.isEmpty ? .secondary : .primary)
                         Spacer()
                         Image(systemName: "lock.fill")
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                     }
                 } else {
                     TextField(showAsHHMM ? "0:00" : "0.0", text: Binding(
@@ -271,7 +271,7 @@ struct ModernDecimalTimeField: View {
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .contentShape(Rectangle())
         .onTapGesture {
             if !isReadOnly {
@@ -285,7 +285,7 @@ struct ModernDecimalTimeField: View {
                         value = ""
                         decimalFieldFocused = false
                     }
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                     Spacer()
                     Button("Done") {
                         decimalFieldFocused = false
@@ -323,13 +323,13 @@ struct ModernIntegerField: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 TextField("0", text: $editingText)
                     .font(.subheadline.bold())
@@ -364,7 +364,7 @@ struct ModernIntegerField: View {
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .contentShape(Rectangle())
         .onTapGesture {
             integerFieldFocused = true
@@ -394,19 +394,19 @@ struct ModernRemarksField: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .frame(width: 20)
 
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
 
             ZStack(alignment: .topLeading) {
                 if value.isEmpty {
                     Text("Add remarks...")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 8)
                 }
@@ -421,7 +421,7 @@ struct ModernRemarksField: View {
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .contentShape(Rectangle())
         .onTapGesture {
             editorFocused = true

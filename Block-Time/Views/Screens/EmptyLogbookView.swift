@@ -6,17 +6,17 @@ struct EmptyLogbookView: View {
         VStack(spacing: 20) {
             Image(systemName: "book.closed")
                 .font(.system(size: 60))
-                .foregroundColor(.gray)
+                .foregroundStyle(.gray)
 
             Text("No Flights Recorded")
                 .font(.title2)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             
             Text("Add a Flight, or Import from Settings")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }

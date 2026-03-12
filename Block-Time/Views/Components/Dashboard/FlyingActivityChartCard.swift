@@ -74,7 +74,7 @@ struct FlyingActivityChartCard: View {
                         y: .value(displayMode == .hours ? "Hours" : "Sectors", item.value)
                     )
                     .foregroundStyle(displayMode == .hours ? Color.blue.gradient : Color.orange.gradient)
-                    .cornerRadius(3)
+                    .clipShape(.rect(cornerRadius: 3))
                 }
                 .chartLegend(.hidden)
                 .chartXAxis {

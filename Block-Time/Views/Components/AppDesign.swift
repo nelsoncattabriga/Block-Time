@@ -54,7 +54,7 @@ struct CardHeader<Trailing: View>: View {
                 .foregroundStyle(iconColor)
             Text(title)
                 .font(.headline)
-                .fontWeight(.bold)
+                .bold()
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
             trailing()

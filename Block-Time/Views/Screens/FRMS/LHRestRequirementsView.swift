@@ -74,7 +74,7 @@ func lhRestCard(title: String, rows: [LHRestRow], footnote: String?) -> some Vie
     }
     .background(.ultraThinMaterial)
     .clipShape(RoundedRectangle(cornerRadius: 10))
-    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+    .overlay { RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1) }
 }
 
 // MARK: - LH Rest Requirements View

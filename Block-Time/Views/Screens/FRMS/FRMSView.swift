@@ -287,14 +287,14 @@ struct FRMSView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Minimum Rest")
                             .iPadScaledFont(.headline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.secondary)
+                            .bold()
+                            .foregroundStyle(.secondary)
 //                            .font(.headline.bold())
 //                            .foregroundStyle(.secondary)
                         Text("\(formatHoursMinutes(limits.restCalculation.minimumRestHours)) hrs")
 //                            .font(.headline)
                             .iPadScaledFont(.subheadline)
-                            .fontWeight(.bold)
+                            .bold()
                             .foregroundStyle(AppColors.accentOrange)
                     }
 
@@ -303,14 +303,14 @@ struct FRMSView: View {
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("Earliest Sign-On")
                             .iPadScaledFont(.headline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.secondary)
+                            .bold()
+                            .foregroundStyle(.secondary)
 //                            .font(.headline.bold())
 //                            .foregroundStyle(.secondary)
                         Text(formatDateTime(limits.earliestSignOn))
 //                            .font(.headline)
                             .iPadScaledFont(.subheadline)
-                            .fontWeight(.bold)
+                            .bold()
                             .foregroundStyle(AppColors.accentOrange)
                     }
                 }

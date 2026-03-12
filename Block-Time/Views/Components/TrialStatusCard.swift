@@ -46,7 +46,7 @@ struct TrialStatusCard: View {
 
             Text("PRO")
                 .font(.caption)
-                .fontWeight(.bold)
+                .bold()
                 .foregroundStyle(.white)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
@@ -83,7 +83,7 @@ struct TrialStatusCard: View {
 
                 Text(badgeLabel)
                     .font(.caption)
-                    .fontWeight(.bold)
+                    .bold()
                     .foregroundStyle(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)

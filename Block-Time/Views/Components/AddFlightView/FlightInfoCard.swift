@@ -172,13 +172,13 @@ struct ModernCapturedDataCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "square.and.pencil")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                     .font(.title3)
 
                 Text("Flight Info")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
@@ -192,7 +192,7 @@ struct ModernCapturedDataCard: View {
                     }) {
                         Text("FLT")
                             .font(.subheadline.bold())
-                            .foregroundColor(!viewModel.isSimulator && !viewModel.isPositioning ? .white : .secondary)
+                            .foregroundStyle(!viewModel.isSimulator && !viewModel.isPositioning ? .white : .secondary)
                             .frame(width: 50, height: 30)
                             .background(!viewModel.isSimulator && !viewModel.isPositioning ? Color.blue : Color.clear)
                             .contentShape(Rectangle())
@@ -217,7 +217,7 @@ struct ModernCapturedDataCard: View {
                     }) {
                         Text("PAX")
                             .font(.subheadline.bold())
-                            .foregroundColor(viewModel.isPositioning ? .white : .secondary)
+                            .foregroundStyle(viewModel.isPositioning ? .white : .secondary)
                             .frame(width: 50, height: 30)
                             .background(viewModel.isPositioning ? Color.orange : Color.clear)
                             .contentShape(Rectangle())
@@ -233,7 +233,7 @@ struct ModernCapturedDataCard: View {
                     }) {
                         Text("SIM")
                             .font(.subheadline.bold())
-                            .foregroundColor(viewModel.isSimulator ? .white : .secondary)
+                            .foregroundStyle(viewModel.isSimulator ? .white : .secondary)
                             .frame(width: 50, height: 30)
                             .background(viewModel.isSimulator ? Color.purple : Color.clear)
                             .contentShape(Rectangle())
@@ -324,7 +324,7 @@ struct ModernCapturedDataCard: View {
                 HStack {
                     Text(viewModel.enterTimesInLocalTime ? "Flight Times (LOCAL)" : "Flight Times (UTC)")
                         .font(.footnote.bold())
-                        .foregroundColor(.primary.opacity(0.8))
+                        .foregroundStyle(.primary.opacity(0.8))
                     Spacer()
                 }
 
@@ -431,7 +431,7 @@ struct ModernCapturedDataCard: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)

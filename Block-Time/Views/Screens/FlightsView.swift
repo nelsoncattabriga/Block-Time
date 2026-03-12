@@ -86,13 +86,13 @@ struct FlightsView: View {
                         //VStack(alignment: .leading, spacing: 2) {
                             Text("\(filteredFlightSectors.count) \(filteredFlightSectors.count == 1 ? "Entry" : "Entries")")
                             .font(.headline.bold())
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         Spacer()
                         Spacer()
 
                         Text("\(cachedTotalHours, specifier: "%.1f") hrs")
                             .font(.headline.bold())
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                     }
                     .padding()
                     .background(Color.clear)
@@ -101,7 +101,7 @@ struct FlightsView: View {
                     if showSearchBar {
                         HStack {
                             Image(systemName: "magnifyingglass")
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .padding(.leading, 12)
 
                             TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
@@ -118,7 +118,7 @@ struct FlightsView: View {
                                     applyFilters()
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 .padding(.trailing, 12)
@@ -126,7 +126,7 @@ struct FlightsView: View {
                         }
                         .padding(.vertical, 8)
                         .background(Color(.systemGray6))
-                        .cornerRadius(10)
+                        .clipShape(.rect(cornerRadius: 10))
                         .padding(.horizontal)
                         .padding(.bottom, 8)
                         .transition(.move(edge: .top).combined(with: .opacity))
@@ -191,11 +191,11 @@ struct FlightsView: View {
                                 Text("Edit \(selectedFlights.count)")
                                     .font(.headline)
                             }
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, actionButtonVerticalPadding)
                             .background(selectedFlights.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
-                            .cornerRadius(actionButtonCornerRadius)
+                            .clipShape(.rect(cornerRadius: actionButtonCornerRadius))
                             .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
                         .disabled(selectedFlights.isEmpty)
@@ -211,11 +211,11 @@ struct FlightsView: View {
                                 Text("Delete \(selectedFlights.count)")
                                     .font(.headline)
                             }
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, actionButtonVerticalPadding)
                             .background(selectedFlights.isEmpty ? Color.red.opacity(0.5) : Color.red)
-                            .cornerRadius(actionButtonCornerRadius)
+                            .clipShape(.rect(cornerRadius: actionButtonCornerRadius))
                             .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                         }
                         .disabled(selectedFlights.isEmpty)
@@ -254,7 +254,7 @@ struct FlightsView: View {
                     }
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     HStack(spacing: 16) {
                         // Add new flight button - hide in select mode
                         if !isSelectMode {
@@ -285,7 +285,7 @@ struct FlightsView: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if isSelectMode {
                         // Show Select All / Deselect All button in select mode
                         Button(action: {
@@ -301,7 +301,7 @@ struct FlightsView: View {
                         }) {
                             let allSelected = selectedFlights == Set(filteredFlightSectors.map { $0.id })
                             Text(allSelected ? "Deselect All" : "Select All")
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                         }
                     } else {
                         // Show search, sort and filter buttons in normal mode
@@ -1093,16 +1093,16 @@ private struct EmptyFlightsView: View {
         VStack(spacing: 20) {
             Image(systemName: "airplane.departure")
                 .font(.system(size: 60))
-                .foregroundColor(.gray)
+                .foregroundStyle(.gray)
 
             Text("No Flights Recorded")
                 .font(.title2)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text("Capture your first ACARS photo to start building your logbook or Import from Settings")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -1118,16 +1118,16 @@ private struct NoResultsView: View {
         VStack(spacing: 20) {
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .font(.system(size: 60))
-                .foregroundColor(.gray)
+                .foregroundStyle(.gray)
 
             Text("No Flights Match Filters")
                 .font(.title2)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text("Try adjusting your filter criteria")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
@@ -1138,11 +1138,11 @@ private struct NoResultsView: View {
                 Text("Clear All Filters")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                     .background(Color.blue)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1308,13 +1308,13 @@ struct FilterSheet: View {
                     }) {
                         HStack {
                             Text("Captain")
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Text(filterCaptainName.isEmpty ? "Any" : filterCaptainName)
-                                .foregroundColor(filterCaptainName.isEmpty ? .secondary : .blue)
+                                .foregroundStyle(filterCaptainName.isEmpty ? Color.secondary : Color.blue)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
@@ -1323,13 +1323,13 @@ struct FilterSheet: View {
                     }) {
                         HStack {
                             Text("F/O")
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Text(filterFOName.isEmpty ? "Any" : filterFOName)
-                                .foregroundColor(filterFOName.isEmpty ? .secondary : .blue)
+                                .foregroundStyle(filterFOName.isEmpty ? Color.secondary : Color.blue)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
@@ -1338,13 +1338,13 @@ struct FilterSheet: View {
                     }) {
                         HStack {
                             Text("S/O")
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Text(filterSOName.isEmpty ? "Any" : filterSOName)
-                                .foregroundColor(filterSOName.isEmpty ? .secondary : .blue)
+                                .foregroundStyle(filterSOName.isEmpty ? Color.secondary : Color.blue)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -1355,13 +1355,13 @@ struct FilterSheet: View {
                     }) {
                         HStack {
                             Text("Flight Number")
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Text(filterFlightNumber.isEmpty ? "Any" : filterFlightNumber)
-                                .foregroundColor(filterFlightNumber.isEmpty ? .secondary : .blue)
+                                .foregroundStyle(filterFlightNumber.isEmpty ? Color.secondary : Color.blue)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
@@ -1370,13 +1370,13 @@ struct FilterSheet: View {
                     }) {
                         HStack {
                             Text("From")
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Text(filterFromAirport.isEmpty ? "Any" : filterFromAirport)
-                                .foregroundColor(filterFromAirport.isEmpty ? .secondary : .blue)
+                                .foregroundStyle(filterFromAirport.isEmpty ? Color.secondary : Color.blue)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
@@ -1385,13 +1385,13 @@ struct FilterSheet: View {
                     }) {
                         HStack {
                             Text("To")
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Text(filterToAirport.isEmpty ? "Any" : filterToAirport)
-                                .foregroundColor(filterToAirport.isEmpty ? .secondary : .blue)
+                                .foregroundStyle(filterToAirport.isEmpty ? Color.secondary : Color.blue)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -1434,14 +1434,14 @@ struct FilterSheet: View {
             .navigationTitle("Filter Flights")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Clear") {
                         HapticManager.shared.impact(.medium)
                         onClear()
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Apply") {
                         HapticManager.shared.impact(.light)
                         onApply()
@@ -1595,8 +1595,8 @@ struct DateRangeButton: View {
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
             .background(isSelected ? Color.green.opacity(0.15) : Color(.systemGray6))
-            .foregroundColor(isSelected ? .green : .primary)
-            .cornerRadius(10)
+            .foregroundStyle(isSelected ? .green : .primary)
+            .clipShape(.rect(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(isSelected ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1.5)

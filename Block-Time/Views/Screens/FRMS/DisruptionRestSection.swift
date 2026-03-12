@@ -243,7 +243,7 @@ struct DisruptionRestSection: View {
             Spacer()
             Text(formatHoursMinutes(effectiveRest))
                 .font(.title3)
-                .fontWeight(.bold)
+                .bold()
                 .foregroundStyle(.blue)
                 .monospacedDigit()
         }

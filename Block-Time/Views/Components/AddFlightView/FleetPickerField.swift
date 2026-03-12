@@ -13,7 +13,7 @@ struct FleetPickerField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .frame(width: 80, alignment: .leading)
             
             Button(action: {
@@ -23,26 +23,26 @@ struct FleetPickerField: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(selectedFleet.name)
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         
                         if let aircraft = selectedAircraft {
                             Text("\(aircraft.displayRegistration(showFullReg: showFullReg)) • \(aircraft.type)")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         } else {
                             Text("Select aircraft from fleet")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     Spacer()
                     Image(systemName: "building.2")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(Color(.systemGray6).opacity(0.75))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
                         .stroke(Color(.systemGray4), lineWidth: 1)
@@ -103,7 +103,7 @@ struct FleetPickerSheet: View {
                                     
                                     Text("\(fleet.aircraft.count) aircraft")
                                         .font(.caption2)
-                                        .foregroundColor(
+                                        .foregroundStyle(
                                             selectedFleet.id == fleet.id ? 
                                             .white.opacity(0.8) : .secondary
                                         )
@@ -114,11 +114,11 @@ struct FleetPickerSheet: View {
                                     selectedFleet.id == fleet.id ? 
                                     Color.blue : Color(.systemGray5)
                                 )
-                                .foregroundColor(
+                                .foregroundStyle(
                                     selectedFleet.id == fleet.id ? 
                                     .white : .primary
                                 )
-                                .cornerRadius(12)
+                                .clipShape(.rect(cornerRadius: 12))
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
@@ -131,7 +131,7 @@ struct FleetPickerSheet: View {
                 // Search Bar
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     TextField("Search aircraft...", text: $searchText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -140,7 +140,7 @@ struct FleetPickerSheet: View {
                         Button("Clear") {
                             searchText = ""
                         }
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -153,7 +153,7 @@ struct FleetPickerSheet: View {
                         Text(selectedFleet.name)
                         Spacer()
                         Text("\(filteredAircraft.count) aircraft")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }) {
                         ForEach(filteredAircraft, id: \.id) { aircraft in
                             Button(action: {
@@ -164,11 +164,11 @@ struct FleetPickerSheet: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(aircraft.displayRegistration(showFullReg: showFullReg))
                                             .font(.headline)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
                                         
                                         Text(aircraft.type)
                                             .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                     
                                     Spacer()
@@ -176,7 +176,7 @@ struct FleetPickerSheet: View {
                                     if let selected = selectedAircraft, 
                                        selected.id == aircraft.id {
                                         Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
                                     }
                                 }
                             }
@@ -189,14 +189,14 @@ struct FleetPickerSheet: View {
             .navigationTitle("Select Fleet & Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if selectedAircraft != nil {
                         Button("Done") {
                             onDismiss()

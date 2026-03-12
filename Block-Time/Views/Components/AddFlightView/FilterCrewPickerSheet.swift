@@ -52,11 +52,11 @@ struct FilterCrewPickerSheet: View {
                                     Text("Use \"\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\"")
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                                 .background(Color.blue)
-                                .cornerRadius(20)
+                                .clipShape(.rect(cornerRadius: 20))
                             }
 
                             Spacer()
@@ -66,7 +66,7 @@ struct FilterCrewPickerSheet: View {
                                 searchText = ""
                             }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                         }
                         .padding(.horizontal)
@@ -81,9 +81,9 @@ struct FilterCrewPickerSheet: View {
                         Section {
                             HStack {
                                 Image(systemName: "magnifyingglass")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                                 Text("No matching names found")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                             .padding(.vertical, 8)
                         }
@@ -97,13 +97,13 @@ struct FilterCrewPickerSheet: View {
                                     HStack {
                                         Text(name)
                                             .font(.body)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
 
                                         Spacer()
 
                                         if selectedName == name {
                                             Image(systemName: "checkmark")
-                                                .foregroundColor(.blue)
+                                                .foregroundStyle(.blue)
                                         }
                                     }
                                 }
@@ -116,17 +116,17 @@ struct FilterCrewPickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedName.isEmpty {
                         Button("Clear") {
                             selectedName = ""
                             onDismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()

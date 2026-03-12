@@ -183,13 +183,13 @@ struct ImportExportView: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "arrow.down.doc.fill")
-                    .foregroundColor(.indigo)
+                    .foregroundStyle(.indigo)
                     .font(.title3)
 
                 Text("Import & Export")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -201,12 +201,12 @@ struct ImportExportView: View {
                         ProgressView()
                         Text("Importing…")
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         Spacer()
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.75))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
 
                 // Import roster (unified for both SH and LH)
@@ -240,12 +240,12 @@ struct ImportExportView: View {
                         ProgressView()
                         Text("Importing webCIS data…")
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         Spacer()
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.75))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
 
                 // Import from webCIS data file
@@ -303,7 +303,7 @@ struct ImportExportView: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -316,13 +316,13 @@ struct ImportExportView: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "trash.fill")
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                     .font(.title3)
 
                 Text("Delete Logbook")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
 
                 Spacer()
             }
@@ -339,7 +339,7 @@ struct ImportExportView: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -543,18 +543,18 @@ private struct ActionButton: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -566,12 +566,12 @@ private struct ActionButton: View {
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(color.opacity(0.7))
+                        .foregroundStyle(color.opacity(0.7))
                 }
             }
             .padding(16)
             .background(color.opacity(0.12))
-            .cornerRadius(10)
+            .clipShape(.rect(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(color.opacity(0.4), lineWidth: 1)
@@ -637,15 +637,15 @@ struct WebCISMappingView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "doc.text.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
 
                     Text("webCIS Import")
                         .font(.title2)
-                        .fontWeight(.bold)
+                        .bold()
 
                     Text("Configure aircraft type mapping")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.top)
 
@@ -658,13 +658,13 @@ struct WebCISMappingView: View {
                         if !registrationMappings.isEmpty {
                             Text("\(registrationMappings.count) mapping(s)")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
                     Text("Map aircraft registration patterns to types (optional)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
 
                     Button(action: {
                         // Detect patterns if not already detected
@@ -675,17 +675,17 @@ struct WebCISMappingView: View {
                     }) {
                         HStack {
                             Image(systemName: "airplane")
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                             Text(registrationMappings.isEmpty ? "Setup Aircraft Types" : "Edit Aircraft Types")
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(Color.blue.opacity(0.7))
+                                .foregroundStyle(Color.blue.opacity(0.7))
                         }
                         .padding()
                         .background(Color.blue.opacity(0.12))
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(Color.blue.opacity(0.4), lineWidth: 1)
@@ -703,15 +703,15 @@ struct WebCISMappingView: View {
                 }) {
                     HStack {
                         Image(systemName: "arrow.down.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                         Text("Import webCIS Data")
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.green.opacity(0.12))
-                    .cornerRadius(10)
+                    .clipShape(.rect(cornerRadius: 10))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.green.opacity(0.4), lineWidth: 1)
@@ -722,7 +722,7 @@ struct WebCISMappingView: View {
             .navigationTitle("webCIS Import")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }

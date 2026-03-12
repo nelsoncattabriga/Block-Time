@@ -38,10 +38,10 @@ struct LogViewerView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Log File Size")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text(logFileSize)
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
 
                     Spacer()
@@ -49,15 +49,15 @@ struct LogViewerView: View {
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("Total Lines")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Text("\(totalLineCount)")
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                 }
                 .padding()
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             }
             .padding(.horizontal)
             .padding(.top, 8)
@@ -66,7 +66,7 @@ struct LogViewerView: View {
             HStack {
                 Text("Filter:")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 Picker("Filter", selection: $selectedFilter) {
                     Text("All Levels").tag(Optional<LogLevel>.none)
@@ -85,7 +85,7 @@ struct LogViewerView: View {
             // Search Bar
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 TextField("Search logs...", text: $searchText)
                     .textFieldStyle(PlainTextFieldStyle())
@@ -108,13 +108,13 @@ struct LogViewerView: View {
                         applyFilters()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
             .padding(12)
             .background(Color(.systemGray6).opacity(0.5))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .padding(.horizontal)
             .padding(.bottom, 8)
 
@@ -132,16 +132,16 @@ struct LogViewerView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(.system(size: 60))
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.gray)
 
                     Text("No logs found")
                         .font(.headline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
 
                     if selectedFilter != nil || !searchText.isEmpty {
                         Text("Try adjusting your filters")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
@@ -152,7 +152,7 @@ struct LogViewerView: View {
                             ForEach(Array(filteredLines.enumerated()), id: \.offset) { index, line in
                                 Text(line)
                                     .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                     .padding(.horizontal)
                                     .padding(.vertical, 1)
                                     .id(index)
@@ -188,8 +188,8 @@ struct LogViewerView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+                    .foregroundStyle(.white)
+                    .clipShape(.rect(cornerRadius: 10))
                 }
 
                 Button(action: {
@@ -202,8 +202,8 @@ struct LogViewerView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.green)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+                    .foregroundStyle(.white)
+                    .clipShape(.rect(cornerRadius: 10))
                 }
 
                 Button(action: {
@@ -216,8 +216,8 @@ struct LogViewerView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+                    .foregroundStyle(.white)
+                    .clipShape(.rect(cornerRadius: 10))
                 }
             }
             .padding()

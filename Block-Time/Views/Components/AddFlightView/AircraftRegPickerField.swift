@@ -12,7 +12,7 @@ struct AircraftRegPickerField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .frame(width: 80, alignment: .leading)
             
             Button(action: {
@@ -22,22 +22,22 @@ struct AircraftRegPickerField: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(regString.isEmpty ? "Select aircraft..." : regString)
-                            .foregroundColor(regString.isEmpty ? .secondary : .primary)
+                            .foregroundStyle(regString.isEmpty ? .secondary : .primary)
                         
                         if !regString.isEmpty && !aircraftType.isEmpty {
                             Text(aircraftType)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     Spacer()
                     Image(systemName: "airplane")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(Color(.systemGray6).opacity(0.75))
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
                         .stroke(Color(.systemGray4), lineWidth: 1)
@@ -179,7 +179,7 @@ struct AircraftRegPickerSheet: View {
                 // Search Bar
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     
                     TextField("Search aircraft...", text: $searchText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -198,7 +198,7 @@ struct AircraftRegPickerSheet: View {
                             searchText = ""
                             updateFilteredAircraft()
                         }
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -212,17 +212,17 @@ struct AircraftRegPickerSheet: View {
                 //                }) {
                 //                    HStack {
                 //                        Image(systemName: "plus.circle.fill")
-                //                            .foregroundColor(.green)
+                //                            .foregroundStyle(.green)
                 //                            .font(.title3)
                 //
                 //                        VStack(alignment: .leading, spacing: 4) {
                 //                            Text("Add New Aircraft")
                 //                                .font(.headline)
-                //                                .foregroundColor(.primary)
+                //                                .foregroundStyle(.primary)
                 //
                 ////                            Text("Enter registration and type")
                 ////                                .font(.subheadline)
-                ////                                .foregroundColor(.secondary)
+                ////                                .foregroundStyle(.secondary)
                 //                        }
                 //
                 //                        Spacer()
@@ -245,24 +245,24 @@ struct AircraftRegPickerSheet: View {
                                 
                                 HStack {
                                     Image(systemName: "clock")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                         .font(.caption)
                                     
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(displayReg)
                                             .font(.headline)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
                                         
                                         //                                        Text(aircraft.type)
                                         //                                            .font(.subheadline)
-                                        //                                            .foregroundColor(.secondary)
+                                        //                                            .foregroundStyle(.secondary)
                                     }
                                     
                                     Spacer()
                                     
                                     if isSelected {
                                         Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
                                     }
                                 }
                                 .contentShape(Rectangle())
@@ -287,18 +287,18 @@ struct AircraftRegPickerSheet: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(displayReg)
                                             .font(.headline)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
 
                                         //                                    Text(aircraft.type)
                                         //                                        .font(.subheadline)
-                                        //                                        .foregroundColor(.secondary)
+                                        //                                        .foregroundStyle(.secondary)
                                     }
 
                                     Spacer()
 
                                     if isSelected {
                                         Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
                                     }
                                 }
                                 .contentShape(Rectangle())
@@ -332,17 +332,17 @@ struct AircraftRegPickerSheet: View {
                 }) {
                     HStack {
                         Image(systemName: "plus.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                             .font(.title3)
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Add New Aircraft")
                                 .font(.subheadline)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
 //                            Text("Enter registration and type")
 //                                .font(.subheadline)
-//                                .foregroundColor(.secondary)
+//                                .foregroundStyle(.secondary)
                         }
 
                         Spacer()
@@ -358,7 +358,7 @@ struct AircraftRegPickerSheet: View {
             .navigationTitle("Select Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedReg.isEmpty {
                         Button("Clear Rego") {
                             HapticManager.shared.impact(.medium)
@@ -366,11 +366,11 @@ struct AircraftRegPickerSheet: View {
                             selectedType = ""
                             onDismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()
@@ -423,7 +423,7 @@ private struct AddAircraftSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Registration")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("e.g., VH-ABC or B738SIM", text: $newAircraftReg)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocapitalization(.allCharacters)
@@ -437,7 +437,7 @@ private struct AddAircraftSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Aircraft Type")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("e.g., B738", text: $newAircraftType)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocapitalization(.allCharacters)
@@ -464,7 +464,7 @@ private struct AddAircraftSheet: View {
             .navigationTitle("Add New Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }

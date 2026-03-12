@@ -647,8 +647,8 @@ struct SH_NextDutyView: View {
                     Text("Consecutive Duties")
 //                        .font(.headline)
                         .iPadScaledFont(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
+                        .bold()
+                        .foregroundStyle(.secondary)
 
                     Spacer()
 
@@ -662,7 +662,7 @@ struct SH_NextDutyView: View {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveDuties)")
-                                    .font(.headline).fontWeight(.bold)
+                                    .font(.headline).bold()
                                     .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
                                 Text("/\(maxConsec)")
                                     .font(.subheadline).foregroundStyle(.secondary)
@@ -677,7 +677,7 @@ struct SH_NextDutyView: View {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.dutyDaysIn11Days)")
-                                    .font(.headline).fontWeight(.bold)
+                                    .font(.headline).bold()
                                     .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
                                 Text("/\(maxDuty11)")
                                     .font(.subheadline).foregroundStyle(.secondary)
@@ -690,7 +690,7 @@ struct SH_NextDutyView: View {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveEarlyStarts)")
-                                    .font(.headline).fontWeight(.bold)
+                                    .font(.headline).bold()
                                     .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
                                 Text("/\(maxEarly)")
                                     .font(.subheadline).foregroundStyle(.secondary)
@@ -703,7 +703,7 @@ struct SH_NextDutyView: View {
                         VStack {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text("\(totals.consecutiveLateNights)")
-                                    .font(.headline).fontWeight(.bold)
+                                    .font(.headline).bold()
                                     .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
                                 Text("/\(maxLate)")
                                     .font(.subheadline).foregroundStyle(.secondary)

@@ -332,7 +332,7 @@ struct LH_NextDutyView: View {
             }
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1) }
 
             // Pre-Duty Rest
             lhRestCard(
@@ -404,7 +404,7 @@ struct LH_NextDutyView: View {
             }
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1) }
 
             // Disruption Rest table
             VStack(alignment: .leading, spacing: 0) {
@@ -507,7 +507,7 @@ struct LH_NextDutyView: View {
             }
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1) }
 
             if viewModel.selectedLimitType == .planning {
                 VStack(alignment: .leading, spacing: 4) {

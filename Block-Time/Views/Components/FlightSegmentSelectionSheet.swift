@@ -19,16 +19,16 @@ struct FlightSegmentSelectionSheet: View {
                 VStack(spacing: 8) {
                     Image(systemName: "airplane.circle.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                         .padding(.top, 20)
 
                     Text("Multiple Flight Segments Found")
                         .font(.title2)
-                        .fontWeight(.bold)
+                        .bold()
 
                     Text("Select the segment you want to log")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.bottom, 20)
                 }
                 .padding(.horizontal)
@@ -55,7 +55,7 @@ struct FlightSegmentSelectionSheet: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         onDismiss()
                     }
@@ -79,11 +79,11 @@ struct FlightSegmentCard: View {
                     Text("Segment \(index) of \(totalSegments)")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
                         .background(Color.blue)
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
 
                     Spacer()
                 }
@@ -96,21 +96,21 @@ struct FlightSegmentCard: View {
                     VStack(spacing: 4) {
                         Image(systemName: "airplane.departure")
                             .font(.title3)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
 
                         Text(segment.origin)
                             .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
+                            .bold()
+                            .foregroundStyle(.primary)
 
                         Text("Departs")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         Text(segment.departureTime)
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                     .frame(maxWidth: .infinity)
 
@@ -118,28 +118,28 @@ struct FlightSegmentCard: View {
                     VStack {
                         Image(systemName: "arrow.right")
                             .font(.title2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     // Destination
                     VStack(spacing: 4) {
                         Image(systemName: "airplane.arrival")
                             .font(.title3)
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
 
                         Text(segment.destination)
                             .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
+                            .bold()
+                            .foregroundStyle(.primary)
 
                         Text("Arrives")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         Text(segment.arrivalTime)
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -149,15 +149,15 @@ struct FlightSegmentCard: View {
                 // Date
                 HStack {
                     Image(systemName: "calendar")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(segment.flightDate)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.bottom, 12)
             }
             .background(.thinMaterial)
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.blue.opacity(0.3), lineWidth: 2)

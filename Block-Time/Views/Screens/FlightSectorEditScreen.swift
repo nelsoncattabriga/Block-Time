@@ -77,7 +77,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // Flight Number
@@ -88,7 +88,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // Aircraft Registration
@@ -99,7 +99,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // Aircraft Type
@@ -110,7 +110,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // From Airport
@@ -121,7 +121,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // To Airport
@@ -132,7 +132,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // Captain Name
@@ -143,7 +143,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // First Officer Name
@@ -154,7 +154,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // Second Officer 1 Name
@@ -165,7 +165,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // Second Officer 2 Name
@@ -176,7 +176,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // Block Time
@@ -186,7 +186,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
 
                 // Night Time
@@ -196,7 +196,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
 
                 // P1 Time
@@ -206,7 +206,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
 
                 // P1US Time
@@ -216,7 +216,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
 
                 // Instrument Time
@@ -226,7 +226,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
 
                 // SIM Time
@@ -236,7 +236,7 @@ struct FlightSectorEditScreen: View {
                         .font(.body)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 // Pilot Flying Toggle
@@ -259,12 +259,12 @@ struct FlightSectorEditScreen: View {
                         .frame(minHeight: 80)
                         .padding(8)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                 }
                 
                 if let errorMessage = saveErrorMessage {
                     Text(errorMessage)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                         .font(.footnote)
                         .padding(.horizontal, 16)
                 }
@@ -274,11 +274,11 @@ struct FlightSectorEditScreen: View {
                     Button(action: saveFlight) {
                         Text("Save")
                             .font(.headline)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.green)
-                            .cornerRadius(12)
+                            .clipShape(.rect(cornerRadius: 12))
                     }
                     */
                     
@@ -287,11 +287,11 @@ struct FlightSectorEditScreen: View {
                     }) {
                         Text("Delete")
                             .font(.headline)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.red)
-                            .cornerRadius(12)
+                            .clipShape(.rect(cornerRadius: 12))
                     }
                 }
                 .padding(.horizontal, 16)
@@ -304,7 +304,7 @@ struct FlightSectorEditScreen: View {
         .navigationTitle("Edit Flight")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") {
                     saveFlight()
                 }

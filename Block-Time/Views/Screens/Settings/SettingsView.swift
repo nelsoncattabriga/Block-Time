@@ -73,7 +73,7 @@ struct SettingsView: View {
                         NavigationLink(destination: categoryDetailView(for: category)) {
                             HStack(spacing: 16) {
                                 Image(systemName: category.icon)
-                                    .foregroundColor(category.color)
+                                    .foregroundStyle(category.color)
                                     .font(.title3)
                                     .frame(width: 32, height: 32)
                                     .background(category.color.opacity(0.15))
@@ -83,22 +83,22 @@ struct SettingsView: View {
                                     Text(category.rawValue)
                                         .font(.headline)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
 
                                     Text(category.subtitle)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
 
                                 Spacer()
 
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             .padding(16)
                             .background(.thinMaterial)
-                            .cornerRadius(12)
+                            .clipShape(.rect(cornerRadius: 12))
                             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -148,13 +148,13 @@ struct AppearanceSettingsView: View {
                 VStack(spacing: 16) {
                     HStack {
                         Image(systemName: "paintpalette.fill")
-                            .foregroundColor(.red)
+                            .foregroundStyle(.red)
                             .font(.title3)
 
                         Text("Appearance")
                             .font(.headline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Spacer()
                     }
@@ -163,18 +163,18 @@ struct AppearanceSettingsView: View {
                         // Appearance Picker
                         HStack(spacing: 12) {
                             Image(systemName: "circle.lefthalf.filled")
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                                 .frame(width: 20)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Light/Dark Theme")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
 
                                 Text(themeService.appearanceMode.displayName)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
 
                             Spacer()
@@ -191,23 +191,23 @@ struct AppearanceSettingsView: View {
                         }
                         .padding(12)
                         .background(Color(.systemGray6).opacity(0.5))
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
 
                         // Colour Theme Picker
                         HStack(spacing: 12) {
                             Image(systemName: themeService.currentTheme.icon)
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                                 .frame(width: 20)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Colour Theme")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
 
                                 Text(themeService.currentTheme.description)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
 
                             Spacer()
@@ -224,12 +224,12 @@ struct AppearanceSettingsView: View {
                         }
                         .padding(12)
                         .background(Color(.systemGray6).opacity(0.5))
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
                     }
                 }
                 .padding(16)
                 .background(.thinMaterial)
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
@@ -349,13 +349,13 @@ private struct ModernDefaultCrewNamesCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "person.2.fill")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .font(.title3)
 
                 Text("Crew Info")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -364,14 +364,14 @@ private struct ModernDefaultCrewNamesCard: View {
                 // Flight Time Position Picker
                 HStack(spacing: 12) {
                     Image(systemName: "clock.badge.checkmark")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Log Flight Time As")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
 
                     Spacer()
@@ -388,20 +388,20 @@ private struct ModernDefaultCrewNamesCard: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // F/O PF Time Credit Picker (only show when F/O is selected)
                 if viewModel.flightTimePosition == .firstOfficer {
                     HStack(spacing: 12) {
                         Image(systemName: "airplane.circle")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .frame(width: 20)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Log PF time as")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                         }
 
                         Spacer()
@@ -417,7 +417,7 @@ private struct ModernDefaultCrewNamesCard: View {
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
 
                 // Default Name Field
@@ -474,7 +474,7 @@ private struct ModernDefaultCrewNamesCard: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -490,13 +490,13 @@ private struct ModernOpsDataCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "slider.horizontal.3")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .font(.title3)
 
                 Text("Operations")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -506,17 +506,17 @@ private struct ModernOpsDataCard: View {
                 // Instrument Time when PF
                 HStack {
                     Image(systemName: "gauge.with.dots.needle.67percent")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                         .frame(width: 20)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Inst Time when PF")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text("\(viewModel.pfAutoInstrumentMinutes) minutes")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -535,7 +535,7 @@ private struct ModernOpsDataCard: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 Divider()
                     .padding(.horizontal, 8)
@@ -557,17 +557,17 @@ private struct ModernOpsDataCard: View {
                 if viewModel.logApproaches {
                     HStack {
                         Image(systemName: "location.north.line")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .frame(width: 20)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Default Approach")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
                             Text(viewModel.defaultApproachType ?? "Nil")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
 
                         Spacer()
@@ -587,13 +587,13 @@ private struct ModernOpsDataCard: View {
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
             }
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -609,13 +609,13 @@ private struct ModernFormatOptionsCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "scribble.variable")
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
                     .font(.title3)
 
                 Text("Flight Information")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -677,18 +677,18 @@ private struct ModernFormatOptionsCard: View {
                 // Airport ID Picker
                 HStack(spacing: 12) {
                     Image(systemName: "airplane.circle")
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Airport Code")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text(viewModel.useIATACodes ? "IATA - BNE" : "ICAO - YBBN")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -704,7 +704,7 @@ private struct ModernFormatOptionsCard: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 
                 Divider()
@@ -714,18 +714,18 @@ private struct ModernFormatOptionsCard: View {
                 // Enter Times In Local Time toggle
                 HStack(spacing: 12) {
                     Image(systemName: "clock.badge.questionmark")
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Times Entered In")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text(viewModel.enterTimesInLocalTime ? "Enter times in LOCAL time" : "Enter times in UTC")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -741,23 +741,23 @@ private struct ModernFormatOptionsCard: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // Show Times In Picker
                 HStack(spacing: 12) {
                     Image(systemName: "clock.badge.checkmark")
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Times Shown In")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text(viewModel.displayFlightsInLocalTime ? "Date & Times in Local Time" : "Date & Times in UTC")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -773,19 +773,19 @@ private struct ModernFormatOptionsCard: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // Flight Times Format Picker
                 HStack(spacing: 12) {
                     Image(systemName: "clock")
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Flight Times Displayed As")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                     }
 
@@ -802,24 +802,24 @@ private struct ModernFormatOptionsCard: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // Rounding Picker (only show when Decimal mode is selected)
                 if !viewModel.showTimesInHoursMinutes {
                     HStack(spacing: 12) {
                         Image(systemName: "number")
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                             .frame(width: 20)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Decimal Rounding")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
                             Text(roundingExampleText)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
 
                         Spacer()
@@ -836,7 +836,7 @@ private struct ModernFormatOptionsCard: View {
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
 
                
@@ -845,7 +845,7 @@ private struct ModernFormatOptionsCard: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -871,13 +871,13 @@ struct ModernPhotoBackupCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "photo.badge.arrow.down")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .font(.title3)
 
                 Text("Photo Backup")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -895,7 +895,7 @@ struct ModernPhotoBackupCard: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -924,13 +924,13 @@ private struct ModernDataImportCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "square.and.arrow.down")
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                     .font(.title3)
 
                 Text("Logbook Data")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -943,16 +943,16 @@ private struct ModernDataImportCard: View {
                             Text("Importing…")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Text("Please wait...")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         Spacer()
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
 
                 if isExporting {
@@ -962,16 +962,16 @@ private struct ModernDataImportCard: View {
                             Text("Exporting…")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Text("Please wait...")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         Spacer()
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                 }
 
                 Button(action: {
@@ -980,28 +980,28 @@ private struct ModernDataImportCard: View {
                     HStack(spacing: 12) {
                         Image(systemName: "square.and.arrow.down")
                             .font(.title3)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Import Logbook Data")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
 
                             Text("CSV or Tab-Delimited file")
                                 .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundStyle(.white.opacity(0.9))
                         }
 
                         Spacer()
 
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundStyle(.white.opacity(0.9))
                     }
                     .padding(16)
                     .background(Color.green.opacity(0.7))
-                    .cornerRadius(10)
+                    .clipShape(.rect(cornerRadius: 10))
                 }
                 .buttonStyle(PlainButtonStyle())
                 .fileImporter(
@@ -1032,28 +1032,28 @@ private struct ModernDataImportCard: View {
                     HStack(spacing: 12) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.title3)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Backup Logbook")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
 
                             Text("Save as CSV file")
                                 .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundStyle(.white.opacity(0.9))
                         }
 
                         Spacer()
 
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundStyle(.white.opacity(0.9))
                     }
                     .padding(16)
                     .background(Color.blue.opacity(0.7))
-                    .cornerRadius(10)
+                    .clipShape(.rect(cornerRadius: 10))
                 }
                 .buttonStyle(PlainButtonStyle())
                 .background(
@@ -1071,28 +1071,28 @@ private struct ModernDataImportCard: View {
                     HStack(spacing: 12) {
                         Image(systemName: "trash")
                             .font(.title3)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Delete All Logbook Data")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
 
                             Text("This cannot be undone")
                                 .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundStyle(.white.opacity(0.9))
                         }
 
                         Spacer()
 
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundStyle(.white.opacity(0.9))
                     }
                     .padding(16)
                     .background(Color.red.opacity(0.7))
-                    .cornerRadius(10)
+                    .clipShape(.rect(cornerRadius: 10))
                 }
                 .buttonStyle(PlainButtonStyle())
                 .alert("Delete All Logbook Data", isPresented: $showingDeleteWarning) {
@@ -1123,7 +1123,7 @@ private struct ModernDataImportCard: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -1255,13 +1255,13 @@ private struct ModernTextFieldRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(label)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 TextField(placeholder, text: $text)
                     .textFieldStyle(PlainTextFieldStyle())
@@ -1270,7 +1270,7 @@ private struct ModernTextFieldRow: View {
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.5))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
     }
 }
 
@@ -1312,23 +1312,23 @@ private struct AirlinePickerSheet: View {
                                 } else {
                                     Image(systemName: "pencil.circle")
                                         .font(.title3)
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                         .frame(width: 20, height: 20)
                                 }
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(airline.name)
                                         .font(.body)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
 
                                     if !airline.prefix.isEmpty {
                                         Text("Prefix: \(airline.prefix)")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     } else {
                                         Text("Enter your own prefix")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
 
@@ -1336,10 +1336,10 @@ private struct AirlinePickerSheet: View {
 
                                 if airline.id == "CUSTOM" && isCustomSelected {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                 } else if selectedPrefix == airline.prefix && !isCustomSelected {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                 }
                             }
                         }
@@ -1350,7 +1350,7 @@ private struct AirlinePickerSheet: View {
             .navigationTitle("Select Airline")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         onDismiss()
                         dismiss()
@@ -1372,18 +1372,18 @@ private struct ModernToggleRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(color)
+                .foregroundStyle(color)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
@@ -1395,7 +1395,7 @@ private struct ModernToggleRow: View {
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.5))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
     }
 }
 
@@ -1416,18 +1416,18 @@ private struct ModernAirlinePrefixRow: View {
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: "tag")
-                        .foregroundColor(color)
+                        .foregroundStyle(color)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Airline Prefix")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text(isEnabled ? "\(prefix)405 vs 405" : "QF405 vs 405")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -1444,11 +1444,11 @@ private struct ModernAirlinePrefixRow: View {
 
                             Text(isCustomSelected ? "Custom" : prefix)
                                 .font(.subheadline.bold())
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
@@ -1459,7 +1459,7 @@ private struct ModernAirlinePrefixRow: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             }
             .buttonStyle(PlainButtonStyle())
 
@@ -1467,7 +1467,7 @@ private struct ModernAirlinePrefixRow: View {
             if isEnabled && isCustomSelected {
                 HStack(spacing: 12) {
                     Image(systemName: "pencil")
-                        .foregroundColor(color)
+                        .foregroundStyle(color)
                         .frame(width: 20)
 
                     TextField("Enter custom prefix", text: $customPrefix)
@@ -1479,7 +1479,7 @@ private struct ModernAirlinePrefixRow: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
             }
         }
         .sheet(isPresented: $showingAirlinePicker) {
@@ -1552,14 +1552,14 @@ private struct ModernFleetSelectorRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "airplane.departure")
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Fleet Selection")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
             }
 
             Spacer()
@@ -1580,7 +1580,7 @@ private struct ModernFleetSelectorRow: View {
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.5))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .onAppear {
             loadFleets()
         }
@@ -1602,13 +1602,13 @@ private struct ModernFRMSCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "clock.badge.exclamationmark")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .font(.title3)
 
                 Text("FRMS Configuration")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -1617,18 +1617,18 @@ private struct ModernFRMSCard: View {
                 // Fleet Picker
                     HStack(spacing: 12) {
                     Image(systemName: "airplane.departure")
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Fleet")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text(viewModel.configuration.fleet.fullDescription)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -1645,23 +1645,23 @@ private struct ModernFRMSCard: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // Home Base Picker
                 HStack(spacing: 12) {
                     Image(systemName: "house.fill")
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Home Base")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text(viewModel.configuration.homeBase)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -1677,14 +1677,14 @@ private struct ModernFRMSCard: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // Default Limits removed - always using operational limits
             }
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -1704,13 +1704,13 @@ struct ModernCloudKitSyncCard: View {
             // Header
             HStack {
                 Image(systemName: "icloud.fill")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .font(.title3)
 
                 Text("iCloud Sync Status")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
@@ -1718,12 +1718,12 @@ struct ModernCloudKitSyncCard: View {
                 if debugModeEnabled {
                     Text("DEBUG")
                         .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.orange)
+                        .bold()
+                        .foregroundStyle(.orange)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Color.orange.opacity(0.2))
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
             }
 
@@ -1732,7 +1732,7 @@ struct ModernCloudKitSyncCard: View {
                 VStack(spacing: 8) {
                     Image(systemName: "exclamationmark.icloud")
                         .font(.largeTitle)
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
 
                     Text("iCloud Not Available")
                         .font(.subheadline)
@@ -1740,7 +1740,7 @@ struct ModernCloudKitSyncCard: View {
 
                     Text("Sign in to iCloud in Settings to sync your data.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.vertical, 8)
@@ -1772,7 +1772,7 @@ struct ModernCloudKitSyncCard: View {
 //                    // Info
 //                    Text("Data will sync via iCloud automatically.")
 //                        .font(.caption)
-//                        .foregroundColor(.secondary)
+//                        .foregroundStyle(.secondary)
 //                        .multilineTextAlignment(.center)
 //                        .padding(.top, 4)
 
@@ -1786,7 +1786,7 @@ struct ModernCloudKitSyncCard: View {
                             Text("Debug: Error Simulation")
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.orange)
+                                .foregroundStyle(.orange)
 
                             HStack(spacing: 8) {
                                 Button(action: {
@@ -1840,7 +1840,7 @@ struct ModernCloudKitSyncCard: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -1870,7 +1870,7 @@ private struct SyncDetailRowView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .frame(width: 24)
 
                 Text(title)
@@ -1891,18 +1891,18 @@ private struct SyncDetailRowView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: errorInfo.isRetryable ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill")
-                            .foregroundColor(errorInfo.isRetryable ? .orange : .red)
+                            .foregroundStyle(errorInfo.isRetryable ? .orange : .red)
                             .font(.caption)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(errorInfo.message)
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .foregroundColor(errorInfo.isRetryable ? .orange : .red)
+                                .foregroundStyle(errorInfo.isRetryable ? .orange : .red)
 
                             Text(errorInfo.suggestion)
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -1921,7 +1921,7 @@ private struct SyncDetailRowView: View {
                                 Image(systemName: showErrorDetails ? "chevron.up" : "chevron.down")
                                     .font(.caption2)
                             }
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                         }
                         .padding(.top, 2)
 
@@ -1936,23 +1936,23 @@ private struct SyncDetailRowView: View {
                                     Text("Failed Items (\(detailedError.individualErrors.count))")
                                         .font(.caption2)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
 
                                     ForEach(Array(detailedError.individualErrors.enumerated()), id: \.offset) { index, errorItem in
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text("Record: \(errorItem.recordID)")
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                                 .fixedSize(horizontal: false, vertical: true)
 
                                             let itemErrorInfo = CloudKitErrorHelper.userFriendlyMessage(for: errorItem.error)
                                         Text(itemErrorInfo.message)
                                             .font(.caption2)
-                                            .foregroundColor(itemErrorInfo.isRetryable ? .orange : .red)
+                                            .foregroundStyle(itemErrorInfo.isRetryable ? .orange : .red)
 
                                         Text(itemErrorInfo.suggestion)
                                             .font(.caption2)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
                                     .padding(.vertical, 3)
@@ -1971,18 +1971,18 @@ private struct SyncDetailRowView: View {
                                     Text("Technical Details")
                                         .font(.caption2)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
 
                                     Group {
                                         HStack(alignment: .top) {
                                             Text("Error Domain:")
                                                 .font(.caption2)
                                                 .fontWeight(.medium)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                                 .frame(width: 100, alignment: .leading)
                                             Text(detailedError.errorDomain)
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                             Spacer()
                                         }
 
@@ -1990,11 +1990,11 @@ private struct SyncDetailRowView: View {
                                             Text("Error Code:")
                                                 .font(.caption2)
                                                 .fontWeight(.medium)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                                 .frame(width: 100, alignment: .leading)
                                             Text("\(detailedError.errorCode)")
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                             Spacer()
                                         }
 
@@ -2002,11 +2002,11 @@ private struct SyncDetailRowView: View {
                                             Text("Operation:")
                                                 .font(.caption2)
                                                 .fontWeight(.medium)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                                 .frame(width: 100, alignment: .leading)
                                             Text(detailedError.operation)
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                             Spacer()
                                         }
 
@@ -2014,11 +2014,11 @@ private struct SyncDetailRowView: View {
                                             Text("Timestamp:")
                                                 .font(.caption2)
                                                 .fontWeight(.medium)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                                 .frame(width: 100, alignment: .leading)
                                             Text(detailedError.timestamp.formatted(date: .numeric, time: .standard))
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                             Spacer()
                                         }
 
@@ -2026,11 +2026,11 @@ private struct SyncDetailRowView: View {
                                             Text("Description:")
                                                 .font(.caption2)
                                                 .fontWeight(.medium)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                                 .frame(width: 100, alignment: .leading)
                                             Text(errorInfo.suggestion)
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                                 .fixedSize(horizontal: false, vertical: true)
                                             Spacer()
                                         }
@@ -2043,18 +2043,18 @@ private struct SyncDetailRowView: View {
                                             Text("Additional Info:")
                                                 .font(.caption2)
                                                 .fontWeight(.semibold)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
 
                                             ForEach(Array(detailedError.errorUserInfo.sorted(by: { $0.key < $1.key })), id: \.key) { key, value in
                                                 HStack(alignment: .top) {
                                                     Text("\(key):")
                                                         .font(.caption2)
                                                         .fontWeight(.medium)
-                                                        .foregroundColor(.secondary)
+                                                        .foregroundStyle(.secondary)
                                                         .frame(width: 100, alignment: .leading)
                                                     Text(value)
                                                         .font(.system(.caption2, design: .monospaced))
-                                                        .foregroundColor(.primary)
+                                                        .foregroundStyle(.primary)
                                                         .fixedSize(horizontal: false, vertical: true)
                                                     Spacer()
                                                 }
@@ -2069,42 +2069,42 @@ private struct SyncDetailRowView: View {
                 }
                 .padding(6)
                 .background(errorInfo.isRetryable ? Color.orange.opacity(0.1) : Color.red.opacity(0.1))
-                .cornerRadius(4)
+                .clipShape(.rect(cornerRadius: 4))
             } else if let date = lastSync {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                             .font(.footnote)
                         Text("Last synced \(date.formatted(.relative(presentation: .named)))")
                             .font(.footnote)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     if let changeDate = lastChange, changeDate != date {
                         HStack(spacing: 4) {
                             Image(systemName: "pencil.circle.fill")
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                                 .font(.footnote)
                             Text("Last changed \(changeDate.formatted(.relative(presentation: .named)))")
                                 .font(.footnote)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
             } else {
                 HStack(spacing: 4) {
                     Image(systemName: "clock")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .font(.footnote)
                     Text("Not yet synced")
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .padding(8)
         .background(Color(.systemGray6).opacity(0.5))
-        .cornerRadius(6)
+        .clipShape(.rect(cornerRadius: 6))
     }
 }

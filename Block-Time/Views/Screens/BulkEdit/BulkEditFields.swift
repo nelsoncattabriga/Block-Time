@@ -50,7 +50,7 @@ struct BulkEditTextField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             TextField(
                 fieldState.isMixed ? "(Mixed)" : (placeholder ?? label),
@@ -64,7 +64,7 @@ struct BulkEditTextField: View {
             .font(.body)
             .padding(10)
             .background(Color(.secondarySystemBackground))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
@@ -110,7 +110,7 @@ struct BulkEditOptionalTextField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             TextField(
                 fieldState.isMixed ? "(Mixed)" : label,
@@ -123,7 +123,7 @@ struct BulkEditOptionalTextField: View {
             .font(.body)
             .padding(10)
             .background(Color(.secondarySystemBackground))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
@@ -162,7 +162,7 @@ struct BulkEditIntField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             TextField(
                 fieldState.isMixed ? "(Mixed)" : label,
@@ -173,7 +173,7 @@ struct BulkEditIntField: View {
             .font(.body)
             .padding(10)
             .background(Color(.secondarySystemBackground))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
@@ -227,7 +227,7 @@ struct BulkEditToggle: View {
                     Text("(Mixed)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
@@ -272,7 +272,7 @@ struct BulkEditTextEditor: View {
                 .padding(8)
                 .scrollContentBackground(.hidden)
                 .background(Color(.secondarySystemBackground))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
@@ -295,7 +295,7 @@ struct BulkEditTextEditor: View {
 
             if textValue.isEmpty || textValue == "(Mixed)" {
                 Text(fieldState.isMixed ? "(Mixed)" : "Enter remarks...")
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 16)
                     .allowsHitTesting(false)

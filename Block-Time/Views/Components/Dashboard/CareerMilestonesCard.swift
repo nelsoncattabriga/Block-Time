@@ -67,7 +67,7 @@ struct CareerMilestonesCard: View {
                 .font(.subheadline).foregroundStyle(color)
             Text(value)
                 .iPadScaledFont(.subheadline)
-                .fontWeight(.bold)
+                .bold()
                 .fontDesign(.rounded)
                 .foregroundStyle(.primary)
             Text(label)

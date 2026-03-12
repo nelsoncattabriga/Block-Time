@@ -86,7 +86,7 @@ struct MigrationImportView: View {
 //            .navigationTitle("Migrate from Logger")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         onDismiss?()
                         dismiss()
@@ -130,15 +130,15 @@ struct MigrationImportView: View {
             VStack(spacing: 12) {
                 Image(systemName: "square.and.arrow.down")
                     .font(.system(size: 60))
-                    .foregroundColor(.orange)
+                    .foregroundStyle(.orange)
 
                 Text("Migrate from Logger")
                     .font(.title2)
-                    .fontWeight(.bold)
+                    .bold()
 
 //                Text("Migrate your complete logbook data")
 //                    .font(.subheadline)
-//                    .foregroundColor(.secondary)
+//                    .foregroundStyle(.secondary)
 //                    .multilineTextAlignment(.center)
             }
             .padding(.top)
@@ -147,7 +147,7 @@ struct MigrationImportView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Image(systemName: "info.circle.fill")
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                     Text("What will be imported:")
                         .font(.headline)
                     Spacer()
@@ -181,7 +181,7 @@ struct MigrationImportView: View {
             }
             .padding()
             .background(Color.orange.opacity(0.1))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .padding(.horizontal)
 
             // Import Mode Selection (hidden during onboarding)
@@ -189,7 +189,7 @@ struct MigrationImportView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Image(systemName: "slider.horizontal.3")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                         Text("Import Mode:")
                             .font(.headline)
                         Spacer()
@@ -207,7 +207,7 @@ struct MigrationImportView: View {
                 }
                 .padding()
                 .background(Color.blue.opacity(0.1))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
                 .padding(.horizontal)
             }
 
@@ -216,7 +216,7 @@ struct MigrationImportView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
                         Text("File Selected:")
                             .font(.headline)
                         Spacer()
@@ -224,17 +224,17 @@ struct MigrationImportView: View {
 
                     HStack {
                         Image(systemName: "doc.fill")
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                         Text(fileURL.lastPathComponent)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         Spacer()
                     }
                     .padding(.leading, 24)
                 }
                 .padding()
                 .background(Color.green.opacity(0.1))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
                 .padding(.horizontal)
             }
 
@@ -250,15 +250,15 @@ struct MigrationImportView: View {
                 }) {
                     HStack {
                         Image(systemName: "square.and.arrow.down.fill")
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                         Text("Import Data")
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.orange.opacity(0.12))
-                    .cornerRadius(12)
+                    .clipShape(.rect(cornerRadius: 12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.orange.opacity(0.4), lineWidth: 1)
@@ -273,15 +273,15 @@ struct MigrationImportView: View {
                 }) {
                     HStack {
                         Image(systemName: "doc.badge.plus")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                         Text(selectedFileURL == nil ? "Select Migration File" : "Choose Different File")
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.blue.opacity(0.12))
-                    .cornerRadius(12)
+                    .clipShape(.rect(cornerRadius: 12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.blue.opacity(0.4), lineWidth: 1)
@@ -302,14 +302,14 @@ struct MigrationImportView: View {
             // Animated Icon
             Image(systemName: "arrow.triangle.2.circlepath")
                 .font(.system(size: 70))
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
                 .symbolEffect(.rotate, options: .repeating, value: isImporting)
 
             // Progress Information
             VStack(spacing: 16) {
                 Text("Importing Your Data")
                     .font(.title2)
-                    .fontWeight(.bold)
+                    .bold()
 
                 if let progress = importProgress {
                     VStack(spacing: 12) {
@@ -323,11 +323,11 @@ struct MigrationImportView: View {
                         VStack(spacing: 4) {
                             Text(progress.phase.rawValue)
                                 .font(.headline)
-                                .foregroundColor(.orange)
+                                .foregroundStyle(.orange)
 
                             Text(progress.message)
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                         }
 
@@ -335,7 +335,7 @@ struct MigrationImportView: View {
                         if progress.totalItems > 0 {
                             Text("\(progress.currentItem) of \(progress.totalItems)")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .padding(.horizontal)
@@ -348,15 +348,15 @@ struct MigrationImportView: View {
             VStack(spacing: 8) {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.yellow)
+                        .foregroundStyle(.yellow)
                     Text("Please wait - do not close the app")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding()
             .background(Color.yellow.opacity(0.1))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .padding(.horizontal)
             .padding(.bottom)
         }
@@ -369,7 +369,7 @@ struct MigrationImportView: View {
             // Success Icon with animation
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 70))
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
                 .padding(.top)
                 .symbolEffect(.bounce, value: importComplete)
 
@@ -377,11 +377,11 @@ struct MigrationImportView: View {
             VStack(spacing: 8) {
                 Text("Migration Complete!")
                     .font(.title2)
-                    .fontWeight(.bold)
+                    .bold()
 
                 Text("Your data has been successfully imported")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -390,7 +390,7 @@ struct MigrationImportView: View {
                 // Header
                 HStack {
                     Image(systemName: "checkmark.seal.fill")
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     Text("Import Summary")
                         .font(.headline)
                         .fontWeight(.semibold)
@@ -452,7 +452,7 @@ struct MigrationImportView: View {
                 }
             }
             .background(Color(.systemBackground))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -464,7 +464,7 @@ struct MigrationImportView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "lightbulb.fill")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                     Text("Next Steps:")
                         .font(.headline)
                     Spacer()
@@ -478,7 +478,7 @@ struct MigrationImportView: View {
             }
             .padding()
             .background(Color.blue.opacity(0.1))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .padding(.horizontal)
 
             Spacer()
@@ -491,15 +491,15 @@ struct MigrationImportView: View {
             }) {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundStyle(.green)
                     Text("Done")
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(Color.green.opacity(0.12))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.green.opacity(0.4), lineWidth: 1)
@@ -679,7 +679,7 @@ struct MigrationInfoRow: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.title3)
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -689,7 +689,7 @@ struct MigrationInfoRow: View {
 
                 Text(detail)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
@@ -707,13 +707,13 @@ struct MigrationStatRow: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(color)
+                .foregroundStyle(color)
                 .frame(width: 40)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 Text(value)
                     .font(.headline)
@@ -736,12 +736,12 @@ struct ImportModeCard: View {
             HStack(spacing: 12) {
                 // Selection indicator
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? .blue : .gray)
+                    .foregroundStyle(isSelected ? .blue : .gray)
                     .font(.title3)
 
                 // Mode icon
                 Image(systemName: mode.icon)
-                    .foregroundColor(mode == .replace ? .red : .blue)
+                    .foregroundStyle(mode == .replace ? .red : .blue)
                     .frame(width: 24)
 
                 // Mode text
@@ -749,11 +749,11 @@ struct ImportModeCard: View {
                     Text(mode.rawValue)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Text(mode.description)
                         .font(.caption)
-                        .foregroundColor(mode == .replace ? .red : .secondary)
+                        .foregroundStyle(mode == .replace ? .red : .secondary)
                         .multilineTextAlignment(.leading)
                 }
 
@@ -761,7 +761,7 @@ struct ImportModeCard: View {
             }
             .padding()
             .background(isSelected ? Color.blue.opacity(0.1) : Color(.systemGray6))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
@@ -779,14 +779,14 @@ struct NextStepRow: View {
         HStack(spacing: 12) {
             Text("\(number)")
                 .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
+                .bold()
+                .foregroundStyle(.white)
                 .frame(width: 24, height: 24)
                 .background(Circle().fill(Color.blue))
 
             Text(text)
                 .font(.subheadline)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Spacer()
         }

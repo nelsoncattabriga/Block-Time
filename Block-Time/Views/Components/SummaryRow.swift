@@ -101,11 +101,11 @@ struct SummaryRow: View, Equatable {
             VStack(spacing: 0) {
                 Text(dayOfMonth)
                     .font(.title.bold())
-                    .foregroundColor(.teal.opacity(0.9))
+                    .foregroundStyle(.teal.opacity(0.9))
 
                 Text(formattedDate)
                     .font(.subheadline.bold())
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
             }
             .frame(width: 50)
@@ -124,22 +124,22 @@ struct SummaryRow: View, Equatable {
                 HStack {
                     Image(systemName: "clock.badge.checkmark.fill")
                         .font(.headline)
-                        .foregroundColor(.teal)
+                        .foregroundStyle(.teal)
 
                     Text(sector.aircraftType)
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Spacer()
 
                     // Summary badge
                     Text("SUMMARY")
                         .font(.caption2.bold())
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(Color.teal)
-                        .cornerRadius(4)
+                        .clipShape(.rect(cornerRadius: 4))
                 }
 
                 // Time entries grid
@@ -153,11 +153,11 @@ struct SummaryRow: View, Equatable {
                             HStack(spacing: 4) {
                                 Text(entry.label)
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
 
                                 Text(formatTime(entry.value))
                                     .font(.subheadline.bold())
-                                    .foregroundColor(.teal.opacity(0.9))
+                                    .foregroundStyle(.teal.opacity(0.9))
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -168,7 +168,7 @@ struct SummaryRow: View, Equatable {
                 if !sector.remarks.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(sector.remarks)
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
             }

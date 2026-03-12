@@ -64,17 +64,17 @@ struct FRMSFlightStripCard: View {
                 VStack(spacing: 1) {
                     Text(String(format: "%.1f", hours))
                         .font(.system(.headline, design: .rounded, weight: .bold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                     Text("hrs")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .frame(width: 74, height: 74)
 
             Text(label)
                 .font(.footnote).fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }

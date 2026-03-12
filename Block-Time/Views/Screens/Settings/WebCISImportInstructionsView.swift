@@ -19,15 +19,15 @@ struct WebCISImportInstructionsView: View {
                     VStack(spacing: 10) {
                         Image(systemName: "doc.text.fill")
                             .font(.system(size: 52))
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
 
                         Text("webCIS Flying Record")
                             .font(.title2)
-                            .fontWeight(.bold)
+                            .bold()
 
                         Text("RCIS Flying Experience Report")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.top)
 
@@ -53,7 +53,7 @@ struct WebCISImportInstructionsView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                         }
                     }
                     .padding(.horizontal)
@@ -63,7 +63,7 @@ struct WebCISImportInstructionsView: View {
             .navigationTitle("Import webCIS Data")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
             }
@@ -77,24 +77,24 @@ private struct WebCISNoticeBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "envelope.badge.fill")
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
                 .font(.subheadline)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("File Must Be Requested")
                     .font(.subheadline)
-                    .fontWeight(.bold)
+                    .bold()
 
                 Text("The webCIS Flying Experience Report is **not** available for self-service download. You must request it by email from Qantas.")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding()
         .background(Color.orange.opacity(0.1))
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.orange.opacity(0.45), lineWidth: 1)
@@ -127,12 +127,12 @@ private struct WebCISInstructionCard<Action: View>: View {
                         .frame(width: 36, height: 36)
                     Image(systemName: "envelope.fill")
                         .font(.headline)
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                 }
 
                 Text("How to Get Your File")
                     .font(.subheadline)
-                    .fontWeight(.bold)
+                    .bold()
             }
 
             // Steps
@@ -142,14 +142,14 @@ private struct WebCISInstructionCard<Action: View>: View {
                         Text("\(index + 1)")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                             .frame(width: 20, height: 20)
                             .background(Color.orange.opacity(0.12))
                             .clipShape(Circle())
 
                         Text(step)
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Spacer(minLength: 0)
@@ -160,8 +160,8 @@ private struct WebCISInstructionCard<Action: View>: View {
             action
         }
         .padding()
-        .background(Color(.secondarySystemBackground).overlay(Color.orange.opacity(0.05)))
-        .cornerRadius(14)
+        .background(Color(.secondarySystemBackground).overlay { Color.orange.opacity(0.05) })
+        .clipShape(.rect(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color(.separator).opacity(0.4), lineWidth: 1.5)

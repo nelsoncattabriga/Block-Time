@@ -21,18 +21,18 @@ struct OnboardingWelcomeView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "airplane.circle.fill")
                             .font(.system(size: 80))
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .padding(.top, 40)
 
                         VStack(spacing: 8) {
                             Text("Welcome to Block-Time")
                                 .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
+                                .bold()
+                                .foregroundStyle(.primary)
 
 //                            Text("Get started by migrating your data or setting up manually")
 //                                .font(.subheadline)
-//                                .foregroundColor(.secondary)
+//                                .foregroundStyle(.secondary)
 //                                .multilineTextAlignment(.center)
 //                                .padding(.horizontal)
                         }
@@ -48,7 +48,7 @@ struct OnboardingWelcomeView: View {
 //                                HStack {
 //                                    Image(systemName: "arrow.down.doc.fill")
 //                                        .font(.system(size: 40))
-//                                        .foregroundColor(.orange)
+//                                        .foregroundStyle(.orange)
 //                                    Spacer()
 //                                }
 //
@@ -56,18 +56,18 @@ struct OnboardingWelcomeView: View {
 //                                    Text("Migrate from Logger")
 //                                        .font(.title3)
 //                                        .fontWeight(.semibold)
-//                                        .foregroundColor(.primary)
+//                                        .foregroundStyle(.primary)
 //
 //                                    Text("Import your flights, settings, and aircraft from Logger")
 //                                        .font(.body)
-//                                        .foregroundColor(.secondary)
+//                                        .foregroundStyle(.secondary)
 //                                        .fixedSize(horizontal: false, vertical: true)
 //                                }
 //
 //                            }
 //                            .padding(20)
 //                            .background(Color.orange.opacity(0.1))
-//                            .cornerRadius(16)
+//                            .clipShape(.rect(cornerRadius: 16))
 //                            .overlay(
 //                                RoundedRectangle(cornerRadius: 16)
 //                                    .stroke(Color.orange.opacity(0.3), lineWidth: 2)
@@ -83,7 +83,7 @@ struct OnboardingWelcomeView: View {
                                 HStack {
                                     Image(systemName: "gearshape.fill")
                                         .font(.system(size: 40))
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
 //                                    Spacer()
                                     
                                 
@@ -91,11 +91,11 @@ struct OnboardingWelcomeView: View {
                                         Text("Initial Setup")
                                             .font(.title3)
                                             .fontWeight(.semibold)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
 
                                         Text("Configure Block-Time Settings")
                                             .font(.body)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
                                     
@@ -105,17 +105,17 @@ struct OnboardingWelcomeView: View {
 //                                    Text("Initial Setup")
 //                                        .font(.title3)
 //                                        .fontWeight(.semibold)
-//                                        .foregroundColor(.primary)
+//                                        .foregroundStyle(.primary)
 //
 //                                    Text("Configure Block-Time Settings")
 //                                        .font(.body)
-//                                        .foregroundColor(.secondary)
+//                                        .foregroundStyle(.secondary)
 //                                        .fixedSize(horizontal: false, vertical: true)
 //                                }
                             }
                             .padding(20)
                             .background(Color.blue.opacity(0.1))
-                            .cornerRadius(16)
+                            .clipShape(.rect(cornerRadius: 16))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
                                     .stroke(Color.blue.opacity(0.3), lineWidth: 2)

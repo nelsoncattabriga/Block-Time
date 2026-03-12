@@ -80,11 +80,11 @@ struct FilterAirportPickerSheet: View {
                                     Text("Use \"\(searchText.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())\"")
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                                 .background(Color.blue)
-                                .cornerRadius(20)
+                                .clipShape(.rect(cornerRadius: 20))
                             }
 
                             Spacer()
@@ -94,7 +94,7 @@ struct FilterAirportPickerSheet: View {
                                 searchText = ""
                             }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                         }
                         .padding(.horizontal)
@@ -109,9 +109,9 @@ struct FilterAirportPickerSheet: View {
                         Section {
                             HStack {
                                 Image(systemName: "magnifyingglass")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                                 Text("No matching airports found")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                             .padding(.vertical, 8)
                         }
@@ -128,27 +128,27 @@ struct FilterAirportPickerSheet: View {
                                             if let iataCode = AirportService.shared.convertToIATA(airport) {
                                                 Text(iataCode)
                                                     .font(.body)
-                                                    .foregroundColor(.primary)
+                                                    .foregroundStyle(.primary)
 
                                                 Text("/ \(airport)")
                                                     .font(.body)
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundStyle(.secondary)
                                             } else {
                                                 // No IATA code available, show ICAO only
                                                 Text(airport)
                                                     .font(.body)
-                                                    .foregroundColor(.primary)
+                                                    .foregroundStyle(.primary)
                                             }
                                         } else {
                                             // Display as ICAO (IATA)
                                             Text(airport)
                                                 .font(.body)
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
 
                                             if let iataCode = AirportService.shared.convertToIATA(airport) {
                                                 Text("/ \(iataCode)")
                                                     .font(.body)
-                                                    .foregroundColor(.secondary)
+                                                    .foregroundStyle(.secondary)
                                             }
                                         }
 
@@ -156,7 +156,7 @@ struct FilterAirportPickerSheet: View {
 
                                         if selectedAirport == airport {
                                             Image(systemName: "checkmark")
-                                                .foregroundColor(.blue)
+                                                .foregroundStyle(.blue)
                                         }
                                     }
                                 }
@@ -169,17 +169,17 @@ struct FilterAirportPickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedAirport.isEmpty {
                         Button("Clear") {
                             selectedAirport = ""
                             onDismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()

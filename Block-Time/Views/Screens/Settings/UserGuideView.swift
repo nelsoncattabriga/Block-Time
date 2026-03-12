@@ -60,7 +60,7 @@ struct UserGuideView: View {
             }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { navigator.goBack() } label: {
                     Image(systemName: "chevron.left")
                 }
@@ -84,7 +84,7 @@ struct UserGuideView: View {
         VStack(spacing: 20) {
             Image(systemName: "wifi.slash")
                 .font(.system(size: 60))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Text("Unable to Load Guide")
                 .font(.title2)
@@ -92,7 +92,7 @@ struct UserGuideView: View {
 
             Text("Check your internet connection and try again.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 

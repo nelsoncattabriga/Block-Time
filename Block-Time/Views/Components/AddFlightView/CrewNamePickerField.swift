@@ -31,7 +31,7 @@ struct CrewNamePickerField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .frame(width: 80, alignment: .leading)
             
             Button(action: {
@@ -40,17 +40,17 @@ struct CrewNamePickerField: View {
             }) {
                 HStack {
                     Text(nameString.isEmpty ? "Select crew..." : nameString)
-                        .foregroundColor(nameString.isEmpty ? .secondary : .primary)
+                        .foregroundStyle(nameString.isEmpty ? .secondary : .primary)
                     Spacer()
                     Image(systemName: "person.2")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(Color(.systemGray6).opacity(0.75))
                 .autocapitalization(.words)
                 .disableAutocorrection(true)
-                .cornerRadius(6)
+                .clipShape(.rect(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
                         .stroke(Color(.systemGray4), lineWidth: 1)
@@ -132,11 +132,11 @@ struct CrewNamePickerSheet: View {
                                     Text("Use \"\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\"")
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                                 .background(Color.blue)
-                                .cornerRadius(20)
+                                .clipShape(.rect(cornerRadius: 20))
                             }
                             
                             Spacer()
@@ -146,7 +146,7 @@ struct CrewNamePickerSheet: View {
                                 searchText = ""
                             }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                         }
                         .padding(.horizontal)
@@ -172,18 +172,18 @@ struct CrewNamePickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedName.isEmpty {
                         Button("Clear Name") {
                             HapticManager.shared.impact(.medium)
                             selectedName = ""
                             onDismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()
@@ -220,14 +220,14 @@ struct CrewNamesList: View {
                         }) {
                             HStack {
                                 Image(systemName: "clock")
-                                    .foregroundColor(.blue)
+                                    .foregroundStyle(.blue)
                                     .font(.caption)
                                 Text(name)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 if selectedName == name {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                 }
                             }
                             .contentShape(Rectangle())
@@ -250,11 +250,11 @@ struct CrewNamesList: View {
                             }) {
                                 HStack {
                                     Text(name)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     Spacer()
                                     if selectedName == name {
                                         Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
                                     }
                                 }
                                 .contentShape(Rectangle())
@@ -266,7 +266,7 @@ struct CrewNamesList: View {
                                     onNameRemoved(name)
                                 }) {
                                     Image(systemName: "trash")
-                                        .foregroundColor(.red)
+                                        .foregroundStyle(.red)
                                         .font(.subheadline)
                                         .padding(8)
                                 }
@@ -279,9 +279,9 @@ struct CrewNamesList: View {
                 Section {
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                         Text("No matching names found")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                     }
                     .padding(.vertical, 8)
                 }
@@ -289,9 +289,9 @@ struct CrewNamesList: View {
                 Section {
                     HStack {
                         Image(systemName: "person.badge.plus")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                         Text("No saved names yet")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                     }
                     .padding(.vertical, 8)
                 }

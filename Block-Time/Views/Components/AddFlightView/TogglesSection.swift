@@ -25,7 +25,7 @@ struct ModernTogglesSection: View {
                         }) {
                             Text("PF")
                                 .font(.subheadline.bold())
-                                .foregroundColor(viewModel.isPilotFlying ? .white : .secondary)
+                                .foregroundStyle(viewModel.isPilotFlying ? .white : .secondary)
                                 .frame(width: 55, height: 30)
                                 .background(viewModel.isPilotFlying ? Color.green : Color.clear)
                                 .contentShape(Rectangle())
@@ -43,7 +43,7 @@ struct ModernTogglesSection: View {
                         }) {
                             Text("PM")
                                 .font(.subheadline.bold())
-                                .foregroundColor(!viewModel.isPilotFlying ? .white : .secondary)
+                                .foregroundStyle(!viewModel.isPilotFlying ? .white : .secondary)
                                 .frame(width: 55, height: 30)
                                 .background(!viewModel.isPilotFlying ? Color.gray : Color.clear)
                                 .contentShape(Rectangle())
@@ -87,7 +87,7 @@ struct ModernTogglesSection: View {
                     }) {
                         Text("P1")
                             .font(.footnote.bold())
-                            .foregroundColor(viewModel.selectedTimeCredit == .p1 ? .white : .secondary)
+                            .foregroundStyle(viewModel.selectedTimeCredit == .p1 ? .white : .secondary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 24)
                             .background(viewModel.selectedTimeCredit == .p1 ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
@@ -109,7 +109,7 @@ struct ModernTogglesSection: View {
                     }) {
                         Text("ICUS")
                             .font(.footnote.bold())
-                            .foregroundColor(viewModel.selectedTimeCredit == .p1us ? .white : .secondary)
+                            .foregroundStyle(viewModel.selectedTimeCredit == .p1us ? .white : .secondary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 24)
                             .background(viewModel.selectedTimeCredit == .p1us ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
@@ -131,7 +131,7 @@ struct ModernTogglesSection: View {
                     }) {
                         Text("P2")
                             .font(.footnote.bold())
-                            .foregroundColor(viewModel.selectedTimeCredit == .p2 ? .white : .secondary)
+                            .foregroundStyle(viewModel.selectedTimeCredit == .p2 ? .white : .secondary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 24)
                             .background(viewModel.selectedTimeCredit == .p2 ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
@@ -142,7 +142,7 @@ struct ModernTogglesSection: View {
                         .opacity(viewModel.isPositioning ? 0.5 : 1.0)
                     }
                     .background(Color(.secondarySystemBackground))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.blue.opacity(0.2), lineWidth: 1)
@@ -155,7 +155,7 @@ struct ModernTogglesSection: View {
 
             .padding(12)
             .background(Color(.systemGray6).opacity(0.75))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
 
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
@@ -167,7 +167,7 @@ struct ModernTogglesSection: View {
                 HStack {
                     Text("T/O & LDG")
                         .font(.caption.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Spacer()
                 }
 
@@ -228,7 +228,7 @@ struct ModernToggle: View {
         VStack(spacing: 4) {
             Text(title)
                 .font(.subheadline.bold())
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Toggle("", isOn: $isOn)
                 .labelsHidden()
@@ -261,7 +261,7 @@ struct ModernApproachToggle: View {
         HStack(spacing: 8) {
             Text("APP")
                 .font(.subheadline.bold())
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Button(action: {
                 if !isDisabled {
@@ -272,15 +272,15 @@ struct ModernApproachToggle: View {
                 HStack(spacing: 4) {
                     Text(displayText)
                         .font(.footnote.bold())
-                        .foregroundColor(isOn ? .white : .secondary)
+                        .foregroundStyle(isOn ? .white : .secondary)
 
                     Image(systemName: "chevron.down")
                         .font(.caption2)
-                        .foregroundColor(isOn ? .white : .secondary)
+                        .foregroundStyle(isOn ? .white : .secondary)
                 }
                 .frame(width: 64, height: 28)
                 .background(isOn ? Color.orange.opacity(0.8) : Color(.secondarySystemBackground))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
@@ -344,7 +344,7 @@ struct TimeCreditRadioButton: View {
                 // Title
                 Text(title)
                     .font(.subheadline.bold())
-                    .foregroundColor(isSelected ? color : .secondary)
+                    .foregroundStyle(isSelected ? color : .secondary)
 
             }
             .frame(maxWidth: .infinity)

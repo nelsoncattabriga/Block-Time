@@ -1,0 +1,50 @@
+ Based on the original review, here's what remains:
+
+  Remaining items
+
+  ┌─────┬────────────────────────────────────────────────┬──────────────────────────────────────────────────────────┬────────────────────────┐
+  │  #  │                     Issue                      │                          Scope                           │         Effort         │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 4   │ .navigationBarLeading/Trailing →               │ 50+ toolbar items, ~20 files                             │ Low — mechanical       │
+  │     │ .topBarLeading/Trailing                        │                                                          │ find/replace           │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 5   │ tabItem {} → Tab API + enum selection          │ MainTabView.swift                                        │ Low                    │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 6   │ foregroundColor() → foregroundStyle()          │ 60+ calls, ~10 files                                     │ Low — mechanical       │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 7   │ .cornerRadius() →                              │ 50+ calls, ~15 files                                     │ Low — mechanical       │
+  │     │ clipShape(.rect(cornerRadius:))                │                                                          │                        │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 8   │ Computed some View properties → extracted View │ ~15 properties across FRMSView, NewDashboardView,        │ Medium                 │
+  │     │  structs                                       │ PaywallView, DashboardCardView, etc.                     │                        │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 9   │ .overlay(Shape) old form → .overlay { Shape }  │ 4 files                                                  │ Low                    │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 10  │ String(format:) → FormatStyle in user-facing   │ FlightDatabaseService, FRMSCalculationService            │ Medium — needs context │
+  │     │ service output                                 │                                                          │  per call              │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 11  │ GeometryReader in AddFlightView                │ 1 file                                                   │ Low                    │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 12  │ fontWeight(.bold) → bold()                     │ 2+ files                                                 │ Low                    │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 13  │ Multiple types per file in AppDesign.swift     │ 1 file                                                   │ Low                    │
+  ├─────┼────────────────────────────────────────────────┼──────────────────────────────────────────────────────────┼────────────────────────┤
+  │ 14  │ Task.detached in LogViewerView                 │ Already fixed in item 3 ✅                               │ —                      │
+  └─────┴────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┴────────────────────────┘
+
+  Not yet migrated from item 2
+
+  - FlightTimeExtractorViewModel — still ObservableObject (medium complexity, NotificationCenter observers, 30+ @Published)
+  - FlightDatabaseService, AutomaticBackupService — still ObservableObject + DispatchQueue in services layer
+
+  Prioritised order
+
+  Items 4, 6, 7 are pure find/replace with no risk. 5 is a small self-contained change. 8 has the most architectural impact. 10 requires care per
+   call site. 2 (remaining) is the most complex outstanding work.
+
+❯ save this so we can come back to this later                                                                             
+
+
+Saved. Next time just say "continue the SwiftUI review" and I'll pick up from item 4.
+
+

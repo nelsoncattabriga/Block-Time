@@ -19,13 +19,13 @@ struct ModernActionButtonsCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "paperplane.fill")
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                     .font(.title3)
 
                 Text("Actions")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -153,7 +153,7 @@ struct ModernActionButtonsCard: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)

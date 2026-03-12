@@ -183,11 +183,11 @@ struct FlightSectorRow: View, Equatable {
                 VStack(spacing: 0) {
                     Text(cachedDayOfMonth)
                         .font(.title.bold())
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .blue.opacity(0.8))
+                        .foregroundStyle(cachedIsFutureFlight ? Color.secondary : Color.blue.opacity(0.8))
 
                     Text(cachedFormattedDate)
                         .font(.subheadline.bold())
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
+                        .foregroundStyle(cachedIsFutureFlight ? .secondary : .primary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -215,38 +215,38 @@ struct FlightSectorRow: View, Equatable {
                         // Show "Sim" for simulator flights, "Flt" for regular flights
                         Text(sector.simTimeValue > 0 ? "Sim" : "Flt")
                             .font(.headline)
-                            .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
+                            .foregroundStyle(cachedIsFutureFlight ? .secondary : .primary)
                     }
 
                     //Flight Number
                     Text("\(sector.flightNumberFormatted)")
                         .font(.headline)
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
+                        .foregroundStyle(cachedIsFutureFlight ? .secondary : .primary)
 
                     Spacer()
 
                     // Route Details
                     Text(cachedFromAirportCode)
                         .font(.headline)
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .blue.opacity(0.7))
+                        .foregroundStyle(cachedIsFutureFlight ? Color.secondary : Color.blue.opacity(0.7))
 
                     // Only show airplane icon if not a SIM flight, or if SIM flight has airports
                     if sector.simTimeValue == 0 || (!sector.fromAirport.isEmpty && !sector.toAirport.isEmpty) {
                         Image(systemName: "airplane")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Text(cachedToAirportCode)
                         .font(.headline)
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .blue.opacity(0.7))
+                        .foregroundStyle(cachedIsFutureFlight ? Color.secondary : Color.blue.opacity(0.7))
                 }
 
                 // Rego
                 HStack {
                     Text(sector.aircraftReg.isEmpty ? "" : "\(sector.aircraftReg)")
                         .font(.subheadline.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .italic(sector.aircraftReg.isEmpty)
 
                     // PAX Badge if Posiitoning Flight
@@ -254,12 +254,12 @@ struct FlightSectorRow: View, Equatable {
                         HStack{
                         Text("PAX")
                                 .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.orange)
+                                .bold()
+                                .foregroundStyle(.orange)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 2)
                                 .background(Color.orange.opacity(0.2))
-                                .cornerRadius(4)
+                                .clipShape(.rect(cornerRadius: 4))
                         }
                     }
                     
@@ -269,7 +269,7 @@ struct FlightSectorRow: View, Equatable {
                     // OUT & IN Times
                     Text(cachedOutTime)
                         .font(.subheadline)
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
+                        .foregroundStyle(cachedIsFutureFlight ? .secondary : .primary)
 
                     // Show arrow if we have both times (actual or scheduled)
                     let hasOutTime = !sector.outTime.isEmpty || !sector.scheduledDeparture.isEmpty
@@ -277,12 +277,12 @@ struct FlightSectorRow: View, Equatable {
                     if hasOutTime && hasInTime {
                         Image(systemName: "arrow.right")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Text(cachedInTime)
                         .font(.subheadline)
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
+                        .foregroundStyle(cachedIsFutureFlight ? .secondary : .primary)
                 }
 
                 // Aircraft Type
@@ -290,7 +290,7 @@ struct FlightSectorRow: View, Equatable {
                     if !isPositioning {
                         Text("\(sector.aircraftType)")
                             .font(.footnote.bold())
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer()
 
@@ -298,25 +298,25 @@ struct FlightSectorRow: View, Equatable {
                     if cachedIsFutureFlight {
                         Text("")
                             .font(.subheadline.italic())
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     } else if !isPositioning {
                         // Don't show flight hours or PF/PM badges for positioning flights
                         // For simulator flights, show sim time instead of block time
                         if sector.simTimeValue > 0 {
                             Text("\(sector.getFormattedSimTime(asHoursMinutes: showTimesInHoursMinutes))")
                                     .font(.headline.bold())
-                                    .foregroundColor(.purple.opacity(0.8))
+                                    .foregroundStyle(.purple.opacity(0.8))
                         } else {
                             Text("\(sector.getFormattedBlockTime(asHoursMinutes: showTimesInHoursMinutes, roundingMode: roundingMode))")
                                     .font(.headline.bold())
-                                    .foregroundColor(.orange.opacity(0.8))
+                                    .foregroundStyle(.orange.opacity(0.8))
                         }
 
                         // PF and PM Badges
                         if sector.isPilotFlying {
                             Text("PF")
                                 .font(.subheadline.monospaced())
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 2)
                                 .overlay(
@@ -326,7 +326,7 @@ struct FlightSectorRow: View, Equatable {
                         } else {
                             Text("PM")
                                 .font(.subheadline.monospaced())
-                                .foregroundColor(.secondary.opacity(0.5))
+                                .foregroundStyle(.secondary.opacity(0.5))
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 2)
                                 .overlay(
@@ -344,8 +344,8 @@ struct FlightSectorRow: View, Equatable {
                         Text(cachedCrewNames)
                             .font(.footnote)
                             .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
-                            //.foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
+                            .foregroundStyle(.secondary)
+                            //.foregroundStyle(cachedIsFutureFlight ? .secondary : .primary)
                     }
                 }
             }

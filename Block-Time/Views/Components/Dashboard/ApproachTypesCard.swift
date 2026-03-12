@@ -111,7 +111,7 @@ struct ApproachTypesCard: View {
     private func approachRow(item: NDApproachTypeStat) -> some View {
         HStack(spacing: 10) {
             Text(item.typeName)
-                .iPadScaledFont(.caption).fontWeight(.bold)
+                .iPadScaledFont(.caption).bold()
                 .foregroundStyle(item.color)
                 .frame(width: 36, alignment: .leading)
 

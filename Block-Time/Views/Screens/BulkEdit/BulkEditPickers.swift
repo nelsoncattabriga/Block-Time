@@ -56,7 +56,7 @@ struct BulkEditFlightTypeToggle: View {
                     Text("(Mixed)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
@@ -74,7 +74,7 @@ struct BulkEditFlightTypeToggle: View {
                     }) {
                         Text("FLT")
                             .font(.subheadline.bold())
-                            .foregroundColor(currentType == .flight ? .white : .secondary)
+                            .foregroundStyle(currentType == .flight ? .white : .secondary)
                             .frame(width: 55, height: 28)
                             .background(currentType == .flight ? Color.blue : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
@@ -92,7 +92,7 @@ struct BulkEditFlightTypeToggle: View {
                     }) {
                         Text("PAX")
                             .font(.subheadline.bold())
-                            .foregroundColor(currentType == .positioning ? .white : .secondary)
+                            .foregroundStyle(currentType == .positioning ? .white : .secondary)
                             .frame(width: 55, height: 28)
                             .background(currentType == .positioning ? Color.orange : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
@@ -110,7 +110,7 @@ struct BulkEditFlightTypeToggle: View {
                     }) {
                         Text("SIM")
                             .font(.subheadline.bold())
-                            .foregroundColor(currentType == .simulator ? .white : .secondary)
+                            .foregroundStyle(currentType == .simulator ? .white : .secondary)
                             .frame(width: 55, height: 28)
                             .background(currentType == .simulator ? Color.purple : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
@@ -118,7 +118,7 @@ struct BulkEditFlightTypeToggle: View {
                     .buttonStyle(PlainButtonStyle())
                 }
                 .background(Color(.secondarySystemBackground))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
@@ -156,7 +156,7 @@ struct BulkEditPilotRoleSegmentedPicker: View {
                     Text("(Mixed)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
@@ -174,7 +174,7 @@ struct BulkEditPilotRoleSegmentedPicker: View {
                     }) {
                         Text("PF")
                             .font(.subheadline.bold())
-                            .foregroundColor(isPilotFlying ? .white : .secondary)
+                            .foregroundStyle(isPilotFlying ? .white : .secondary)
                             .frame(width: 55, height: 28)
                             .background(isPilotFlying ? Color.green : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
@@ -192,7 +192,7 @@ struct BulkEditPilotRoleSegmentedPicker: View {
                     }) {
                         Text("PM")
                             .font(.subheadline.bold())
-                            .foregroundColor(!isPilotFlying ? .white : .secondary)
+                            .foregroundStyle(!isPilotFlying ? .white : .secondary)
                             .frame(width: 55, height: 28)
                             .background(!isPilotFlying ? Color.gray : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
@@ -200,7 +200,7 @@ struct BulkEditPilotRoleSegmentedPicker: View {
                     .buttonStyle(PlainButtonStyle())
                 }
                 .background(Color(.secondarySystemBackground))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
@@ -248,7 +248,7 @@ struct BulkEditTimeCreditRadioButton: View {
                     Text("(Mixed)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .background(
@@ -268,7 +268,7 @@ struct BulkEditTimeCreditRadioButton: View {
                     }) {
                         Text("P1")
                             .font(.subheadline.bold())
-                            .foregroundColor(selectedCredit == .p1 ? .white : .secondary)
+                            .foregroundStyle(selectedCredit == .p1 ? .white : .secondary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 28)
                             .background(selectedCredit == .p1 ? Color.blue : Color(.secondarySystemBackground))
@@ -291,7 +291,7 @@ struct BulkEditTimeCreditRadioButton: View {
                     }) {
                         Text("P1US")
                             .font(.subheadline.bold())
-                            .foregroundColor(selectedCredit == .p1us ? .white : .secondary)
+                            .foregroundStyle(selectedCredit == .p1us ? .white : .secondary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 28)
                             .background(selectedCredit == .p1us ? Color.blue : Color(.secondarySystemBackground))
@@ -314,7 +314,7 @@ struct BulkEditTimeCreditRadioButton: View {
                     }) {
                         Text("P2")
                             .font(.subheadline.bold())
-                            .foregroundColor(selectedCredit == .p2 ? .white : .secondary)
+                            .foregroundStyle(selectedCredit == .p2 ? .white : .secondary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 28)
                             .background(selectedCredit == .p2 ? Color.blue : Color(.secondarySystemBackground))
@@ -325,7 +325,7 @@ struct BulkEditTimeCreditRadioButton: View {
                     .opacity(isActuallyDisabled ? 0.5 : 1.0)
                 }
                 .background(Color(.secondarySystemBackground))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
@@ -393,16 +393,16 @@ struct BulkEditApproachPicker: View {
                 HStack(spacing: 4) {
                     Text(displayText)
                         .font(.subheadline.bold())
-                        .foregroundColor(isOn ? .white : .secondary)
+                        .foregroundStyle(isOn ? .white : .secondary)
 
                     Image(systemName: "chevron.down")
                         .font(.caption2)
-                        .foregroundColor(isOn ? .white : .secondary)
+                        .foregroundStyle(isOn ? .white : .secondary)
                 }
                 .frame(height: 28)
                 .padding(.horizontal, 12)
                 .background(isOn ? Color.orange : Color(.secondarySystemBackground))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
@@ -453,7 +453,7 @@ struct BulkEditPrefixManager: View {
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             VStack(spacing: 8) {
                 // Operation Selector
@@ -468,7 +468,7 @@ struct BulkEditPrefixManager: View {
                         Text("(Mixed)")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                             .background(
@@ -487,7 +487,7 @@ struct BulkEditPrefixManager: View {
                         }) {
                             Text("No Change")
                                 .font(.subheadline.bold())
-                                .foregroundColor(selectedOperation == .noChange ? .white : .secondary)
+                                .foregroundStyle(selectedOperation == .noChange ? .white : .secondary)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 28)
                                 .background(selectedOperation == .noChange ? Color.gray : Color(.secondarySystemBackground))
@@ -506,7 +506,7 @@ struct BulkEditPrefixManager: View {
                         }) {
                             Text("Add")
                                 .font(.subheadline.bold())
-                                .foregroundColor(selectedOperation == .add ? .white : .secondary)
+                                .foregroundStyle(selectedOperation == .add ? .white : .secondary)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 28)
                                 .background(selectedOperation == .add ? Color.green : Color(.secondarySystemBackground))
@@ -525,7 +525,7 @@ struct BulkEditPrefixManager: View {
                         }) {
                             Text("Remove")
                                 .font(.subheadline.bold())
-                                .foregroundColor(selectedOperation == .remove ? .white : .secondary)
+                                .foregroundStyle(selectedOperation == .remove ? .white : .secondary)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 28)
                                 .background(selectedOperation == .remove ? Color.red : Color(.secondarySystemBackground))
@@ -534,7 +534,7 @@ struct BulkEditPrefixManager: View {
                         .buttonStyle(PlainButtonStyle())
                     }
                     .background(Color(.secondarySystemBackground))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
@@ -554,7 +554,7 @@ struct BulkEditPrefixManager: View {
                     .font(.body)
                     .padding(10)
                     .background(Color(.secondarySystemBackground))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(isPrefixFieldFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)

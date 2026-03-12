@@ -53,11 +53,11 @@ struct FilterTextPickerSheet: View {
                                     Text("Use \"\(searchText.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())\"")
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                                 .background(Color.blue)
-                                .cornerRadius(20)
+                                .clipShape(.rect(cornerRadius: 20))
                             }
 
                             Spacer()
@@ -67,7 +67,7 @@ struct FilterTextPickerSheet: View {
                                 searchText = ""
                             }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                         }
                         .padding(.horizontal)
@@ -82,9 +82,9 @@ struct FilterTextPickerSheet: View {
                         Section {
                             HStack {
                                 Image(systemName: "magnifyingglass")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                                 Text("No matching \(title.lowercased()) found")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                             .padding(.vertical, 8)
                         }
@@ -98,13 +98,13 @@ struct FilterTextPickerSheet: View {
                                     HStack {
                                         Text(value)
                                             .font(.body)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
 
                                         Spacer()
 
                                         if selectedValue == value {
                                             Image(systemName: "checkmark")
-                                                .foregroundColor(.blue)
+                                                .foregroundStyle(.blue)
                                         }
                                     }
                                 }
@@ -117,17 +117,17 @@ struct FilterTextPickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedValue.isEmpty {
                         Button("Clear") {
                             selectedValue = ""
                             onDismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()

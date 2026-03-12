@@ -8,13 +8,13 @@ struct ModernManualEntryDataCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "person.2.fill")
-                    .foregroundColor(.purple)
+                    .foregroundStyle(.purple)
                     .font(.title3)
 
                 Text("Crew & Ops Data")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -101,7 +101,7 @@ struct ModernManualEntryDataCard: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)

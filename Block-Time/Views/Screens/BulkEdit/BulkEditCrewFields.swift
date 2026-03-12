@@ -25,11 +25,11 @@ struct BulkEditCrewField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .frame(width: 20)
 
                 Button(action: {
@@ -39,13 +39,13 @@ struct BulkEditCrewField: View {
                     HStack {
                         Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select crew..." : textValue))
                             .font(.body)
-                            .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
+                            .foregroundStyle(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
 
                         Spacer()
 
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .contentShape(Rectangle())
                 }
@@ -53,7 +53,7 @@ struct BulkEditCrewField: View {
             }
             .padding(10)
             .background(Color(.secondarySystemBackground))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .sheet(isPresented: $showingPicker) {
                 CrewNamePickerSheet(
                     title: label,
@@ -102,11 +102,11 @@ struct BulkEditOptionalCrewField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .frame(width: 20)
 
                 Button(action: {
@@ -116,13 +116,13 @@ struct BulkEditOptionalCrewField: View {
                     HStack {
                         Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select crew..." : textValue))
                             .font(.body)
-                            .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
+                            .foregroundStyle(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
 
                         Spacer()
 
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .contentShape(Rectangle())
                 }
@@ -130,7 +130,7 @@ struct BulkEditOptionalCrewField: View {
             }
             .padding(10)
             .background(Color(.secondarySystemBackground))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .sheet(isPresented: $showingPicker) {
                 CrewNamePickerSheet(
                     title: label,

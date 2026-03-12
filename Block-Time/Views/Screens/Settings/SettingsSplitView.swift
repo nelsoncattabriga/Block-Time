@@ -103,15 +103,15 @@ private struct SettingsCategoriesListContent: View {
                             Text(category.rawValue)
                                 .font(.headline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
                             Text(category.subtitle)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     } icon: {
                         Image(systemName: category.icon)
-                            .foregroundColor(category.color)
+                            .foregroundStyle(category.color)
                             .font(.title3)
                             .frame(width: 32, height: 32)
                             .background(category.color.opacity(0.15))
@@ -148,16 +148,16 @@ private struct EmptySettingsDetailView: View {
         VStack(spacing: 20) {
             Image(systemName: "gearshape.2")
                 .font(.system(size: 80))
-                .foregroundColor(.gray.opacity(0.5))
+                .foregroundStyle(.gray.opacity(0.5))
 
             Text("Select a Setting")
                 .font(.title2)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text("Choose a category from the sidebar")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }

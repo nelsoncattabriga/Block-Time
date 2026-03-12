@@ -33,7 +33,7 @@ struct ExportLogbookView: View {
             .navigationTitle("Export Logbook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
@@ -70,11 +70,11 @@ struct ExportLogbookView: View {
             VStack(spacing: 12) {
                 Image(systemName: "square.and.arrow.up.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(.indigo)
+                    .foregroundStyle(.indigo)
 
                 Text("Export Logbook")
                     .font(.title2)
-                    .fontWeight(.bold)
+                    .bold()
             }
             .padding(.top)
 
@@ -82,15 +82,15 @@ struct ExportLogbookView: View {
             VStack(spacing: 8) {
                 Text("\(flightCount)")
                     .font(.system(size: 48, weight: .bold))
-                    .foregroundColor(.indigo)
+                    .foregroundStyle(.indigo)
 
                 Text(flightCount == 1 ? "flight to export" : "flights to export")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .padding()
             .background(Color.indigo.opacity(0.1))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .padding(.horizontal)
 
             // Instructions
@@ -112,7 +112,7 @@ struct ExportLogbookView: View {
             }
             .padding()
             .background(Color.indigo.opacity(0.1))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .padding(.horizontal)
 
             Spacer()
@@ -127,16 +127,16 @@ struct ExportLogbookView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .indigo))
                     } else {
                         Image(systemName: "square.and.arrow.up.fill")
-                            .foregroundColor(.indigo)
+                            .foregroundStyle(.indigo)
                     }
                     Text(isExporting ? "Exporting..." : "Export Logbook")
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(Color.indigo.opacity(0.12))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.indigo.opacity(0.4), lineWidth: 1)
@@ -155,18 +155,18 @@ struct ExportLogbookView: View {
             // Success Icon
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
                 .padding(.top)
 
             // Summary
             VStack(spacing: 8) {
                 Text("Export Complete")
                     .font(.title2)
-                    .fontWeight(.bold)
+                    .bold()
 
                 Text("Successfully exported \(flightCount) flight\(flightCount == 1 ? "" : "s")")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -175,25 +175,25 @@ struct ExportLogbookView: View {
                 HStack(spacing: 16) {
                     Image(systemName: "doc.fill")
                         .font(.title2)
-                        .foregroundColor(.indigo)
+                        .foregroundStyle(.indigo)
                         .frame(width: 32)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(flightCount)")
                             .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
+                            .bold()
+                            .foregroundStyle(.primary)
 
                         Text(flightCount == 1 ? "Flight Exported" : "Flights Exported")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
                 }
                 .padding()
                 .background(Color.indigo.opacity(0.1))
-                .cornerRadius(12)
+                .clipShape(.rect(cornerRadius: 12))
             }
             .padding(.horizontal)
 
@@ -206,15 +206,15 @@ struct ExportLogbookView: View {
                 }) {
                     HStack {
                         Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(.indigo)
+                            .foregroundStyle(.indigo)
                         Text("Share Export File")
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.indigo.opacity(0.12))
-                    .cornerRadius(12)
+                    .clipShape(.rect(cornerRadius: 12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.indigo.opacity(0.4), lineWidth: 1)
@@ -230,8 +230,8 @@ struct ExportLogbookView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color(.systemGray6))
-                        .foregroundColor(.secondary)
-                        .cornerRadius(12)
+                        .foregroundStyle(.secondary)
+                        .clipShape(.rect(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color(.systemGray4), lineWidth: 1)
@@ -321,7 +321,7 @@ private struct InstructionRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(.indigo)
+                .foregroundStyle(.indigo)
                 .frame(width: 24)
 
             Text(text)

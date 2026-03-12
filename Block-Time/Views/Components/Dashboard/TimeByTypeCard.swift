@@ -71,7 +71,7 @@ struct TimeByTypeCard: View {
                                 angularInset: 1.5
                             )
                             .foregroundStyle(fleetColor(at: index))
-                            .cornerRadius(4)
+                            .clipShape(.rect(cornerRadius: 4))
                         }
 
                         VStack(spacing: 2) {

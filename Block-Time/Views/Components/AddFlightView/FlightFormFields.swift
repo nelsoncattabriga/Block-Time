@@ -63,13 +63,13 @@ struct ModernDatePickerField: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 // Custom button so we fully control the date label text.
                 // The compact DatePicker renders its own button label using an
@@ -79,7 +79,7 @@ struct ModernDatePickerField: View {
                 } label: {
                     Text(Self.displayFormatter.string(from: selectedDate))
                         .font(.subheadline.bold())
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
             }
@@ -91,16 +91,16 @@ struct ModernDatePickerField: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Local Date")
                         .font(.caption.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text(Self.displayFormatter.string(from: localDateValue))
                         .font(.subheadline.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .sheet(isPresented: $showingPicker) {
             VStack(spacing: 0) {
                 DatePicker("", selection: $selectedDate, displayedComponents: .date)
@@ -145,23 +145,23 @@ struct ModernAircraftRegField: View {
         }) {
             HStack {
                 Image(systemName: "airplane")
-                    .foregroundColor(isDisabled ? .gray : .blue)
+                    .foregroundStyle(isDisabled ? .gray : .blue)
                     .frame(width: 20)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("A/C REGISTRATION")
                         .font(.caption.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
 
                     HStack(alignment: .bottom, spacing: 8) {
                         Text(viewModel.aircraftReg.isEmpty ? "Select aircraft" : viewModel.aircraftReg)
                             .font(.subheadline.bold())
-                            .foregroundColor(viewModel.aircraftReg.isEmpty ? .secondary : .primary)
+                            .foregroundStyle(viewModel.aircraftReg.isEmpty ? .secondary : .primary)
 
                         if !viewModel.aircraftReg.isEmpty && !viewModel.aircraftType.isEmpty {
                             Text(viewModel.aircraftType)
                                 .font(.caption.bold())
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -171,16 +171,16 @@ struct ModernAircraftRegField: View {
                 if isDisabled {
                     Image(systemName: "lock.fill")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.gray)
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(12)
             .background(Color(.systemGray6).opacity(0.75))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(isDisabled)
@@ -233,28 +233,28 @@ struct ModernAirportField: View {
         Button(action: { showingPicker = true }) {
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .frame(width: 20)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
                         .font(.caption.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
 
                     Text(displayCode.isEmpty ? placeholderText : displayCode)
                         .font(.subheadline.bold())
-                        .foregroundColor(displayCode.isEmpty ? .secondary.opacity(0.5) : .primary)
+                        .foregroundStyle(displayCode.isEmpty ? Color.secondary.opacity(0.5) : Color.primary)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
             .padding(12)
             .background(Color(.systemGray6).opacity(0.75))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingPicker) {
@@ -296,17 +296,17 @@ struct ModernCrewField: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(isDisabled ? .gray : .blue)
+                .foregroundStyle(isDisabled ? .gray : .blue)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 Text(value.isEmpty ? "Select crew" : value)
                     .font(.subheadline.bold())
-                    .foregroundColor(value.isEmpty ? .secondary : .primary)
+                    .foregroundStyle(value.isEmpty ? .secondary : .primary)
             }
 
             Spacer()
@@ -314,16 +314,16 @@ struct ModernCrewField: View {
             if isDisabled {
                 Image(systemName: "lock.fill")
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
             } else {
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .contentShape(Rectangle())
         .onTapGesture {
             if !isDisabled {
@@ -367,13 +367,13 @@ struct ModernFlightNumberField: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 TextField(placeholder, text: $value)
                     .font(.subheadline.bold())
@@ -408,12 +408,12 @@ struct ModernFlightNumberField: View {
 
                         Image(systemName: "airplane.path.dotted")
                             .font(.system(size: 25))
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .opacity(canSearch ? 1.0 : 0.4)
 
                         Text("Online Search")
                             .font(.caption.bold())
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .opacity(canSearch ? 1.0 : 0.4)
                     }
                 }
@@ -422,7 +422,7 @@ struct ModernFlightNumberField: View {
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .contentShape(Rectangle())
         .onTapGesture {
             textFieldFocused = true
@@ -476,13 +476,13 @@ struct ModernEditableField: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 TextField(placeholder, text: $value)
                     .font(.subheadline.bold())
@@ -508,7 +508,7 @@ struct ModernEditableField: View {
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .contentShape(Rectangle())
         .onTapGesture {
             textFieldFocused = true

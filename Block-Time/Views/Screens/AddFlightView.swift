@@ -18,31 +18,26 @@ struct AddFlightView: View {
 
     var body: some View {
 
-            GeometryReader { geometry in
-                // Use horizontal size class instead of hardcoded width
-                let useWideLayout = (horizontalSizeClass == .regular && geometry.size.width > 700) || geometry.size.width > 900
-
-                ScrollViewReader { scrollProxy in
-                    ScrollView {
-                        if useWideLayout {
-                            WideLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
-                                .id("top")
-                        } else {
-                            CompactLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
-                                .id("top")
-                        }
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    if horizontalSizeClass == .regular {
+                        WideLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                            .id("top")
+                    } else {
+                        CompactLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                            .id("top")
                     }
-                    .scrollContentBackground(.hidden)
-                    .background(
-                        ZStack {
-                            themeService.getGradient()
-                                .ignoresSafeArea()
-                        }
-                    )
-                    .onReceive(NotificationCenter.default.publisher(for: .scrollToTop)) { _ in
-                        withAnimation {
-                            scrollProxy.scrollTo("top", anchor: .top)
-                        }
+                }
+                .scrollContentBackground(.hidden)
+                .background(
+                    ZStack {
+                        themeService.getGradient()
+                            .ignoresSafeArea()
+                    }
+                )
+                .onReceive(NotificationCenter.default.publisher(for: .scrollToTop)) { _ in
+                    withAnimation {
+                        scrollProxy.scrollTo("top", anchor: .top)
                     }
                 }
             }
@@ -51,7 +46,7 @@ struct AddFlightView: View {
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 if !viewModel.isEditingMode && !isInSplitView {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button("Cancel") {
                             dismiss()
                         }
@@ -144,7 +139,7 @@ private struct CompactLayoutView: View {
             .toolbar {
                 // Only show back button when editing AND not in split view
                 if viewModel.isEditingMode && !isInSplitView {
-                    ToolbarItem(placement: .navigationBarLeading) {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button(action: {
                             if viewModel.hasUnsavedChanges {
                                 showingDiscardAlert = true
@@ -241,7 +236,7 @@ private struct WideLayoutView: View {
         .toolbar {
             // Only show back button when editing AND not in split view
             if viewModel.isEditingMode && !isInSplitView {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button(action: {
                         if viewModel.hasUnsavedChanges {
                             showingDiscardAlert = true

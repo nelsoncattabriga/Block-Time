@@ -59,7 +59,7 @@ struct NewDashboardView: View {
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { showingEditSheet = true } label: {
                         Image(systemName: "slider.horizontal.3")
                     }
@@ -118,7 +118,7 @@ struct NewDashboardView: View {
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { showingEditSheet = true } label: {
                         Image(systemName: "slider.horizontal.3")
                     }

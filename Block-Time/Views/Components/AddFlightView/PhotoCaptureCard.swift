@@ -34,13 +34,13 @@ struct ModernPhotoCaptureCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "camera.fill")
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
                     .font(.title3)
 
                 Text(cardTitle)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -60,13 +60,13 @@ struct ModernPhotoCaptureCard: View {
                     Text("Photos Library")
                         .font(.subheadline)
                 }
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
             }
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -102,23 +102,23 @@ struct ModernButtonContent: View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.title)
-                .foregroundColor(color)
+                .foregroundStyle(color)
 
             VStack(spacing: 2) {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Text(subtitle)
                     .font(.footnote)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .background(color.opacity(0.1))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(color.opacity(0.3), lineWidth: 1)
@@ -139,24 +139,24 @@ struct ModernActionButton: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundColor(isEnabled ? .white : .gray)
+                    .foregroundStyle(isEnabled ? .white : .gray)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(isEnabled ? .white : .gray)
+                        .foregroundStyle(isEnabled ? .white : .gray)
 
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(isEnabled ? .white.opacity(0.8) : .gray)
+                        .foregroundStyle(isEnabled ? .white.opacity(0.8) : .gray)
                 }
 
                 Spacer()
             }
             .padding(16)
             .background(isEnabled ? color.opacity(0.8) : Color.gray.opacity(0.3))
-            .cornerRadius(10)
+            .clipShape(.rect(cornerRadius: 10))
         }
         .disabled(!isEnabled)
         .buttonStyle(PlainButtonStyle())

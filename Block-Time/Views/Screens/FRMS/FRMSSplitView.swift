@@ -136,15 +136,15 @@ private struct FRMSSidebarContent: View {
                             Text(section.rawValue)
                                 .font(.headline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
                             Text(section.subtitle)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     } icon: {
                         Image(systemName: section.icon)
-                            .foregroundColor(section.color)
+                            .foregroundStyle(section.color)
                             .font(.title3)
                             .frame(width: 32, height: 32)
                             .background(section.color.opacity(0.15))
@@ -226,16 +226,16 @@ struct FRMSEmptyDetailView: View {
         VStack(spacing: 20) {
             Image(systemName: "clock.badge.checkmark")
                 .font(.system(size: 80))
-                .foregroundColor(.gray.opacity(0.5))
+                .foregroundStyle(.gray.opacity(0.5))
 
             Text("Select a Section")
                 .font(.title2)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text("Choose a category from the sidebar")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }

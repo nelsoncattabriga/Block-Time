@@ -119,7 +119,7 @@ struct ImportMappingView: View {
 //                Section {
 //                    Text("Map columns from your import file to logbook fields")
 //                        .font(.subheadline)
-//                        .foregroundColor(.secondary)
+//                        .foregroundStyle(.secondary)
 //                }
 
                 Section(header: Text("Import Mode")) {
@@ -134,10 +134,10 @@ struct ImportMappingView: View {
                     if importMode == .replace {
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                             Text("This will delete all existing flights")
                                 .font(.caption)
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                         }
                     }
                 }
@@ -158,7 +158,7 @@ struct ImportMappingView: View {
                                 .font(.subheadline)
                             Text("This will map imported aircraft registrations to aircraft type. Only use this if import data does not contain aircraft type information.")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
@@ -175,11 +175,11 @@ struct ImportMappingView: View {
                                 if !registrationMappings.isEmpty {
                                     Text("\(registrationMappings.filter { !$0.aircraftType.isEmpty }.count) mapped")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -229,16 +229,16 @@ struct ImportMappingView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Found \(importData.rows.count) rows to import")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         // Show mapping validation warnings
                         if !isValidMapping {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                                 Text("Some required fields are not mapped")
                                     .font(.caption)
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                             }
                         }
 
@@ -248,11 +248,11 @@ struct ImportMappingView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Unmapped required fields:")
                                     .font(.caption)
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                                 ForEach(unmappedRequired, id: \.id) { mapping in
                                     Text("• \(mapping.logbookField)")
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -262,13 +262,13 @@ struct ImportMappingView: View {
             .navigationTitle("Import Mapping")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Import") {
                         onImport(fieldMappings, importMode, enableRegistrationMapping ? registrationMappings : [])
                         dismiss()
@@ -493,19 +493,19 @@ struct FieldMappingRow: View {
                     .fontWeight(.semibold)
                 if mapping.isRequired {
                     Text("*")
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                 }
                 Spacer()
                 if mapping.supportsMultipleColumns && mapping.sourceColumns.count > 1 {
                     Text("\(mapping.sourceColumns.count) columns")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
 
             Text(mapping.logbookFieldDescription)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             // Column Selection
             if mapping.supportsMultipleColumns {
@@ -517,7 +517,7 @@ struct FieldMappingRow: View {
                         HStack {
                             if mapping.sourceColumns.isEmpty {
                                 Text("Not Mapped")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             } else {
                                 Text(mapping.sourceColumns.joined(separator: ", "))
                                     .lineLimit(1)
@@ -525,11 +525,11 @@ struct FieldMappingRow: View {
                             Spacer()
                             Image(systemName: "chevron.down")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         .padding(8)
                         .background(Color(.systemGray6).opacity(0.75))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                     }
                     .buttonStyle(.plain)
 
@@ -537,10 +537,10 @@ struct FieldMappingRow: View {
                         HStack(spacing: 4) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.caption)
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                             Text("Will sum all selected columns")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         .padding(.leading, 4)
                     }
@@ -554,8 +554,8 @@ struct FieldMappingRow: View {
                     }
                 )) {
                     Text("Not Mapped").tag(nil as String?)
-                    ForEach(availableHeaders.indices, id: \.self) { index in
-                        Text(availableHeaders[index]).tag(availableHeaders[index] as String?)
+                    ForEach(availableHeaders, id: \.self) { header in
+                        Text(header).tag(header as String?)
                     }
                 }
                 .pickerStyle(.menu)
@@ -585,32 +585,16 @@ struct ColumnPickerView: View {
                 Section {
                     Text("Select one or more columns to map to \(fieldName)")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section(header: Text("Available Columns")) {
-                    ForEach(availableHeaders.indices, id: \.self) { index in
-                        let header = availableHeaders[index]
-                        Button {
-                            toggleSelection(header)
-                        } label: {
-                            HStack {
-                                Text(header)
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                if selectedColumns.contains(header) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.accentColor)
-                                }
-                            }
-                        }
-                    }
+                    availableHeaderRows
                 }
 
                 if !selectedColumns.isEmpty {
                     Section(header: Text("Selected Columns")) {
-                        ForEach(selectedColumns.indices, id: \.self) { index in
-                            let column = selectedColumns[index]
+                        ForEach(Array(selectedColumns), id: \.self) { column in
                             HStack {
                                 Text(column)
                                 Spacer()
@@ -618,7 +602,7 @@ struct ColumnPickerView: View {
                                     selectedColumns.removeAll { $0 == column }
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -628,18 +612,37 @@ struct ColumnPickerView: View {
             .navigationTitle("Select Columns")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Clear All") {
                         selectedColumns.removeAll()
                     }
                     .disabled(selectedColumns.isEmpty)
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
                     .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var availableHeaderRows: some View {
+        ForEach(availableHeaders, id: \.self) { (header: String) in
+            Button {
+                toggleSelection(header)
+            } label: {
+                HStack {
+                    Text(header)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if selectedColumns.contains(header) {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(.tint)
+                    }
                 }
             }
         }
@@ -671,7 +674,7 @@ struct RegistrationTypeMappingView: View {
                 Section {
                     Text("Map registration patterns to aircraft types. Types will be automatically assigned during import.")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section {
@@ -696,12 +699,12 @@ struct RegistrationTypeMappingView: View {
                                 Spacer()
                                 Text("\(mapping.sampleRegistrations.count) aircraft")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
 
                             Text("Examples: \(mapping.sampleRegistrations.joined(separator: ", "))")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
 
                             Picker("Aircraft Type", selection: $mapping.aircraftType) {
                                 Text("Not Mapped").tag("")
@@ -729,13 +732,13 @@ struct RegistrationTypeMappingView: View {
             .navigationTitle("Map Aircraft Types")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
@@ -793,13 +796,13 @@ private struct PreviewRowView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Row \(rowNumber)")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             ForEach(fieldMappings, id: \.id) { mapping in
                 HStack(alignment: .top, spacing: 12) {
                     Text(mapping.logbookField + ":")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .frame(minWidth: 80, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -830,7 +833,7 @@ private struct PreviewRowView: View {
 
                             Text("(Sum: \(mapping.sourceColumns.joined(separator: " + ")))")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -839,7 +842,7 @@ private struct PreviewRowView: View {
         }
         .padding(8)
         .background(Color(.systemGray6).opacity(0.75))
-        .cornerRadius(6)
+        .clipShape(.rect(cornerRadius: 6))
     }
 }
 

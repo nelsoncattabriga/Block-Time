@@ -234,7 +234,7 @@ struct EditableCardWrapper<Content: View>: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                         .background(
                             Circle()
                                 .fill(Color(.systemBackground))

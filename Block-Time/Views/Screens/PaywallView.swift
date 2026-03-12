@@ -108,7 +108,7 @@ struct PaywallView: View {
 
             Text(purchaseService.isTrialActive ? "Unlock Block-Time" : "Your Trial Has Ended")
                 .font(.title)
-                .fontWeight(.bold)
+                .bold()
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
@@ -129,7 +129,7 @@ struct PaywallView: View {
                 featureRow(feature)
                 if feature.title != proFeatures.last?.title {
                     Divider()
-                        .overlay(.white.opacity(0.15))
+                        .overlay { Color.white.opacity(0.15) }
                 }
             }
         }
@@ -190,12 +190,12 @@ struct PaywallView: View {
                         ProgressView()
                             .tint(.white)
                         Text("Loading…")
-                            .fontWeight(.bold)
+                            .bold()
                     } else {
                         Image(systemName: "lock.open.fill")
                             .font(.subheadline)
                         Text(purchaseButtonTitle)
-                            .fontWeight(.bold)
+                            .bold()
                     }
                 }
                 .frame(maxWidth: .infinity)

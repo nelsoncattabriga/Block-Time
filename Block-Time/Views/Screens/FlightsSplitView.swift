@@ -52,7 +52,7 @@ struct FlightsSplitView: View {
                             .environmentObject(viewModel)
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbar {
-                                ToolbarItem(placement: .navigationBarTrailing) {
+                                ToolbarItem(placement: .topBarTrailing) {
                                     Button("Cancel") {
                                         isAddingNewFlight = false
                                         viewModel.resetAllFields()
@@ -69,7 +69,7 @@ struct FlightsSplitView: View {
                             .environmentObject(viewModel)
                             .id(flight.id) // Force view refresh when flight changes
                             .toolbar {
-                                ToolbarItem(placement: .navigationBarTrailing) {
+                                ToolbarItem(placement: .topBarTrailing) {
                                     Button {
                                         if viewModel.hasUnsavedChanges {
                                             showingDiscardAlert = true
@@ -198,13 +198,13 @@ private struct FlightsListContent: View {
                 HStack {
                     Text("\(filteredFlightSectors.count) \(filteredFlightSectors.count == 1 ? "Entry" : "Entries")")
                         .font(.headline.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Spacer()
 
                     Text("\(cachedTotalHours, specifier: "%.1f") hrs")
                         .font(.headline.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .padding()
                 .background(Color.clear)
@@ -213,7 +213,7 @@ private struct FlightsListContent: View {
                 if showSearchBar {
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .padding(.leading, 12)
 
                         TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
@@ -233,7 +233,7 @@ private struct FlightsListContent: View {
                                 shouldScrollToLastFlight = true
                             }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             .buttonStyle(PlainButtonStyle())
                             .padding(.trailing, 12)
@@ -241,7 +241,7 @@ private struct FlightsListContent: View {
                     }
                     .padding(.vertical, 8)
                     .background(Color(.systemGray6))
-                    .cornerRadius(10)
+                    .clipShape(.rect(cornerRadius: 10))
                     .padding(.horizontal)
                     .padding(.bottom, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -302,11 +302,11 @@ private struct FlightsListContent: View {
                             Text("Edit \(selectedFlightsForDeletion.count)")
                                 .font(.headline)
                         }
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 20)
                         .padding(.vertical, actionButtonVerticalPadding)
                         .background(selectedFlightsForDeletion.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
-                        .cornerRadius(actionButtonCornerRadius)
+                        .clipShape(.rect(cornerRadius: actionButtonCornerRadius))
                         .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
                     .disabled(selectedFlightsForDeletion.isEmpty)
@@ -322,11 +322,11 @@ private struct FlightsListContent: View {
                             Text("Delete \(selectedFlightsForDeletion.count)")
                                 .font(.headline)
                         }
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 20)
                         .padding(.vertical, actionButtonVerticalPadding)
                         .background(selectedFlightsForDeletion.isEmpty ? Color.red.opacity(0.5) : Color.red)
-                        .cornerRadius(actionButtonCornerRadius)
+                        .clipShape(.rect(cornerRadius: actionButtonCornerRadius))
                         .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
                     }
                     .disabled(selectedFlightsForDeletion.isEmpty)
@@ -341,7 +341,7 @@ private struct FlightsListContent: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .topBarLeading) {
                 HStack(spacing: 16) {
                     // Add new flight button - hide in select mode
                     if !isSelectMode {
@@ -388,7 +388,7 @@ private struct FlightsListContent: View {
             }
 
             if isSelectMode {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     // Show Select All / Deselect All button in select mode
                     if !filteredFlightSectors.isEmpty {
                         Button(action: {
@@ -404,13 +404,13 @@ private struct FlightsListContent: View {
                         }) {
                             let allSelected = selectedFlightsForDeletion == Set(filteredFlightSectors.map { $0.id })
                             Text(allSelected ? "Deselect All" : "Select All")
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                         }
                     }
                 }
             } else {
                 // Show search, sort and filter buttons in normal mode
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
                         HapticManager.shared.impact(.light)
 
@@ -460,7 +460,7 @@ private struct FlightsListContent: View {
                     .labelStyle(.iconOnly)
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
                         HapticManager.shared.impact(.light)
                         filterViewModel.sortOrderReversed.toggle()
@@ -473,7 +473,7 @@ private struct FlightsListContent: View {
                     .labelStyle(.iconOnly)
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
                         HapticManager.shared.impact(.light)
                         showingFilterSheet = true
@@ -1192,16 +1192,16 @@ private struct EmptyDetailView: View {
         VStack(spacing: 20) {
             Image(systemName: "airplane.circle")
                 .font(.system(size: 80))
-                .foregroundColor(.gray.opacity(0.5))
+                .foregroundStyle(.gray.opacity(0.5))
 
             Text("Select a Flight")
                 .font(.title2)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text("Tap a flight from the list to view or edit details")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
@@ -1209,7 +1209,7 @@ private struct EmptyDetailView: View {
             if !isSelectMode {
                 Text("or")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 // Add new flight button
                 Button(action: {
@@ -1222,11 +1222,11 @@ private struct EmptyDetailView: View {
                         Text("Add New Flight")
                             .font(.headline)
                     }
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(Color.blue)
-                    .cornerRadius(10)
+                    .clipShape(.rect(cornerRadius: 10))
                 }
             }
         }
@@ -1244,16 +1244,16 @@ private struct EmptyFlightsView: View {
         VStack(spacing: 20) {
             Image(systemName: "airplane.departure")
                 .font(.system(size: 60))
-                .foregroundColor(.gray)
+                .foregroundStyle(.gray)
 
             Text("No Flights Recorded")
                 .font(.title2)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text("Capture your first ACARS photo to start building your logbook or Import from Settings")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -1269,16 +1269,16 @@ private struct NoResultsView: View {
         VStack(spacing: 20) {
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .font(.system(size: 60))
-                .foregroundColor(.gray)
+                .foregroundStyle(.gray)
 
             Text("No Flights Match Filters")
                 .font(.title2)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text("Try adjusting your filter criteria")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
@@ -1289,11 +1289,11 @@ private struct NoResultsView: View {
                 Text("Clear All Filters")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                     .background(Color.blue)
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

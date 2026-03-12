@@ -13,13 +13,17 @@ enum FlightDestination: Hashable {
     case editFlight(FlightSector)
 }
 
+enum AppTab {
+    case logbook, dashboard, frms, settings
+}
+
 struct MainTabView: View {
     @StateObject private var viewModel = FlightTimeExtractorViewModel()
     @State private var flightsFilterViewModel = FlightsFilterViewModel()
     @State private var frmsViewModel = FRMSViewModel()
     @State private var userDefaultsService = UserDefaultsService()
     @State private var appState = AppState.shared
-    @State private var selectedTab = 0
+    @State private var selectedTab: AppTab = .logbook
     @State private var showingOnboarding = false
     @State private var showingOnboardingFlow = false
     @State private var showingMigrationImport = false
@@ -44,37 +48,24 @@ struct MainTabView: View {
     // MARK: - Tab Layout (for both iPhone and iPad)
     private var tabLayout: some View {
         TabView(selection: $selectedTab) {
-            FlightsSplitView(filterViewModel: flightsFilterViewModel)
-                .environmentObject(viewModel)
-                .tabItem {
-                    Image(systemName: "airplane.departure")
-                    Text("Logbook")
-                }
-                .tag(0)
+            Tab("Logbook", systemImage: "airplane.departure", value: AppTab.logbook) {
+                FlightsSplitView(filterViewModel: flightsFilterViewModel)
+                    .environmentObject(viewModel)
+            }
 
-            NewDashboardView(frmsViewModel: frmsViewModel)
-                .tabItem {
-                    Image(systemName: "chart.xyaxis.line")
-                    Text("Dashboard")
-                }
-                .tag(1)
+            Tab("Dashboard", systemImage: "chart.xyaxis.line", value: AppTab.dashboard) {
+                NewDashboardView(frmsViewModel: frmsViewModel)
+            }
 
-            FRMSSplitView(flightTimeVM: viewModel, frmsViewModel: frmsViewModel)
-                .tabItem {
-                    Image(systemName: "clock.badge.checkmark")
-                    Text("FRMS")
-                }
-                .tag(2)
+            Tab("FRMS", systemImage: "clock.badge.checkmark", value: AppTab.frms) {
+                FRMSSplitView(flightTimeVM: viewModel, frmsViewModel: frmsViewModel)
+            }
 
-            SettingsSplitView(viewModel: viewModel, frmsViewModel: frmsViewModel)
-                .environmentObject(viewModel)
-                .tabItem {
-                    Image(systemName: "gear")
-                    Text("Settings")
-                }
-                .badge(settingsTabBadge)
-                .tag(3)
-
+            Tab("Settings", systemImage: "gear", value: AppTab.settings) {
+                SettingsSplitView(viewModel: viewModel, frmsViewModel: frmsViewModel)
+                    .environmentObject(viewModel)
+            }
+            .badge(settingsTabBadge)
         }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingWelcomeView(

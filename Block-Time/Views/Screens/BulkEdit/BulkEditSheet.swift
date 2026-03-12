@@ -260,7 +260,7 @@ struct BulkEditSheet: View {
             .navigationTitle("Edit \(selectedFlights.count) Flight\(selectedFlights.count == 1 ? "" : "s")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         if bulkEditViewModel.hasModifications {
@@ -271,13 +271,13 @@ struct BulkEditSheet: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         saveChanges()
                     }
                     .disabled(!bulkEditViewModel.hasModifications)
                     .fontWeight(bulkEditViewModel.hasModifications ? .bold : .regular)
-                    .foregroundColor(bulkEditViewModel.hasModifications ? .blue : .gray)
+                    .foregroundStyle(bulkEditViewModel.hasModifications ? .blue : .gray)
                 }
             }
             .alert("Discard Changes?", isPresented: $showingDiscardAlert) {
@@ -321,11 +321,11 @@ struct SectionCard<Content: View>: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.headline)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
 
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }

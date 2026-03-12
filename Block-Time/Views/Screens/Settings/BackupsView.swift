@@ -60,13 +60,13 @@ struct BackupsView: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "clock.arrow.circlepath")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .font(.title3)
 
                 Text("Data Backup")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -75,18 +75,18 @@ struct BackupsView: View {
                 // Automatic Backups Toggle
                 HStack(spacing: 12) {
                     Image(systemName: "power")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Automatic Backup")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text(backupService.settings.isEnabled ? "Enabled" : "Disabled")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -105,18 +105,18 @@ struct BackupsView: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // Location Picker
                 HStack(spacing: 12) {
                     Image(systemName: "folder")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                         .frame(width: 20)
 
                     Text("Location")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Spacer()
 
@@ -139,19 +139,19 @@ struct BackupsView: View {
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 if backupService.settings.isEnabled {
                     // Backup Frequency
                     HStack(spacing: 12) {
                         Image(systemName: "calendar")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .frame(width: 20)
 
                         Text("Frequency")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Spacer()
 
@@ -171,19 +171,19 @@ struct BackupsView: View {
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                     .transition(.opacity.combined(with: .move(edge: .top)))
 
                     // Max Backups to Keep
                     HStack(spacing: 12) {
                         Image(systemName: "tray.full")
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                             .frame(width: 20)
 
                         Text("Backups to Keep")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Spacer()
 
@@ -203,7 +203,7 @@ struct BackupsView: View {
                     }
                     .padding(12)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
@@ -214,18 +214,18 @@ struct BackupsView: View {
                 // Last Backup Info
                 HStack(spacing: 12) {
                     Image(systemName: backupService.lastBackupDate != nil ? "checkmark.circle.fill" : "clock")
-                        .foregroundColor(backupService.lastBackupDate != nil ? .blue : .secondary)
+                        .foregroundStyle(backupService.lastBackupDate != nil ? .blue : .secondary)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Last Backup")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text("(\(backupService.availableBackups.count) backup\(backupService.availableBackups.count == 1 ? "" : "s") saved)")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -235,20 +235,20 @@ struct BackupsView: View {
                             .scaleEffect(0.8)
                         Text("Saving")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     } else if let lastBackup = backupService.lastBackupDate {
                         Text(lastBackup.formatted(.relative(presentation: .named)))
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     } else {
                         Text("Never")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
-                .cornerRadius(8)
+                .clipShape(.rect(cornerRadius: 8))
 
                 // Backup Now Button
                 ActionButton(
@@ -276,7 +276,7 @@ struct BackupsView: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -316,18 +316,18 @@ private struct ActionButton: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
 
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -339,12 +339,12 @@ private struct ActionButton: View {
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(color.opacity(0.7))
+                        .foregroundStyle(color.opacity(0.7))
                 }
             }
             .padding(16)
             .background(color.opacity(0.12))
-            .cornerRadius(10)
+            .clipShape(.rect(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(color.opacity(0.4), lineWidth: 1)
@@ -376,28 +376,28 @@ private struct BackupDetailSheet: View {
                     VStack(spacing: 10) {
                         Image(systemName: "externaldrive.fill.badge.checkmark")
                             .font(.system(size: 56))
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
 
                         Text(backup.formattedDate)
                             .font(.title3)
-                            .fontWeight(.bold)
+                            .bold()
 
                         if let count = backup.flightCount {
                             Text("\(count) flights · \(backup.formattedSize)")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 5)
                                 .background(Color(.systemGray5))
-                                .cornerRadius(20)
+                                .clipShape(.rect(cornerRadius: 20))
                         } else {
                             Text(backup.formattedSize)
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 5)
                                 .background(Color(.systemGray5))
-                                .cornerRadius(20)
+                                .clipShape(.rect(cornerRadius: 20))
                         }
                     }
                     .padding(.top, 8)
@@ -406,7 +406,7 @@ private struct BackupDetailSheet: View {
                     VStack(spacing: 12) {
                         HStack {
                             Image(systemName: "info.circle.fill")
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                                 .font(.title3)
                             Text("Backup Information")
                                 .font(.headline)
@@ -425,11 +425,11 @@ private struct BackupDetailSheet: View {
                         }
                         .padding(12)
                         .background(Color.blue.opacity(0.07))
-                        .cornerRadius(10)
+                        .clipShape(.rect(cornerRadius: 10))
                     }
                     .padding(16)
                     .background(.thinMaterial)
-                    .cornerRadius(12)
+                    .clipShape(.rect(cornerRadius: 12))
                     .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
@@ -440,7 +440,7 @@ private struct BackupDetailSheet: View {
                     VStack(spacing: 12) {
                         HStack {
                             Image(systemName: "bolt.fill")
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                                 .font(.title3)
                             Text("Actions")
                                 .font(.headline)
@@ -473,29 +473,29 @@ private struct BackupDetailSheet: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "trash.fill")
                                     .font(.title3)
-                                    .foregroundColor(.red)
+                                    .foregroundStyle(.red)
                                     .frame(width: 24)
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Delete this Backup")
                                         .font(.subheadline)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
 
                                     Text("Permanently remove this backup file")
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
 
                                 Spacer()
 
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundColor(Color.red.opacity(0.7))
+                                    .foregroundStyle(Color.red.opacity(0.7))
                             }
                             .padding(16)
                             .background(Color.red.opacity(0.12))
-                            .cornerRadius(10)
+                            .clipShape(.rect(cornerRadius: 10))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
                                     .stroke(Color.red.opacity(0.4), lineWidth: 1)
@@ -505,7 +505,7 @@ private struct BackupDetailSheet: View {
                     }
                     .padding(16)
                     .background(.thinMaterial)
-                    .cornerRadius(12)
+                    .clipShape(.rect(cornerRadius: 12))
                     .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
@@ -518,7 +518,7 @@ private struct BackupDetailSheet: View {
             .navigationTitle("Backup Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
@@ -568,16 +568,16 @@ private struct BackupDetailSheet: View {
     private func infoRow(icon: String, label: String, value: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(.blue)
+                .foregroundStyle(.blue)
                 .frame(width: 20)
             Text(label)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Spacer()
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
         }
         .padding(.vertical, 6)
     }
@@ -768,13 +768,13 @@ struct ManageBackupsView: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "folder.badge.plus")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .font(.title3)
 
                 Text("External Backups")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -784,7 +784,7 @@ struct ManageBackupsView: View {
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: "doc.badge.arrow.up.fill")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                         .font(.title3)
                         .frame(width: 24)
 
@@ -792,22 +792,22 @@ struct ManageBackupsView: View {
                         Text("Choose File")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Text("Browse and select a backup file")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(Color.blue.opacity(0.7))
+                        .foregroundStyle(Color.blue.opacity(0.7))
                 }
                 .padding(16)
                 .background(Color.blue.opacity(0.12))
-                .cornerRadius(10)
+                .clipShape(.rect(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.blue.opacity(0.4), lineWidth: 1)
@@ -817,7 +817,7 @@ struct ManageBackupsView: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -830,13 +830,13 @@ struct ManageBackupsView: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "clock.arrow.circlepath")
-                    .foregroundColor(.blue)
+                    .foregroundStyle(.blue)
                     .font(.title3)
 
                 Text("Available Backups")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
@@ -844,11 +844,11 @@ struct ManageBackupsView: View {
                     Text("\(backupService.availableBackups.count)")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Color(.systemGray5))
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
                 }
             }
 
@@ -856,13 +856,13 @@ struct ManageBackupsView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "tray")
                         .font(.system(size: 48))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("No backups available")
                         .font(.headline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                     Text("Backups will appear here once created")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -876,7 +876,7 @@ struct ManageBackupsView: View {
                             }) {
                                 HStack(spacing: 12) {
                                     Image(systemName: "doc.fill")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                         .font(.title3)
                                         .frame(width: 24)
 
@@ -885,17 +885,17 @@ struct ManageBackupsView: View {
                                             Text("\(count) flights")
                                                 .font(.subheadline)
                                                 .fontWeight(.medium)
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                         } else {
                                             Text("Backup")
                                                 .font(.subheadline)
                                                 .fontWeight(.medium)
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                         }
 
                                         Text(backup.formattedDate)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
 
                                     Spacer()
@@ -903,11 +903,11 @@ struct ManageBackupsView: View {
                                     VStack(alignment: .trailing, spacing: 4) {
                                         Text(backup.formattedSize)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
 
                                         Image(systemName: "chevron.right")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 .padding(.vertical, 4)
@@ -925,7 +925,7 @@ struct ManageBackupsView: View {
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -989,7 +989,7 @@ private struct RestoreModeSheet: View {
             VStack(spacing: 12) {
                 Image(systemName: "arrow.counterclockwise.circle.fill")
                     .font(.system(size: 50))
-                    .foregroundColor(.green)
+                    .foregroundStyle(.green)
 
                 Text("Choose Restore Mode")
                     .font(.title2)
@@ -1003,22 +1003,22 @@ private struct RestoreModeSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "arrow.triangle.merge")
-                                    .foregroundColor(.green)
+                                    .foregroundStyle(.green)
                                 Text("Merge with Existing Data")
                                     .font(.headline)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                             }
 
                             Text("Smart merge and skip duplicates")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.leading)
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
                         .background(Color.green.opacity(0.12))
-                        .cornerRadius(12)
+                        .clipShape(.rect(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.green.opacity(0.4), lineWidth: 1)
@@ -1031,22 +1031,22 @@ private struct RestoreModeSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                                 Text("Overwrite All Data")
                                     .font(.headline)
-                                    .foregroundColor(.primary)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                             }
 
                             Text("Replace all existing flights with backup data")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.leading)
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
                         .background(Color.orange.opacity(0.12))
-                        .cornerRadius(12)
+                        .clipShape(.rect(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.orange.opacity(0.4), lineWidth: 1)
@@ -1062,11 +1062,11 @@ private struct RestoreModeSheet: View {
                 Button(action: onCancel) {
                     Text("Cancel")
                         .font(.headline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color(.systemGray6))
-                        .cornerRadius(12)
+                        .clipShape(.rect(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color(.systemGray4), lineWidth: 1)

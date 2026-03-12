@@ -91,11 +91,11 @@ struct AirportPickerSheet: View {
                                     Text("Use \"\(searchText.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())\"")
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                                 .background(Color.blue)
-                                .cornerRadius(20)
+                                .clipShape(.rect(cornerRadius: 20))
                             }
 
                             Spacer()
@@ -105,7 +105,7 @@ struct AirportPickerSheet: View {
                                 searchText = ""
                             }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                         }
                         .padding(.horizontal)
@@ -135,17 +135,17 @@ struct AirportPickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedAirport.isEmpty {
                         Button("Clear") {
                             selectedAirport = ""
                             onDismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()
@@ -285,24 +285,24 @@ struct AirportsList: View {
                         }) {
                             HStack {
                                 Image(systemName: "clock")
-                                    .foregroundColor(.blue)
+                                    .foregroundStyle(.blue)
                                     .font(.caption)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(airport.displayCode)
                                         .font(.headline)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
 
                                     Text(airport.displayName)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
 
                                 Spacer()
 
                                 if selectedAirport == airport.icaoCode {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                 }
                             }
                         }
@@ -323,18 +323,18 @@ struct AirportsList: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(airport.displayCode)
                                         .font(.headline)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
 
                                     Text(airport.displayName)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
 
                                 Spacer()
 
                                 if selectedAirport == airport.icaoCode {
                                     Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                                        .foregroundStyle(.blue)
                                 }
                             }
                         }
@@ -345,9 +345,9 @@ struct AirportsList: View {
                 Section {
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                         Text("No matching airports found")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.gray)
                     }
                     .padding(.vertical, 8)
                 }

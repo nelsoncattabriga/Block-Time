@@ -53,13 +53,13 @@ struct UnifiedRosterPreviewView: View {
             .navigationTitle("Review Flights")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         toggleSelectAll()
                     } label: {
@@ -98,7 +98,7 @@ struct UnifiedRosterPreviewView: View {
                         .font(.headline)
                     Text("\(parsedFlights.count) flight\(parsedFlights.count == 1 ? "" : "s") found")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -111,14 +111,14 @@ struct UnifiedRosterPreviewView: View {
 //                        Text(pilotInfo.rosterType.displayName)
 //                            .font(.caption2)
 //                            .fontWeight(.semibold)
-//                            .foregroundColor(.white)
+//                            .foregroundStyle(.white)
 //                            .padding(.horizontal, 6)
 //                            .padding(.vertical, 2)
 //                            .background(pilotInfo.rosterType == .shortHaul ? Color.blue : Color.purple)
-//                            .cornerRadius(4)
+//                            .clipShape(.rect(cornerRadius: 4))
                         Text("BP \(pilotInfo.bidPeriod)")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -126,12 +126,12 @@ struct UnifiedRosterPreviewView: View {
             if !allSelected {
                 HStack {
                     Image(systemName: "info.circle.fill")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(.blue)
                         .font(.caption)
 
                     Text("\(selectedCount) of \(parsedFlights.count) flight\(selectedCount == 1 ? "" : "s") selected")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
 
                     Spacer()
                 }
@@ -160,8 +160,8 @@ struct UnifiedRosterPreviewView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(selectedCount > 0 ? Color.blue : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .foregroundStyle(.white)
+                    .clipShape(.rect(cornerRadius: 12))
                 }
                 .disabled(selectedCount == 0 || isImporting)
             }
@@ -206,7 +206,7 @@ private struct UnifiedFlightPreviewRow: View {
                 // Selection indicator
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundColor(isSelected ? .blue : .gray)
+                    .foregroundStyle(isSelected ? .blue : .gray)
                     .frame(width: 24)
 
                 // Flight details
@@ -216,13 +216,13 @@ private struct UnifiedFlightPreviewRow: View {
                         Text("QF\(flight.flightNumber)")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
 
                         Spacer()
 
                         Text(formatDate(flight.date))
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
 
                     // Middle row: Route and times
@@ -231,24 +231,24 @@ private struct UnifiedFlightPreviewRow: View {
                             Text(flight.departureAirport)
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Text(formatTime(flight.departureTime))
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
 
                         Image(systemName: "arrow.right")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(flight.arrivalAirport)
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             Text(formatTime(flight.arrivalTime))
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
 
                         Spacer()
@@ -259,12 +259,12 @@ private struct UnifiedFlightPreviewRow: View {
                         HStack(spacing: 8) {
                             Text("PAX")
                                 .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.orange)
+                                .bold()
+                                .foregroundStyle(.orange)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(Color.orange.opacity(0.2))
-                                .cornerRadius(4)
+                                .clipShape(.rect(cornerRadius: 4))
 
                             Spacer()
                         }
@@ -274,7 +274,7 @@ private struct UnifiedFlightPreviewRow: View {
             }
             .padding()
             .background(isSelected ? Color.blue.opacity(0.05) : Color(.systemGray6))
-            .cornerRadius(12)
+            .clipShape(.rect(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(isSelected ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 2)

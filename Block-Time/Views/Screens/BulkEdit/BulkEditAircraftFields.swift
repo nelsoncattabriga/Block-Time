@@ -21,7 +21,7 @@ struct BulkEditAircraftRegField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Button(action: {
                 showingPicker = true
@@ -29,20 +29,20 @@ struct BulkEditAircraftRegField: View {
                 HStack {
                     Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select aircraft..." : textValue))
                         .font(.body)
-                        .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
+                        .foregroundStyle(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             .padding(10)
             .background(Color(.secondarySystemBackground))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .sheet(isPresented: $showingPicker) {
                 BulkEditAircraftPickerSheet(
                     selectedReg: Binding(
@@ -161,7 +161,7 @@ struct BulkEditAircraftPickerSheet: View {
                     // Search Bar
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
 
                         TextField("Search aircraft...", text: $searchText)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -179,7 +179,7 @@ struct BulkEditAircraftPickerSheet: View {
                                 searchText = ""
                                 updateFilteredAircraft()
                             }
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                         }
                     }
 
@@ -189,15 +189,15 @@ struct BulkEditAircraftPickerSheet: View {
                     }) {
                         HStack {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                             Text("Add New Aircraft")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.green)
+                                .foregroundStyle(.green)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(Color.green.opacity(0.1))
-                        .cornerRadius(8)
+                        .clipShape(.rect(cornerRadius: 8))
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -219,15 +219,15 @@ struct BulkEditAircraftPickerSheet: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(aircraft.displayRegistration(showFullReg: showFullReg))
                                                 .font(.body)
-                                                .foregroundColor(.primary)
+                                                .foregroundStyle(.primary)
                                             Text(aircraft.type)
                                                 .font(.caption)
-                                                .foregroundColor(.secondary)
+                                                .foregroundStyle(.secondary)
                                         }
                                         Spacer()
                                         if selectedReg == aircraft.registration {
                                             Image(systemName: "checkmark")
-                                                .foregroundColor(.blue)
+                                                .foregroundStyle(.blue)
                                         }
                                     }
                                     .contentShape(Rectangle())
@@ -241,9 +241,9 @@ struct BulkEditAircraftPickerSheet: View {
                         Section {
                             HStack {
                                 Image(systemName: searchText.isEmpty ? "airplane" : "magnifyingglass")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                                 Text(searchText.isEmpty ? "No aircraft in fleet" : "No matching aircraft found")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                             .padding(.vertical, 8)
                         }
@@ -253,7 +253,7 @@ struct BulkEditAircraftPickerSheet: View {
             .navigationTitle("Select Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedReg.isEmpty {
                         Button("Clear") {
                             HapticManager.shared.impact(.light)
@@ -261,11 +261,11 @@ struct BulkEditAircraftPickerSheet: View {
                             selectedType = ""
                             onDismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         onDismiss()
                     }
@@ -319,7 +319,7 @@ struct BulkEditAddAircraftSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Registration")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("e.g., VH-ABC", text: $newAircraftReg)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .textCase(.uppercase)
@@ -335,7 +335,7 @@ struct BulkEditAddAircraftSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Aircraft Type")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                         TextField("e.g., B738", text: $newAircraftType)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .textCase(.uppercase)
@@ -364,7 +364,7 @@ struct BulkEditAddAircraftSheet: View {
             .navigationTitle("Add New Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
@@ -416,7 +416,7 @@ struct BulkEditAircraftTypeField: View {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Button(action: {
                 // Load existing aircraft types from database
@@ -427,20 +427,20 @@ struct BulkEditAircraftTypeField: View {
                 HStack {
                     Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select type..." : textValue))
                         .font(.body)
-                        .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
+                        .foregroundStyle(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
             .padding(10)
             .background(Color(.secondarySystemBackground))
-            .cornerRadius(8)
+            .clipShape(.rect(cornerRadius: 8))
             .sheet(isPresented: $showingPicker) {
                 AircraftTypePickerSheet(
                     title: label,
@@ -518,11 +518,11 @@ struct AircraftTypePickerSheet: View {
                                     Text("Use \"\(searchText.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())\"")
                                 }
                                 .font(.subheadline)
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                                 .background(Color.blue)
-                                .cornerRadius(20)
+                                .clipShape(.rect(cornerRadius: 20))
                             }
 
                             Spacer()
@@ -532,7 +532,7 @@ struct AircraftTypePickerSheet: View {
                                 searchText = ""
                             }) {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                         }
                         .padding(.horizontal)
@@ -555,11 +555,11 @@ struct AircraftTypePickerSheet: View {
                                 }) {
                                     HStack {
                                         Text(type)
-                                            .foregroundColor(.primary)
+                                            .foregroundStyle(.primary)
                                         Spacer()
                                         if selectedType.uppercased() == type.uppercased() {
                                             Image(systemName: "checkmark")
-                                                .foregroundColor(.blue)
+                                                .foregroundStyle(.blue)
                                         }
                                     }
                                 }
@@ -570,9 +570,9 @@ struct AircraftTypePickerSheet: View {
                         Section {
                             HStack {
                                 Image(systemName: "magnifyingglass")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                                 Text("No matching types found")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                             .padding(.vertical, 8)
                         }
@@ -580,9 +580,9 @@ struct AircraftTypePickerSheet: View {
                         Section {
                             HStack {
                                 Image(systemName: "airplane")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                                 Text("No aircraft types in database yet")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                             }
                             .padding(.vertical, 8)
                         }
@@ -592,18 +592,18 @@ struct AircraftTypePickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedType.isEmpty {
                         Button("Clear Type") {
                             HapticManager.shared.impact(.light)
                             selectedType = ""
                             onDismiss()
                         }
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         onDismiss()
                     }
