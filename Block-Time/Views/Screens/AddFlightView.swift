@@ -16,11 +16,16 @@ struct AddFlightView: View {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
     }
 
+    @State private var viewWidth: CGFloat = 0
+    private var useWideLayout: Bool {
+        (horizontalSizeClass == .regular && viewWidth > 700) || viewWidth > 900
+    }
+
     var body: some View {
 
             ScrollViewReader { scrollProxy in
                 ScrollView {
-                    if horizontalSizeClass == .regular {
+                    if useWideLayout {
                         WideLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
                             .id("top")
                     } else {
@@ -41,6 +46,7 @@ struct AddFlightView: View {
                     }
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = $0 }
             .navigationTitle(viewModel.isEditingMode ? "Edit Flight" : "Add Flight")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
