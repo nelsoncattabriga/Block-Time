@@ -100,15 +100,15 @@ struct FlyingActivityChartCard: View {
                     let totalBlock = filtered.reduce(0) { $0 + $1.blockHours }
                     let avg = totalBlock / Double(filtered.count)
                     HStack {
-                        summaryChip(label: "Monthly Avg", value: String(format: "%.1f hrs", avg), color: .blue)
+                        summaryChip(label: "Monthly Avg", value: "\(avg.formatted(.number.precision(.fractionLength(1)))) hrs", color: .blue)
                         Spacer()
-                        summaryChip(label: "Period Total", value: String(format: "%.1f hrs", totalBlock), color: .blue)
+                        summaryChip(label: "Period Total", value: "\(totalBlock.formatted(.number.precision(.fractionLength(1)))) hrs", color: .blue)
                     }
                 } else {
                     let totalSectors = filtered.reduce(0) { $0 + $1.sectorCount }
                     let avg = Double(totalSectors) / Double(filtered.count)
                     HStack {
-                        summaryChip(label: "Monthly Avg", value: String(format: "%.0f sectors", avg), color: .orange)
+                        summaryChip(label: "Monthly Avg", value: "\(avg.formatted(.number.precision(.fractionLength(0)))) sectors", color: .orange)
                         Spacer()
                         summaryChip(label: "Period Total", value: "\(totalSectors) sectors", color: .orange)
                     }

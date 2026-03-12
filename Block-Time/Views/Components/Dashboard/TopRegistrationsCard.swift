@@ -142,7 +142,7 @@ struct TopRegistrationsCard: View {
             .frame(minWidth: 60, maxWidth: .infinity)
             
             if displayMode == .hours {
-                Text(String(format: "%.0f hrs", reg.hours))
+                Text("\(reg.hours.formatted(.number.precision(.fractionLength(0)))) hrs")
                     .iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
             } else {
                 Text("\(reg.sectors) sectors")

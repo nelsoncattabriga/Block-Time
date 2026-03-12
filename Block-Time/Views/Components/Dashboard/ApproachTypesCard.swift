@@ -134,7 +134,7 @@ struct ApproachTypesCard: View {
 //            HStack(spacing: 4) {
 //                Text("\(item.count)")
 //                    .iPadScaledFont(.caption).fontWeight(.semibold)
-                Text(String(format: "(%.0f%%)", item.percentage))
+                Text("(\(item.percentage.formatted(.number.precision(.fractionLength(0))))%)")
                     .iPadScaledFont(.caption).foregroundStyle(.secondary)
 //            }
             .frame(width: 48, alignment: .trailing)

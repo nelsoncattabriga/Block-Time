@@ -95,13 +95,13 @@ struct AverageMetricCard: View {
     private var formattedValue: String {
         if shouldStackVertically {
             // Use abbreviations in iPhone 2-column mode
-            let sectorsText = String(format: "%.0f flts", averageSectors)
-            let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
+            let sectorsText = "\(averageSectors.formatted(.number.precision(.fractionLength(0)))) flts"
+            let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : "\(averageHours.formatted(.number.precision(.fractionLength(1)))) hrs"
             return "\(hoursText) | \(sectorsText)"
         } else {
             // Use full text in wider layouts
-            let sectorsText = String(format: "%.0f flights", averageSectors)
-            let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
+            let sectorsText = "\(averageSectors.formatted(.number.precision(.fractionLength(0)))) flights"
+            let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : "\(averageHours.formatted(.number.precision(.fractionLength(1)))) hrs"
             return "\(hoursText) | \(sectorsText)"
         }
     }

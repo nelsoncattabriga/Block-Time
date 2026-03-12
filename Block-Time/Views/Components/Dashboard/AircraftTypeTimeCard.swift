@@ -144,7 +144,7 @@ struct AircraftTypeTimeCard: View {
         if showTimesInHoursMinutes {
             return FlightSector.decimalToHHMM(value)
         } else {
-            return String(format: "%.1f hrs", value)
+            return "\(value.formatted(.number.precision(.fractionLength(1)))) hrs"
         }
     }
 

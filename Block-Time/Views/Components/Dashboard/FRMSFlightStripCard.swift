@@ -62,7 +62,7 @@ struct FRMSFlightStripCard: View {
                     .animation(.spring(response: 0.7, dampingFraction: 0.8), value: ratio)
 
                 VStack(spacing: 1) {
-                    Text(String(format: "%.1f", hours))
+                    Text(hours.formatted(.number.precision(.fractionLength(1))))
                         .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundStyle(.primary)
                     Text("hrs")

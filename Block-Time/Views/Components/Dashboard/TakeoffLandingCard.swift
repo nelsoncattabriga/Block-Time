@@ -148,7 +148,7 @@ struct TakeoffLandingCard: View {
             Spacer()
             Text("\(count)")
                 .iPadScaledFont(.caption).fontWeight(.semibold)
-            Text(String(format: "(%.0f%%)", pct * 100))
+            Text("(\((pct * 100).formatted(.number.precision(.fractionLength(0))))%)")
                 .iPadScaledFont(.caption).foregroundStyle(.secondary)
         }
     }

@@ -19,7 +19,7 @@ struct AdaptiveLimitLayout: View {
         if showTimesInHoursMinutes {
             return hours.toHoursMinutesString
         } else {
-            return String(format: "%.1f hrs", hours)
+            return "\(hours.formatted(.number.precision(.fractionLength(1)))) hrs"
         }
     }
 

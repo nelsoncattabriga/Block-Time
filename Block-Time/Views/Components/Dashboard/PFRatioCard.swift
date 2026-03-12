@@ -98,7 +98,7 @@ struct PFRatioCard: View {
 
             // Summary
             HStack {
-                statChip(label: "Average PF", value: String(format: "%.0f%%", averagePF * 100), color: .blue)
+                statChip(label: "Average PF", value: averagePF.formatted(.percent.precision(.fractionLength(0))), color: .blue)
                 Spacer()
                 let totalSectors = filtered.reduce(0) { $0 + $1.totalSectors }
                 statChip(label: "Sectors", value: "\(totalSectors)", color: .secondary)

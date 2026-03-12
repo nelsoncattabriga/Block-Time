@@ -17,7 +17,7 @@ struct CareerMilestonesCard: View {
             // Top stats row
             HStack(spacing: 0) {
                 statBlock(
-                    value: String(format: "%.0f", stats.totalHours),
+                    value: stats.totalHours.formatted(.number.precision(.fractionLength(0))),
                     label: "Total Hours",
                     icon: "clock.fill",
                     color: .blue
@@ -38,7 +38,7 @@ struct CareerMilestonesCard: View {
                 )
                 Divider().frame(height: 44).padding(.horizontal, 8)
                 statBlock(
-                    value: String(format: "%.1f yrs", stats.yearsOfData),
+                    value: "\(stats.yearsOfData.formatted(.number.precision(.fractionLength(1)))) yrs",
                     label: "Logged",
                     icon: "calendar",
                     color: .orange

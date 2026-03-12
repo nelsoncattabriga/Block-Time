@@ -48,14 +48,14 @@ struct RecentActivityCard: View {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
 
                     // Format hours based on user preference
-                    Text(showTimesInHoursMinutes ? FlightSector.decimalToHHMM(recentHours) : String(format: "%.1f hrs", recentHours))
+                    Text(showTimesInHoursMinutes ? FlightSector.decimalToHHMM(recentHours) : "\(recentHours.formatted(.number.precision(.fractionLength(1)))) hrs")
                         .iPadScaledFont(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
 
 
                     if let max = maxHours {
-                        Text(" / \(String(format: "%.0f", max))")
+                        Text(" / \(max.formatted(.number.precision(.fractionLength(0))))")
                             .iPadScaledFont(.subheadline)
                             .foregroundStyle(.secondary)
                     }

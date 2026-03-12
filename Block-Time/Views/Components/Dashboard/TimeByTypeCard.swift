@@ -76,7 +76,7 @@ struct TimeByTypeCard: View {
 
                         VStack(spacing: 2) {
                             if displayMode == .hours {
-                                Text(String(format: "%.0f", totalHours))
+                                Text(totalHours.formatted(.number.precision(.fractionLength(0))))
                                     .font(.system(.title3, design: .rounded, weight: .bold))
                                 Text("hrs")
                                     .iPadScaledFont(.caption)
@@ -108,7 +108,7 @@ struct TimeByTypeCard: View {
                                 Spacer()
 
                                 Text(displayMode == .hours
-                                     ? String(format: "%.0f hrs", item.hours)
+                                     ? "\(item.hours.formatted(.number.precision(.fractionLength(0)))) hrs"
                                      : "\(item.sectors)")
                                     .iPadScaledFont(.caption)
                                     .foregroundStyle(.secondary)
