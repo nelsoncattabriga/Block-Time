@@ -139,7 +139,7 @@ struct TrialStatusCard: View {
     private var badgeLabel: String {
         let days = purchaseService.trialDaysRemaining
         if days == 0 { return "EXPIRED" }
-        return "\(days)d LEFT"
+        return "\(days) DAYS LEFT"
     }
 
     private var badgeIcon: String {
