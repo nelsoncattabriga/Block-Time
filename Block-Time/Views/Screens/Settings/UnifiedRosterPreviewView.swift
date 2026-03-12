@@ -20,7 +20,7 @@ struct UnifiedRosterPreviewView: View {
     @State private var isImporting = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Header with summary
                 headerSection

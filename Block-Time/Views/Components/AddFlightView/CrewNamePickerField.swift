@@ -108,7 +108,7 @@ struct CrewNamePickerSheet: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Search field and actions
                 VStack(spacing: 12) {

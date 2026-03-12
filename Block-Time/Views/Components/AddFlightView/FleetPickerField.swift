@@ -85,7 +85,7 @@ struct FleetPickerSheet: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Fleet Selector
                 ScrollView(.horizontal, showsIndicators: false) {

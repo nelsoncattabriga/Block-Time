@@ -68,7 +68,7 @@ struct MigrationImportView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     if importComplete, let summary = importSummary {

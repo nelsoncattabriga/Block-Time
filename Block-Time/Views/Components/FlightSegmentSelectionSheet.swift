@@ -13,7 +13,7 @@ struct FlightSegmentSelectionSheet: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Header
                 VStack(spacing: 8) {

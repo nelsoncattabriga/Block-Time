@@ -1282,7 +1282,7 @@ private struct AirlinePickerSheet: View {
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 Section(header: Text("Select Airline")) {
                     ForEach(Airline.airlines) { airline in

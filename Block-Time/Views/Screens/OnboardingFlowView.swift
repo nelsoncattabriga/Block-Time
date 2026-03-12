@@ -18,7 +18,7 @@ struct OnboardingFlowView: View {
     private let steps = ["Crew Settings", "Flight Information", "FRMS"]
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 switch currentStep {
                 case 0:

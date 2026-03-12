@@ -630,7 +630,7 @@ struct WebCISMappingView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 // Header
                 VStack(spacing: 8) {

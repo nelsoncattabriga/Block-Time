@@ -18,7 +18,7 @@ struct ExportLogbookView: View {
     @State private var showShareSheet = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     if exportComplete {

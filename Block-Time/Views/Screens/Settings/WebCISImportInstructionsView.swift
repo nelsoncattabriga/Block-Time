@@ -12,7 +12,7 @@ struct WebCISImportInstructionsView: View {
     let onSelectFile: () -> Void
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     // Header

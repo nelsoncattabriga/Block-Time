@@ -154,7 +154,7 @@ struct BulkEditAircraftPickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Search Bar and Add Button Section
                 VStack(spacing: 12) {
@@ -313,7 +313,7 @@ struct BulkEditAddAircraftSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("Aircraft Details")) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -492,7 +492,7 @@ struct AircraftTypePickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Search field and actions
                 VStack(spacing: 12) {

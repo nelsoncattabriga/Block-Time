@@ -42,7 +42,7 @@ struct UnifiedRosterImportView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                 // Header
@@ -492,7 +492,7 @@ private struct UnifiedRosterImportResultView: View {
     let onDone: () -> Void
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     // Success/Warning Icon

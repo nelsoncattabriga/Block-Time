@@ -26,7 +26,7 @@ struct AverageMetricConfigSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section {
                     Picker("Aircraft", selection: $selectedAircraftType) {

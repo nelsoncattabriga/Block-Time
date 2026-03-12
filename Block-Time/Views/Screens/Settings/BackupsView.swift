@@ -368,7 +368,7 @@ private struct BackupDetailSheet: View {
     @State private var selectedRestoreMode: ImportMode = .merge
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
 

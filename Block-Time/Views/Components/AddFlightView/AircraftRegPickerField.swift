@@ -174,7 +174,7 @@ struct AircraftRegPickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Search Bar
                 HStack {
@@ -417,7 +417,7 @@ private struct AddAircraftSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("Aircraft Details")) {
                     VStack(alignment: .leading, spacing: 8) {
