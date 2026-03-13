@@ -685,7 +685,7 @@ class FileImportService {
         }
 
         // Explicit false values
-        if normalized == "false" || normalized == "no" || normalized == "0" || normalized == "n" {
+        if normalized == "false" || normalized == "no" || normalized == "0" || normalized == "n" || normalized == "pm" {
             return false
         }
 
