@@ -44,14 +44,21 @@ final class PurchaseService {
         trialDaysRemaining > 0
     }
 
-    /// True if the user can access all features (Pro purchase or active trial).
+    /// True when running inside TestFlight (sandbox receipt URL contains "sandboxReceipt").
+    /// TestFlight testers get unrestricted access regardless of trial status.
+    var isTestFlight: Bool {
+        guard let receiptURL = Bundle.main.appStoreReceiptURL else { return false }
+        return receiptURL.lastPathComponent == "sandboxReceipt"
+    }
+
+    /// True if the user can access all features (Pro purchase, active trial, or TestFlight).
     var hasAccess: Bool {
-        isPro || isTrialActive
+        isPro || isTrialActive || isTestFlight
     }
 
     /// True if the user can add new flights (same condition — gated separately from app access).
     var canAddFlight: Bool {
-        isPro || isTrialActive
+        isPro || isTrialActive || isTestFlight
     }
 
     // MARK: - Init
