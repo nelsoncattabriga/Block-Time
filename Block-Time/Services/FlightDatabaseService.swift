@@ -919,13 +919,15 @@ class FlightDatabaseService: ObservableObject {
 
                 for flight in allFlights {
                     if let date = flight.date,
-                       let flightNumber = flight.flightNumber,
                        let fromAirport = flight.fromAirport,
                        let toAirport = flight.toAirport,
-                       let aircraftReg = flight.aircraftReg,
-                       let aircraftType = flight.aircraftType {
+                       let aircraftReg = flight.aircraftReg {
                         let dateString = dateFormatter.string(from: date)
-                        let signature = "\(dateString)|\(flightNumber)|\(fromAirport)|\(toAirport)|\(aircraftReg)|\(aircraftType)"
+                        let flightNumber = flight.flightNumber ?? ""
+                        // Exclude aircraftType — webCIS imports have no type, but previously
+                        // imported flights may have had it resolved via registration mapping,
+                        // causing a mismatch. date+reg+route is sufficient for uniqueness.
+                        let signature = "\(dateString)|\(flightNumber)|\(fromAirport)|\(toAirport)|\(aircraftReg)"
                         contentBasedDuplicates.insert(signature)
                     }
                 }
@@ -944,17 +946,19 @@ class FlightDatabaseService: ObservableObject {
                     continue
                 }
 
-                // Check content-based duplicate
-                let signature = "\(sector.date)|\(sector.flightNumber)|\(sector.fromAirport)|\(sector.toAirport)|\(sector.aircraftReg)|\(sector.aircraftType)"
-                if contentBasedDuplicates.contains(signature) {
-                    duplicateCount += 1
-                    LogManager.shared.info("⊘ Skipping duplicate (content match): \(sector.date) \(sector.flightNumber) \(sector.aircraftType)-\(sector.aircraftReg) (different UUID: \(sector.id))")
+                // Parse and validate date first — needed for normalised content signature
+                guard let parsedDate = dateFormatter.date(from: sector.date) else {
+                    failureCount += 1
                     continue
                 }
 
-                // Parse and validate date
-                guard let parsedDate = dateFormatter.date(from: sector.date) else {
-                    failureCount += 1
+                // Check content-based duplicate using the normalised date string so formats
+                // like "11 May 01" and "11/05/2001" both resolve to the same signature
+                let normalizedDate = dateFormatter.string(from: parsedDate)
+                let signature = "\(normalizedDate)|\(sector.flightNumber)|\(sector.fromAirport)|\(sector.toAirport)|\(sector.aircraftReg)"
+                if contentBasedDuplicates.contains(signature) {
+                    duplicateCount += 1
+                    LogManager.shared.info("⊘ Skipping duplicate (content match): \(normalizedDate) \(sector.flightNumber) \(sector.aircraftReg) (UUID: \(sector.id))")
                     continue
                 }
 
