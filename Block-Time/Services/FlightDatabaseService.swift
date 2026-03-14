@@ -2264,6 +2264,12 @@ class FlightDatabaseService: ObservableObject {
         // CloudKit changes made on another device before launch were never reflected in the UI
         // because contextDidSave doesn't always fire for store-level remote changes.
 
+        // Skip during batch imports to prevent view re-renders mid-import
+        if isBatchImporting {
+            LogManager.shared.debug("FlightDatabaseService: Remote store change skipped (batch import in progress)")
+            return
+        }
+
         // Rate limit: Skip if we've processed a notification too recently
         let now = Date()
         if let lastTime = lastRemoteStoreChangeTime,

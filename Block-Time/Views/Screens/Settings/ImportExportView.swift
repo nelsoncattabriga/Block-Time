@@ -32,10 +32,12 @@ struct ImportExportView: View {
     // webCIS import state
     @State private var isImportingWebCIS = false
     @State private var webCISImportData: ImportData?
-    @State private var showingWebCISMappingSheet = false
 
     // webCIS instructions state
     @State private var showingWebCISInstructions = false
+
+    // webCIS live import (WKWebView)
+    @State private var showingWebCISLiveImport = false
 
     // Roster import state
     @State private var showingRosterImport = false
@@ -126,10 +128,23 @@ struct ImportExportView: View {
                 performImport(data: data, mappings: mappings, mode: mode, registrationMappings: regMappings)
             }
         }
-        .sheet(isPresented: $showingWebCISMappingSheet) {
-            if let data = webCISImportData {
-                WebCISMappingView(importData: data) { regMappings in
-                    performWebCISImportWithMappings(data: data, registrationMappings: regMappings)
+        .sheet(item: $webCISImportData) { data in
+            WebCISMappingView(importData: data) { regMappings in
+                performWebCISImportWithMappings(data: data, registrationMappings: regMappings)
+            }
+        }
+        .fullScreenCover(isPresented: $showingWebCISLiveImport) {
+            WebCISLiveImportView { rawText in
+                // Dismiss fullScreenCover first, then present mapping sheet after animation completes
+                showingWebCISLiveImport = false
+                Task {
+                    try? await Task.sleep(for: .milliseconds(600))
+                    if let parsedData = try? FileImportService.shared.parseWebCISText(rawText) {
+                        webCISImportData = parsedData
+                    } else {
+                        resultMessage = "Could not parse the extracted webCIS data."
+                        showingResult = true
+                    }
                 }
             }
         }
@@ -259,6 +274,18 @@ struct ImportExportView: View {
                 }
                 .disabled(isImportingWebCIS)
 
+                // Live webCIS import via WKWebView
+                ActionButton(
+                    title: "Live webCIS Import",
+                    subtitle: "Log in and extract directly",
+                    icon: "globe",
+                    color: .green.opacity(0.8),
+                    isLoading: false
+                ) {
+                    showingWebCISLiveImport = true
+                }
+                .disabled(isImportingWebCIS)
+
                 // Generic data import
                 ActionButton(
                     title: "CSV Data Import",
@@ -267,9 +294,7 @@ struct ImportExportView: View {
                     color: .indigo.opacity(0.6),
                     isLoading: false
                 ) {
-                    print("🔘 Import Logbook button tapped")
                     activeFilePickerMode = .importWithMapping
-                    print("🔘 activeFilePickerMode set to: \(String(describing: activeFilePickerMode))")
                 }
                 .disabled(isImporting)
 
@@ -348,32 +373,22 @@ struct ImportExportView: View {
 
     // MARK: - Helper Functions
     private func handleImportFileSelection(_ result: Result<[URL], Error>) {
-        print("📁 handleImportFileSelection called")
         switch result {
         case .success(let files):
-            print("📁 Files selected: \(files)")
             if let fileURL = files.first {
-                print("📁 Parsing file: \(fileURL)")
                 parseImportFile(fileURL)
-            } else {
-                print("📁 No file URL found")
             }
         case .failure(let error):
-            print("📁 File selection error: \(error)")
             resultMessage = "Error selecting file: \(error.localizedDescription)"
             showingResult = true
         }
     }
 
     private func parseImportFile(_ url: URL) {
-        print("📁 parseImportFile called with: \(url)")
         do {
             let parsedData = try FileImportService.shared.parseFile(url: url)
-            print("📁 Successfully parsed file, setting importData")
             importData = parsedData
-            print("📁 importData set: \(importData != nil)")
         } catch {
-            print("📁 Parse error: \(error)")
             resultMessage = "Error parsing file: \(error.localizedDescription)"
             showingResult = true
         }
@@ -447,32 +462,22 @@ struct ImportExportView: View {
     }
 
     private func handleWebCISFileSelection(_ result: Result<[URL], Error>) {
-        print("📁 handleWebCISFileSelection called")
         switch result {
         case .success(let files):
-            print("📁 webCIS files selected: \(files)")
             if let fileURL = files.first {
-                print("📁 Parsing webCIS file: \(fileURL)")
                 parseWebCISFile(fileURL)
-            } else {
-                print("📁 No file URL found")
             }
         case .failure(let error):
-            print("📁 webCIS file selection error: \(error)")
             resultMessage = "Error selecting file: \(error.localizedDescription)"
             showingResult = true
         }
     }
 
     private func parseWebCISFile(_ url: URL) {
-        print("📁 parseWebCISFile called with: \(url)")
         do {
             let parsedData = try FileImportService.shared.parseWebCISFile(url: url)
-            print("📁 Successfully parsed webCIS file, showing mapping sheet")
             webCISImportData = parsedData
-            showingWebCISMappingSheet = true
         } catch {
-            print("📁 webCIS parse error: \(error)")
             resultMessage = "Error parsing webCIS file: \(error.localizedDescription)"
             showingResult = true
         }

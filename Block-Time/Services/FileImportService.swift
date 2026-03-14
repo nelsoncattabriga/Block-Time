@@ -760,6 +760,77 @@ class FileImportService {
         return createWebCISFieldMapping(headers: headers)
     }
 
+    /// Parse webCIS text extracted from the DOM (live import via WKWebView).
+    /// The JS extraction script joins table cells with \t, so each line is tab-separated.
+    /// DOM column order (19 cells):
+    ///   0:Date  1:Reg  2:Sector(DEP-DES)  3:Inst
+    ///   4:SE Dual D  5:SE Dual N  6:SE Cmd D  7:SE Cmd N
+    ///   8:ME ICUS D  9:ME ICUS N  10:ME Dual D  11:ME Dual N
+    ///   12:ME CoPilot D  13:ME CoPilot N  14:ME Cmd D  15:ME Cmd N
+    ///   16:Sim  17:Sp/Ins(ignored)  18:(ignored)
+    func parseWebCISText(_ content: String) throws -> ImportData {
+        let lines = content.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        guard !lines.isEmpty else { throw ImportError.invalidFormat }
+
+        let headers = ["DATE", "REG", "DEP", "DES", "INST", "P2D", "P2N", "P1D", "P1N",
+                       "P1USD", "P1USN", "MEDD", "MEDN", "MEFD", "MEFN", "MECD", "MECN", "SIMU", "FLEN", "TOTAL"]
+
+        var dataRows: [[String]] = []
+        for line in lines {
+            let cells = line.components(separatedBy: "\t").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard cells.count >= 3, cells[0].first?.isNumber == true else { continue }
+
+            func c(_ i: Int) -> String { i < cells.count ? cells[i] : "" }
+
+            // Split sector "SYD-MEL" into dep/dest
+            let sector = c(2)
+            let dashIdx = sector.firstIndex(of: "-")
+            let dep  = dashIdx.map { String(sector[sector.startIndex..<$0]) } ?? sector
+            let dest = dashIdx.map { String(sector[sector.index(after: $0)...]) } ?? ""
+
+            var mefd = c(12)  // ME CoPilot D
+            var mefn = c(13)  // ME CoPilot N
+            let meid = c(8)   // ME ICUS D
+            let mein = c(9)   // ME ICUS N
+
+            // Deduplication: if ICUS time exists, blank CoPilot to avoid double-counting
+            if !meid.isEmpty && meid.contains(":") && !mefd.isEmpty && mefd.contains(":") { mefd = "" }
+            if !mein.isEmpty && mein.contains(":") && !mefn.isEmpty && mefn.contains(":") { mefn = "" }
+
+            let timeFields = [c(4), c(5), c(6), c(7), meid, mein, c(10), c(11), mefd, mefn, c(14), c(15), c(16)]
+            let total = sumWebCISTimes(timeFields)
+
+            let row: [String] = [
+                c(0),   // DATE
+                c(1),   // REG
+                dep,    // DEP
+                dest,   // DES
+                c(3),   // INST
+                c(4),   // P2D  (SE Dual D)
+                c(5),   // P2N  (SE Dual N)
+                c(6),   // P1D  (SE Cmd D)
+                c(7),   // P1N  (SE Cmd N)
+                meid,   // P1USD (ME ICUS D)
+                mein,   // P1USN (ME ICUS N)
+                c(10),  // MEDD (ME Dual D)
+                c(11),  // MEDN (ME Dual N)
+                mefd,   // MEFD (ME CoPilot D)
+                mefn,   // MEFN (ME CoPilot N)
+                c(14),  // MECD (ME Cmd D)
+                c(15),  // MECN (ME Cmd N)
+                c(16),  // SIMU
+                "",     // FLEN (ignored)
+                total   // TOTAL
+            ]
+            dataRows.append(row)
+        }
+
+        return ImportData(headers: headers, rows: dataRows, fileURL: URL(string: "webcis://live")!, delimiter: ",")
+    }
+
     /// Check if CSV headers match Logger's export format
     private func isLoggerExportFormat(headers: [String]) -> Bool {
         // Logger's export has these key headers in this order
@@ -1368,8 +1439,10 @@ class FileImportService {
             "d/M/yy",          // 1/1/24
             "MM/dd/yy",        // 12/31/24 (US)
             "yy-MM-dd",        // 24-12-31
-            "ddMMMyy",         // 25Sep04 (webCIS format)
-            "dMMMyy",          // 1Sep04 (webCIS format with single digit day)
+            "ddMMMyy",         // 25Sep04 (webCIS file format)
+            "dMMMyy",          // 1Sep04 (webCIS file format with single digit day)
+            "dd MMM yy",       // 11 May 01 (webCIS DOM/live format)
+            "d MMM yy",        // 1 May 01 (webCIS DOM/live format single digit day)
             // Then 4-digit year formats
             "dd/MM/yyyy",      // 31/12/2024
             "d/M/yyyy",        // 1/1/2024
