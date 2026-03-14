@@ -221,16 +221,17 @@ class RosterParserService {
 
                 LogManager.shared.debug("   Components: \(components)")
 
-                guard components.count >= 7 else {
-                    LogManager.shared.debug("    Not enough components (need 7+, got \(components.count))")
+                // Check if second component is "P" for positioning — affects required count
+                let isPositioning = components.count > 1 && components[1] == "P"
+                let flightIndex = isPositioning ? 2 : 1
+                let requiredCount = flightIndex + 6  // need flightIndex + 5 for equipmentCode
+
+                guard components.count >= requiredCount else {
+                    LogManager.shared.debug("    Not enough components (need \(requiredCount)+, got \(components.count))")
                     continue
                 }
 
                 let dateString = components[0]  // e.g., "03Nov"
-
-                // Check if second component is "P" for positioning
-                let isPositioning = components[1] == "P"
-                let flightIndex = isPositioning ? 2 : 1
 
                 let flightNumber = components[flightIndex]
                 let departureAirport = components[flightIndex + 1]

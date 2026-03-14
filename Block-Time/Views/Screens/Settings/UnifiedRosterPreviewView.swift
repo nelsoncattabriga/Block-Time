@@ -31,7 +31,7 @@ struct UnifiedRosterPreviewView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(Array(parsedFlights.enumerated()), id: \.offset) { index, flight in
-                            let flightID = flightIDs[index]
+                            let flightID = index < flightIDs.count ? flightIDs[index] : UUID()
                             UnifiedFlightPreviewRow(
                                 flight: flight,
                                 isSelected: selectedFlights.contains(flightID)
@@ -184,8 +184,9 @@ struct UnifiedRosterPreviewView: View {
         isImporting = true
 
         // Filter to only selected flights
-        let flightsToImport = parsedFlights.enumerated().compactMap { index, flight in
-            selectedFlights.contains(flightIDs[index]) ? flight : nil
+        let flightsToImport = parsedFlights.enumerated().compactMap { index, flight -> UnifiedParsedFlight? in
+            guard index < flightIDs.count else { return nil }
+            return selectedFlights.contains(flightIDs[index]) ? flight : nil
         }
 
         // Call the import callback

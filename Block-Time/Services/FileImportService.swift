@@ -744,40 +744,6 @@ class FileImportService {
         completion: @escaping (Result<ImportResult, Error>) -> Void
     ) {
         let mappings = createWebCISFieldMapping(headers: importData.headers)
-
-        // --- DEBUG: dump headers, column mapping, and first 3 parsed rows ---
-        print("🔬 webCIS DEBUG — headers (\(importData.headers.count)): \(importData.headers)")
-        print("🔬 webCIS DEBUG — total rows: \(importData.rows.count)")
-        if let firstRow = importData.rows.first {
-            print("🔬 webCIS DEBUG — row[0] (\(firstRow.count) cells): \(firstRow)")
-        }
-        if importData.rows.count > 1 {
-            print("🔬 webCIS DEBUG — row[1] (\(importData.rows[1].count) cells): \(importData.rows[1])")
-        }
-
-        let columnMapping = createColumnMapping(headers: importData.headers, fieldMappings: mappings)
-        print("🔬 webCIS DEBUG — column mapping:")
-        for (field, info) in columnMapping.sorted(by: { $0.key < $1.key }) {
-            let values = info.columnIndices.map { idx -> String in
-                guard let row = importData.rows.first, idx < row.count else { return "idx:\(idx)=OOB" }
-                return "idx:\(idx)[\(importData.headers[idx])]=\(row[idx])"
-            }
-            print("🔬   \(field) → \(values)")
-        }
-
-        // Parse first 3 rows fully to see what FlightSector is produced
-        let regMap = createRegistrationTypeMap(mappings: registrationMappings)
-        for i in 0..<min(3, importData.rows.count) {
-            let result = createFlightFromRow(importData.rows[i], mapping: columnMapping, registrationTypeMap: regMap, rowIndex: i)
-            switch result {
-            case .success(let flight):
-                print("🔬 webCIS DEBUG — row[\(i)] → date=\(flight.date) reg=\(flight.aircraftReg) from=\(flight.fromAirport) to=\(flight.toAirport) block=\(flight.blockTime) p1=\(flight.p1Time) p2=\(flight.p2Time) night=\(flight.nightTime) inst=\(flight.instrumentTime)")
-            case .failure(let err):
-                print("🔬 webCIS DEBUG — row[\(i)] FAILED: \(err.message)")
-            }
-        }
-        // --- END DEBUG ---
-
         importFlights(from: importData, mapping: mappings, mode: mode, registrationMappings: registrationMappings, completion: completion)
     }
 
@@ -1223,10 +1189,6 @@ class FileImportService {
             dataRows.append(row)
         }
 
-        print("🔍 parseWebCISText: \(lines.count) lines → \(dataRows.count) flight rows")
-        if let first = dataRows.first {
-            print("🔍 first row: \(first)")
-        }
         return ImportData(headers: headers, rows: dataRows, fileURL: URL(string: "webcis://live")!, delimiter: ",")
     }
 

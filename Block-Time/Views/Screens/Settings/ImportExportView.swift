@@ -160,11 +160,11 @@ struct ImportExportView: View {
                 // Parse directly from the tab-separated DOM text, then dismiss.
                 // Wait for the fullScreenCover to fully dismiss before presenting the mapping sheet.
                 if let parsedData = try? FileImportService.shared.parseWebCISText(rawText) {
-                    webCISImportData = parsedData
                     showingWebCISLiveImport = false
                     Task {
+                        // Wait for fullScreenCover dismiss animation before presenting sheet
                         try? await Task.sleep(for: .milliseconds(600))
-                        webCISImportData = parsedData  // re-set after dismiss to trigger sheet
+                        webCISImportData = parsedData
                     }
                 } else {
                     showingWebCISLiveImport = false
@@ -302,9 +302,7 @@ struct ImportExportView: View {
                     color: .indigo.opacity(0.6),
                     isLoading: false
                 ) {
-                    print("🔘 Import Logbook button tapped")
                     activeFilePickerMode = .importWithMapping
-                    print("🔘 activeFilePickerMode set to: \(String(describing: activeFilePickerMode))")
                 }
                 .disabled(isImporting)
 
@@ -383,32 +381,22 @@ struct ImportExportView: View {
 
     // MARK: - Helper Functions
     private func handleImportFileSelection(_ result: Result<[URL], Error>) {
-        print("📁 handleImportFileSelection called")
         switch result {
         case .success(let files):
-            print("📁 Files selected: \(files)")
             if let fileURL = files.first {
-                print("📁 Parsing file: \(fileURL)")
                 parseImportFile(fileURL)
-            } else {
-                print("📁 No file URL found")
             }
         case .failure(let error):
-            print("📁 File selection error: \(error)")
             resultMessage = "Error selecting file: \(error.localizedDescription)"
             showingResult = true
         }
     }
 
     private func parseImportFile(_ url: URL) {
-        print("📁 parseImportFile called with: \(url)")
         do {
             let parsedData = try FileImportService.shared.parseFile(url: url)
-            print("📁 Successfully parsed file, setting importData")
             importData = parsedData
-            print("📁 importData set: \(importData != nil)")
         } catch {
-            print("📁 Parse error: \(error)")
             resultMessage = "Error parsing file: \(error.localizedDescription)"
             showingResult = true
         }
@@ -482,31 +470,22 @@ struct ImportExportView: View {
     }
 
     private func handleWebCISFileSelection(_ result: Result<[URL], Error>) {
-        print("📁 handleWebCISFileSelection called")
         switch result {
         case .success(let files):
-            print("📁 webCIS files selected: \(files)")
             if let fileURL = files.first {
-                print("📁 Parsing webCIS file: \(fileURL)")
                 parseWebCISFile(fileURL)
-            } else {
-                print("📁 No file URL found")
             }
         case .failure(let error):
-            print("📁 webCIS file selection error: \(error)")
             resultMessage = "Error selecting file: \(error.localizedDescription)"
             showingResult = true
         }
     }
 
     private func parseWebCISFile(_ url: URL) {
-        print("📁 parseWebCISFile called with: \(url)")
         do {
             let parsedData = try FileImportService.shared.parseWebCISFile(url: url)
-            print("📁 Successfully parsed webCIS file, showing mapping sheet")
             webCISImportData = parsedData
         } catch {
-            print("📁 webCIS parse error: \(error)")
             resultMessage = "Error parsing webCIS file: \(error.localizedDescription)"
             showingResult = true
         }

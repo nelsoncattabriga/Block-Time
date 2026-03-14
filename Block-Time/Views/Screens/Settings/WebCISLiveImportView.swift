@@ -158,11 +158,6 @@ struct WebCISLiveImportView: View {
                 .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
                 .count
 
-            print("✅ WebCIS extraction succeeded — \(rowCount) flight rows found")
-            print("--- RAW EXTRACTED TEXT (first 2000 chars) ---")
-            print(String(rawText.prefix(2000)))
-            print("--- END RAW TEXT ---")
-
             extractionStatus = .success(rowCount: rowCount)
 
             // Brief delay so user sees the success state, then hand off.
@@ -387,8 +382,6 @@ private struct WebCISWebView: UIViewRepresentable {
                 guard let self else { return }
                 self.parent.isLoading = false
                 self.parent.currentURL = webView.url
-                print("📄 WebCIS page loaded: \(webView.url?.absoluteString ?? "unknown")")
-                print("📄 Page title: \(webView.title ?? "none")")
             }
         }
 
@@ -418,16 +411,10 @@ private struct WebCISWebView: UIViewRepresentable {
                 return
             }
 
-            // Actual data payload
-            print("📦 WebCIS data received — \(body.count) chars")
-
             let result: Result<String, Error>
             if body.hasPrefix("__DEBUG__") {
-                // No structured data found — still pass through for debugging
-                print("⚠️ WebCIS: no structured flight data found, received debug dump")
-                print(body)
                 result = .failure(NSError(domain: "WebCIS", code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "No flight table found on this page. Check the console logs."]))
+                    userInfo: [NSLocalizedDescriptionKey: "No flight table found on this page. Navigate to your logbook and try again."]))
             } else {
                 result = .success(body)
             }
