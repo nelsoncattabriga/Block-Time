@@ -569,11 +569,18 @@ class CloudKitSettingsSyncService {
             AutomaticBackupService.shared.updateSettings(updatedBackupSettings, syncToCloud: false)
         }
 
-        // FRMS settings
+        // FRMS settings — use existing local config or a fresh default (e.g. on first install)
         var frmsSettingsChanged = false
-        if let frmsConfigData = UserDefaults.standard.data(forKey: "FRMSConfiguration"),
-           var frmsConfig = try? JSONDecoder().decode(FRMSConfiguration.self, from: frmsConfigData) {
-
+        do {
+            var frmsConfig: FRMSConfiguration
+            if let frmsConfigData = UserDefaults.standard.data(forKey: "FRMSConfiguration"),
+               let decoded = try? JSONDecoder().decode(FRMSConfiguration.self, from: frmsConfigData) {
+                frmsConfig = decoded
+            } else {
+                // No local config yet (fresh install) — start from defaults so cloud values can be applied
+                frmsConfig = FRMSConfiguration()
+                frmsSettingsChanged = true
+            }
             if let showFRMS = ubiquitousStore.object(forKey: CloudKeys.frmsShowFRMS) as? Bool,
                showFRMS != frmsConfig.showFRMS {
                 frmsConfig.showFRMS = showFRMS
