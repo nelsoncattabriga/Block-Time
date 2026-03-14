@@ -135,6 +135,8 @@ struct ImportExportView: View {
         }
         .fullScreenCover(isPresented: $showingWebCISLiveImport) {
             WebCISLiveImportView { rawText in
+                // Save raw extracted text to iCloud Backups folder (silent, best-effort)
+                saveWebCISRawText(rawText)
                 // Dismiss fullScreenCover first, then present mapping sheet after animation completes
                 showingWebCISLiveImport = false
                 Task {
@@ -449,6 +451,29 @@ struct ImportExportView: View {
             resultMessage = "Failed to save aircraft summary. Please try again."
         }
         showingResult = true
+    }
+
+    /// Silently saves the raw tab-separated webCIS text to the iCloud Backups folder.
+    /// Filename: <hhmm>_webcis_web_download.txt  e.g. 1432_webcis_web_download.txt
+    private func saveWebCISRawText(_ text: String) {
+        Task.detached(priority: .utility) {
+            let fm = FileManager.default
+            guard let iCloudBase = fm.url(forUbiquityContainerIdentifier: nil)?
+                .appendingPathComponent("Documents") else { return }
+
+            let backupDir = iCloudBase.appendingPathComponent("Backups", isDirectory: true)
+            if !fm.fileExists(atPath: backupDir.path) {
+                try? fm.createDirectory(at: backupDir, withIntermediateDirectories: true)
+            }
+
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HHmm"
+            let timeStamp = formatter.string(from: Date())
+            let fileName = "\(timeStamp)_webcis_web_download.txt"
+            let fileURL = backupDir.appendingPathComponent(fileName)
+
+            try? text.write(to: fileURL, atomically: true, encoding: .utf8)
+        }
     }
 
     private func handleWebCISFileSelection(_ result: Result<[URL], Error>) {

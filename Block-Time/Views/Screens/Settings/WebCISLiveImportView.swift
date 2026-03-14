@@ -62,7 +62,6 @@ struct WebCISLiveImportView: View {
             .overlay(alignment: .bottom) {
                 extractionBanner
             }
-            .navigationTitle("webCIS Logbook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
