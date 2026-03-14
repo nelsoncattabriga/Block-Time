@@ -24,6 +24,7 @@ final class PurchaseService {
     // MARK: - Observable State
 
     var isPro: Bool = false
+    var isTestFlight: Bool = false
     var products: [Product] = []
     var isLoading: Bool = false
     var purchaseError: String?
@@ -44,13 +45,6 @@ final class PurchaseService {
         trialDaysRemaining > 0
     }
 
-    /// True when running inside TestFlight (sandbox receipt URL contains "sandboxReceipt").
-    /// TestFlight testers get unrestricted access regardless of trial status.
-    var isTestFlight: Bool {
-        guard let receiptURL = Bundle.main.appStoreReceiptURL else { return false }
-        return receiptURL.lastPathComponent == "sandboxReceipt"
-    }
-
     /// True if the user can access all features (Pro purchase, active trial, or TestFlight).
     var hasAccess: Bool {
         isPro || isTrialActive || isTestFlight
@@ -69,6 +63,13 @@ final class PurchaseService {
             UserDefaults.standard.set(Date(), forKey: installDateKey)
         }
         isPro = UserDefaults.standard.bool(forKey: isProKey)
+
+        // Detect TestFlight via AppTransaction environment (StoreKit 2)
+        Task { @MainActor in
+            if case .verified(let tx) = try? await AppTransaction.shared {
+                isTestFlight = tx.environment == .xcode || tx.environment == .sandbox
+            }
+        }
     }
 
     /// Starts listening for incoming transactions (promo codes, deferred purchases).
