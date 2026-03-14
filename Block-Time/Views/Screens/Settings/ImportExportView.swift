@@ -32,10 +32,12 @@ struct ImportExportView: View {
     // webCIS import state
     @State private var isImportingWebCIS = false
     @State private var webCISImportData: ImportData?
-    @State private var showingWebCISMappingSheet = false
 
     // webCIS instructions state
     @State private var showingWebCISInstructions = false
+
+    // webCIS live import (WKWebView)
+    @State private var showingWebCISLiveImport = false
 
     // Roster import state
     @State private var showingRosterImport = false
@@ -127,11 +129,9 @@ struct ImportExportView: View {
                 performImport(data: data, mappings: mappings, mode: mode, registrationMappings: regMappings)
             }
         }
-        .sheet(isPresented: $showingWebCISMappingSheet) {
-            if let data = webCISImportData {
-                WebCISMappingView(importData: data) { regMappings in
-                    performWebCISImportWithMappings(data: data, registrationMappings: regMappings)
-                }
+        .sheet(item: $webCISImportData) { data in
+            WebCISMappingView(importData: data) { regMappings in
+                performWebCISImportWithMappings(data: data, registrationMappings: regMappings)
             }
         }
         .alert(resultMessage.contains("successfully") || resultMessage.contains("success") || resultMessage.contains("Summary") ? "Success" : "Error", isPresented: $showingResult) {
@@ -153,6 +153,28 @@ struct ImportExportView: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showingWebCISLiveImport) {
+            WebCISLiveImportView { rawText in
+                // Save to a temp file and process via the normal file import path.
+                // Parse directly from the tab-separated DOM text, then dismiss.
+                // Wait for the fullScreenCover to fully dismiss before presenting the mapping sheet.
+                if let parsedData = try? FileImportService.shared.parseWebCISText(rawText) {
+                    webCISImportData = parsedData
+                    showingWebCISLiveImport = false
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(600))
+                        webCISImportData = parsedData  // re-set after dismiss to trigger sheet
+                    }
+                } else {
+                    showingWebCISLiveImport = false
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(600))
+                        resultMessage = "Could not parse the extracted webCIS data."
+                        showingResult = true
+                    }
+                }
+            }
         }
         .sheet(isPresented: $showingRosterImport) {
             UnifiedRosterImportView()
@@ -257,6 +279,18 @@ struct ImportExportView: View {
                     isLoading: false
                 ) {
                     showingWebCISInstructions = true
+                }
+                .disabled(isImportingWebCIS)
+
+                // Live webCIS import via WKWebView
+                ActionButton(
+                    title: "Live webCIS Import",
+                    subtitle: "Log in and extract directly",
+                    icon: "globe",
+                    color: .green.opacity(0.8),
+                    isLoading: false
+                ) {
+                    showingWebCISLiveImport = true
                 }
                 .disabled(isImportingWebCIS)
 
@@ -471,7 +505,6 @@ struct ImportExportView: View {
             let parsedData = try FileImportService.shared.parseWebCISFile(url: url)
             print("📁 Successfully parsed webCIS file, showing mapping sheet")
             webCISImportData = parsedData
-            showingWebCISMappingSheet = true
         } catch {
             print("📁 webCIS parse error: \(error)")
             resultMessage = "Error parsing webCIS file: \(error.localizedDescription)"

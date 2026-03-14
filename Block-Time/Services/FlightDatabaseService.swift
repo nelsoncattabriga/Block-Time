@@ -1016,6 +1016,19 @@ class FlightDatabaseService: ObservableObject {
             } catch {
                 viewContext.rollback()
                 LogManager.shared.error("Database: Batch save failed - \(error.localizedDescription)")
+                // Print full Core Data validation errors
+                let nsError = error as NSError
+                print("🔴 Batch save error domain=\(nsError.domain) code=\(nsError.code)")
+                print("🔴 userInfo: \(nsError.userInfo)")
+                if let detailedErrors = nsError.userInfo[NSDetailedErrorsKey] as? [NSError] {
+                    for (i, detail) in detailedErrors.prefix(5).enumerated() {
+                        print("🔴 Detail[\(i)]: \(detail.userInfo)")
+                    }
+                }
+                // Print first flight that was attempted to help diagnose
+                if let first = sectors.first {
+                    print("🔴 First sector: date='\(first.date)' reg='\(first.aircraftReg)' from='\(first.fromAirport)' to='\(first.toAirport)' block='\(first.blockTime)'")
+                }
                 failureCount = sectors.count
                 successCount = 0
             }
