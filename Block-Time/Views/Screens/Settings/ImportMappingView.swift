@@ -37,6 +37,12 @@ struct RegistrationTypeMapping: Identifiable {
     let sampleRegistrations: [String]  // Show examples to user
 }
 
+// MARK: - Saved Mapping
+private struct SavedMappingEntry: Codable {
+    let logbookField: String
+    let sourceColumns: [String]
+}
+
 // MARK: - Combination Strategy
 enum CombinationStrategy: String, CaseIterable, Identifiable {
     case sum = "Sum"
@@ -106,10 +112,22 @@ struct ImportMappingView: View {
         self.importData = importData
         self.onImport = onImport
 
-        print("🔍 Starting createInitialMappings...")
-        // Initialize field mappings with smart auto-detection
-        _fieldMappings = State(initialValue: Self.createInitialMappings(headers: importData.headers))
-        print("🔍 ImportMappingView init completed")
+        // Try saved mapping first, fall back to auto-detection
+        let key = "LastImportMapping_\(importData.delimiter)"
+        if let data = UserDefaults.standard.data(forKey: key),
+           let saved = try? JSONDecoder().decode([SavedMappingEntry].self, from: data) {
+            let validHeaders = Set(importData.headers)
+            var mappings = Self.createInitialMappings(headers: importData.headers)
+            for i in mappings.indices {
+                if let entry = saved.first(where: { $0.logbookField == mappings[i].logbookField }) {
+                    let validColumns = entry.sourceColumns.filter { validHeaders.contains($0) }
+                    mappings[i].sourceColumns = validColumns
+                }
+            }
+            _fieldMappings = State(initialValue: mappings)
+        } else {
+            _fieldMappings = State(initialValue: Self.createInitialMappings(headers: importData.headers))
+        }
     }
 
     var body: some View {
@@ -270,6 +288,11 @@ struct ImportMappingView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Import") {
+                        // Save current mapping for next time
+                        let entries = fieldMappings.map { SavedMappingEntry(logbookField: $0.logbookField, sourceColumns: $0.sourceColumns) }
+                        if let data = try? JSONEncoder().encode(entries) {
+                            UserDefaults.standard.set(data, forKey: "LastImportMapping_\(importData.delimiter)")
+                        }
                         onImport(fieldMappings, importMode, enableRegistrationMapping ? registrationMappings : [])
                         dismiss()
                     }
