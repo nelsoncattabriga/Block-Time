@@ -70,46 +70,36 @@ struct WebCISLiveImportView: View {
                 }
 
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    // Navigation controls
                     Button { navigator.goBack() } label: {
                         Image(systemName: "chevron.left")
                     }
                     Button { navigator.reload() } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-
-                    // Extract button — only visible on the logbook page
-                    if isOnLogbookPage {
-                        Button {
-                            extractionStatus = .extracting
-                            navigator.extractData()
-                        } label: {
-                            Label("Extract Data", systemImage: "tray.and.arrow.down")
-                        }
-                        .fontWeight(.semibold)
-                        .tint(.green)
-                        .disabled(isLoading)
-                    }
                 }
             }
         }
     }
 
-    // MARK: - Bottom banner
+    // MARK: - Bottom overlay
 
     @ViewBuilder
     private var extractionBanner: some View {
         switch extractionStatus {
         case .idle:
             if isOnLogbookPage && !isLoading {
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle")
-                    Text("Tap **Extract Data** in the toolbar to import your logbook")
-                        .font(.caption)
+                Button {
+                    extractionStatus = .extracting
+                    navigator.extractData()
+                } label: {
+                    Label("Extract Logbook Data", systemImage: "tray.and.arrow.down")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .foregroundStyle(.white)
+                        .background(.green, in: RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 .padding(.bottom, 8)
             }
 
@@ -117,33 +107,53 @@ struct WebCISLiveImportView: View {
             HStack(spacing: 8) {
                 ProgressView()
                 Text("Extracting logbook data…")
-                    .font(.caption)
+                    .font(.subheadline)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 16)
             .padding(.bottom, 8)
 
         case .success(let rowCount):
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 Text("Extracted \(rowCount) rows — proceeding to import…")
-                    .font(.caption)
+                    .font(.subheadline)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 16)
             .padding(.bottom, 8)
 
         case .failed(let reason):
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                Text("Extraction failed: \(reason)")
-                    .font(.caption)
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Text(reason)
+                        .font(.subheadline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 16)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+
+                Button {
+                    extractionStatus = .idle
+                    navigator.extractData()
+                } label: {
+                    Label("Try Again", systemImage: "arrow.clockwise")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .foregroundStyle(.white)
+                        .background(.green, in: RoundedRectangle(cornerRadius: 14))
+                }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
             .padding(.bottom, 8)
         }
     }
@@ -414,7 +424,7 @@ private struct WebCISWebView: UIViewRepresentable {
             let result: Result<String, Error>
             if body.hasPrefix("__DEBUG__") {
                 result = .failure(NSError(domain: "WebCIS", code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "No flight table found on this page. Navigate to your logbook and try again."]))
+                    userInfo: [NSLocalizedDescriptionKey: "No flight data found on this page. Navigate to the Flying Experience Tab."]))
             } else {
                 result = .success(body)
             }

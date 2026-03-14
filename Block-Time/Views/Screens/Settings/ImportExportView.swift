@@ -164,6 +164,8 @@ struct ImportExportView: View {
         .sheet(isPresented: $showingWebCISInstructions) {
             WebCISImportInstructionsView {
                 activeFilePickerMode = .webCIS
+            } onLiveImport: {
+                showingWebCISLiveImport = true
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -274,21 +276,9 @@ struct ImportExportView: View {
                 }
                 .disabled(isImportingWebCIS)
 
-                // Live webCIS import via WKWebView
-                ActionButton(
-                    title: "Live webCIS Import",
-                    subtitle: "Log in and extract directly",
-                    icon: "globe",
-                    color: .green.opacity(0.8),
-                    isLoading: false
-                ) {
-                    showingWebCISLiveImport = true
-                }
-                .disabled(isImportingWebCIS)
-
                 // Generic data import
                 ActionButton(
-                    title: "CSV Data Import",
+                    title: "Import CSV File",
                     subtitle: "CSV or Tab-Delimited file",
                     icon: "square.and.arrow.down.on.square.fill",
                     color: .indigo.opacity(0.6),

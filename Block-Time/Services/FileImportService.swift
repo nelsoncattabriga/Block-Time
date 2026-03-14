@@ -778,12 +778,58 @@ class FileImportService {
         let headers = ["DATE", "REG", "DEP", "DES", "INST", "P2D", "P2N", "P1D", "P1N",
                        "P1USD", "P1USN", "MEDD", "MEDN", "MEFD", "MEFN", "MECD", "MECN", "SIMU", "FLEN", "TOTAL"]
 
+        // Regex to detect a bare time value like "2:30" or "12:05" (not a route like "SYD-MEL")
+        let timeOnlyPattern = try? NSRegularExpression(pattern: #"^\d{1,3}:\d{2}$"#)
+        func looksLikeTime(_ s: String) -> Bool {
+            guard !s.isEmpty else { return false }
+            let range = NSRange(s.startIndex..., in: s)
+            return timeOnlyPattern?.firstMatch(in: s, range: range) != nil
+        }
+
         var dataRows: [[String]] = []
         for line in lines {
             let cells = line.components(separatedBy: "\t").map { $0.trimmingCharacters(in: .whitespaces) }
             guard cells.count >= 3, cells[0].first?.isNumber == true else { continue }
 
             func c(_ i: Int) -> String { i < cells.count ? cells[i] : "" }
+
+            // Sim row: reg cell contains "SIM", time is in the last non-empty cell
+            // e.g. ['02 May 24', 'SIM', '', '', ..., '4:00'] — 18 cells
+            if c(1).uppercased() == "SIM" {
+                let simTime = c(17).isEmpty ? c(cells.count - 1) : c(17)
+                let total = sumWebCISTimes([simTime])
+                let row: [String] = [
+                    c(0),  // DATE
+                    "",    // REG — "SIM" is not a rego
+                    "",    // DEP
+                    "",    // DES
+                    "",    // INST
+                    "", "", "", "", "", "", "", "", "", "", "", "",  // all flight-time cols empty
+                    simTime, // SIMU
+                    "",    // FLEN
+                    total  // TOTAL
+                ]
+                dataRows.append(row)
+                continue
+            }
+
+            // Sparse sim row fallback: few cells where cell[2] is a bare time, no route
+            if cells.count < 5 && looksLikeTime(c(2)) {
+                let total = sumWebCISTimes([c(2)])
+                let row: [String] = [
+                    c(0),  // DATE
+                    c(1),  // REG
+                    "",    // DEP
+                    "",    // DES
+                    "",    // INST
+                    "", "", "", "", "", "", "", "", "", "", "", "",  // all flight-time cols empty
+                    c(2),  // SIMU — the time value from cell[2]
+                    "",    // FLEN
+                    total  // TOTAL
+                ]
+                dataRows.append(row)
+                continue
+            }
 
             // Split sector "SYD-MEL" into dep/dest
             let sector = c(2)
