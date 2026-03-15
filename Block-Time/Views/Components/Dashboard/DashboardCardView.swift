@@ -92,7 +92,7 @@ struct DashboardCardView: View {
             StatCard(
                 title: "Total Time",
                 value: stats.formattedTotalFlightTime(asHoursMinutes: showTimesInHoursMinutes),
-                subtitle: "\(stats.totalSectors) sectors",
+                subtitle: "\(stats.totalSectors) sectors · \(viewModel.careerStats.totalAircraftTypes) aircraft types",
                 color: .blue,
                 icon: "clock.fill"
             )
@@ -100,33 +100,37 @@ struct DashboardCardView: View {
             StatCard(
                 title: "PIC Time",
                 value: stats.formattedP1Time(asHoursMinutes: showTimesInHoursMinutes),
-                subtitle: "In Command",
+                subtitle: stats.totalBlockTime > 0 ? String(format: "%.0f%% of total block time", stats.totalP1Time / stats.totalBlockTime * 100) : "In Command",
                 color: .green,
-                icon: "person.badge.shield.checkmark.fill"
+                icon: "person.badge.shield.checkmark.fill",
+                fraction: stats.totalBlockTime > 0 ? stats.totalP1Time / stats.totalBlockTime : nil
             )
         case .icusTime:
             StatCard(
                 title: "ICUS Time",
                 value: stats.formattedP1USTime(asHoursMinutes: showTimesInHoursMinutes),
-                subtitle: "Under Supervision",
+                subtitle: stats.totalBlockTime > 0 ? String(format: "%.0f%% of total block time", stats.totalP1USTime / stats.totalBlockTime * 100) : "Under Supervision",
                 color: .orange,
-                icon: "person.2.fill"
+                icon: "person.2.fill",
+                fraction: stats.totalBlockTime > 0 ? stats.totalP1USTime / stats.totalBlockTime : nil
             )
         case .nightTime:
             StatCard(
                 title: "Night Time",
                 value: stats.formattedNightTime(asHoursMinutes: showTimesInHoursMinutes),
-                subtitle: "Night flying",
+                subtitle: stats.totalBlockTime > 0 ? String(format: "%.0f%% of total block time", stats.totalNightTime / stats.totalBlockTime * 100) : "Night flying",
                 color: .indigo,
-                icon: "moon.fill"
+                icon: "moon.fill",
+                fraction: stats.totalBlockTime > 0 ? stats.totalNightTime / stats.totalBlockTime : nil
             )
         case .simTime:
             StatCard(
                 title: "SIM Time",
                 value: stats.formattedSIMTime(asHoursMinutes: showTimesInHoursMinutes),
-                subtitle: "Simulator training",
+                subtitle: stats.totalFlightTime > 0 ? String(format: "%.0f%% of total flight time", stats.totalSIMTime / stats.totalFlightTime * 100) : "Simulator training",
                 color: .cyan,
-                icon: "desktopcomputer"
+                icon: "desktopcomputer",
+                fraction: stats.totalFlightTime > 0 ? stats.totalSIMTime / stats.totalFlightTime : nil
             )
 //        case .pfRatioStat:
 //            StatCard(

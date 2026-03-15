@@ -7,6 +7,7 @@ struct StatCard: View {
     let subtitle: String
     let color: Color
     let icon: String
+    var fraction: Double? = nil  // 0–1, drives progress bar when provided
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -16,11 +17,17 @@ struct StatCard: View {
                 Text(value)
                     .iPadScaledFont(.subheadline)
                     .fontWeight(.semibold)
+                    .fontDesign(.rounded)
                     .foregroundStyle(.primary)
 
-                // Spacer to match progress bar height in other cards
-                Spacer()
-                    .frame(height: 6)
+                if let fraction {
+                    ProgressView(value: min(max(fraction, 0), 1))
+                        .tint(color)
+                        .frame(height: 6)
+                } else {
+                    Spacer()
+                        .frame(height: 6)
+                }
 
                 Text(subtitle)
                     .iPadScaledFont(.caption)
