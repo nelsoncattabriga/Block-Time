@@ -181,12 +181,18 @@ struct SHRestWindowCard: View {
         return f
     }()
 
-    private func formattedTime(_ date: Date) -> String {
-        Self.timeFormatter.string(from: date)
+    /// Timezone matching FRMSView.formatDateTime: destination airport local time, falling back to device timezone.
+    private func timeZone(for date: Date) -> TimeZone {
+        let toAirport = lastDuty?.toAirport ?? ""
+        return AirportService.shared.getTimeZone(for: toAirport, on: date) ?? .current
     }
 
     private func formattedTimeWithDay(_ date: Date) -> String {
-        let cal = Calendar.current
+        let tz = timeZone(for: date)
+        Self.timeFormatter.timeZone = tz
+        Self.dayTimeFormatter.timeZone = tz
+        var cal = Calendar.current
+        cal.timeZone = tz
         if cal.isDateInToday(date) {
             return Self.timeFormatter.string(from: date)
         }
