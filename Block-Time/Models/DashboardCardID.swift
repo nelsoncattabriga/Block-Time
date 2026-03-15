@@ -13,6 +13,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     // ── New Dashboard Cards  ─────────────────────────────────────────────
     case frmsFlightTime    // 2-ring flight time gauge (28d/365d)
     case frmsDutyTime      // 2-ring duty time gauge (7d/14d)
+    case frmsRestWindow    // Rest window timeline (sign-off → earliest sign-on)
     case activityChart     // Monthly block hours bar chart
     case timeByType        // Time by Type distribution pie chart
     case pfRatioChart      // PF ratio trend line
@@ -47,6 +48,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         switch self {
         case .frmsFlightTime:    return "FRMS Flight Time"
         case .frmsDutyTime:      return "FRMS Duty Time"
+        case .frmsRestWindow:    return "FRMS SH Rest"
         case .activityChart:     return "Flying Activity"
         case .timeByType:        return "Time by Type"
         case .pfRatioChart:      return "PF Ratio"
@@ -79,6 +81,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         switch self {
         case .frmsFlightTime:    return "airplane.circle.fill"
         case .frmsDutyTime:      return "briefcase.fill"
+        case .frmsRestWindow:    return "bed.double.fill"
         case .activityChart:     return "chart.bar.fill"
         case .timeByType:        return "chart.pie.fill"
         case .pfRatioChart:      return "chart.line.uptrend.xyaxis"
@@ -111,6 +114,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         switch self {
         case .frmsFlightTime:    return .orange
         case .frmsDutyTime:      return .teal
+        case .frmsRestWindow:    return .orange
         case .activityChart:     return .blue
         case .timeByType:        return .purple
         case .pfRatioChart:      return .orange
@@ -142,7 +146,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     /// Advisory hint: this card was designed to look good at sidebar (narrow) widths.
     var sidebarHint: Bool {
         switch self {
-        case .frmsFlightTime, .frmsDutyTime, .totalTime, .picTime, .icusTime, .nightTime, .simTime, .recentActivity7, .recentActivity28, .recentActivity30, .recentActivity365, .pfRecency, .aiiiRecency, .takeoffRecency, .landingRecency, .aircraftTypeTime, .averageMetric, .careerMilestones:
+        case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .totalTime, .picTime, .icusTime, .nightTime, .simTime, .recentActivity7, .recentActivity28, .recentActivity30, .recentActivity365, .pfRecency, .aiiiRecency, .takeoffRecency, .landingRecency, .aircraftTypeTime, .averageMetric, .careerMilestones:
             return true
         default:
             return false

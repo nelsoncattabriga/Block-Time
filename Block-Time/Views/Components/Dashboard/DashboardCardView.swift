@@ -41,7 +41,7 @@ struct DashboardCardView: View {
 
     private func isInsightsCard(_ id: DashboardCardID) -> Bool {
         switch id {
-        case .frmsFlightTime, .frmsDutyTime, .activityChart, .timeByType,
+        case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .activityChart, .timeByType,
              .pfRatioChart, .takeoffLanding, .approachTypes, .topRoutes,
              .topRegistrations, .workRateHeatmap, .careerMilestones:
             return true
@@ -59,6 +59,8 @@ struct DashboardCardView: View {
             FRMSFlightStripCard(data: viewModel.frmsStrip)
         case .frmsDutyTime:
             FRMSDutyStripCard(flightStrip: viewModel.frmsStrip, frmsViewModel: frmsViewModel)
+        case .frmsRestWindow:
+            SHRestWindowCard(frmsViewModel: frmsViewModel)
         case .activityChart:
             FlyingActivityChartCard(data: viewModel.monthlyActivity)
         case .timeByType:
