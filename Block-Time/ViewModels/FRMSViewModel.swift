@@ -67,10 +67,28 @@ class FRMSViewModel {
             name: .settingsDidChange,
             object: nil
         )
+
+        // Listen for flight data changes directly so FRMS updates even when its tab
+        // has never been opened (SwiftUI TabView is lazy — the view's .onReceive won't
+        // fire until the tab is first visited).
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleFlightDataChanged),
+            name: .flightDataChanged,
+            object: nil
+        )
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleFlightDataChanged() {
+        let positionRaw = UserDefaults.standard.string(forKey: "flightTimePosition") ?? FlightTimePosition.captain.rawValue
+        let crewPosition = FlightTimePosition(rawValue: positionRaw) ?? .captain
+        Task {
+            await refreshFlightData(crewPosition: crewPosition)
+        }
     }
 
     @objc private func handleSettingsChanged(notification: Notification) {

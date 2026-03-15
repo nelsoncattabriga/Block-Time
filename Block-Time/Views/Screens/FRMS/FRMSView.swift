@@ -109,11 +109,9 @@ struct FRMSView: View {
                 homeBaseTimeZone = FRMSCalculationService(configuration: viewModel.configuration).getHomeBaseTimeZone()
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
-                LogManager.shared.debug("FRMSView: Received .flightDataChanged notification")
-                Task {
-                    await viewModel.refreshFlightData(crewPosition: flightTimePosition)
-                    updateMBTT()
-                }
+                // ViewModel observes .flightDataChanged directly and refreshes its own data.
+                // Only update MBTT here (view-local state not owned by the ViewModel).
+                updateMBTT()
             }
         }
     }
