@@ -742,18 +742,26 @@ class LHRosterParserService {
         return calendar.date(byAdding: .day, value: daysToAdd, to: previousDate)
     }
 
-    /// Extract flight number from service code (e.g., "QFA0509" -> "509", "QFA0003" -> "3")
+    /// Extract flight number from service code (e.g., "QFA0509" -> "509" or "0509" based on user setting)
     private static func extractFlightNumber(from service: String) -> String {
         // Remove "QFA" prefix if present
         var flightNum = service.replacingOccurrences(of: "QFA", with: "")
         flightNum = flightNum.trimmingCharacters(in: .whitespaces)
 
-        // Remove leading zeros
-        if let number = Int(flightNum) {
-            return String(number)
+        // Respect the user's "Preserve Leading Zeros" setting
+        let settings = UserDefaultsService().loadSettings()
+        if settings.includeLeadingZeroInFlightNumber {
+            // Preserve as-is (e.g. "0509" stays "0509")
+            return flightNum
         }
 
-        return flightNum
+        // Strip all leading zeros from the numeric prefix, preserving any trailing letter suffix
+        let numericPrefix = flightNum.prefix(while: { $0.isNumber })
+        let suffix = String(flightNum.dropFirst(numericPrefix.count))
+        guard !numericPrefix.isEmpty else { return flightNum }
+        let stripped = numericPrefix.drop(while: { $0 == "0" })
+        let result = stripped.isEmpty ? String(numericPrefix.last!) : String(stripped)
+        return result + suffix
     }
 
     // MARK: - BP Date Calculation

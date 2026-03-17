@@ -181,15 +181,32 @@ class PlannedFlightService {
                         continue
                     }
 
-                    // Normalize flight number (remove QF prefix) for broader matching
-                    let normalizedFlightNumber = parsedFlight.flightNumber.replacingOccurrences(of: "QF", with: "")
+                    // Build a set of all leading-zero variants so we fetch any matching stored format.
+                    // e.g. parsed "0427" → check for "427", "QF427", "0427", "QF0427"
+                    var rawNum = parsedFlight.flightNumber
+                    if rawNum.hasPrefix("QFA") { rawNum = String(rawNum.dropFirst(3)) }
+                    else if rawNum.hasPrefix("QF") { rawNum = String(rawNum.dropFirst(2)) }
 
-                    // Create predicates for both with and without QF prefix
-                    let flightNumberPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [
-                        NSPredicate(format: "flightNumber == %@", parsedFlight.flightNumber),
-                        NSPredicate(format: "flightNumber == %@", "QF\(normalizedFlightNumber)"),
-                        NSPredicate(format: "flightNumber == %@", normalizedFlightNumber)
-                    ])
+                    // Numeric prefix and optional trailing suffix (for letter-suffixed flights)
+                    let numericPrefix = rawNum.prefix(while: { $0.isNumber })
+                    let suffix = String(rawNum.dropFirst(numericPrefix.count))
+                    let strippedNum: String = {
+                        let s = numericPrefix.drop(while: { $0 == "0" })
+                        return (s.isEmpty ? numericPrefix.last.map(String.init) ?? String(numericPrefix) : String(s)) + suffix
+                    }()
+
+                    // All plausible stored forms (with/without prefix, with/without leading zeros)
+                    let flightNumberVariants: [String] = Array(Set([
+                        rawNum,                          // "0427"
+                        strippedNum,                     // "427"
+                        "QF" + rawNum,                   // "QF0427"
+                        "QF" + strippedNum,              // "QF427"
+                        parsedFlight.flightNumber        // original as-parsed
+                    ]))
+
+                    let flightNumberPredicate = NSCompoundPredicate(orPredicateWithSubpredicates:
+                        flightNumberVariants.map { NSPredicate(format: "flightNumber == %@", $0) }
+                    )
 
                     let flightPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
                         NSPredicate(format: "date == %@", utcDate as NSDate),
@@ -270,9 +287,10 @@ class PlannedFlightService {
                         LogManager.shared.debug("      Routes: \(departureICAO)-\(arrivalICAO) vs \(existing.fromAirport ?? "nil")-\(existing.toAirport ?? "nil")")
 
             // Match on UTC date, flight number, and ICAO airport codes
-            // Normalize flight numbers for comparison (remove "QF" prefix if present)
-            let parsedFlightNum = parsedFlight.flightNumber.replacingOccurrences(of: "QF", with: "")
-            let existingFlightNum = (existing.flightNumber ?? "").replacingOccurrences(of: "QF", with: "")
+            // Normalise flight numbers: strip airline prefix and all leading zeros so
+            // "QF0427", "QF427", "0427", "427" all compare as equal.
+            let parsedFlightNum = normaliseFlightNumber(parsedFlight.flightNumber)
+            let existingFlightNum = normaliseFlightNumber(existing.flightNumber ?? "")
 
             if existing.date == utcDate &&
                existingFlightNum == parsedFlightNum &&
@@ -443,7 +461,7 @@ class PlannedFlightService {
 
     // MARK: - Helper Methods
 
-    /// Format flight number with airline prefix if user setting is enabled
+    /// Format flight number with airline prefix and leading zero handling based on user settings
     private func formatFlightNumber(_ flightNumber: String) -> String {
         let settings = userDefaultsService.loadSettings()
         var formatted = flightNumber
@@ -456,18 +474,42 @@ class PlannedFlightService {
             }
         }
 
-        // Handle leading zero based on settings
-        if formatted.contains(settings.airlinePrefix) && !settings.includeLeadingZeroInFlightNumber {
-            if formatted.hasPrefix(settings.airlinePrefix + "0") {
-                formatted = settings.airlinePrefix + String(formatted.dropFirst(settings.airlinePrefix.count + 1))
-            }
-        } else if !formatted.contains(settings.airlinePrefix) && !settings.includeLeadingZeroInFlightNumber {
-            if formatted.hasPrefix("0") {
-                formatted = String(formatted.dropFirst())
+        // Handle leading zeros based on settings — strip ALL leading zeros, not just one
+        if !settings.includeLeadingZeroInFlightNumber {
+            if formatted.hasPrefix(settings.airlinePrefix) {
+                let numericPart = String(formatted.dropFirst(settings.airlinePrefix.count))
+                let stripped = stripLeadingZeros(numericPart)
+                formatted = settings.airlinePrefix + stripped
+            } else {
+                formatted = stripLeadingZeros(formatted)
             }
         }
 
         return formatted
+    }
+
+    /// Strip all leading zeros from a flight number string, preserving any trailing letter suffix.
+    /// Only operates on purely numeric strings — if a letter suffix is present (e.g. "0412D"),
+    /// zeros are stripped from the numeric prefix only: "0412D" → "412D".
+    /// Leaves a single "0" intact if the entire numeric part is zero.
+    private func stripLeadingZeros(_ number: String) -> String {
+        let numericPrefix = number.prefix(while: { $0.isNumber })
+        let suffix = number.dropFirst(numericPrefix.count)
+        guard !numericPrefix.isEmpty else { return number }
+        let stripped = numericPrefix.drop(while: { $0 == "0" })
+        let result = stripped.isEmpty ? String(numericPrefix.last!) : String(stripped)
+        return result + suffix
+    }
+
+    /// Normalise a flight number for duplicate comparison by stripping the airline prefix
+    /// and all leading zeros from the numeric part. Trailing letter suffixes are preserved.
+    /// Examples: "QF0427" → "427", "QFA0001" → "1", "QF412D" → "412D", "427" → "427"
+    private func normaliseFlightNumber(_ flightNumber: String) -> String {
+        var digits = flightNumber
+        // Strip QFA before QF to avoid partial removal
+        if digits.hasPrefix("QFA") { digits = String(digits.dropFirst(3)) }
+        else if digits.hasPrefix("QF") { digits = String(digits.dropFirst(2)) }
+        return stripLeadingZeros(digits)
     }
 
     /// Format time from HHmm to HH:mm
