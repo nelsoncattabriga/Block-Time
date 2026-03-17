@@ -474,18 +474,33 @@ class PlannedFlightService {
             }
         }
 
-        // Handle leading zeros based on settings — strip ALL leading zeros, not just one
-        if !settings.includeLeadingZeroInFlightNumber {
-            if formatted.hasPrefix(settings.airlinePrefix) {
-                let numericPart = String(formatted.dropFirst(settings.airlinePrefix.count))
-                let stripped = stripLeadingZeros(numericPart)
-                formatted = settings.airlinePrefix + stripped
-            } else {
-                formatted = stripLeadingZeros(formatted)
-            }
+        // Apply leading zero preference to the numeric part
+        if formatted.hasPrefix(settings.airlinePrefix) {
+            let numericPart = String(formatted.dropFirst(settings.airlinePrefix.count))
+            let adjusted = settings.includeLeadingZeroInFlightNumber
+                ? padToFourDigits(numericPart)
+                : stripLeadingZeros(numericPart)
+            formatted = settings.airlinePrefix + adjusted
+        } else {
+            formatted = settings.includeLeadingZeroInFlightNumber
+                ? padToFourDigits(formatted)
+                : stripLeadingZeros(formatted)
         }
 
         return formatted
+    }
+
+    /// Pad the numeric prefix of a flight number to 4 digits, preserving any trailing letter suffix.
+    /// e.g. "427" → "0427", "1" → "0001", "0427" → "0427", "412D" → "0412D".
+    /// Already at 4+ digits or non-numeric strings are returned unchanged.
+    private func padToFourDigits(_ number: String) -> String {
+        let numericPrefix = number.prefix(while: { $0.isNumber })
+        let suffix = String(number.dropFirst(numericPrefix.count))
+        guard !numericPrefix.isEmpty else { return number }
+        let stripped = String(numericPrefix.drop(while: { $0 == "0" }))
+        let core = stripped.isEmpty ? "0" : stripped
+        let padded = String(repeating: "0", count: max(0, 4 - core.count)) + core
+        return padded + suffix
     }
 
     /// Strip all leading zeros from a flight number string, preserving any trailing letter suffix.

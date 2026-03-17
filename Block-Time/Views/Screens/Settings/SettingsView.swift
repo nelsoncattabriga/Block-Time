@@ -660,8 +660,8 @@ private struct ModernFormatOptionsCard: View {
 
 
                 ModernToggleRow(
-                    title: "Preserve Leading Zeros in Captured Flt No",
-                    subtitle: "0405 vs 405",
+                    title: "Leading Zeros in Flt No",
+                    subtitle: "QF0405 vs QF405",
                     isOn: Binding(
                         get: { viewModel.includeLeadingZeroInFlightNumber },
                         set: { viewModel.updateIncludeLeadingZeroInFlightNumber($0) }

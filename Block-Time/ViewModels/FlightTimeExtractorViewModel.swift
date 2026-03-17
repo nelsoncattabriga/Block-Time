@@ -1228,34 +1228,53 @@ class FlightTimeExtractorViewModel: ObservableObject {
     }
     
     private func formatFlightNumber(_ flightNumber: String) -> String {
-        // Don't format empty flight numbers
-        guard !flightNumber.isEmpty else {
-            return flightNumber
-        }
+        guard !flightNumber.isEmpty else { return flightNumber }
 
         var formatted = flightNumber
 
         if includeAirlinePrefixInFlightNumber {
-            // Only add prefix if it's not already there
             if !formatted.hasPrefix(airlinePrefix) {
                 formatted = airlinePrefix + formatted
             }
         }
 
-        if formatted.contains(airlinePrefix) && !includeLeadingZeroInFlightNumber {
+        // Apply leading zero preference to the numeric part
+        if formatted.hasPrefix(airlinePrefix) {
             let numericPart = String(formatted.dropFirst(airlinePrefix.count))
-            if numericPart.hasPrefix("0") {
-                let stripped = String(numericPart.drop(while: { $0 == "0" }))
-                formatted = airlinePrefix + (stripped.isEmpty ? numericPart : stripped)
-            }
-        } else if !formatted.contains(airlinePrefix) && !includeLeadingZeroInFlightNumber {
-            if formatted.hasPrefix("0") {
-                let stripped = String(formatted.drop(while: { $0 == "0" }))
-                if !stripped.isEmpty { formatted = stripped }
-            }
+            let adjusted = includeLeadingZeroInFlightNumber
+                ? padFlightNumberToFourDigits(numericPart)
+                : stripFlightNumberLeadingZeros(numericPart)
+            formatted = airlinePrefix + adjusted
+        } else {
+            formatted = includeLeadingZeroInFlightNumber
+                ? padFlightNumberToFourDigits(formatted)
+                : stripFlightNumberLeadingZeros(formatted)
         }
 
         return formatted
+    }
+
+    /// Pad the numeric prefix of a flight number to 4 digits, preserving any trailing letter suffix.
+    /// e.g. "427" → "0427", "1" → "0001", "0427" → "0427".
+    private func padFlightNumberToFourDigits(_ number: String) -> String {
+        let numericPrefix = number.prefix(while: { $0.isNumber })
+        let suffix = String(number.dropFirst(numericPrefix.count))
+        guard !numericPrefix.isEmpty else { return number }
+        let stripped = String(numericPrefix.drop(while: { $0 == "0" }))
+        let core = stripped.isEmpty ? "0" : stripped
+        let padded = String(repeating: "0", count: max(0, 4 - core.count)) + core
+        return padded + suffix
+    }
+
+    /// Strip all leading zeros from the numeric prefix of a flight number, preserving any trailing letter suffix.
+    /// e.g. "0427" → "427", "0001" → "1".
+    private func stripFlightNumberLeadingZeros(_ number: String) -> String {
+        let numericPrefix = number.prefix(while: { $0.isNumber })
+        let suffix = String(number.dropFirst(numericPrefix.count))
+        guard !numericPrefix.isEmpty else { return number }
+        let stripped = numericPrefix.drop(while: { $0 == "0" })
+        let result = stripped.isEmpty ? String(numericPrefix.last!) : String(stripped)
+        return result + suffix
     }
     
     // MARK: - Crew Name Management (unchanged)
