@@ -268,8 +268,8 @@ struct ImportExportView: View {
 
                 // Import from webCIS data file
                 ActionButton(
-                    title: "Import webCIS Data",
-                    subtitle: "RCIS Flying Experience Report",
+                    title: "Import webCIS History",
+                    subtitle: "ARMS Flying Experience Report",
                     icon: "doc.text.fill",
                     color: .orange.opacity(0.8),
                     isLoading: false
@@ -723,7 +723,7 @@ struct WebCISMappingView: View {
                     HStack {
                         Image(systemName: "arrow.down.circle.fill")
                             .foregroundColor(.green)
-                        Text("Import webCIS Data")
+                        Text("Import webCIS History")
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                     }

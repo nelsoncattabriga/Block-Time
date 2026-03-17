@@ -91,7 +91,7 @@ struct WebCISLiveImportView: View {
                     extractionStatus = .extracting
                     navigator.extractData()
                 } label: {
-                    Label("Extract Logbook Data", systemImage: "tray.and.arrow.down")
+                    Label("Import webCIS History", systemImage: "tray.and.arrow.down")
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -105,7 +105,7 @@ struct WebCISLiveImportView: View {
         case .extracting:
             HStack(spacing: 8) {
                 ProgressView()
-                Text("Extracting logbook data…")
+                Text("Importing webCIS History…")
                     .font(.subheadline)
             }
             .frame(maxWidth: .infinity)

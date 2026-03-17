@@ -26,7 +26,7 @@ struct WebCISImportInstructionsView: View {
                             .font(.title2)
                             .fontWeight(.bold)
 
-                        Text("RCIS Flying Experience Report")
+                        Text("ARMS Flying Experience Report")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -85,7 +85,7 @@ struct WebCISImportInstructionsView: View {
                 }
                 .padding(.bottom, 24)
             }
-            .navigationTitle("Import webCIS Data")
+            .navigationTitle("Import webCIS History")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
