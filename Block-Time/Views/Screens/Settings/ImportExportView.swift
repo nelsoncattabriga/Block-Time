@@ -280,8 +280,8 @@ struct ImportExportView: View {
 
                 // Generic data import
                 ActionButton(
-                    title: "Import CSV File",
-                    subtitle: "CSV or Tab-Delimited file",
+                    title: "Import from File",
+                    subtitle: "CSV or Tab-Delimited files",
                     icon: "square.and.arrow.down.on.square.fill",
                     color: .indigo.opacity(0.6),
                     isLoading: false

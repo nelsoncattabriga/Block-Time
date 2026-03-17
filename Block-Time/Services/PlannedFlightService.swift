@@ -181,26 +181,34 @@ class PlannedFlightService {
                         continue
                     }
 
-                    // Build a set of all leading-zero variants so we fetch any matching stored format.
-                    // e.g. parsed "0427" → check for "427", "QF427", "0427", "QF0427"
+                    // Build all leading-zero variants so the fetch matches regardless of stored format.
+                    // Must cover both padded ("QF0427") and stripped ("QF427") forms because the
+                    // user may have toggled the setting between imports.
                     var rawNum = parsedFlight.flightNumber
                     if rawNum.hasPrefix("QFA") { rawNum = String(rawNum.dropFirst(3)) }
                     else if rawNum.hasPrefix("QF") { rawNum = String(rawNum.dropFirst(2)) }
 
                     // Numeric prefix and optional trailing suffix (for letter-suffixed flights)
                     let numericPrefix = rawNum.prefix(while: { $0.isNumber })
-                    let suffix = String(rawNum.dropFirst(numericPrefix.count))
-                    let strippedNum: String = {
-                        let s = numericPrefix.drop(while: { $0 == "0" })
-                        return (s.isEmpty ? numericPrefix.last.map(String.init) ?? String(numericPrefix) : String(s)) + suffix
-                    }()
+                    let letterSuffix = String(rawNum.dropFirst(numericPrefix.count))
 
-                    // All plausible stored forms (with/without prefix, with/without leading zeros)
+                    // Stripped form: remove all leading zeros ("0618" → "618", "618" → "618")
+                    let strippedCore: String = {
+                        let s = numericPrefix.drop(while: { $0 == "0" })
+                        return (s.isEmpty ? String(numericPrefix.last ?? "0") : String(s))
+                    }()
+                    let strippedNum = strippedCore + letterSuffix
+
+                    // Padded form: pad stripped core to 4 digits ("618" → "0618", "1" → "0001")
+                    let paddedCore = String(repeating: "0", count: max(0, 4 - strippedCore.count)) + strippedCore
+                    let paddedNum = paddedCore + letterSuffix
+
+                    // All plausible stored forms: stripped and padded, with and without QF prefix
                     let flightNumberVariants: [String] = Array(Set([
-                        rawNum,                          // "0427"
-                        strippedNum,                     // "427"
-                        "QF" + rawNum,                   // "QF0427"
-                        "QF" + strippedNum,              // "QF427"
+                        strippedNum,                     // "618"
+                        paddedNum,                       // "0618"
+                        "QF" + strippedNum,              // "QF618"
+                        "QF" + paddedNum,                // "QF0618"
                         parsedFlight.flightNumber        // original as-parsed
                     ]))
 
