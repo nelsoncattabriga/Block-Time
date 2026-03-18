@@ -1389,8 +1389,11 @@ class FileImportService {
         }
 
         // Convert back to decimal hours
+        // Use %.2f to match parseDurationTime precision — %.1f caused rounding errors
+        // e.g. 1:46 (106 min) → 1.7666... → "1.8" (%.1f) → stored as 1.80 → displayed as 1:48
+        // With %.2f: 1.7666... → "1.77" → displayed as 1:46 (correct)
         let decimalHours = Double(totalMinutes) / 60.0
-        return String(format: "%.1f", decimalHours)
+        return String(format: "%.2f", decimalHours)
     }
 
     private func createWebCISFieldMapping(headers: [String]) -> [FieldMapping] {
