@@ -436,14 +436,20 @@ class FileImportService {
                 return values[0]
             }
 
-            // For multiple values, sum them together
-            // Convert to doubles if possible
-            let doubleValues = values.compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+            // For multiple values, sum them together.
+            // Use sumWebCISTimes so that h:mm strings (e.g. "1:46") are handled correctly
+            // alongside decimal values — Double("1:46") returns nil, so the old
+            // Double() path silently dropped all but the first column for h:mm data.
+            let hasColonFormat = values.contains { $0.contains(":") }
+            if hasColonFormat {
+                return sumWebCISTimes(values)
+            }
 
-            // If all values could be converted to doubles, sum them
-            if doubleValues.count == values.count {
+            // All decimal values — sum directly
+            let doubleValues = values.compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+            if doubleValues.count == values.filter({ !$0.trimmingCharacters(in: .whitespaces).isEmpty }).count {
                 let sum = doubleValues.reduce(0, +)
-                return String(format: "%.1f", sum)
+                return String(format: "%.2f", sum)
             }
 
             // For non-numeric values, just use first non-empty
