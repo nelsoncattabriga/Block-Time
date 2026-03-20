@@ -911,10 +911,13 @@ class FlightDatabaseService: ObservableObject {
             // Step 2: Build a content-based duplicate check for flights not caught by UUID
             // This catches flights that are the same but have different UUIDs (e.g., from backup restore)
             var contentBasedDuplicates = Set<String>()
+            // Fuzzy map for WebCIS imports that have no flight number: keyed on "reg|from|to|blockTime",
+            // storing all calendar dates (UTC and ±1 day) to handle UTC/local midnight offset.
+            var fuzzyDuplicates = Set<String>()
             do {
                 // Fetch all flights to build a content signature map
                 let allFlightsRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-                allFlightsRequest.propertiesToFetch = ["date", "flightNumber", "fromAirport", "toAirport", "aircraftReg", "aircraftType"]
+                allFlightsRequest.propertiesToFetch = ["date", "flightNumber", "fromAirport", "toAirport", "aircraftReg", "aircraftType", "blockTime"]
                 let allFlights = try viewContext.fetch(allFlightsRequest)
 
                 for flight in allFlights {
@@ -927,9 +930,19 @@ class FlightDatabaseService: ObservableObject {
                         let dateString = dateFormatter.string(from: date)
                         let signature = "\(dateString)|\(flightNumber)|\(fromAirport)|\(toAirport)|\(aircraftReg)|\(aircraftType)"
                         contentBasedDuplicates.insert(signature)
+
+                        // Build fuzzy entries for ±1 day to tolerate UTC/local date offset
+                        let blockTime = flight.blockTime ?? ""
+                        let fuzzyKey = "\(fromAirport)|\(toAirport)|\(aircraftReg)|\(blockTime)"
+                        for dayOffset in [-1, 0, 1] {
+                            if let offsetDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: date) {
+                                let offsetDateString = dateFormatter.string(from: offsetDate)
+                                fuzzyDuplicates.insert("\(offsetDateString)|\(fuzzyKey)")
+                            }
+                        }
                     }
                 }
-                LogManager.shared.info("Built content signature map with \(contentBasedDuplicates.count) unique flights")
+                LogManager.shared.info("Built content signature map with \(contentBasedDuplicates.count) unique flights, \(fuzzyDuplicates.count) fuzzy entries")
             } catch {
                 LogManager.shared.error("Error building content-based duplicate check: \(error.localizedDescription)")
                 // Continue without content-based checking if it fails
@@ -950,6 +963,20 @@ class FlightDatabaseService: ObservableObject {
                     duplicateCount += 1
                     LogManager.shared.info("⊘ Skipping duplicate (content match): \(sector.date) \(sector.flightNumber) \(sector.aircraftType)-\(sector.aircraftReg) (different UUID: \(sector.id))")
                     continue
+                }
+
+                // Fuzzy duplicate check for WebCIS imports (no flight number):
+                // matches on date ±1 day + reg + from + to + blockTime.
+                // The ±1 day tolerance handles the UTC/local midnight offset that occurs
+                // when manually-entered flights are stored with a local-time date but
+                // WebCIS imports always store midnight UTC.
+                if sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let fuzzyKey = "\(sector.date)|\(sector.fromAirport)|\(sector.toAirport)|\(sector.aircraftReg)|\(sector.blockTime)"
+                    if fuzzyDuplicates.contains(fuzzyKey) {
+                        duplicateCount += 1
+                        LogManager.shared.info("⊘ Skipping duplicate (fuzzy date match): \(sector.date) \(sector.aircraftReg) \(sector.fromAirport)-\(sector.toAirport)")
+                        continue
+                    }
                 }
 
                 // Parse and validate date
