@@ -794,7 +794,7 @@ class FileImportService {
 
         var dataRows: [[String]] = []
         for line in lines {
-            let cells = line.components(separatedBy: "\t").map { $0.trimmingCharacters(in: .whitespaces) }
+            let cells = line.components(separatedBy: "\t").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             guard cells.count >= 3, cells[0].first?.isNumber == true else { continue }
 
             func c(_ i: Int) -> String { i < cells.count ? cells[i] : "" }
@@ -1155,7 +1155,7 @@ class FileImportService {
 
     // MARK: - Parse Duration Time (handles decimal or HH:MM formats)
     private func parseDurationTime(_ timeString: String) -> String {
-        let trimmed = timeString.trimmingCharacters(in: .whitespaces)
+        let trimmed = timeString.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // If empty, return as-is
         if trimmed.isEmpty {
