@@ -162,9 +162,10 @@ struct WebCISLiveImportView: View {
     private func handleExtractedData(_ result: Result<String, Error>) {
         switch result {
         case .success(let rawText):
-            // Count tab-separated lines — each is one flight row
+            // Count data lines (skip the header row and any blanks)
             let rowCount = rawText.components(separatedBy: "\n")
                 .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                .filter { $0.first?.isNumber == true }
                 .count
 
             extractionStatus = .success(rowCount: rowCount)
@@ -273,13 +274,25 @@ extension WebCISLiveImportView {
         }
         console.log('[BlockTime] --- Column count in row 0: ' + dataTable.rows[0].cells.length + ' ---');
 
-        // Extract all rows as tab-separated text — one row per line
-        var lines = [];
+        // Extract all rows as tab-separated text — one row per line.
+        // Always pad to exactly 19 columns so indices are stable regardless of
+        // whether the browser omits trailing empty <td> elements.
+        // Column layout (0-based):
+        //   0:Date  1:Reg  2:Sector(DEP-ARR)  3:Inst
+        //   4:SE Dual D  5:SE Dual N  6:SE Cmd D  7:SE Cmd N
+        //   8:ME ICUS D  9:ME ICUS N  10:ME Dual D  11:ME Dual N
+        //   12:ME Co-Pilot D  13:ME Co-Pilot N  14:ME Cmd D  15:ME Cmd N
+        //   16:Flight Engr (ignored)  17:Sim  18:Sp/Ins (parse, don't total)
+        var EXPECTED_COLS = 19;
+        var HEADERS = ['Date','Reg','Sector','Inst','SE_Dual_D','SE_Dual_N','SE_Cmd_D','SE_Cmd_N','ME_ICUS_D','ME_ICUS_N','ME_Dual_D','ME_Dual_N','ME_CoPilot_D','ME_CoPilot_N','ME_Cmd_D','ME_Cmd_N','FlightEngr','Sim','SpIns'];
+        var lines = [HEADERS.join('\\t')];
         for (var r = 0; r < dataTable.rows.length; r++) {
             var cells = Array.from(dataTable.rows[r].cells).map(function(c) { return c.innerText.trim(); });
             // Only include rows that look like flight data (first cell matches date pattern)
             if (datePattern.test(cells[0])) {
-                lines.push(cells.join('\\t'));
+                // Pad with empty strings if the row has fewer cells than expected
+                while (cells.length < EXPECTED_COLS) { cells.push(''); }
+                lines.push(cells.slice(0, EXPECTED_COLS).join('\\t'));
             }
         }
 

@@ -13,6 +13,7 @@ struct SettingsSplitView: View {
     var frmsViewModel: FRMSViewModel
     @State private var selectedCategory: SettingsCategory? = .crew
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
+    @State private var showingWebCISLiveImport = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
 
@@ -44,8 +45,10 @@ struct SettingsSplitView: View {
             }
             .navigationSplitViewStyle(.balanced)
             .onChange(of: scenePhase) { oldPhase, newPhase in
-                // Force sidebar to show when app becomes active
-                if newPhase == .active && shouldUseSplitView {
+                // Force sidebar to show when app becomes active, but not while
+                // the webCIS live import sheet is open — rebuilding the split view
+                // would reset its @State and dismiss the WKWebView mid-auth.
+                if newPhase == .active && shouldUseSplitView && !showingWebCISLiveImport {
                     columnVisibility = .doubleColumn
                 }
             }
@@ -71,7 +74,7 @@ struct SettingsSplitView: View {
         case .backups:
             BackupsView(viewModel: viewModel)
         case .importExport:
-            ImportExportView(viewModel: viewModel)
+            ImportExportView(viewModel: viewModel, showingWebCISLiveImport: $showingWebCISLiveImport)
         case .about:
             SupportView()
         }

@@ -766,14 +766,14 @@ class FileImportService {
         return createWebCISFieldMapping(headers: headers)
     }
 
-    /// Parse webCIS text extracted from the DOM (live import via WKWebView).
-    /// The JS extraction script joins table cells with \t, so each line is tab-separated.
-    /// DOM column order (19 cells):
-    ///   0:Date  1:Reg  2:Sector(DEP-DES)  3:Inst
+    /// Parse webCIS text extracted from the DOM (live import via WKWebView) or re-imported
+    /// from a Block-Time saved download file. Both use the same 19-column tab-separated format.
+    /// Column order (0-based):
+    ///   0:Date  1:Reg  2:Sector(DEP-ARR)  3:Inst
     ///   4:SE Dual D  5:SE Dual N  6:SE Cmd D  7:SE Cmd N
     ///   8:ME ICUS D  9:ME ICUS N  10:ME Dual D  11:ME Dual N
-    ///   12:ME CoPilot D  13:ME CoPilot N  14:ME Cmd D  15:ME Cmd N
-    ///   16:Sim  17:Sp/Ins(ignored)  18:(ignored)
+    ///   12:ME Co-Pilot D  13:ME Co-Pilot N  14:ME Cmd D  15:ME Cmd N
+    ///   16:Flight Engr (ignored)  17:Sim  18:Sp/Ins (parsed, not totalled)
     func parseWebCISText(_ content: String) throws -> ImportData {
         let lines = content.components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -799,10 +799,9 @@ class FileImportService {
 
             func c(_ i: Int) -> String { i < cells.count ? cells[i] : "" }
 
-            // Sim row: reg cell contains "SIM", time is in the last non-empty cell
-            // e.g. ['02 May 24', 'SIM', '', '', ..., '4:00'] — 18 cells
+            // Sim row: reg cell contains "SIM", time is in col17
             if c(1).uppercased() == "SIM" {
-                let simTime = c(17).isEmpty ? c(cells.count - 1) : c(17)
+                let simTime = c(17).isEmpty ? c(cells.count - 1) : c(17)  // fallback for malformed rows
                 let total = sumWebCISTimes([simTime])
                 let row: [String] = [
                     c(0),  // DATE
@@ -852,7 +851,10 @@ class FileImportService {
             if !meid.isEmpty && meid.contains(":") && !mefd.isEmpty && mefd.contains(":") { mefd = "" }
             if !mein.isEmpty && mein.contains(":") && !mefn.isEmpty && mefn.contains(":") { mefn = "" }
 
-            let timeFields = [c(4), c(5), c(6), c(7), meid, mein, c(10), c(11), mefd, mefn, c(14), c(15), c(16)]
+            // col16 = Flight Engr (ignored), col17 = Sim, col18 = Sp/Ins (parsed, not totalled)
+            let simu = c(17)
+
+            let timeFields = [c(4), c(5), c(6), c(7), meid, mein, c(10), c(11), mefd, mefn, c(14), c(15), simu]
             let total = sumWebCISTimes(timeFields)
 
             let row: [String] = [
@@ -873,7 +875,7 @@ class FileImportService {
                 mefn,   // MEFN (ME CoPilot N)
                 c(14),  // MECD (ME Cmd D)
                 c(15),  // MECN (ME Cmd N)
-                c(16),  // SIMU
+                simu,   // SIMU
                 "",     // FLEN (ignored)
                 total   // TOTAL
             ]
@@ -1263,6 +1265,15 @@ class FileImportService {
         }
 
         let content = try String(contentsOf: url, encoding: .utf8)
+
+        // Tab-separated = saved output from the live WebCIS JS extractor.
+        // Delegate to the same parser used during live import so both paths behave identically.
+        let firstDataLine = content.components(separatedBy: .newlines)
+            .first { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        if firstDataLine?.contains("\t") == true {
+            return try parseWebCISText(content)
+        }
+
         let lines = content.components(separatedBy: .newlines)
 
         // Find where data starts (after header lines that start with whitespace or contain "Date")
@@ -1275,7 +1286,7 @@ class FileImportService {
             }
         }
 
-        guard dataStartIndex > 0 && dataStartIndex < lines.count else {
+        guard dataStartIndex < lines.count else {
             throw ImportError.invalidFormat
         }
 
@@ -1496,6 +1507,8 @@ class FileImportService {
             "yy-MM-dd",        // 24-12-31
             "ddMMMyy",         // 25Sep04 (webCIS file format)
             "dMMMyy",          // 1Sep04 (webCIS file format with single digit day)
+            "dd-MMM-yy",       // 25-Sep-04 (webCIS saved download format)
+            "d-MMM-yy",        // 6-May-23 (webCIS saved download format single digit day)
             "dd MMM yy",       // 11 May 01 (webCIS DOM/live format)
             "d MMM yy",        // 1 May 01 (webCIS DOM/live format single digit day)
             // Then 4-digit year formats

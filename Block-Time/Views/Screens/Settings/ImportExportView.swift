@@ -37,7 +37,19 @@ struct ImportExportView: View {
     @State private var showingWebCISInstructions = false
 
     // webCIS live import (WKWebView)
-    @State private var showingWebCISLiveImport = false
+    // On iPad, showingWebCISLiveImport is owned by SettingsSplitView (passed as a binding)
+    // so it survives split-view rebuilds triggered by scenePhase changes when returning
+    // from an authenticator app mid-auth. On iPhone a local @State is used instead.
+    private let externalShowingWebCISLiveImport: Binding<Bool>?
+    @State private var localShowingWebCISLiveImport = false
+    private var webCISLiveImportBinding: Binding<Bool> {
+        externalShowingWebCISLiveImport ?? $localShowingWebCISLiveImport
+    }
+
+    init(viewModel: FlightTimeExtractorViewModel, showingWebCISLiveImport: Binding<Bool>? = nil) {
+        self.viewModel = viewModel
+        self.externalShowingWebCISLiveImport = showingWebCISLiveImport
+    }
 
     // Roster import state
     @State private var showingRosterImport = false
@@ -133,12 +145,12 @@ struct ImportExportView: View {
                 performWebCISImportWithMappings(data: data, registrationMappings: regMappings)
             }
         }
-        .fullScreenCover(isPresented: $showingWebCISLiveImport) {
+        .fullScreenCover(isPresented: webCISLiveImportBinding) {
             WebCISLiveImportView { rawText in
                 // Save raw extracted text to iCloud Backups folder (silent, best-effort)
                 saveWebCISRawText(rawText)
                 // Dismiss fullScreenCover first, then present mapping sheet after animation completes
-                showingWebCISLiveImport = false
+                webCISLiveImportBinding.wrappedValue = false
                 Task {
                     try? await Task.sleep(for: .milliseconds(600))
                     if let parsedData = try? FileImportService.shared.parseWebCISText(rawText) {
@@ -167,7 +179,7 @@ struct ImportExportView: View {
             WebCISImportInstructionsView {
                 activeFilePickerMode = .webCIS
             } onLiveImport: {
-                showingWebCISLiveImport = true
+                webCISLiveImportBinding.wrappedValue = true
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
