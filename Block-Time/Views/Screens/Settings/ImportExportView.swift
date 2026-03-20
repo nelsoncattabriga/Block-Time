@@ -389,6 +389,11 @@ struct ImportExportView: View {
     }
 
     private func parseImportFile(_ url: URL) {
+        // Auto-detect webCIS files and redirect to the correct flow
+        if FileImportService.shared.looksLikeWebCISFile(url: url) {
+            parseWebCISFile(url)
+            return
+        }
         do {
             let parsedData = try FileImportService.shared.parseFile(url: url)
             importData = parsedData
