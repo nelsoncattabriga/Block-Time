@@ -363,7 +363,7 @@ struct ImportMappingView: View {
             mappings.append(RegistrationTypeMapping(
                 pattern: pattern + "*",
                 aircraftType: detectedType,
-                sampleRegistrations: Array(regs.prefix(3).sorted())
+                sampleRegistrations: Array(regs.sorted())
             ))
         }
 
