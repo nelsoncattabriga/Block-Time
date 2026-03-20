@@ -42,43 +42,12 @@ struct WebCISImportInstructionsView: View {
                     }
                     .padding(.horizontal)
 
-                    // Divider with label
-                    HStack(spacing: 12) {
-                        Rectangle()
-                            .fill(Color(.separator).opacity(0.5))
-                            .frame(height: 1)
-                        Text("or import from file")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize()
-                        Rectangle()
-                            .fill(Color(.separator).opacity(0.5))
-                            .frame(height: 1)
-                    }
-                    .padding(.horizontal)
-
-                    // Notice banner
-//                    WebCISNoticeBanner()
-//                        .padding(.horizontal)
-
-                    // Instruction card
-                    WebCISInstructionCard {
-                        Divider()
-                        Button {
-                            dismiss()
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .seconds(0.2))
-                                onSelectFile()
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "doc.badge.plus")
-                                Text("Select webCIS File")
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .foregroundStyle(.orange)
+                    // File import option
+                    WebCISFileImportCard {
+                        dismiss()
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(0.2))
+                            onSelectFile()
                         }
                     }
                     .padding(.horizontal)
@@ -106,11 +75,11 @@ private struct WebCISLiveImportCard: View {
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(Color.green.opacity(0.12))
+                        .fill(Color.orange.opacity(0.12))
                         .frame(width: 44, height: 44)
                     Image(systemName: "globe")
                         .font(.title3)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.orange)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -130,11 +99,11 @@ private struct WebCISLiveImportCard: View {
                     .foregroundStyle(.secondary)
             }
             .padding()
-            .background(Color(.secondarySystemBackground).overlay(Color.green.opacity(0.05)))
+            .background(Color(.secondarySystemBackground).overlay(Color.orange.opacity(0.05)))
             .clipShape(.rect(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.green.opacity(0.35), lineWidth: 1.5)
+                    .stroke(Color.orange.opacity(0.35), lineWidth: 1.5)
             )
         }
         .buttonStyle(.plain)
@@ -172,70 +141,48 @@ private struct WebCISLiveImportCard: View {
 //    }
 //}
 
-// MARK: - Instruction Card
+// MARK: - File Import Card
 
-private struct WebCISInstructionCard<Action: View>: View {
-    let action: Action
-
-    init(@ViewBuilder action: () -> Action) {
-        self.action = action()
-    }
-
-    private let steps: [String] = [
-        "Search Workday for the 'Manager Crew Systems' email address",
-        "Email them requesting a copy of your webCIS Flying Record",
-        "Once you receive the file, save it and tap Select webCIS File below"
-    ]
+private struct WebCISFileImportCard: View {
+    let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack(spacing: 12) {
+        Button(action: action) {
+            HStack(spacing: 14) {
                 ZStack {
                     Circle()
                         .fill(Color.orange.opacity(0.12))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: "envelope.fill")
-                        .font(.headline)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "doc.badge.plus")
+                        .font(.title3)
                         .foregroundStyle(.orange)
                 }
 
-                Text("Import From File")
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-            }
-
-            // Steps
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                    HStack(alignment: .top, spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.orange)
-                            .frame(width: 20, height: 20)
-                            .background(Color.orange.opacity(0.12))
-                            .clipShape(Circle())
-
-                        Text(step)
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Spacer(minLength: 0)
-                    }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Select webCIS File")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                    Text("Import from a saved webCIS history file")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-            }
 
-            action
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(Color(.secondarySystemBackground).overlay(Color.orange.opacity(0.05)))
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.orange.opacity(0.35), lineWidth: 1.5)
+            )
         }
-        .padding()
-        .background(Color(.secondarySystemBackground).overlay(Color.orange.opacity(0.05)))
-        .clipShape(.rect(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color(.separator).opacity(0.4), lineWidth: 1.5)
-        )
+        .buttonStyle(.plain)
     }
 }
 
