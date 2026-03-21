@@ -264,7 +264,7 @@ struct FlightSectorRow: View, Equatable {
 
                     // INS Badge if Sp/Ins flight
                     if sector.isSpInsOnly {
-                        Text("INS")
+                        Text("SP/INS")
                             .font(.subheadline)
                             .fontWeight(.bold)
                             .foregroundColor(.purple)
