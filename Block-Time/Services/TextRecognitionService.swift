@@ -267,7 +267,7 @@ class TextRecognitionService: ObservableObject {
         let timePattern = try! NSRegularExpression(pattern: "^\\s*([0-9ØøOo8]{2}: ?[0-9ØøOo]{2})\\s*$")
 
         // Track which label we're capturing for
-        let skipLabelsOnly = ["ON-BLX", "FUEL", "STATE", "*PRINT", "SENSORS", "INIT", "REF", "FIX", "MENU"]
+        let skipLabelsOnly = ["ON-BLX", "FUEL", "STATE", "*PRINT", "SENSORS", "INIT", "REF", "FIX", "MENU", "<RETURN"]
 
         var extractedTimes: [String] = []
         var fltTime = ""
@@ -292,9 +292,38 @@ class TextRecognitionService: ObservableObject {
             }
 
             // Skip lines that are labels without associated times
-            if skipLabelsOnly.contains(line) || line.isEmpty {
+            // Also skip any line that contains "<RETURN" (the footer timestamp line)
+            if skipLabelsOnly.contains(where: { line.hasPrefix($0) }) || line.isEmpty {
                 searchIndex += 1
                 continue
+            }
+
+            // Detect OCR-split times: a line of just digits ("04") followed by ": MM" on the next line
+            let splitHoursPattern = try! NSRegularExpression(pattern: "^([0-9ØøOo8]{2})$")
+            if splitHoursPattern.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) != nil,
+               searchIndex + 1 < lines.count {
+                let nextLine = lines[searchIndex + 1].trimmingCharacters(in: .whitespaces)
+                let splitMinsPattern = try! NSRegularExpression(pattern: "^: ?([0-9ØøOo]{2})$")
+                if let minsMatch = splitMinsPattern.firstMatch(in: nextLine, range: NSRange(nextLine.startIndex..., in: nextLine)),
+                   let minsRange = Range(minsMatch.range(at: 1), in: nextLine) {
+                    let rejoined = line + ":" + nextLine[minsRange]
+                    let correctedTime = smartCorrectTime(rejoined)
+                    LogManager.shared.debug("  Rejoined split time at line \(searchIndex): '\(line)' + '\(nextLine)' → \(correctedTime)")
+                    searchIndex += 2  // consume both lines
+
+                    if let captureAs = captureNextTimeAs {
+                        if captureAs == "FLT" { fltTime = correctedTime }
+                        else if captureAs == "BLK" { blkTime = correctedTime }
+                        captureNextTimeAs = nil
+                    } else {
+                        extractedTimes.append(correctedTime)
+                        lastTimeIndex = searchIndex
+                        let fieldNames = ["OUT", "OFF", "ON", "IN"]
+                        let fieldName = extractedTimes.count <= fieldNames.count ? fieldNames[extractedTimes.count - 1] : "?"
+                        LogManager.shared.debug("  Columnar \(fieldName) time (rejoined): \(correctedTime)")
+                    }
+                    continue
+                }
             }
 
             let matches = timePattern.matches(in: line, range: NSRange(line.startIndex..., in: line))
