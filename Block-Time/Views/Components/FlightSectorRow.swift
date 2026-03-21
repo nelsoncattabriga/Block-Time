@@ -250,31 +250,6 @@ struct FlightSectorRow: View, Equatable {
                         .foregroundColor(.secondary)
                         .italic(sector.aircraftReg.isEmpty)
 
-                    // PAX Badge if positioning flight
-                    if isPositioning {
-                        Text("PAX")
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 2)
-                            .background(Color.orange.opacity(0.2))
-                            .cornerRadius(4)
-                    }
-
-                    // INS Badge if Sp/Ins flight
-                    if sector.isSpInsOnly {
-                        Text("SP/INS")
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.purple)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 2)
-                            .background(Color.purple.opacity(0.2))
-                            .cornerRadius(4)
-                    }
-                    
-                    
                     Spacer()
 
                     // OUT & IN Times
@@ -311,8 +286,7 @@ struct FlightSectorRow: View, Equatable {
                             .font(.subheadline.italic())
                             .foregroundColor(.secondary)
                     } else if !isPositioning {
-                        // Don't show flight hours or PF/PM badges for positioning flights
-                        // For Sp/Ins flights show spInsTime in teal, sim in purple, block in orange
+                        // For Sp/Ins flights show spInsTime in purple, sim in purple, block in orange
                         if sector.isSpInsOnly {
                             Text(sector.getFormattedSpInsTime(asHoursMinutes: showTimesInHoursMinutes))
                                 .font(.headline.bold())
@@ -326,9 +300,31 @@ struct FlightSectorRow: View, Equatable {
                                 .font(.headline.bold())
                                 .foregroundColor(.orange.opacity(0.8))
                         }
+                    }
 
-                        // PF and PM Badges
-                        if sector.isPilotFlying {
+                    // Flight type / role badge (always shown, not gated by isPositioning)
+                    if !cachedIsFutureFlight {
+                        if isPositioning {
+                            Text("PAX")
+                                .font(.subheadline.monospaced())
+                                .foregroundColor(.orange)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.orange, lineWidth: 1)
+                                )
+                        } else if sector.isSpInsOnly {
+                            Text("INS")
+                                .font(.subheadline.monospaced())
+                                .foregroundColor(.purple)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.purple, lineWidth: 1)
+                                )
+                        } else if sector.isPilotFlying {
                             Text("PF")
                                 .font(.subheadline.monospaced())
                                 .foregroundColor(.green)
