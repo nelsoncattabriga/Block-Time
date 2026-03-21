@@ -53,6 +53,7 @@ class CloudKitSettingsSyncService {
         static let savedCoPilotNames = "cloud_savedCoPilotNames"
         static let savePhotosToLibrary = "cloud_savePhotosToLibrary"
         static let showSONameFields = "cloud_showSONameFields"
+        static let showSpInsSelector = "cloud_showSpInsSelector"
         static let pfAutoInstrumentMinutes = "cloud_pfAutoInstrumentMinutes"
         static let logbookDestination = "cloud_logbookDestination"
         static let displayFlightsInLocalTime = "cloud_displayFlightsInLocalTime"
@@ -286,6 +287,7 @@ class CloudKitSettingsSyncService {
         ubiquitousStore.set(settings.savedCoPilotNames, forKey: CloudKeys.savedCoPilotNames)
         ubiquitousStore.set(settings.savePhotosToLibrary, forKey: CloudKeys.savePhotosToLibrary)
         ubiquitousStore.set(settings.showSONameFields, forKey: CloudKeys.showSONameFields)
+        ubiquitousStore.set(settings.showSpInsSelector, forKey: CloudKeys.showSpInsSelector)
         ubiquitousStore.set(settings.pfAutoInstrumentMinutes, forKey: CloudKeys.pfAutoInstrumentMinutes)
         ubiquitousStore.set(settings.logbookDestination.rawValue, forKey: CloudKeys.logbookDestination)
         ubiquitousStore.set(settings.displayFlightsInLocalTime, forKey: CloudKeys.displayFlightsInLocalTime)
@@ -459,6 +461,11 @@ class CloudKitSettingsSyncService {
            showSOFields != localSettings.showSONameFields {
             settings.showSONameFields = showSOFields
             changedKeys.insert("showSONameFields")
+        }
+        if let showSpIns = ubiquitousStore.object(forKey: CloudKeys.showSpInsSelector) as? Bool,
+           showSpIns != localSettings.showSpInsSelector {
+            settings.showSpInsSelector = showSpIns
+            changedKeys.insert("showSpInsSelector")
         }
         if let pfAutoInstrument = ubiquitousStore.object(forKey: CloudKeys.pfAutoInstrumentMinutes) as? Int,
            pfAutoInstrument != localSettings.pfAutoInstrumentMinutes {

@@ -187,6 +187,20 @@ private struct FlightsListContent: View {
         UIDevice.current.userInterfaceIdiom == .pad ? 10 : 14
     }
 
+    private var flightCountHeader: some View {
+        HStack {
+            Text("\(filteredFlightSectors.count) \(filteredFlightSectors.count == 1 ? "Entry" : "Entries")")
+                .font(.headline.bold())
+                .foregroundColor(.secondary)
+            Spacer()
+            Spacer()
+            Text("\(cachedTotalHours, specifier: "%.1f") hrs")
+                .font(.headline.bold())
+                .foregroundColor(.secondary)
+        }
+        .padding()
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
@@ -195,18 +209,7 @@ private struct FlightsListContent: View {
                 EmptyFlightsView()
             } else {
                 // Flight count header
-                HStack {
-                    Text("\(filteredFlightSectors.count) \(filteredFlightSectors.count == 1 ? "Entry" : "Entries")")
-                        .font(.headline.bold())
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Spacer()
-
-                    Text("\(cachedTotalHours, specifier: "%.1f") hrs")
-                        .font(.headline.bold())
-                        .foregroundColor(.secondary)
-                }
-                .padding()
+                flightCountHeader
                 .background(Color.clear)
 
                 // Search bar (collapsible)
@@ -516,6 +519,7 @@ private struct FlightsListContent: View {
                 filterContainsRemarks: $filterViewModel.filterContainsRemarks,
                 filterSimulator: $filterViewModel.filterSimulator,
                 filterPositioning: $filterViewModel.filterPositioning,
+                filterSpIns: $filterViewModel.filterSpIns,
                 filterNoBlockTime: $filterViewModel.filterNoBlockTime,
                 filterNoCrewNames: $filterViewModel.filterNoCrewNames,
                 filterNoFlightNumber: $filterViewModel.filterNoFlightNumber,
@@ -817,13 +821,18 @@ private struct FlightsListContent: View {
                 return false
             }
 
-            // Simulator filter
-            if filterViewModel.filterSimulator && sector.simTimeValue == 0 {
+            // Simulator filter (exclude Sp/Ins-only flights — they have simTime==spInsTime but are not SIM)
+            if filterViewModel.filterSimulator && (sector.simTimeValue == 0 || sector.isSpInsOnly) {
                 return false
             }
 
             // Positioning filter
             if filterViewModel.filterPositioning && !sector.isPositioning {
+                return false
+            }
+
+            // Sp/Ins filter
+            if filterViewModel.filterSpIns && !sector.isSpInsOnly {
                 return false
             }
 
@@ -908,9 +917,11 @@ private struct FlightsListContent: View {
         // Cache total hours calculation
         cachedTotalHours = if filterViewModel.filterSimulator {
             sorted.reduce(0.0) { $0 + $1.simTimeValue }
+        } else if filterViewModel.filterSpIns {
+            sorted.reduce(0.0) { $0 + $1.spInsTimeValue }
         } else {
-            // Match Dashboard logic: sum block + sim (handles Summary Rows with both fields)
-            sorted.reduce(0.0) { $0 + $1.blockTimeValue + $1.simTimeValue }
+            // Match Dashboard logic: sum block + sim, excluding Sp/Ins-only entries
+            sorted.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly ? 0 : $1.simTimeValue) }
         }
 
         // Update filter active state
@@ -930,6 +941,7 @@ private struct FlightsListContent: View {
                         filterViewModel.filterContainsRemarks ||
                         filterViewModel.filterSimulator ||
                         filterViewModel.filterPositioning ||
+                        filterViewModel.filterSpIns ||
                         filterViewModel.filterNoBlockTime ||
                         filterViewModel.filterNoCrewNames ||
                         filterViewModel.filterNoFlightNumber ||
@@ -1136,6 +1148,7 @@ private struct FlightsListContent: View {
                !filterViewModel.filterContainsRemarks &&
                !filterViewModel.filterSimulator &&
                !filterViewModel.filterPositioning &&
+               !filterViewModel.filterSpIns &&
                !filterViewModel.filterNoBlockTime &&
                !filterViewModel.filterNoCrewNames &&
                !filterViewModel.filterNoFlightNumber &&

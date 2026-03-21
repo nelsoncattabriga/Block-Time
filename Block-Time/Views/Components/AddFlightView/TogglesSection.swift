@@ -14,7 +14,7 @@ struct ModernTogglesSection: View {
                     HStack(spacing: 0) {
                         // PF Button
                         Button(action: {
-                            if !viewModel.isPositioning {
+                            if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
                                 viewModel.isPilotFlying = true
                                 HapticManager.shared.impact(.medium)
                                 // When PF is turned on, restore default approach type if set
@@ -31,12 +31,12 @@ struct ModernTogglesSection: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .disabled(viewModel.isPositioning)
-                        .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                        .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
+                        .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
 
                         // PM Button
                         Button(action: {
-                            if !viewModel.isPositioning {
+                            if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
                                 viewModel.isPilotFlying = false
                                 HapticManager.shared.impact(.medium)
                             }
@@ -49,8 +49,8 @@ struct ModernTogglesSection: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .disabled(viewModel.isPositioning)
-                        .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                        .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
+                        .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
                     }
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
@@ -68,7 +68,7 @@ struct ModernTogglesSection: View {
                                     viewModel.updateSelectedApproachType(newValue)
                                 }
                             ),
-                            isDisabled: !viewModel.isPilotFlying
+                            isDisabled: (!viewModel.isPilotFlying && !viewModel.isSimulator) || viewModel.isSpIns
                         )
                     }
 
@@ -80,7 +80,7 @@ struct ModernTogglesSection: View {
                     HStack(alignment:.center, spacing: 0) {
                     // P1 Button
                     Button(action: {
-                        if !viewModel.isPositioning {
+                        if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
                             viewModel.selectedTimeCredit = .p1
                             HapticManager.shared.impact(.medium)
                         }
@@ -94,15 +94,15 @@ struct ModernTogglesSection: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .disabled(viewModel.isPositioning)
-                    .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                    .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
+                    .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
 
                     Divider()
                         .frame(height: 24)
 
                     // P1US Button
                     Button(action: {
-                        if !viewModel.isPositioning {
+                        if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
                             viewModel.selectedTimeCredit = .p1us
                             HapticManager.shared.impact(.medium)
                         }
@@ -116,15 +116,15 @@ struct ModernTogglesSection: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .disabled(viewModel.isPositioning)
-                    .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                    .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
+                    .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
 
                     Divider()
                         .frame(height: 24)
 
                     // P2 Button
                     Button(action: {
-                        if !viewModel.isPositioning {
+                        if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
                             viewModel.selectedTimeCredit = .p2
                             HapticManager.shared.impact(.medium)
                         }
@@ -138,8 +138,8 @@ struct ModernTogglesSection: View {
                             .contentShape(Rectangle())
                     }
                         .buttonStyle(PlainButtonStyle())
-                        .disabled(viewModel.isPositioning)
-                        .opacity(viewModel.isPositioning ? 0.5 : 1.0)
+                        .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
+                        .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
                     }
                     .background(Color(.secondarySystemBackground))
                     .cornerRadius(8)

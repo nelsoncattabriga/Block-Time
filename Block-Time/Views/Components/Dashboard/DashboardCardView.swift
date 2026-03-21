@@ -134,6 +134,15 @@ struct DashboardCardView: View {
                 icon: "desktopcomputer",
                 fraction: stats.totalFlightTime > 0 ? stats.totalSIMTime / stats.totalFlightTime : nil
             )
+        case .insTime:
+            StatCard(
+                title: "Sp/INS Time",
+                value: stats.formattedSpInsTime(asHoursMinutes: showTimesInHoursMinutes),
+                subtitle: stats.totalSpInsTime > 0 ? String(format: "%.0f%% of total flight time", stats.totalSpInsTime / stats.totalFlightTime * 100) : "Specialist / Instructor",
+                color: .teal,
+                icon: "person.fill.badge.plus",
+                fraction: stats.totalFlightTime > 0 ? stats.totalSpInsTime / stats.totalFlightTime : nil
+            )
 //        case .pfRatioStat:
 //            StatCard(
 //                title: "PF Ratio",

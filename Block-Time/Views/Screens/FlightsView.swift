@@ -396,6 +396,7 @@ struct FlightsView: View {
                     filterContainsRemarks: $filterViewModel.filterContainsRemarks,
                     filterSimulator: $filterViewModel.filterSimulator,
                     filterPositioning: $filterViewModel.filterPositioning,
+                    filterSpIns: $filterViewModel.filterSpIns,
                     filterNoBlockTime: $filterViewModel.filterNoBlockTime,
                     filterNoCrewNames: $filterViewModel.filterNoCrewNames,
                     filterNoFlightNumber: $filterViewModel.filterNoFlightNumber,
@@ -714,13 +715,18 @@ struct FlightsView: View {
                 return false
             }
 
-            // Simulator filter
-            if filterViewModel.filterSimulator && sector.simTimeValue <= 0 {
+            // Simulator filter (exclude Sp/Ins-only flights — they have simTime==spInsTime but are not SIM)
+            if filterViewModel.filterSimulator && (sector.simTimeValue <= 0 || sector.isSpInsOnly) {
                 return false
             }
 
             // Positioning filter
             if filterViewModel.filterPositioning && !sector.isPositioning {
+                return false
+            }
+
+            // Sp/Ins filter
+            if filterViewModel.filterSpIns && !sector.isSpInsOnly {
                 return false
             }
 
@@ -807,9 +813,11 @@ struct FlightsView: View {
         // Cache total hours calculation - expensive reduce operation
         cachedTotalHours = if filterViewModel.filterSimulator {
             sortedFiltered.reduce(0.0) { $0 + $1.simTimeValue }
+        } else if filterViewModel.filterSpIns {
+            sortedFiltered.reduce(0.0) { $0 + $1.spInsTimeValue }
         } else {
-            // Match Dashboard logic: sum block + sim (handles Summary Rows with both fields)
-            sortedFiltered.reduce(0.0) { $0 + $1.blockTimeValue + $1.simTimeValue }
+            // Match Dashboard logic: sum block + sim, excluding Sp/Ins-only entries
+            sortedFiltered.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly ? 0 : $1.simTimeValue) }
         }
 
         // Update filter active state - includes custom date range and other filters
@@ -829,6 +837,7 @@ struct FlightsView: View {
                         filterViewModel.filterContainsRemarks ||
                         filterViewModel.filterSimulator ||
                         filterViewModel.filterPositioning ||
+                        filterViewModel.filterSpIns ||
                         filterViewModel.filterNoBlockTime ||
                         filterViewModel.filterNoCrewNames ||
                         filterViewModel.filterNoFlightNumber ||
@@ -1041,6 +1050,7 @@ struct FlightsView: View {
                !filterViewModel.filterContainsRemarks &&
                !filterViewModel.filterSimulator &&
                !filterViewModel.filterPositioning &&
+               !filterViewModel.filterSpIns &&
                !filterViewModel.filterNoBlockTime &&
                !filterViewModel.filterNoCrewNames &&
                !filterViewModel.filterNoFlightNumber &&
@@ -1166,6 +1176,7 @@ struct FilterSheet: View {
     @Binding var filterContainsRemarks: Bool
     @Binding var filterSimulator: Bool
     @Binding var filterPositioning: Bool
+    @Binding var filterSpIns: Bool
     @Binding var filterNoBlockTime: Bool
     @Binding var filterNoCrewNames: Bool
     @Binding var filterNoFlightNumber: Bool
@@ -1416,6 +1427,8 @@ struct FilterSheet: View {
                     Toggle("Simulator", isOn: $filterSimulator)
 
                     Toggle("PAX", isOn: $filterPositioning)
+
+                    Toggle("Sp/INS", isOn: $filterSpIns)
 
                     Toggle("Type Summary", isOn: $filterTypeSummary)
                 }

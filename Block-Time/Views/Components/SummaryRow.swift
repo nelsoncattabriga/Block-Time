@@ -67,7 +67,7 @@ struct SummaryRow: View, Equatable {
         if sector.nightTimeValue > 0 {
             entries.append(("Night", sector.nightTimeValue))
         }
-        if sector.simTimeValue > 0 {
+        if sector.simTimeValue > 0 && !sector.isSpInsOnly {
             entries.append(("SIM", sector.simTimeValue))
         }
         if sector.p1TimeValue > 0 {

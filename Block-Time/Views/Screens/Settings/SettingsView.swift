@@ -470,6 +470,17 @@ private struct ModernDefaultCrewNamesCard: View {
                     color: .blue,
                     icon: "person.2.badge.key"
                 )
+
+                ModernToggleRow(
+                    title: "Log Sp/INS Times",
+                    subtitle: "Log Instructor Times",
+                    isOn: Binding(
+                        get: { viewModel.showSpInsSelector },
+                        set: { viewModel.updateShowSpInsSelector($0) }
+                    ),
+                    color: .blue,
+                    icon: "person.fill.badge.plus"
+                )
             }
         }
         .padding(16)

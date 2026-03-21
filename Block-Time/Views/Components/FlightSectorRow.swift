@@ -43,6 +43,7 @@ struct FlightSectorRow: View, Equatable {
                lhs.sector.so2Name == rhs.sector.so2Name &&
                lhs.sector.isPilotFlying == rhs.sector.isPilotFlying &&
                lhs.sector.isPositioning == rhs.sector.isPositioning &&
+               lhs.sector.spInsTime == rhs.sector.spInsTime &&
                lhs.useLocalTime == rhs.useLocalTime &&
                lhs.useIATACodes == rhs.useIATACodes &&
                lhs.showTimesInHoursMinutes == rhs.showTimesInHoursMinutes &&
@@ -249,18 +250,28 @@ struct FlightSectorRow: View, Equatable {
                         .foregroundColor(.secondary)
                         .italic(sector.aircraftReg.isEmpty)
 
-                    // PAX Badge if Posiitoning Flight
+                    // PAX Badge if positioning flight
                     if isPositioning {
-                        HStack{
                         Text("PAX")
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.2))
-                                .cornerRadius(4)
-                        }
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 2)
+                            .background(Color.orange.opacity(0.2))
+                            .cornerRadius(4)
+                    }
+
+                    // INS Badge if Sp/Ins flight
+                    if sector.isSpInsOnly {
+                        Text("INS")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.teal)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 2)
+                            .background(Color.teal.opacity(0.2))
+                            .cornerRadius(4)
                     }
                     
                     
@@ -301,15 +312,19 @@ struct FlightSectorRow: View, Equatable {
                             .foregroundColor(.secondary)
                     } else if !isPositioning {
                         // Don't show flight hours or PF/PM badges for positioning flights
-                        // For simulator flights, show sim time instead of block time
-                        if sector.simTimeValue > 0 {
+                        // For Sp/Ins flights show spInsTime in teal, sim in purple, block in orange
+                        if sector.isSpInsOnly {
+                            Text(sector.getFormattedSpInsTime(asHoursMinutes: showTimesInHoursMinutes))
+                                .font(.headline.bold())
+                                .foregroundColor(.teal.opacity(0.8))
+                        } else if sector.simTimeValue > 0 {
                             Text("\(sector.getFormattedSimTime(asHoursMinutes: showTimesInHoursMinutes))")
-                                    .font(.headline.bold())
-                                    .foregroundColor(.purple.opacity(0.8))
+                                .font(.headline.bold())
+                                .foregroundColor(.purple.opacity(0.8))
                         } else {
                             Text("\(sector.getFormattedBlockTime(asHoursMinutes: showTimesInHoursMinutes, roundingMode: roundingMode))")
-                                    .font(.headline.bold())
-                                    .foregroundColor(.orange.opacity(0.8))
+                                .font(.headline.bold())
+                                .foregroundColor(.orange.opacity(0.8))
                         }
 
                         // PF and PM Badges

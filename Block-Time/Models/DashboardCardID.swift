@@ -30,6 +30,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case icusTime
     case nightTime
     case simTime
+    case insTime
 //    case pfRatioStat
     case recentActivity7
     case recentActivity28
@@ -63,6 +64,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .icusTime:          return "ICUS Time"
         case .nightTime:         return "Night Time"
         case .simTime:           return "Simulator Time"
+        case .insTime:           return "Sp/INS Time"
 //        case .pfRatioStat:       return "PF Ratio"
         case .recentActivity7:   return "Last 7 Days"
         case .recentActivity28:  return "Last 28 Days"
@@ -96,6 +98,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .icusTime:          return "person.2.fill"
         case .nightTime:         return "moon.fill"
         case .simTime:           return "desktopcomputer"
+        case .insTime:           return "person.fill.badge.plus"
 //        case .pfRatioStat:       return "chart.pie.fill"
         case .recentActivity7:   return "calendar"
         case .recentActivity28:  return "calendar"
@@ -129,6 +132,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .icusTime:          return .orange
         case .nightTime:         return .indigo
         case .simTime:           return .cyan
+        case .insTime:           return .teal
 //        case .pfRatioStat:       return .orange
         case .recentActivity7:   return .green
         case .recentActivity28:  return .green
@@ -146,7 +150,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     /// Advisory hint: this card was designed to look good at sidebar (narrow) widths.
     var sidebarHint: Bool {
         switch self {
-        case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .totalTime, .picTime, .icusTime, .nightTime, .simTime, .recentActivity7, .recentActivity28, .recentActivity30, .recentActivity365, .pfRecency, .aiiiRecency, .takeoffRecency, .landingRecency, .aircraftTypeTime, .averageMetric, .careerMilestones:
+        case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .totalTime, .picTime, .icusTime, .nightTime, .simTime, .insTime, .recentActivity7, .recentActivity28, .recentActivity30, .recentActivity365, .pfRecency, .aiiiRecency, .takeoffRecency, .landingRecency, .aircraftTypeTime, .averageMetric, .careerMilestones:
             return true
         default:
             return false

@@ -1,0 +1,164 @@
+JS DOM Extraction (WebCIS Live Import) — 19 columns written                                                                                       
+                                                                                                                                                    
+  The JS script (extractionScript) pads every row to exactly 19 tab-separated columns:                                                              
+                                                                                                                                                    
+  ┌───────┬──────────────┬─────────────────────────────────────┐                                                                                    
+  │ Index │    Header    │               Content               │                                                                                    
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 0     │ Date         │ Flight date                         │
+  ├───────┼──────────────┼─────────────────────────────────────┤
+  │ 1     │ Reg          │ Aircraft registration               │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 2     │ Sector       │ Combined "DEP-ARR" (e.g. "SYD-MEL") │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 3     │ Inst         │ Instructor code                     │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 4     │ SE_Dual_D    │ SE Dual Day                         │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 5     │ SE_Dual_N    │ SE Dual Night                       │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 6     │ SE_Cmd_D     │ SE Command Day                      │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 7     │ SE_Cmd_N     │ SE Command Night                    │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 8     │ ME_ICUS_D    │ ME ICUS Day                         │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 9     │ ME_ICUS_N    │ ME ICUS Night                       │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 10    │ ME_Dual_D    │ ME Dual Day                         │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 11    │ ME_Dual_N    │ ME Dual Night                       │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 12    │ ME_CoPilot_D │ ME Co-Pilot Day                     │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 13    │ ME_CoPilot_N │ ME Co-Pilot Night                   │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 14    │ ME_Cmd_D     │ ME Command Day                      │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 15    │ ME_Cmd_N     │ ME Command Night                    │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 16    │ FlightEngr   │ Flight Engineer (ignored)           │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 17    │ Sim          │ Simulator time                      │
+  ├───────┼──────────────┼─────────────────────────────────────┤                                                                                    
+  │ 18    │ SpIns        │ Sp/Ins (parsed but not totalled)    │
+  └───────┴──────────────┴─────────────────────────────────────┘                                                                                    
+                                                            
+  ---                                                                                                                                               
+  Tab-Separated Parser (parseWebCISText) — expects 19 columns, outputs 20
+                                                                                                                                                    
+  Takes the JS output above. Splits Sector (col 2) into DEP + DES, then outputs a normalised 20-column internal row with these headers:
+                                                                                                                                                    
+  DATE, REG, DEP, DES, INST, P2D, P2N, P1D, P1N, P1USD, P1USN, MEDD, MEDN, MEFD, MEFN, MECD, MECN, SIMU, FLEN, TOTAL                                
+                                                                                                                                                    
+  Note: col 18 (SpIns) from the JS is read/parsed but not carried through into the output row.                                                      
+                                                            
+  ---                                                                                                                                               
+  Fixed-Width Parser (parseWebCISLine) — character positions, outputs 20
+                                                                                                                                                    
+  For .txt files from ARMS (no tabs). Extracts from fixed character positions, same 20-column output:
+                                                                                                                                                    
+  ┌────────────┬─────────────────────────────┐                                                                                                      
+  │   Chars    │            Field            │                                                                                                      
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 0–6        │ DATE                        │              
+  ├────────────┼─────────────────────────────┤
+  │ 8–10       │ REG                         │                                                                                                      
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 12–14      │ DEP                         │                                                                                                      
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 16–18      │ DES                         │              
+  ├────────────┼─────────────────────────────┤
+  │ 20–23      │ INST                        │
+  ├────────────┼─────────────────────────────┤
+  │ 26–30      │ P2D (SE Dual Day)           │
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 33–37      │ P2N (SE Dual Night)         │
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 40–44      │ P1D (SE Cmd Day)            │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 47–51      │ P1N (SE Cmd Night)          │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 54–58      │ P1USD (ME ICUS Day)         │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 62–66      │ P1USN (ME ICUS Night)       │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 70–74      │ MEDD (ME Dual Day)          │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 78–82      │ MEDN (ME Dual Night)        │
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 86–90      │ MEFD (ME CoPilot Day)       │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 94–98      │ MEFN (ME CoPilot Night)     │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 103–107    │ MECD (ME Cmd Day)           │
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 114–118    │ MECN (ME Cmd Night)         │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 123–127    │ FLEN (Flight Engr, ignored) │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ 132–135    │ SIMU                        │              
+  ├────────────┼─────────────────────────────┤                                                                                                      
+  │ calculated │ TOTAL                       │
+  └────────────┴─────────────────────────────┘                                                                                                      
+                                                            
+  Both parsers apply the same ICUS deduplication rule: if ME ICUS Day/Night has a value, ME CoPilot Day/Night is blanked to avoid double-counting.  
+  
+✻ Brewed for 40s                                                                                                                                    
+                                                            
+❯ /Users/nelson/Desktop/Javier/1009_webcis_web_download.txt is an example of a webcis webview download that has one more column that we haven't     
+parsed or saved - Sp/Ins (Specialist / Instructor Time). This is a special column that contains the same type of data as the SIMU column but it     
+isn't counted towards TOTAL time. It is to track how much time a pilot has in a specialist or instructor role but doesn't get added to the total    
+time. I'd like to track this time in my app and even have a way of logging it. It's most common use in Qantas is for pilots who instruct in the     
+simulator - quite often there webcis webview history will show Sim time AND SP/INS column wiht the same times meaning they have run the simulator   
+session but should not have either of the times added to their totals as they weren't flying. What can you suggest as a way to incorporate this     
+into my AddFLightView flow and the app in general. Think hard about the best implementation which won't break existing users databases etc.         
+                                                             
+                                                             
+                                                             
+                                                             Sp/Ins Time — Implementation Recommendation                                                                                                       
+                                                                                                                                                    
+  What the data looks like                                                                                                                          
+                                                                                                                                                    
+  Looking at the actual file, SpIns is column 18 (0-based) in the JS extraction, sitting after Sim at col 17. In the fixed-width format it's at     
+  chars 123–127 — currently labelled FLEN (Flight Engineer) and marked "ignored". So the parser is actually already reading the wrong column for    
+  Sp/Ins — worth verifying which chars it actually lives at in the file you shared.                                                                 
+                                                            
+  ---
+  Core Data: Add spInsTime as an optional String
+                                                                                                                                                    
+  The safest approach: add a new optional attribute to FlightEntity, identical in pattern to simTime. Core Data with CloudKit handles new optional
+  attributes transparently on existing databases — existing records get nil, which resolves to "0.0" via the same safeDoubleValue pattern used      
+  elsewhere. No migration needed, no existing data broken.  
+                                                                                                                                                    
+  <attribute name="spInsTime" optional="YES" attributeType="String"/>
+                                                                                                                                                    
+  FlightSector model                                                                                                                                
+                                                                                                                                                    
+  Add var spInsTime: String alongside simTime, with the same spInsTimeValue computed property and the same validation in init. Also add the debug   
+  assertion that warns if spInsTime > 0 and blockTime > 0 (since this is also a non-flying time).
+                                                                                                                                                    
+  The "instructor in simulator" logic                                                                                                               
+  
+  This is the most important design decision. When a pilot runs a sim session as instructor:                                                        
+  - simTime has the session duration                        
+  - spInsTime has the same duration                                                                                                                 
+  - Neither should count toward totals — they were not flying
+                                                                                                                                                    
+  The existing FRMS calculation already uses blockTimeValue > 0 ? blockTimeValue : simTimeValue — so a pure instructor sim entry (no blockTime)     
+  currently contributes simTime to FRMS totals, which is wrong for instructors.                                                                     
+                                                                                                                                                    
+  Recommendation: Add a computed property isSpInsOnlyFlight: Bool that returns true when spInsTime > 0 && blockTime == "0.0" && spInsTime ==        
+  simTime. Use this in FRMS calculations to exclude those flights, and display a clear visual indicator on the flight row.
+                                                                                                                                                    
+  UI — AddFlightView                                                                                                                                
+  
+  Add spInsTime as a field in the time card, but conditionally shown — only visible when:                                                           
+  1. isSimulator is true (sim session), OR                  
+  2. The field already has a value (editing an imported record)                                                                                     
+                                                               
+  Use a subtle label like "Sp/Ins Time" with a person.fill.badge.plus icon, and a small info tooltip or caption explaining: "Specialist/Instructor  
+  time — not counted toward totals."                                                                                                                
+                                                                                        
+                                                             
+                                                             

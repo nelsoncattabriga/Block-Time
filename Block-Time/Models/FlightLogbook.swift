@@ -74,6 +74,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var p2Time: String
     var instrumentTime: String
     var simTime: String
+    var spInsTime: String
     var isPilotFlying: Bool
     var isPositioning: Bool
     var isAIII: Bool
@@ -106,7 +107,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
          fromAirport: String, toAirport: String, captainName: String, foName: String,
          so1Name: String? = nil, so2Name: String? = nil, blockTime: String,
          nightTime: String, p1Time: String, p1usTime: String, p2Time: String = "0.0", instrumentTime: String,
-         simTime: String, isPilotFlying: Bool, isPositioning: Bool = false, isAIII: Bool = false, isRNP: Bool = false,
+         simTime: String, spInsTime: String = "", isPilotFlying: Bool, isPositioning: Bool = false, isAIII: Bool = false, isRNP: Bool = false,
          isILS: Bool = false, isGLS: Bool = false, isNPA: Bool = false, remarks: String = "",
          dayTakeoffs: Int = 0, dayLandings: Int = 0, nightTakeoffs: Int = 0, nightLandings: Int = 0,
          outTime: String = "", inTime: String = "", scheduledDeparture: String = "", scheduledArrival: String = "") {
@@ -128,6 +129,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         self.p2Time = FlightSector.validateTimeString(p2Time)
         self.instrumentTime = FlightSector.validateTimeString(instrumentTime)
         self.simTime = FlightSector.validateTimeString(simTime)
+        self.spInsTime = FlightSector.validateTimeString(spInsTime)
         self.isPilotFlying = isPilotFlying
         self.isPositioning = isPositioning
         self.isAIII = isAIII
@@ -199,7 +201,20 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var simTimeValue: Double {
         return safeDoubleValue(simTime)
     }
-    
+
+    var spInsTimeValue: Double {
+        return safeDoubleValue(spInsTime)
+    }
+
+    /// True when this entry is a pure Sp/Ins (instructor) session:
+    /// spInsTime is set AND simTime equals spInsTime (pilot ran the sim but didn't fly it).
+    /// In this case neither simTime nor spInsTime counts toward flight totals.
+    var isSpInsOnly: Bool {
+        let spVal = spInsTimeValue
+        guard spVal > 0 else { return false }
+        return abs(simTimeValue - spVal) < 0.01
+    }
+
     // MARK: - Database Integration Methods
     
     /// Create FlightSector from Core Data entity
@@ -245,6 +260,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
             p2Time: entity.p2Time ?? "0.0",
             instrumentTime: instrumentTime,
             simTime: simTime,
+            spInsTime: entity.spInsTime ?? "",
             isPilotFlying: entity.isPilotFlying,
             isPositioning: entity.isPositioning,
             isAIII: entity.isAIII,
@@ -446,6 +462,18 @@ struct FlightSector: Identifiable, Codable, Hashable {
         } else {
             let rounded = roundingMode.apply(to: value, decimalPlaces: 1)
             return String(format: "%.1f hrs", rounded)
+        }
+    }
+
+    /// Get formatted Sp/Ins time (either decimal or HH:MM based on setting)
+    func getFormattedSpInsTime(asHoursMinutes: Bool) -> String {
+        let value = spInsTimeValue
+        guard value > 0 else { return asHoursMinutes ? "0:00" : "0.0 hrs" }
+
+        if asHoursMinutes {
+            return FlightSector.decimalToHHMM(value)
+        } else {
+            return String(format: "%.1f hrs", value)
         }
     }
 

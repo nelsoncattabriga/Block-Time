@@ -24,6 +24,7 @@ class FlightsFilterViewModel: ObservableObject {
     @Published var filterContainsRemarks: Bool = false
     @Published var filterSimulator: Bool = false
     @Published var filterPositioning: Bool = false
+    @Published var filterSpIns: Bool = false
     @Published var filterNoBlockTime: Bool = false
     @Published var filterNoCrewNames: Bool = false
     @Published var filterNoFlightNumber: Bool = false
@@ -48,6 +49,7 @@ class FlightsFilterViewModel: ObservableObject {
         filterContainsRemarks = false
         filterSimulator = false
         filterPositioning = false
+        filterSpIns = false
         filterNoBlockTime = false
         filterNoCrewNames = false
         filterNoFlightNumber = false

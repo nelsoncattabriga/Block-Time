@@ -220,9 +220,10 @@ class FRMSCalculationService {
             }
 
             // Sum flight times from individual flights
-            flightTime7Days = flights7Days.reduce(0.0) { $0 + ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue) }
-            flightTime28Or30Days = flightsFlightTimePeriod.reduce(0.0) { $0 + ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue) }
-            flightTime365Days = flights365Days.reduce(0.0) { $0 + ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue) }
+            // Sp/Ins only (instructor running sim) contributes to duty but NOT flight time
+            flightTime7Days = flights7Days.reduce(0.0) { $0 + ($1.isSpInsOnly ? 0 : ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue)) }
+            flightTime28Or30Days = flightsFlightTimePeriod.reduce(0.0) { $0 + ($1.isSpInsOnly ? 0 : ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue)) }
+            flightTime365Days = flights365Days.reduce(0.0) { $0 + ($1.isSpInsOnly ? 0 : ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue)) }
 
         } else {
             // Fallback to duty-based calculation if flights not provided (for backward compatibility)
@@ -1652,16 +1653,22 @@ class FRMSCalculationService {
             return nil
         }
 
-        // Determine if this is a simulator flight (simTime populated, no blockTime)
-        let isSim = flightSector.blockTimeValue == 0 && flightSector.simTimeValue > 0
+        // Determine if this is a simulator or Sp/Ins instructor session
+        let isSim = (flightSector.blockTimeValue == 0 && flightSector.simTimeValue > 0) || flightSector.isSpInsOnly
 
         // Get flight time from sector
-        // For simulator flights, use simTime; otherwise use blockTime
-        let flightTime = flightSector.blockTimeValue > 0 ? flightSector.blockTimeValue : flightSector.simTimeValue
+        // For Sp/Ins only (instructor running sim): no flight time contribution
+        // For regular sim: use simTime. For flights: use blockTime.
+        let flightTime: Double
+        if flightSector.isSpInsOnly {
+            flightTime = 0
+        } else {
+            flightTime = flightSector.blockTimeValue > 0 ? flightSector.blockTimeValue : flightSector.simTimeValue
+        }
 
-        // If no flight time at all, check if it's a positioning flight
-        // Positioning flights may have zero blockTime but still contribute to duty time
-        if flightTime == 0 && !flightSector.isPositioning {
+        // If no flight time at all, check if it's a positioning flight or Sp/Ins instructor session
+        // Both may have zero flightTime but still contribute to duty time
+        if flightTime == 0 && !flightSector.isPositioning && !flightSector.isSpInsOnly {
             return nil
         }
 

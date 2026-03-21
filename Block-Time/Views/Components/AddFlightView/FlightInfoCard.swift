@@ -184,17 +184,19 @@ struct ModernCapturedDataCard: View {
 
                 HStack(spacing: 0) {
                     Button(action: {
-                        if viewModel.isSimulator || viewModel.isPositioning {
+                        if viewModel.isSimulator || viewModel.isPositioning || viewModel.isSpIns {
                             viewModel.isSimulator = false
                             viewModel.isPositioning = false
+                            viewModel.isSpIns = false
+                            viewModel.spInsTime = ""
                             HapticManager.shared.impact(.medium)
                         }
                     }) {
                         Text("FLT")
                             .font(.subheadline.bold())
-                            .foregroundColor(!viewModel.isSimulator && !viewModel.isPositioning ? .white : .secondary)
+                            .foregroundColor(!viewModel.isSimulator && !viewModel.isPositioning && !viewModel.isSpIns ? .white : .secondary)
                             .frame(width: 50, height: 30)
-                            .background(!viewModel.isSimulator && !viewModel.isPositioning ? Color.blue : Color.clear)
+                            .background(!viewModel.isSimulator && !viewModel.isPositioning && !viewModel.isSpIns ? Color.blue : Color.clear)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -203,8 +205,10 @@ struct ModernCapturedDataCard: View {
                         if !viewModel.isPositioning {
                             viewModel.isPositioning = true
                             viewModel.isSimulator = false
+                            viewModel.isSpIns = false
                             viewModel.blockTime = ""  // Clear block time for positioning flights
                             viewModel.nightTime = ""  // Clear night time for positioning flights
+                            viewModel.spInsTime = ""  // Clear Sp/Ins time for positioning flights
                             viewModel.aircraftReg = ""  // Clear aircraft reg for positioning flights
                             viewModel.aircraftType = ""  // Clear aircraft type for positioning flights
                             viewModel.captainName = ""  // Clear captain name for positioning flights
@@ -228,6 +232,8 @@ struct ModernCapturedDataCard: View {
                         if !viewModel.isSimulator {
                             viewModel.isSimulator = true
                             viewModel.isPositioning = false
+                            viewModel.isSpIns = false
+                            viewModel.spInsTime = ""
                             HapticManager.shared.impact(.medium)
                         }
                     }) {
@@ -239,10 +245,31 @@ struct ModernCapturedDataCard: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
+
+                    if viewModel.showSpInsSelector || viewModel.isSpIns {
+                        Button(action: {
+                            if !viewModel.isSpIns {
+                                viewModel.isSpIns = true
+                                viewModel.isSimulator = false
+                                viewModel.isPositioning = false
+                                viewModel.blockTime = ""
+                                viewModel.nightTime = ""
+                                HapticManager.shared.impact(.medium)
+                            }
+                        }) {
+                            Text("INS")
+                                .font(.subheadline.bold())
+                                .foregroundColor(viewModel.isSpIns ? .white : .secondary)
+                                .frame(width: 50, height: 30)
+                                .background(viewModel.isSpIns ? Color.teal : Color.clear)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(viewModel.isPositioning ? Color.orange : (viewModel.isSimulator ? Color.purple : Color.blue), lineWidth: 2)
+                        .stroke(viewModel.isPositioning ? Color.orange : (viewModel.isSimulator ? Color.purple : (viewModel.isSpIns ? Color.teal : Color.blue)), lineWidth: 2)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
@@ -295,7 +322,7 @@ struct ModernCapturedDataCard: View {
 
                     // Flight Number field with search button
                     ModernFlightNumberField(
-                        label: viewModel.isSimulator ? "SIM #" : "FLIGHT #",
+                        label: (viewModel.isSimulator || viewModel.isSpIns) ? "SIM #" : "FLIGHT #",
                         value: Binding(
                             get: { viewModel.flightNumber },
                             set: { viewModel.updateFlightNumber($0) }
@@ -313,7 +340,7 @@ struct ModernCapturedDataCard: View {
                             // But not for simulator flights (allows custom sim flight numbers like SIM06B)
                             if viewModel.flightNumber.isEmpty &&
                                viewModel.includeAirlinePrefixInFlightNumber &&
-                               !viewModel.isSimulator {
+                               !viewModel.isSimulator && !viewModel.isSpIns {
                                 viewModel.updateFlightNumber(viewModel.airlinePrefix)
                             }
                         }
@@ -409,22 +436,33 @@ struct ModernCapturedDataCard: View {
                         )
                     }
 
-                    HStack{
+                    if viewModel.isSpIns {
+                        // INS mode: only SP/INS Time field
                         ModernDecimalTimeField(
-                            label: viewModel.isSimulator ? "SIM Time" : "BLOCK Time",
-                            value: $viewModel.blockTime,
-                            icon: viewModel.isSimulator ? "desktopcomputer" : "timer",
-                            isReadOnly: viewModel.isPositioning,
+                            label: "SP/INS Time",
+                            value: $viewModel.spInsTime,
+                            icon: "person.fill.badge.plus",
+                            isReadOnly: false,
                             showAsHHMM: viewModel.showTimesInHoursMinutes
                         )
+                    } else {
+                        HStack {
+                            ModernDecimalTimeField(
+                                label: viewModel.isSimulator ? "SIM Time" : "BLOCK Time",
+                                value: $viewModel.blockTime,
+                                icon: viewModel.isSimulator ? "desktopcomputer" : "timer",
+                                isReadOnly: viewModel.isPositioning,
+                                showAsHHMM: viewModel.showTimesInHoursMinutes
+                            )
 
-                        ModernDecimalTimeField(
-                            label: "NIGHT Time",
-                            value: $viewModel.nightTime,
-                            icon: "moon.stars",
-                            isReadOnly: viewModel.isPositioning,
-                            showAsHHMM: viewModel.showTimesInHoursMinutes
-                        )
+                            ModernDecimalTimeField(
+                                label: "NIGHT Time",
+                                value: $viewModel.nightTime,
+                                icon: "moon.stars",
+                                isReadOnly: viewModel.isPositioning,
+                                showAsHHMM: viewModel.showTimesInHoursMinutes
+                            )
+                        }
                     }
                 }
             }

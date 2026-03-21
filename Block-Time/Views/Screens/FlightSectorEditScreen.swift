@@ -27,6 +27,7 @@ struct FlightSectorEditScreen: View {
     @State private var p1usTime: String
     @State private var instrumentTime: String
     @State private var simTime: String
+    @State private var spInsTime: String
     @State private var isPilotFlying: Bool
     @State private var isAIII: Bool
     @State private var remarks: String
@@ -59,6 +60,7 @@ struct FlightSectorEditScreen: View {
         _p1usTime = State(initialValue: sector.p1usTime)
         _instrumentTime = State(initialValue: sector.instrumentTime)
         _simTime = State(initialValue: sector.simTime)
+        _spInsTime = State(initialValue: sector.spInsTime)
         _isPilotFlying = State(initialValue: sector.isPilotFlying)
         _isAIII = State(initialValue: sector.isAIII)
         _remarks = State(initialValue: sector.remarks)
@@ -238,7 +240,20 @@ struct FlightSectorEditScreen: View {
                         .background(Color(.secondarySystemBackground))
                         .cornerRadius(6)
                 }
-                
+
+                // Sp/Ins Time — only show for sim entries (when simTime is set) or when already populated
+                if (!simTime.isEmpty && simTime != "0.00" && simTime != "0.0") ||
+                   (!spInsTime.isEmpty && spInsTime != "0.00" && spInsTime != "0.0") {
+                    EditableCard(title: "Sp/Ins Time (hrs)") {
+                        TextField("Sp/Ins Time", text: $spInsTime)
+                            .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
+                            .font(.body)
+                            .padding(8)
+                            .background(Color(.secondarySystemBackground))
+                            .cornerRadius(6)
+                    }
+                }
+
                 // Pilot Flying Toggle
                 EditableCard(title: "Pilot Flying (PF)") {
                     Toggle("Is Pilot Flying?", isOn: $isPilotFlying)
@@ -357,6 +372,7 @@ struct FlightSectorEditScreen: View {
             p1usTime: p1usTime,
             instrumentTime: instrumentTime,
             simTime: simTime,
+            spInsTime: spInsTime,
             isPilotFlying: isPilotFlying,
             isAIII: isAIII,
             remarks: remarks

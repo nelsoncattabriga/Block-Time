@@ -84,6 +84,13 @@ extension FlightDatabaseService {
 
     private func hrs(_ s: String?) -> Double { Double(s ?? "0") ?? 0 }
 
+    /// True when the entity is a Sp/Ins-only flight (simTime == spInsTime > 0)
+    private func isSpInsOnly(_ f: FlightEntity) -> Bool {
+        let spVal = hrs(f.spInsTime)
+        guard spVal > 0 else { return false }
+        return abs(hrs(f.simTime) - spVal) < 0.01
+    }
+
     private func monthStart(for date: Date) -> Date {
         let cal = Calendar.current
         return cal.date(from: cal.dateComponents([.year, .month], from: date)) ?? date
@@ -102,7 +109,7 @@ extension FlightDatabaseService {
             let m = monthStart(for: date)
             let blockHrs = hrs(f.blockTime)
             block[m, default: 0] += blockHrs
-            sim[m, default: 0]   += hrs(f.simTime)
+            sim[m, default: 0]   += isSpInsOnly(f) ? 0 : hrs(f.simTime)
             night[m, default: 0] += hrs(f.nightTime)
             if blockHrs > 0 {
                 sectors[m, default: 0] += 1
@@ -127,7 +134,7 @@ extension FlightDatabaseService {
             guard let date = f.date, date >= cutoff else { continue }
             let d = cal.startOfDay(for: date)
             block[d, default: 0] += hrs(f.blockTime)
-            sim[d, default: 0]   += hrs(f.simTime)
+            sim[d, default: 0]   += isSpInsOnly(f) ? 0 : hrs(f.simTime)
         }
 
         let days = Set(block.keys).union(sim.keys)
@@ -240,7 +247,7 @@ extension FlightDatabaseService {
 
     private func computeCareerStats(_ flights: [FlightEntity]) -> NDCareerStats {
         let block = flights.reduce(0.0) { $0 + hrs($1.blockTime) }
-        let sim   = flights.reduce(0.0) { $0 + hrs($1.simTime) }
+        let sim   = flights.reduce(0.0) { $0 + (isSpInsOnly($1) ? 0 : hrs($1.simTime)) }
         let aircraftTypes = Set(flights.compactMap { $0.aircraftType }.filter { !$0.isEmpty })
         return NDCareerStats(
             totalHours: block + sim,
@@ -260,7 +267,7 @@ extension FlightDatabaseService {
         var h7 = 0.0, h28 = 0.0, h365 = 0.0
         for f in flights {
             guard let date = f.date else { continue }
-            let total = hrs(f.blockTime) + hrs(f.simTime)
+            let total = hrs(f.blockTime) + (isSpInsOnly(f) ? 0 : hrs(f.simTime))
             if date >= ago7   { h7   += total }
             if date >= ago28  { h28  += total }
             if date >= ago365 { h365 += total }

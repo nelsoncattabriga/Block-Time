@@ -476,6 +476,7 @@ class FileImportService {
 
         let importedNightTime = parseDurationTime(getValue("Night Time"))
         let simTime = parseDurationTime(getValue("SIM Time"))
+        let spInsTime = parseDurationTime(getValue("Sp/Ins Time"))
 
         let p1Time = parseDurationTime(getValue("P1 Time"))
         let p1usTime = parseDurationTime(getValue("P1US Time"))
@@ -656,6 +657,7 @@ class FileImportService {
             p2Time: p2Time,
             instrumentTime: instrumentTime,
             simTime: simTime,
+            spInsTime: spInsTime,
             isPilotFlying: isPilotFlying,
             isPositioning: isPositioning,
             isAIII: isAIII,
@@ -815,7 +817,7 @@ class FileImportService {
         guard !lines.isEmpty else { throw ImportError.invalidFormat }
 
         let headers = ["DATE", "REG", "DEP", "DES", "INST", "P2D", "P2N", "P1D", "P1N",
-                       "P1USD", "P1USN", "MEDD", "MEDN", "MEFD", "MEFN", "MECD", "MECN", "SIMU", "FLEN", "TOTAL"]
+                       "P1USD", "P1USN", "MEDD", "MEDN", "MEFD", "MEFN", "MECD", "MECN", "SIMU", "FLEN", "TOTAL", "SPINS"]
 
         // Regex to detect a bare time value like "2:30" or "12:05" (not a route like "SYD-MEL")
         let timeOnlyPattern = try? NSRegularExpression(pattern: #"^\d{1,3}:\d{2}$"#)
@@ -832,10 +834,13 @@ class FileImportService {
 
             func c(_ i: Int) -> String { i < cells.count ? cells[i] : "" }
 
-            // Sim row: reg cell contains "SIM", time is in col17
+            // Sim row: reg cell contains "SIM", time is in col17, SpIns in col18
             if c(1).uppercased() == "SIM" {
                 let simTime = c(17).isEmpty ? c(cells.count - 1) : c(17)  // fallback for malformed rows
-                let total = sumWebCISTimes([simTime])
+                let spins = c(18)
+                // If SpIns matches SimTime, exclude sim from total (instructor session)
+                let simuForTotal = (!spins.isEmpty && spins.contains(":") && spins == simTime) ? "" : simTime
+                let total = sumWebCISTimes([simuForTotal])
                 let row: [String] = [
                     c(0),  // DATE
                     "",    // REG — "SIM" is not a rego
@@ -845,7 +850,8 @@ class FileImportService {
                     "", "", "", "", "", "", "", "", "", "", "", "",  // all flight-time cols empty
                     simTime, // SIMU
                     "",    // FLEN
-                    total  // TOTAL
+                    total, // TOTAL
+                    spins  // SPINS
                 ]
                 dataRows.append(row)
                 continue
@@ -863,7 +869,8 @@ class FileImportService {
                     "", "", "", "", "", "", "", "", "", "", "", "",  // all flight-time cols empty
                     c(2),  // SIMU — the time value from cell[2]
                     "",    // FLEN
-                    total  // TOTAL
+                    total, // TOTAL
+                    ""     // SPINS
                 ]
                 dataRows.append(row)
                 continue
@@ -886,8 +893,11 @@ class FileImportService {
 
             // col16 = Flight Engr (ignored), col17 = Sim, col18 = Sp/Ins (parsed, not totalled)
             let simu = c(17)
+            let spins = c(18)
 
-            let timeFields = [c(4), c(5), c(6), c(7), meid, mein, c(10), c(11), mefd, mefn, c(14), c(15), simu]
+            // If SpIns matches SimTime, pilot was instructing — exclude sim from totals
+            let simuForTotal = (!spins.isEmpty && spins.contains(":") && spins == simu) ? "" : simu
+            let timeFields = [c(4), c(5), c(6), c(7), meid, mein, c(10), c(11), mefd, mefn, c(14), c(15), simuForTotal]
             let total = sumWebCISTimes(timeFields)
 
             let row: [String] = [
@@ -908,9 +918,10 @@ class FileImportService {
                 mefn,   // MEFN (ME CoPilot N)
                 c(14),  // MECD (ME Cmd D)
                 c(15),  // MECN (ME Cmd N)
-                simu,   // SIMU
+                simu,   // SIMU (stored as-is; isSpInsOnly logic handles display/totals)
                 "",     // FLEN (ignored)
-                total   // TOTAL
+                total,  // TOTAL
+                spins   // SPINS
             ]
             dataRows.append(row)
         }
@@ -988,6 +999,8 @@ class FileImportService {
                 mappings.append(FieldMapping(logbookField: "Instrument Time", logbookFieldDescription: "Instrument Time", sourceColumn: header, isRequired: true))
             } else if headerLower == "sim time" {
                 mappings.append(FieldMapping(logbookField: "SIM Time", logbookFieldDescription: "SIM Time", sourceColumn: header, isRequired: true))
+            } else if headerLower == "sp/ins time" {
+                mappings.append(FieldMapping(logbookField: "Sp/Ins Time", logbookFieldDescription: "Sp/Ins Time", sourceColumn: header, isRequired: false))
             } else if headerLower == "pilot flying" {
                 mappings.append(FieldMapping(logbookField: "Pilot Flying", logbookFieldDescription: "Pilot Flying", sourceColumn: header, isRequired: false))
             } else if headerLower == "aiii" {
@@ -1021,7 +1034,7 @@ class FileImportService {
     // MARK: - Export to CSV
     func exportToCSV(flights: [FlightSector]) -> String {
         // CSV Header
-        var csv = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks\n"
+        var csv = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks\n"
 
         // Add each flight as a row
         for flight in flights {
@@ -1047,6 +1060,7 @@ class FileImportService {
                 flight.p2Time,
                 flight.instrumentTime,
                 flight.simTime,
+                flight.spInsTime,
                 flight.isPositioning ? "1" : "",
                 flight.isPilotFlying ? "1" : "",
                 flight.isAIII ? "1" : "",
@@ -1325,7 +1339,7 @@ class FileImportService {
 
         // Create CSV headers for webCIS data
         let headers = ["DATE", "REG", "DEP", "DES", "INST", "P2D", "P2N", "P1D", "P1N",
-                       "P1USD", "P1USN", "MEDD", "MEDN", "MEFD", "MEFN", "MECD", "MECN", "SIMU", "FLEN", "TOTAL"]
+                       "P1USD", "P1USN", "MEDD", "MEDN", "MEFD", "MEFN", "MECD", "MECN", "SIMU", "FLEN", "TOTAL", "SPINS"]
 
         // Parse data rows
         var dataRows: [[String]] = []
@@ -1356,8 +1370,8 @@ class FileImportService {
     private func parseWebCISLine(_ line: String) -> [String] {
         var columns: [String] = []
 
-        // Ensure line is long enough (at least 140 chars for full data)
-        let paddedLine = line.padding(toLength: 140, withPad: " ", startingAt: 0)
+        // Ensure line is long enough (at least 148 chars for full data including SpIns)
+        let paddedLine = line.padding(toLength: 148, withPad: " ", startingAt: 0)
 
         // Extract fields based on character positions (from Perl script)
         columns.append(String(paddedLine.prefix(7)).trimmingCharacters(in: .whitespaces))  // Date (0-6)
@@ -1403,13 +1417,16 @@ class FileImportService {
 
         let simu = String(paddedLine.dropFirst(132).prefix(4)).trimmingCharacters(in: .whitespaces) // Sim
         let flen = String(paddedLine.dropFirst(123).prefix(5)).trimmingCharacters(in: .whitespaces) // Flight Eng (ignore)
+        let spins = String(paddedLine.dropFirst(138).prefix(7)).trimmingCharacters(in: .whitespaces) // SpIns (138-144)
 
         columns.append(simu)  // SIMU
         columns.append(flen)  // FLEN (will be ignored)
 
-        // Calculate total (sum of all flight times, excluding instrument but INCLUDING sim)
-        let total = sumWebCISTimes([sedd, sedn, secd, secn, meid, mein, medd, medn, mefd, mefn, mecd, mecn, simu])
+        // If SpIns matches SimTime, pilot was instructing — exclude sim from total
+        let simuForTotal = (!spins.isEmpty && spins.contains(":") && spins == simu) ? "" : simu
+        let total = sumWebCISTimes([sedd, sedn, secd, secn, meid, mein, medd, medn, mefd, mefn, mecd, mecn, simuForTotal])
         columns.append(total)  // TOTAL
+        columns.append(spins)  // SPINS
 
         return columns
     }
@@ -1481,6 +1498,9 @@ class FileImportService {
 
         // SIM Time
         mappings.append(FieldMapping(logbookField: "SIM Time", logbookFieldDescription: "SIM Time", sourceColumn: "SIMU", isRequired: false))
+
+        // Sp/Ins Time
+        mappings.append(FieldMapping(logbookField: "Sp/Ins Time", logbookFieldDescription: "Sp/Ins Time", sourceColumn: "SPINS", isRequired: false))
 
         return mappings
     }

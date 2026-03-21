@@ -41,6 +41,7 @@
         <attribute name="scheduledArrival" optional="YES" attributeType="String"/>
         <attribute name="scheduledDeparture" optional="YES" attributeType="String"/>
         <attribute name="simTime" optional="YES" attributeType="String"/>
+        <attribute name="spInsTime" optional="YES" attributeType="String"/>
         <attribute name="so1Name" optional="YES" attributeType="String"/>
         <attribute name="so2Name" optional="YES" attributeType="String"/>
         <attribute name="toAirport" optional="YES" attributeType="String"/>
