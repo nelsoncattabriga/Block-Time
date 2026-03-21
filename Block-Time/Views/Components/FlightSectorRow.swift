@@ -267,10 +267,10 @@ struct FlightSectorRow: View, Equatable {
                         Text("INS")
                             .font(.subheadline)
                             .fontWeight(.bold)
-                            .foregroundColor(.teal)
+                            .foregroundColor(.purple)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 2)
-                            .background(Color.teal.opacity(0.2))
+                            .background(Color.purple.opacity(0.2))
                             .cornerRadius(4)
                     }
                     
@@ -316,7 +316,7 @@ struct FlightSectorRow: View, Equatable {
                         if sector.isSpInsOnly {
                             Text(sector.getFormattedSpInsTime(asHoursMinutes: showTimesInHoursMinutes))
                                 .font(.headline.bold())
-                                .foregroundColor(.teal.opacity(0.8))
+                                .foregroundColor(.purple.opacity(0.8))
                         } else if sector.simTimeValue > 0 {
                             Text("\(sector.getFormattedSimTime(asHoursMinutes: showTimesInHoursMinutes))")
                                 .font(.headline.bold())

@@ -244,8 +244,8 @@ struct FlightSectorEditScreen: View {
                 // Sp/Ins Time — only show for sim entries (when simTime is set) or when already populated
                 if (!simTime.isEmpty && simTime != "0.00" && simTime != "0.0") ||
                    (!spInsTime.isEmpty && spInsTime != "0.00" && spInsTime != "0.0") {
-                    EditableCard(title: "Sp/Ins Time (hrs)") {
-                        TextField("Sp/Ins Time", text: $spInsTime)
+                    EditableCard(title: "Sp/INS Time (hrs)") {
+                        TextField("Sp/INS Time", text: $spInsTime)
                             .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
                             .font(.body)
                             .padding(8)

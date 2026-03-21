@@ -132,7 +132,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .icusTime:          return .orange
         case .nightTime:         return .indigo
         case .simTime:           return .cyan
-        case .insTime:           return .teal
+        case .insTime:           return .purple
 //        case .pfRatioStat:       return .orange
         case .recentActivity7:   return .green
         case .recentActivity28:  return .green

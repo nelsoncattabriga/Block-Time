@@ -259,9 +259,14 @@ struct ModernCapturedDataCard: View {
                         }) {
                             Text("INS")
                                 .font(.subheadline.bold())
-                                .foregroundColor(viewModel.isSpIns ? .white : .secondary)
+                                .foregroundColor(viewModel.isSpIns ? .purple : .secondary)
                                 .frame(width: 50, height: 30)
-                                .background(viewModel.isSpIns ? Color.teal : Color.clear)
+                                .background(Color.clear)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(viewModel.isSpIns ? Color.purple : Color.clear, lineWidth: 2)
+                                        .padding(2)
+                                )
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -269,7 +274,7 @@ struct ModernCapturedDataCard: View {
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(viewModel.isPositioning ? Color.orange : (viewModel.isSimulator ? Color.purple : (viewModel.isSpIns ? Color.teal : Color.blue)), lineWidth: 2)
+                        .stroke(viewModel.isPositioning ? Color.orange : (viewModel.isSimulator || viewModel.isSpIns ? Color.purple : Color.blue), lineWidth: 2)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
