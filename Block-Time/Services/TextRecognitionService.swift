@@ -48,6 +48,7 @@ enum FleetType {
     case b737
     case b787
     case a330   // auto-detects screen vs printer format
+    case a321   // same ACARS layout as A330/B737 screen format
 }
 
 // MARK: - Text Recognition Service
@@ -65,6 +66,7 @@ class TextRecognitionService: ObservableObject {
         case .b737: fleetName = "B737"
         case .b787: fleetName = "B787"
         case .a330: fleetName = "A330"
+        case .a321: fleetName = "A321"
         }
         LogManager.shared.info("Starting text recognition for \(fleetName) ACARS image")
 
@@ -96,7 +98,7 @@ class TextRecognitionService: ObservableObject {
                         flightData = try self.processTextRecognitionResults(results)
                     case .b787:
                         flightData = try self.processB787TextRecognitionResults(results)
-                    case .a330:
+                    case .a330, .a321:
                         flightData = try self.processA330TextRecognitionResults(results)
                     }
                     LogManager.shared.info("Successfully extracted flight data: \(flightData.flightNumber) \(flightData.fromAirport)-\(flightData.toAirport)")
@@ -261,7 +263,8 @@ class TextRecognitionService: ObservableObject {
 
         // Extract times that appear after the labels
         // Look for times in the format HH:MM or with OCR errors (Ø, O, 8, etc.)
-        let timePattern = try! NSRegularExpression(pattern: "^\\s*([0-9ØøOo8]{2}:[0-9ØøOo]{2})\\s*$")
+        // Also handles A321/MCDU format where OCR introduces a space after the colon: "03: 21"
+        let timePattern = try! NSRegularExpression(pattern: "^\\s*([0-9ØøOo8]{2}: ?[0-9ØøOo]{2})\\s*$")
 
         // Track which label we're capturing for
         let skipLabelsOnly = ["ON-BLX", "FUEL", "STATE", "*PRINT", "SENSORS", "INIT", "REF", "FIX", "MENU"]
@@ -597,6 +600,9 @@ class TextRecognitionService: ObservableObject {
     /// Also fixes 'Ø', 'ø', 'O', 'o' misread as '0' (e.g., 0Ø:25 → 00:25, ØØ:25 → 00:25)
     private func smartCorrectTime(_ time: String) -> String {
         var correctedTime = time
+
+        // Strip OCR-introduced space after colon (e.g. "03: 21" → "03:21")
+        correctedTime = correctedTime.replacingOccurrences(of: ": ", with: ":")
 
         // First pass: Replace common OCR character errors
         // $ is often misread as 0 (e.g., $7:25 → 07:25, $9:10 → 09:10)

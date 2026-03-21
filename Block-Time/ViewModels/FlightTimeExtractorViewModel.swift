@@ -1028,6 +1028,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         switch selectedFleetID {
         case "B787": fleetType = .b787
         case "A330": fleetType = .a330
+        case "A321": fleetType = .a321
         default:     fleetType = .b737
         }
 
