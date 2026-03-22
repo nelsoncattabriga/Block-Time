@@ -86,12 +86,7 @@ struct AircraftSummarySheet: View {
 
     private var canSave: Bool {
         !aircraftType.trimmingCharacters(in: .whitespaces).isEmpty &&
-        hasAnyTimeValue
-    }
-
-    private var hasAnyTimeValue: Bool {
-        let times = [blockTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, simTime]
-        return times.contains { !$0.isEmpty && (Double($0) ?? 0) > 0 }
+        (Double(blockTime) ?? 0) > 0
     }
 
     // MARK: - Initializers
@@ -149,13 +144,14 @@ struct AircraftSummarySheet: View {
                                         .background(Color(.secondarySystemBackground))
                                         .cornerRadius(8)
                                 }
+
+                                SummaryTimeField(label: "Total Time", value: $blockTime)
                             }
                         }
 
                         // Flight Times Card
                         SectionCard(title: "Flight Times", icon: "clock.fill", color: .purple) {
                             VStack(spacing: 12) {
-                                SummaryTimeField(label: "Total Time", value: $blockTime)
                                 SummaryTimeField(label: "Night Time", value: $nightTime)
                                 SummaryTimeField(label: "P1 Time", value: $p1Time)
                                 SummaryTimeField(label: "P1US Time", value: $p1usTime)
