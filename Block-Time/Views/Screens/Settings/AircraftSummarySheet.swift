@@ -111,7 +111,7 @@ struct AircraftSummarySheet: View {
                     VStack(spacing: 16) {
 
                         // Basic Info Card
-                        SectionCard(title: "Summary Info", icon: "info.circle.fill", color: .blue) {
+                        SectionCard(title: "Type Summary", icon: "info.circle.fill", color: .blue) {
                             VStack(spacing: 12) {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("Date")
@@ -150,7 +150,7 @@ struct AircraftSummarySheet: View {
                         }
 
                         // Flight Times Card
-                        SectionCard(title: "Flight Times", icon: "clock.fill", color: .purple) {
+                        SectionCard(title: "Total Time Summary", icon: "clock.fill", color: .purple) {
                             VStack(spacing: 12) {
                                 SummaryTimeField(label: "Night Time", value: $nightTime)
                                 SummaryTimeField(label: "P1 Time", value: $p1Time)
