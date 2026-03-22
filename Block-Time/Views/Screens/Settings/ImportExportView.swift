@@ -32,6 +32,7 @@ struct ImportExportView: View {
     // webCIS import state
     @State private var isImportingWebCIS = false
     @State private var webCISImportData: ImportData?
+    @State private var webCISPreviewData: ImportData?
 
     // webCIS instructions state
     @State private var showingWebCISInstructions = false
@@ -149,18 +150,25 @@ struct ImportExportView: View {
             WebCISLiveImportView { rawText in
                 // Save raw extracted text to iCloud Backups folder (silent, best-effort)
                 saveWebCISRawText(rawText)
-                // Dismiss fullScreenCover first, then present mapping sheet after animation completes
+                // Dismiss fullScreenCover first, then present preview sheet after animation completes
                 webCISLiveImportBinding.wrappedValue = false
                 Task {
                     try? await Task.sleep(for: .milliseconds(600))
                     if let parsedData = try? FileImportService.shared.parseWebCISText(rawText) {
-                        webCISImportData = parsedData
+                        webCISPreviewData = parsedData
                     } else {
                         resultMessage = "Could not parse the extracted webCIS data."
                         showingResult = true
                     }
                 }
             }
+        }
+        .sheet(item: $webCISPreviewData) { data in
+            WebCISPreviewView(importData: data) { filteredData in
+                webCISImportData = filteredData
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .alert(resultMessage.contains("successfully") || resultMessage.contains("success") || resultMessage.contains("Summary") ? "Success" : "Error", isPresented: $showingResult) {
             Button("OK", role: .cancel) { }
@@ -508,7 +516,7 @@ struct ImportExportView: View {
     private func parseWebCISFile(_ url: URL) {
         do {
             let parsedData = try FileImportService.shared.parseWebCISFile(url: url)
-            webCISImportData = parsedData
+            webCISPreviewData = parsedData
         } catch {
             resultMessage = "Error parsing webCIS file: \(error.localizedDescription)"
             showingResult = true
