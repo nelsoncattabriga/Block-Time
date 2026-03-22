@@ -115,9 +115,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 if isPilotFlying {
                     // F/O + PF = use the foPilotFlyingCredit setting (ICUS or P2)
                     selectedTimeCredit = foPilotFlyingCredit
+                    isTimeCreditManualOverride = false
                 } else {
                     // F/O + not PF = P2
                     selectedTimeCredit = .p2
+                    isTimeCreditManualOverride = false
                 }
             }
         }
@@ -151,6 +153,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
     // Manual edit tracking flags for takeoffs/landings
     @Published var hasManuallyEditedTakeoffsLandings = false
+
+    // Tracks whether the user has manually overridden the auto-selected time credit
+    @Published var isTimeCreditManualOverride = false
 
     // Settings properties
     @Published var defaultCaptainName = ""
@@ -578,6 +583,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             case .secondOfficer:
                 selectedTimeCredit = .p2
             }
+            isTimeCreditManualOverride = false
         }
 
         // Set the appropriate default name to "Self" based on position
@@ -631,6 +637,25 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 }
                 so1Name = defaultSOName
             }
+        }
+    }
+
+    func setTimeCreditWithOverride(_ value: TimeCreditType) {
+        selectedTimeCredit = value
+        isTimeCreditManualOverride = true
+        HapticManager.shared.impact(.medium)
+    }
+
+    func resetTimeCreditOverride() {
+        isTimeCreditManualOverride = false
+        // Re-derive the auto value from current state
+        if isPositioning || isSimulator || isSpIns { return }
+        if flightTimePosition == .firstOfficer {
+            selectedTimeCredit = isPilotFlying ? foPilotFlyingCredit : .p2
+        } else if flightTimePosition == .captain {
+            selectedTimeCredit = .p1
+        } else {
+            selectedTimeCredit = .p2
         }
     }
 
@@ -1558,6 +1583,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 selectedTimeCredit = .p2
             }
         }
+        isTimeCreditManualOverride = false
 
         // For simulator flights, load simTime into blockTime field (since the UI shows "Sim Time" when isSimulator is true)
         // For regular flights, load blockTime as usual
@@ -2294,6 +2320,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         case .secondOfficer:
             selectedTimeCredit = .p2
         }
+        isTimeCreditManualOverride = false
 
         // Clear approach types when PF is off
         selectedApproachType = nil

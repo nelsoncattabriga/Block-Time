@@ -3,21 +3,33 @@ import SwiftUI
 // MARK: - Modern Toggles Section
 struct ModernTogglesSection: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
+    @State private var showingOverride = false
+
+    private var isDisabled: Bool {
+        viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns
+    }
+
+    private var timeCreditLabel: String {
+        switch viewModel.selectedTimeCredit {
+        case .p1: return "P1"
+        case .p1us: return "ICUS"
+        case .p2: return "P2"
+        }
+    }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
+            // Main card: PF/PM + APP row only
             VStack(spacing: 18) {
-
                 // First row: PF/PM, APP
                 HStack(spacing: 64) {
                     // PF/PM Segmented Picker
                     HStack(spacing: 0) {
                         // PF Button
                         Button(action: {
-                            if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
+                            if !isDisabled {
                                 viewModel.isPilotFlying = true
                                 HapticManager.shared.impact(.medium)
-                                // When PF is turned on, restore default approach type if set
                                 if !viewModel.isEditingMode && viewModel.logApproaches && viewModel.defaultApproachType != nil {
                                     viewModel.updateSelectedApproachType(viewModel.defaultApproachType)
                                 }
@@ -31,12 +43,12 @@ struct ModernTogglesSection: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
-                        .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
+                        .disabled(isDisabled)
+                        .opacity(isDisabled ? 0.5 : 1.0)
 
                         // PM Button
                         Button(action: {
-                            if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
+                            if !isDisabled {
                                 viewModel.isPilotFlying = false
                                 HapticManager.shared.impact(.medium)
                             }
@@ -49,15 +61,14 @@ struct ModernTogglesSection: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
-                        .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
+                        .disabled(isDisabled)
+                        .opacity(isDisabled ? 0.5 : 1.0)
                     }
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(viewModel.isPilotFlying ? Color.green : Color.gray, lineWidth: 2)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 8))
-
 
                     // Approach Picker
                     if viewModel.logApproaches {
@@ -71,102 +82,27 @@ struct ModernTogglesSection: View {
                             isDisabled: (!viewModel.isPilotFlying && !viewModel.isSimulator) || viewModel.isSpIns
                         )
                     }
-
-                    //Spacer()
                 }
-
-                // Second row: P1/P1US/P2 Time Credits
-                HStack {
-                    HStack(alignment:.center, spacing: 0) {
-                    // P1 Button
-                    Button(action: {
-                        if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
-                            viewModel.selectedTimeCredit = .p1
-                            HapticManager.shared.impact(.medium)
-                        }
-                    }) {
-                        Text("P1")
-                            .font(.footnote.bold())
-                            .foregroundColor(viewModel.selectedTimeCredit == .p1 ? .white : .secondary)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 24)
-                            .background(viewModel.selectedTimeCredit == .p1 ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
-                    .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
-
-                    Divider()
-                        .frame(height: 24)
-
-                    // P1US Button
-                    Button(action: {
-                        if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
-                            viewModel.selectedTimeCredit = .p1us
-                            HapticManager.shared.impact(.medium)
-                        }
-                    }) {
-                        Text("ICUS")
-                            .font(.footnote.bold())
-                            .foregroundColor(viewModel.selectedTimeCredit == .p1us ? .white : .secondary)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 24)
-                            .background(viewModel.selectedTimeCredit == .p1us ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
-                    .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
-
-                    Divider()
-                        .frame(height: 24)
-
-                    // P2 Button
-                    Button(action: {
-                        if !viewModel.isPositioning && !viewModel.isSimulator && !viewModel.isSpIns {
-                            viewModel.selectedTimeCredit = .p2
-                            HapticManager.shared.impact(.medium)
-                        }
-                    }) {
-                        Text("P2")
-                            .font(.footnote.bold())
-                            .foregroundColor(viewModel.selectedTimeCredit == .p2 ? .white : .secondary)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 24)
-                            .background(viewModel.selectedTimeCredit == .p2 ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
-                            .contentShape(Rectangle())
-                    }
-                        .buttonStyle(PlainButtonStyle())
-                        .disabled(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns)
-                        .opacity(viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns ? 0.5 : 1.0)
-                    }
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-                    )
-                }
-                .frame(maxWidth: 300)
-
             }
             .frame(maxWidth: .infinity)
-
             .padding(12)
             .background(Color(.systemGray6).opacity(0.75))
-            .cornerRadius(8)
-
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color(.systemGray4), lineWidth: 1)
             )
 
+            // Time credit footer note
+            if !isDisabled {
+                timeCreditFooter
+            }
+
             // Takeoffs and Landings section - only show when Pilot Flying is selected
             if viewModel.isPilotFlying {
                 HStack {
                     Text("T/O & LDG")
-                        .font(.caption.bold())
+                        .font(.footnote.bold())
                         .foregroundColor(.secondary)
                     Spacer()
                 }
@@ -211,6 +147,108 @@ struct ModernTogglesSection: View {
                             }
                         )
                     }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var timeCreditFooter: some View {
+        VStack(spacing: 0) {
+            // Override selector — slides in when tapped
+            if showingOverride {
+                HStack(alignment: .center, spacing: 0) {
+                    ForEach([TimeCreditType.p1, .p1us, .p2], id: \.self) { credit in
+                        let label: String = credit == .p1us ? "ICUS" : credit.rawValue
+                        let isSelected = viewModel.selectedTimeCredit == credit
+
+                        Button {
+                            viewModel.setTimeCreditWithOverride(credit)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showingOverride = false
+                            }
+                        } label: {
+                            Text(label)
+                                .font(.footnote.bold())
+                                .foregroundColor(isSelected ? .white : .secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 28)
+                                .background(isSelected ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        if credit != .p2 {
+                            Divider().frame(height: 28)
+                        }
+                    }
+                }
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                )
+                .padding(.top, 4)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
+            // Footer note line
+            HStack(spacing: 4) {
+                if viewModel.isTimeCreditManualOverride {
+                    Text("Time logged as")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Text(timeCreditLabel)
+                        .font(.footnote.bold())
+                        .foregroundColor(.primary)
+                    Text("(manual)")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showingOverride = false
+                        }
+                        viewModel.resetTimeCreditOverride()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else {
+                    Text("Time logged as")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Text(timeCreditLabel)
+                        .font(.footnote.bold())
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showingOverride.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 2) {
+                            Text("Override")
+                                .font(.footnote)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.top, 6)
+        }
+        .onChange(of: viewModel.selectedTimeCredit) {
+            // Collapse override panel if auto-value changes externally (e.g. PF/PM toggle)
+            if !viewModel.isTimeCreditManualOverride {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showingOverride = false
                 }
             }
         }
