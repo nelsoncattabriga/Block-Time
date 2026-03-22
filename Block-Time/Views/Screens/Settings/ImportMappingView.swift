@@ -808,8 +808,9 @@ private struct PreviewRowView: View {
     let headers: [String]
 
     // Cache column indices to avoid repeated searches
+    // Uses keepingLast to safely handle duplicate header names (e.g. empty string columns)
     private var columnIndices: [String: Int] {
-        Dictionary(uniqueKeysWithValues: headers.enumerated().map { ($1, $0) })
+        Dictionary(headers.enumerated().map { ($1, $0) }, uniquingKeysWith: { _, last in last })
     }
 
     var body: some View {

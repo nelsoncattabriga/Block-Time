@@ -16,8 +16,17 @@ struct UnifiedRosterPreviewView: View {
     let onImport: ([UnifiedParsedFlight]) -> Void
 
     @State private var selectedFlights: Set<UUID> = []
-    @State private var flightIDs: [UUID] = []
+    @State private var flightIDs: [UUID]
     @State private var isImporting = false
+
+    init(parsedFlights: [UnifiedParsedFlight], pilotInfo: UnifiedParseResult, onImport: @escaping ([UnifiedParsedFlight]) -> Void) {
+        self.parsedFlights = parsedFlights
+        self.pilotInfo = pilotInfo
+        self.onImport = onImport
+        let ids = parsedFlights.map { _ in UUID() }
+        self._flightIDs = State(initialValue: ids)
+        self._selectedFlights = State(initialValue: Set(ids))
+    }
 
     var body: some View {
         NavigationView {
@@ -69,12 +78,6 @@ struct UnifiedRosterPreviewView: View {
                     }
                 }
             }
-        }
-        .onAppear {
-            // Generate unique IDs for each flight
-            flightIDs = (0..<parsedFlights.count).map { _ in UUID() }
-            // Select all by default
-            selectedFlights = Set(flightIDs)
         }
     }
 
