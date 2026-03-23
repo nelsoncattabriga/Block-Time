@@ -224,6 +224,31 @@ struct FlightSectorRow: View, Equatable {
                         .font(.headline)
                         .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
 
+                    // PAX / INS badge
+                    if !cachedIsFutureFlight {
+                        if isPositioning {
+                            Text("PAX")
+                                .font(.subheadline.monospaced())
+                                .foregroundColor(.orange)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.orange, lineWidth: 1)
+                                )
+                        } else if sector.isSpInsOnly {
+                            Text("INS")
+                                .font(.subheadline.monospaced())
+                                .foregroundColor(.purple)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.purple, lineWidth: 1)
+                                )
+                        }
+                    }
+
                     Spacer()
 
                     // Route Details
@@ -302,29 +327,9 @@ struct FlightSectorRow: View, Equatable {
                         }
                     }
 
-                    // Flight type / role badge (always shown, not gated by isPositioning)
-                    if !cachedIsFutureFlight {
-                        if isPositioning {
-                            Text("PAX")
-                                .font(.subheadline.monospaced())
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(Color.orange, lineWidth: 1)
-                                )
-                        } else if sector.isSpInsOnly {
-                            Text("INS")
-                                .font(.subheadline.monospaced())
-                                .foregroundColor(.purple)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(Color.purple, lineWidth: 1)
-                                )
-                        } else if sector.isPilotFlying {
+                    // PF / PM badge
+                    if !cachedIsFutureFlight && !isPositioning && !sector.isSpInsOnly {
+                        if sector.isPilotFlying {
                             Text("PF")
                                 .font(.subheadline.monospaced())
                                 .foregroundColor(.green)
