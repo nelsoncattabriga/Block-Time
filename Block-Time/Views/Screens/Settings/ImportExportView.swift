@@ -682,8 +682,21 @@ struct WebCISMappingView: View {
 
                         // Registration Mappings Section
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Aircraft Type Mapping")
-                                .font(.headline)
+                            HStack {
+                                Text("Aircraft Type Mapping")
+                                    .font(.headline)
+                                Spacer()
+                                if allTypesResolved {
+                                    Button(action: { showingRegistrationMapping = true }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "pencil")
+                                            Text("Edit")
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundColor(.blue)
+                                    }
+                                }
+                            }
 
                             if allTypesResolved {
                                 // All types auto-detected — show summary with edit option
@@ -707,22 +720,6 @@ struct WebCISMappingView: View {
                                 .background(Color.green.opacity(0.08))
                                 .cornerRadius(8)
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.green.opacity(0.3), lineWidth: 1))
-
-                                Button(action: { showingRegistrationMapping = true }) {
-                                    HStack {
-                                        Image(systemName: "pencil")
-                                            .foregroundColor(.blue)
-                                        Text("Edit Mappings")
-                                            .foregroundColor(.blue)
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .foregroundColor(Color.blue.opacity(0.7))
-                                    }
-                                    .padding()
-                                    .background(Color.blue.opacity(0.08))
-                                    .cornerRadius(8)
-                                }
                             } else {
                                 // Some types missing — prompt user to set them up
                                 if !registrationMappings.isEmpty {
