@@ -163,7 +163,7 @@ struct ImportExportView: View {
                 }
             }
         }
-        .sheet(item: $webCISPreviewData) { data in
+        .fullScreenCover(item: $webCISPreviewData) { data in
             WebCISPreviewView(importData: data) { filteredData in
                 webCISImportData = filteredData
             }

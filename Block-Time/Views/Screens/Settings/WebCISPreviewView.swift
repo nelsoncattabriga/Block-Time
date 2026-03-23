@@ -7,212 +7,225 @@
 
 import SwiftUI
 
+// MARK: - Pre-processed row (all display values computed once — never recomputed)
+
+struct WebCISDisplayRow: Identifiable {
+    let id: Int         // same as index
+    let index: Int
+    let isSim: Bool
+    let date: String
+    let reg: String
+    let sector: String
+    // Display strings — "—" when zero
+    let total: String
+    let night: String
+    let p1: String
+    let icus: String
+    let p2: String
+    let sim: String
+    let inst: String
+    let flen: String      // Flight Engineer
+    let spins: String     // Sp/Ins
+    let isSuspicious: Bool  // true when both totalMin and simMin are zero (incomplete data)
+    // Raw minute values for incremental summary arithmetic
+    let totalMin: Int
+    let nightMin: Int
+    let p1Min: Int
+    let icusMin: Int
+    let p2Min: Int
+    let simMin: Int
+    let instMin: Int
+    let flenMin: Int
+    let spinsMin: Int
+}
+
+// MARK: - Background parsing helpers (file-private free functions — nonisolated, thread-safe)
+
+nonisolated private func parseWebCISDisplayRows(from importData: ImportData) -> [WebCISDisplayRow] {
+    var result = [WebCISDisplayRow]()
+    result.reserveCapacity(importData.rows.count)
+    for (i, raw) in importData.rows.enumerated() {
+        result.append(wcisParseRow(index: i, raw: raw))
+    }
+    return result
+}
+
+nonisolated private func wcisParseRow(index: Int, raw: [String]) -> WebCISDisplayRow {
+    func f(_ i: Int) -> String {
+        guard i < raw.count else { return "" }
+        return raw[i].trimmingCharacters(in: .whitespaces)
+    }
+    // ImportData column layout after FileImportService.parseWebCISText:
+    //  0:DATE 1:REG 2:DEP 3:DES 4:INST
+    //  5:P2D  6:P2N 7:P1D 8:P1N 9:P1USD 10:P1USN
+    //  11:MEDD 12:MEDN 13:MEFD 14:MEFN 15:MECD 16:MECN
+    //  17:SIMU 18:FLEN 19:TOTAL 20:SPINS
+    let dep = f(2), des = f(3), simu = f(17)
+    let isSim = dep.isEmpty && des.isEmpty && !simu.isEmpty
+
+    // TOTAL (col 19) is stored as decimal hours e.g. "1.77" by sumWebCISTimes.
+    // Parse via decimal rather than H:MM to avoid showing zeros everywhere.
+    let totalMin = wcisParseDecimalHours(f(19))
+    let nightMin = wcisSumMinutes([f(6), f(8), f(10), f(12), f(14), f(16)])
+    let p1Min    = wcisSumMinutes([f(7), f(8), f(15), f(16)])
+    let icusMin  = wcisSumMinutes([f(9), f(10)])
+    let p2Min    = wcisSumMinutes([f(5), f(6), f(11), f(12), f(13), f(14)])
+    let simMin   = wcisParseMinutes(simu)
+    let instMin  = wcisParseMinutes(f(4))
+    let flenMin  = wcisParseMinutes(f(18))
+    let spinsMin = wcisParseMinutes(f(20))
+
+    let sector: String
+    if isSim            { sector = "SIM" }
+    else if dep.isEmpty { sector = "—" }
+    else                { sector = "\(dep)-\(des)" }
+
+    return WebCISDisplayRow(
+        id: index, index: index, isSim: isSim,
+        date:   f(0),
+        reg:    isSim ? "SIM" : f(1),
+        sector: sector,
+        total:  wcisDisplayTime(totalMin), night: wcisDisplayTime(nightMin),
+        p1:     wcisDisplayTime(p1Min),    icus:  wcisDisplayTime(icusMin),
+        p2:     wcisDisplayTime(p2Min),    sim:   wcisDisplayTime(simMin),
+        inst:   wcisDisplayTime(instMin),  flen:  wcisDisplayTime(flenMin),
+        spins:  wcisDisplayTime(spinsMin),
+        isSuspicious: totalMin == 0 && simMin == 0,
+        totalMin: totalMin, nightMin: nightMin, p1Min:  p1Min,
+        icusMin:  icusMin,  p2Min:    p2Min,    simMin: simMin,
+        instMin:  instMin,  flenMin:  flenMin,  spinsMin: spinsMin
+    )
+}
+
+/// Parses TOTAL column stored as decimal hours e.g. "1.77" → 106 minutes.
+nonisolated private func wcisParseDecimalHours(_ s: String) -> Int {
+    let t = s.trimmingCharacters(in: .whitespaces)
+    guard let d = Double(t), d > 0 else { return 0 }
+    return Int((d * 60).rounded())
+}
+
+nonisolated private func wcisParseMinutes(_ s: String) -> Int {
+    let t = s.trimmingCharacters(in: .whitespaces)
+    guard (t.count == 4 || t.count == 5), let colon = t.firstIndex(of: ":") else { return 0 }
+    guard let h = Int(t[t.startIndex..<colon]),
+          let m = Int(t[t.index(after: colon)...]) else { return 0 }
+    return h * 60 + m
+}
+
+nonisolated private func wcisSumMinutes(_ times: [String]) -> Int {
+    times.reduce(0) { $0 + wcisParseMinutes($1) }
+}
+
+nonisolated private func wcisDisplayTime(_ minutes: Int) -> String {
+    guard minutes > 0 else { return "—" }
+    return String(format: "%d:%02d", minutes / 60, minutes % 60)
+}
+
 // MARK: - ViewModel
 
 @Observable @MainActor
 final class WebCISPreviewViewModel {
 
-    // MARK: Column indices (webCIS fixed schema)
-    private enum Col {
-        static let date   = 0
-        static let reg    = 1
-        static let dep    = 2
-        static let des    = 3
-        static let inst   = 4
-        static let p2d    = 5
-        static let p2n    = 6
-        static let p1d    = 7
-        static let p1n    = 8
-        static let p1usd  = 9
-        static let p1usn  = 10
-        static let medd   = 11
-        static let medn   = 12
-        static let mefd   = 13
-        static let mefn   = 14
-        static let mecd   = 15
-        static let mecn   = 16
-        static let simu   = 17
-        static let flen   = 18
-        static let total  = 19
-        static let spins  = 20
-    }
-
-    // MARK: State
+    let rows: [WebCISDisplayRow]
+    let totalCount: Int
     let importData: ImportData
-    var selectedRowIndices: Set<Int>
-    var duplicateRowIndices: Set<Int> = []   // placeholder for future duplicate detection
 
-    init(importData: ImportData) {
+    var selectedRowIndices: Set<Int>
+
+    // Incremental totals in minutes — O(1) per toggle
+    private(set) var sumBlock: Int
+    private(set) var sumNight: Int
+    private(set) var sumP1: Int
+    private(set) var sumICUS: Int
+    private(set) var sumP2: Int
+    private(set) var sumSim: Int
+    private(set) var sumInst: Int
+    private(set) var sumFlen: Int
+    private(set) var sumSpins: Int
+
+    init(importData: ImportData, prebuiltRows: [WebCISDisplayRow]) {
         self.importData = importData
-        self.selectedRowIndices = Set(importData.rows.indices)
+        self.totalCount = prebuiltRows.count
+        self.rows = prebuiltRows
+        self.selectedRowIndices = Set(prebuiltRows.indices)
+
+        var b = 0, n = 0, p1 = 0, ic = 0, p2 = 0, si = 0, ins = 0, fl = 0, sp = 0
+        for r in prebuiltRows {
+            b += r.totalMin; n += r.nightMin; p1 += r.p1Min
+            ic += r.icusMin; p2 += r.p2Min;  si += r.simMin
+            ins += r.instMin; fl += r.flenMin; sp += r.spinsMin
+        }
+        self.sumBlock = b; self.sumNight = n; self.sumP1 = p1
+        self.sumICUS  = ic; self.sumP2 = p2;  self.sumSim = si
+        self.sumInst  = ins; self.sumFlen = fl; self.sumSpins = sp
     }
 
-    // MARK: - Selection helpers
+    // MARK: Selection
 
     var selectedCount: Int { selectedRowIndices.count }
-    var totalCount: Int { importData.rows.count }
-
-    var allSelected: Bool { selectedRowIndices.count == importData.rows.count }
+    var allSelected: Bool  { selectedRowIndices.count == totalCount }
 
     func toggleRow(_ index: Int) {
+        guard index < rows.count else { return }
+        let r = rows[index]
         if selectedRowIndices.contains(index) {
             selectedRowIndices.remove(index)
+            sumBlock -= r.totalMin; sumNight -= r.nightMin; sumP1   -= r.p1Min
+            sumICUS  -= r.icusMin;  sumP2    -= r.p2Min;   sumSim  -= r.simMin
+            sumInst  -= r.instMin;  sumFlen  -= r.flenMin; sumSpins -= r.spinsMin
         } else {
             selectedRowIndices.insert(index)
+            sumBlock += r.totalMin; sumNight += r.nightMin; sumP1   += r.p1Min
+            sumICUS  += r.icusMin;  sumP2    += r.p2Min;   sumSim  += r.simMin
+            sumInst  += r.instMin;  sumFlen  += r.flenMin; sumSpins += r.spinsMin
         }
     }
 
     func selectAll() {
-        selectedRowIndices = Set(importData.rows.indices)
+        selectedRowIndices = Set(rows.indices)
+        recomputeTotals()
     }
 
     func deselectAll() {
         selectedRowIndices = []
+        sumBlock = 0; sumNight = 0; sumP1 = 0; sumICUS = 0
+        sumP2 = 0; sumSim = 0; sumInst = 0; sumFlen = 0; sumSpins = 0
     }
 
-    /// Returns a new ImportData containing only the selected rows.
+    private func recomputeTotals() {
+        var b = 0, n = 0, p1 = 0, ic = 0, p2 = 0, si = 0, ins = 0, fl = 0, sp = 0
+        for idx in selectedRowIndices {
+            let r = rows[idx]
+            b += r.totalMin; n += r.nightMin; p1 += r.p1Min
+            ic += r.icusMin; p2 += r.p2Min;  si += r.simMin
+            ins += r.instMin; fl += r.flenMin; sp += r.spinsMin
+        }
+        sumBlock = b; sumNight = n; sumP1 = p1; sumICUS = ic
+        sumP2 = p2; sumSim = si; sumInst = ins; sumFlen = fl; sumSpins = sp
+    }
+
     var filteredImportData: ImportData {
-        let selectedRows = importData.rows.indices
-            .filter { selectedRowIndices.contains($0) }
-            .map { importData.rows[$0] }
-        return ImportData(
-            headers: importData.headers,
-            rows: selectedRows,
-            fileURL: importData.fileURL,
-            delimiter: importData.delimiter
-        )
+        let selected = rows
+            .filter { selectedRowIndices.contains($0.index) }
+            .map { importData.rows[$0.index] }
+        return ImportData(headers: importData.headers, rows: selected,
+                          fileURL: importData.fileURL, delimiter: importData.delimiter)
     }
-
-    // MARK: - Row classification
-
-    func isSimRow(_ row: [String]) -> Bool {
-        let dep = field(row, Col.dep)
-        let des = field(row, Col.des)
-        let simu = field(row, Col.simu)
-        let total = field(row, Col.total)
-        let isDep = !dep.isEmpty
-        let isDes = !des.isEmpty
-        let hasSim = !simu.isEmpty
-        // A sim row: no dep/des and has sim time, OR dep/des empty and total == simu
-        return (!isDep && !isDes && hasSim) ||
-               (!isDep && !isDes && (total.isEmpty || total == simu))
-    }
-
-    // MARK: - Suspicious rows
 
     var suspiciousRowCount: Int {
-        importData.rows.enumerated().filter { (index, row) in
-            selectedRowIndices.contains(index) &&
-            field(row, Col.total).isEmpty &&
-            field(row, Col.simu).isEmpty
-        }.count
+        rows.filter { selectedRowIndices.contains($0.index) && $0.isSuspicious }.count
     }
 
-    // MARK: - Summary totals (selected rows only)
-
-    var totalBlock: String {
-        sumTimes(selectedRows.map { field($0, Col.total) })
-    }
-
-    var totalNight: String {
-        sumTimes(selectedRows.flatMap { row in
-            [Col.p2n, Col.p1n, Col.p1usn, Col.medn, Col.mefn, Col.mecn].map { field(row, $0) }
-        })
-    }
-
-    var totalP1: String {
-        sumTimes(selectedRows.flatMap { row in
-            [Col.p1d, Col.p1n, Col.mecd, Col.mecn].map { field(row, $0) }
-        })
-    }
-
-    var totalICUS: String {
-        sumTimes(selectedRows.flatMap { row in
-            [Col.p1usd, Col.p1usn].map { field(row, $0) }
-        })
-    }
-
-    var totalP2: String {
-        sumTimes(selectedRows.flatMap { row in
-            [Col.p2d, Col.p2n, Col.medd, Col.medn, Col.mefd, Col.mefn].map { field(row, $0) }
-        })
-    }
-
-    var totalSim: String {
-        sumTimes(selectedRows.map { field($0, Col.simu) })
-    }
-
-    var totalInst: String {
-        sumTimes(selectedRows.map { field($0, Col.inst) })
-    }
-
-    // MARK: - Per-row computed values
-
-    func rowDate(_ row: [String]) -> String { field(row, Col.date) }
-    func rowReg(_ row: [String]) -> String { field(row, Col.reg) }
-
-    func rowSector(_ row: [String]) -> String {
-        guard !isSimRow(row) else { return "SIM" }
-        let dep = field(row, Col.dep)
-        let des = field(row, Col.des)
-        if dep.isEmpty && des.isEmpty { return "—" }
-        return "\(dep)-\(des)"
-    }
-
-    func rowTotal(_ row: [String]) -> String { display(field(row, Col.total)) }
-    func rowSim(_ row: [String]) -> String   { display(field(row, Col.simu)) }
-    func rowInst(_ row: [String]) -> String  { display(field(row, Col.inst)) }
-
-    func rowNight(_ row: [String]) -> String {
-        display(sumTimes([Col.p2n, Col.p1n, Col.p1usn, Col.medn, Col.mefn, Col.mecn].map { field(row, $0) }))
-    }
-
-    func rowP1(_ row: [String]) -> String {
-        display(sumTimes([Col.p1d, Col.p1n, Col.mecd, Col.mecn].map { field(row, $0) }))
-    }
-
-    func rowICUS(_ row: [String]) -> String {
-        display(sumTimes([Col.p1usd, Col.p1usn].map { field(row, $0) }))
-    }
-
-    func rowP2(_ row: [String]) -> String {
-        display(sumTimes([Col.p2d, Col.p2n, Col.medd, Col.medn, Col.mefd, Col.mefn].map { field(row, $0) }))
-    }
-
-    // MARK: - Time arithmetic
-
-    /// Sums a collection of "HH:MM" strings, returning "HH:MM". Returns "—" if total is zero.
-    func sumTimes(_ times: [String]) -> String {
-        var totalMinutes = 0
-        for t in times {
-            let trimmed = t.trimmingCharacters(in: .whitespaces)
-            guard (trimmed.count == 4 || trimmed.count == 5), trimmed.contains(":") else { continue }
-            let parts = trimmed.split(separator: ":", maxSplits: 1)
-            guard parts.count == 2,
-                  let h = Int(parts[0]),
-                  let m = Int(parts[1]) else { continue }
-            totalMinutes += h * 60 + m
-        }
-        if totalMinutes == 0 { return "—" }
-        return String(format: "%d:%02d", totalMinutes / 60, totalMinutes % 60)
-    }
-
-    // MARK: - Private helpers
-
-    private var selectedRows: [[String]] {
-        importData.rows.indices
-            .filter { selectedRowIndices.contains($0) }
-            .map { importData.rows[$0] }
-    }
-
-    private func field(_ row: [String], _ index: Int) -> String {
-        guard index < row.count else { return "" }
-        return row[index].trimmingCharacters(in: .whitespaces)
-    }
-
-    private func display(_ value: String) -> String {
-        value.isEmpty || value == "—" ? "—" : value
-    }
+    // Summary display strings
+    var totalBlock: String { wcisDisplayTime(sumBlock) }
+    var totalNight: String { wcisDisplayTime(sumNight) }
+    var totalP1: String    { wcisDisplayTime(sumP1) }
+    var totalICUS: String  { wcisDisplayTime(sumICUS) }
+    var totalP2: String    { wcisDisplayTime(sumP2) }
+    var totalSim: String   { wcisDisplayTime(sumSim) }
+    var totalInst: String  { wcisDisplayTime(sumInst) }
+    var totalFlen: String  { wcisDisplayTime(sumFlen) }
+    var totalSpins: String { wcisDisplayTime(sumSpins) }
 }
 
 // MARK: - Main View
@@ -220,66 +233,127 @@ final class WebCISPreviewViewModel {
 struct WebCISPreviewView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State private var viewModel: WebCISPreviewViewModel
+    @State private var viewModel: WebCISPreviewViewModel?
+    let importData: ImportData
     let onConfirm: (ImportData) -> Void
 
     // Fixed column widths
-    private enum ColWidth {
+    private enum CW {
         static let checkbox: CGFloat = 36
-        static let date:     CGFloat = 90
-        static let reg:      CGFloat = 64
-        static let sector:   CGFloat = 80
-        static let total:    CGFloat = 56
-        static let night:    CGFloat = 56
-        static let p1:       CGFloat = 56
-        static let icus:     CGFloat = 56
-        static let p2:       CGFloat = 56
-        static let sim:      CGFloat = 56
-        static let inst:     CGFloat = 56
+        static let date:     CGFloat = 88
+        static let reg:      CGFloat = 60
+        static let sector:   CGFloat = 76
+        static let num:      CGFloat = 52   // all numeric columns share this width
 
         static var tableWidth: CGFloat {
-            checkbox + date + reg + sector + total + night + p1 + icus + p2 + sim + inst
+            // checkbox + date + reg + sector + 9 numeric columns
+            checkbox + date + reg + sector + num * 9
         }
     }
 
     init(importData: ImportData, onConfirm: @escaping (ImportData) -> Void) {
-        self._viewModel = State(initialValue: WebCISPreviewViewModel(importData: importData))
+        self.importData = importData
         self.onConfirm = onConfirm
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                summaryStrip
-                warningBanner
-                Divider()
-                tableBody
-                Divider()
-                bottomToolbar
+            Group {
+                if let vm = viewModel {
+                    loadedBody(vm: vm)
+                } else {
+                    loadingBody
+                }
             }
             .navigationTitle("Review webCIS Data")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { toolbarItems }
+            .toolbar {
+                if let vm = viewModel {
+                    loadedToolbarItems(vm: vm)
+                } else {
+                    cancelToolbarItem
+                }
+            }
+        }
+        .task {
+            let data = importData
+            let prebuilt = await Task.detached(priority: .userInitiated) {
+                parseWebCISDisplayRows(from: data)
+            }.value
+            self.viewModel = WebCISPreviewViewModel(importData: data, prebuiltRows: prebuilt)
+        }
+    }
+
+    // MARK: - Loading state
+
+    private var loadingBody: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.4)
+            Text("Preparing \(importData.rows.count) rows…")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Loaded state
+
+    private func loadedBody(vm: WebCISPreviewViewModel) -> some View {
+        VStack(spacing: 0) {
+            summaryStrip(vm: vm)
+            warningBanner(vm: vm)
+            Divider()
+            // Pinned column-header row outside the List, but inside the same
+            // horizontal scroll as the list rows — both share one ScrollView(.horizontal).
+            // Vertical laziness comes from List; horizontal scroll wraps everything.
+            ScrollView(.horizontal, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    headerHStack
+                        .frame(height: 30)
+                        .frame(minWidth: CW.tableWidth)
+                        .background(Color.secondary.opacity(0.12))
+                    Divider()
+                    // List provides native, truly-lazy vertical scrolling
+                    List {
+                        ForEach(vm.rows) { row in
+                            rowContent(row, vm: vm)
+                                .listRowInsets(EdgeInsets())
+                                .listRowSeparator(.visible)
+                                .listRowBackground(rowBackground(isSelected: vm.selectedRowIndices.contains(row.index), isSim: row.isSim, isSuspicious: row.isSuspicious))
+                        }
+                    }
+                    .listStyle(.plain)
+                    .frame(minWidth: CW.tableWidth)
+                    // List has no intrinsic height inside a VStack — give it all remaining space
+                    .frame(maxHeight: .infinity)
+                    .environment(\.defaultMinListRowHeight, 36)
+                }
+            }
+            Divider()
+            bottomToolbar(vm: vm)
         }
     }
 
     // MARK: - Summary strip
 
-    private var summaryStrip: some View {
+    private func summaryStrip(vm: WebCISPreviewViewModel) -> some View {
         VStack(spacing: 4) {
-            Text("\(viewModel.selectedCount) of \(viewModel.totalCount) selected")
+            Text("\(vm.selectedCount) of \(vm.totalCount) selected")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    statChip(label: "Block",  value: viewModel.totalBlock)
-                    statChip(label: "Night",  value: viewModel.totalNight)
-                    statChip(label: "P1",     value: viewModel.totalP1)
-                    statChip(label: "ICUS",   value: viewModel.totalICUS)
-                    statChip(label: "P2",     value: viewModel.totalP2)
-                    statChip(label: "Sim",    value: viewModel.totalSim)
-                    statChip(label: "Inst",   value: viewModel.totalInst)
+                HStack(spacing: 10) {
+                    statChip(label: "Block",  value: vm.totalBlock)
+                    statChip(label: "Night",  value: vm.totalNight)
+                    statChip(label: "P1",     value: vm.totalP1)
+                    statChip(label: "ICUS",   value: vm.totalICUS)
+                    statChip(label: "P2",     value: vm.totalP2)
+                    statChip(label: "Sim",    value: vm.totalSim)
+                    statChip(label: "Inst",   value: vm.totalInst)
+                    if vm.sumFlen  > 0 { statChip(label: "F/Eng",  value: vm.totalFlen) }
+                    if vm.sumSpins > 0 { statChip(label: "Sp/Ins", value: vm.totalSpins) }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -308,28 +382,25 @@ struct WebCISPreviewView: View {
     // MARK: - Warning banner
 
     @ViewBuilder
-    private var warningBanner: some View {
-        let suspicious = viewModel.suspiciousRowCount
-        let noneSelected = viewModel.selectedCount == 0
+    private func warningBanner(vm: WebCISPreviewViewModel) -> some View {
+        let suspicious  = vm.suspiciousRowCount
+        let noneSelected = vm.selectedCount == 0
 
         if noneSelected || suspicious > 0 {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.yellow)
                     .font(.caption)
-
                 if noneSelected {
                     Text("No rows selected — select at least one row to import.")
                         .font(.caption)
-                        .foregroundStyle(.primary)
                 } else {
-                    Text("\(suspicious) selected row\(suspicious == 1 ? "" : "s") have no flight or sim time — they may be header or summary rows.")
+                    Text("\(suspicious) selected row\(suspicious == 1 ? "" : "s") flagged. No flight or sim times.")
                         .font(.caption)
-                        .foregroundStyle(.primary)
                 }
-
                 Spacer()
             }
+            .foregroundStyle(.primary)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(Color.yellow.opacity(0.15))
@@ -340,114 +411,79 @@ struct WebCISPreviewView: View {
 
     private var headerHStack: some View {
         HStack(spacing: 0) {
-            // Checkbox column header
             Image(systemName: "checkmark.square")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .frame(width: ColWidth.checkbox, alignment: .center)
-
-            columnHeader("Date",  width: ColWidth.date,   align: .leading)
-            columnHeader("Reg",   width: ColWidth.reg,    align: .leading)
-            columnHeader("Sector",width: ColWidth.sector, align: .leading)
-            columnHeader("Total", width: ColWidth.total)
-            columnHeader("Night", width: ColWidth.night)
-            columnHeader("P1",    width: ColWidth.p1)
-            columnHeader("ICUS",  width: ColWidth.icus)
-            columnHeader("P2",    width: ColWidth.p2)
-            columnHeader("Sim",   width: ColWidth.sim)
-            columnHeader("Inst",  width: ColWidth.inst)
+                .frame(width: CW.checkbox, alignment: .center)
+            colHdr("Date",   w: CW.date,   a: .leading)
+            colHdr("Reg",    w: CW.reg,    a: .leading)
+            colHdr("Sector", w: CW.sector, a: .leading)
+            colHdr("Total",  w: CW.num)
+            colHdr("Night",  w: CW.num)
+            colHdr("P1",     w: CW.num)
+            colHdr("ICUS",   w: CW.num)
+            colHdr("P2",     w: CW.num)
+            colHdr("Sim",    w: CW.num)
+            colHdr("Inst",   w: CW.num)
+            colHdr("F/Eng",  w: CW.num)
+            colHdr("Sp/Ins", w: CW.num)
         }
+        .padding(.horizontal, 4)
     }
 
-    private func columnHeader(_ title: String, width: CGFloat, align: Alignment = .trailing) -> some View {
+    private func colHdr(_ title: String, w: CGFloat, a: Alignment = .trailing) -> some View {
         Text(title)
             .font(.caption2)
             .fontWeight(.semibold)
             .foregroundStyle(.secondary)
-            .frame(width: width, alignment: align)
+            .frame(width: w, alignment: a)
             .padding(.horizontal, 2)
     }
 
-    // MARK: - Table body
+    // MARK: - Row content (used inside List)
 
-    private var tableBody: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    Section {
-                        ForEach(Array(viewModel.importData.rows.enumerated()), id: \.offset) { index, row in
-                            tableRow(index: index, row: row)
-                            Divider()
-                        }
-                    } header: {
-                        headerHStack
-                            .frame(height: 30)
-                            .background(Color.secondary.opacity(0.12))
-                            .padding(.horizontal, 4)
-                        Divider()
-                    }
-                }
-                .frame(minWidth: ColWidth.tableWidth)
-                .padding(.horizontal, 4)
-            }
-        }
-    }
-
-    private func tableRow(index: Int, row: [String]) -> some View {
-        let isSelected = viewModel.selectedRowIndices.contains(index)
-        let isSim = viewModel.isSimRow(row)
-
+    private func rowContent(_ row: WebCISDisplayRow, vm: WebCISPreviewViewModel) -> some View {
+        let isSelected = vm.selectedRowIndices.contains(row.index)
         return Button {
-            viewModel.toggleRow(index)
+            vm.toggleRow(row.index)
         } label: {
-            rowContent(index: index, row: row, isSelected: isSelected, isSim: isSim)
+            HStack(spacing: 0) {
+                Image(systemName: isSelected ? "checkmark.square.fill" : "square")
+                    .font(.caption)
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .frame(width: CW.checkbox, alignment: .center)
+
+                Text(row.date)
+                    .frame(width: CW.date, alignment: .leading).padding(.horizontal, 2)
+
+                Text(row.reg)
+                    .frame(width: CW.reg, alignment: .leading).padding(.horizontal, 2)
+
+                sectorCell(row)
+                    .frame(width: CW.sector, alignment: .leading).padding(.horizontal, 2)
+
+                numCell(row.total, w: CW.num)
+                numCell(row.night, w: CW.num)
+                numCell(row.p1,    w: CW.num)
+                numCell(row.icus,  w: CW.num)
+                numCell(row.p2,    w: CW.num)
+                numCell(row.sim,   w: CW.num)
+                numCell(row.inst,  w: CW.num)
+                numCell(row.flen,  w: CW.num)
+                numCell(row.spins, w: CW.num)
+            }
+            .font(.caption)
+            .foregroundStyle(isSelected ? Color.primary : Color.secondary.opacity(0.5))
+            .frame(height: 36)
+            .frame(minWidth: CW.tableWidth)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(PlainButtonStyle())
-    }
-
-    private func rowContent(index: Int, row: [String], isSelected: Bool, isSim: Bool) -> some View {
-        let dimmed = !isSelected
-
-        return HStack(spacing: 0) {
-            // Checkbox
-            Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                .font(.caption)
-                .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                .frame(width: ColWidth.checkbox, alignment: .center)
-
-            // Date
-            Text(viewModel.rowDate(row))
-                .frame(width: ColWidth.date, alignment: .leading)
-                .padding(.horizontal, 2)
-
-            // Reg
-            Text(isSim ? "SIM" : viewModel.rowReg(row))
-                .frame(width: ColWidth.reg, alignment: .leading)
-                .padding(.horizontal, 2)
-
-            // Sector
-            sectorCell(row: row, isSim: isSim)
-                .frame(width: ColWidth.sector, alignment: .leading)
-                .padding(.horizontal, 2)
-
-            // Numeric columns — right-aligned
-            numericCell(viewModel.rowTotal(row), width: ColWidth.total, highlight: !isSim)
-            numericCell(viewModel.rowNight(row), width: ColWidth.night)
-            numericCell(viewModel.rowP1(row),    width: ColWidth.p1)
-            numericCell(viewModel.rowICUS(row),  width: ColWidth.icus)
-            numericCell(viewModel.rowP2(row),    width: ColWidth.p2)
-            numericCell(viewModel.rowSim(row),   width: ColWidth.sim, highlight: isSim)
-            numericCell(viewModel.rowInst(row),  width: ColWidth.inst)
-        }
-        .font(.caption)
-        .foregroundStyle(dimmed ? Color.secondary.opacity(0.5) : Color.primary)
-        .frame(height: 36)
-        .background(rowBackground(isSelected: isSelected, isSim: isSim))
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
-    private func sectorCell(row: [String], isSim: Bool) -> some View {
-        if isSim {
+    private func sectorCell(_ row: WebCISDisplayRow) -> some View {
+        if row.isSim {
             Text("SIM")
                 .font(.caption2)
                 .fontWeight(.semibold)
@@ -456,23 +492,27 @@ struct WebCISPreviewView: View {
                 .padding(.vertical, 2)
                 .background(Color.indigo.opacity(0.75), in: Capsule())
         } else {
-            Text(viewModel.rowSector(row))
+            Text(row.sector)
         }
     }
 
-    private func numericCell(_ value: String, width: CGFloat, highlight: Bool = false) -> some View {
+    private func numCell(_ value: String, w: CGFloat) -> some View {
         Text(value)
-            .foregroundStyle(value == "—" ? Color.secondary.opacity(0.4) : (highlight ? Color.primary : Color.primary))
-            .frame(width: width, alignment: .trailing)
+            .foregroundStyle(value == "—" ? Color.secondary.opacity(0.4) : Color.primary)
+            .frame(width: w, alignment: .trailing)
             .padding(.horizontal, 2)
     }
 
     @ViewBuilder
-    private func rowBackground(isSelected: Bool, isSim: Bool) -> some View {
-        if isSim && isSelected {
+    private func rowBackground(isSelected: Bool, isSim: Bool, isSuspicious: Bool) -> some View {
+        if isSuspicious && isSelected {
+            Color.orange.opacity(0.15)
+        } else if isSuspicious {
+            Color.orange.opacity(0.07)
+        } else if isSim && isSelected {
             Color.indigo.opacity(0.08)
         } else if !isSelected {
-            Color.secondary.opacity(0.15)
+            Color.secondary.opacity(0.12)
         } else {
             Color.clear
         }
@@ -480,22 +520,22 @@ struct WebCISPreviewView: View {
 
     // MARK: - Bottom toolbar
 
-    private var bottomToolbar: some View {
+    private func bottomToolbar(vm: WebCISPreviewViewModel) -> some View {
         VStack(spacing: 0) {
             Button {
-                let filtered = viewModel.filteredImportData
+                let filtered = vm.filteredImportData
                 onConfirm(filtered)
                 dismiss()
             } label: {
-                Text("Import \(viewModel.selectedCount) Row\(viewModel.selectedCount == 1 ? "" : "s")")
+                Text("Import \(vm.selectedCount) Row\(vm.selectedCount == 1 ? "" : "s")")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(viewModel.selectedCount == 0 ? Color.secondary.opacity(0.3) : Color.accentColor)
+                    .background(vm.selectedCount == 0 ? Color.secondary.opacity(0.3) : Color.accentColor)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .disabled(viewModel.selectedCount == 0)
+            .disabled(vm.selectedCount == 0)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
@@ -505,18 +545,20 @@ struct WebCISPreviewView: View {
     // MARK: - Toolbar
 
     @ToolbarContentBuilder
-    private var toolbarItems: some ToolbarContent {
+    private var cancelToolbarItem: some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
             Button("Cancel") { dismiss() }
         }
+    }
 
+    @ToolbarContentBuilder
+    private func loadedToolbarItems(vm: WebCISPreviewViewModel) -> some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") { dismiss() }
+        }
         ToolbarItem(placement: .primaryAction) {
-            Button(viewModel.allSelected ? "Deselect All" : "Select All") {
-                if viewModel.allSelected {
-                    viewModel.deselectAll()
-                } else {
-                    viewModel.selectAll()
-                }
+            Button(vm.allSelected ? "Deselect All" : "Select All") {
+                if vm.allSelected { vm.deselectAll() } else { vm.selectAll() }
             }
         }
     }
