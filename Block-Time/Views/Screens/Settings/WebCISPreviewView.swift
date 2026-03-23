@@ -395,7 +395,7 @@ struct WebCISPreviewView: View {
                     Text("No rows selected — select at least one row to import.")
                         .font(.caption)
                 } else {
-                    Text("\(suspicious) selected row\(suspicious == 1 ? "" : "s") flagged. No flight or sim times.")
+                    Text("\(suspicious) selected row\(suspicious == 1 ? "" : "s") flagged - no FLT times.")
                         .font(.caption)
                 }
                 Spacer()

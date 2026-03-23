@@ -28,6 +28,8 @@ class FlightsFilterViewModel: ObservableObject {
     @Published var filterNoBlockTime: Bool = false
     @Published var filterNoCrewNames: Bool = false
     @Published var filterNoFlightNumber: Bool = false
+    @Published var filterNoAircraftType: Bool = false
+    @Published var filterNoAircraftReg: Bool = false
     @Published var filterTypeSummary: Bool = false
     @Published var filterKeywordSearch: String = ""
     @Published var selectedDateRange: FlightsView.DateRangeOption = .allFlights
@@ -53,6 +55,8 @@ class FlightsFilterViewModel: ObservableObject {
         filterNoBlockTime = false
         filterNoCrewNames = false
         filterNoFlightNumber = false
+        filterNoAircraftType = false
+        filterNoAircraftReg = false
         filterTypeSummary = false
         filterKeywordSearch = ""
         selectedDateRange = .allFlights

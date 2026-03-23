@@ -400,6 +400,8 @@ struct FlightsView: View {
                     filterNoBlockTime: $filterViewModel.filterNoBlockTime,
                     filterNoCrewNames: $filterViewModel.filterNoCrewNames,
                     filterNoFlightNumber: $filterViewModel.filterNoFlightNumber,
+                    filterNoAircraftType: $filterViewModel.filterNoAircraftType,
+                    filterNoAircraftReg: $filterViewModel.filterNoAircraftReg,
                     filterTypeSummary: $filterViewModel.filterTypeSummary,
                     filterKeywordSearch: $filterViewModel.filterKeywordSearch,
                     selectedDateRange: $filterViewModel.selectedDateRange,
@@ -750,6 +752,18 @@ struct FlightsView: View {
                 return false
             }
 
+            // No Aircraft Type filter
+            if filterViewModel.filterNoAircraftType &&
+               !sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return false
+            }
+
+            // No Aircraft Registration filter
+            if filterViewModel.filterNoAircraftReg &&
+               !sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return false
+            }
+
             // Type Summary filter - show only SUMMARY entries
             if filterViewModel.filterTypeSummary && sector.flightNumber != "SUMMARY" {
                 return false
@@ -841,6 +855,8 @@ struct FlightsView: View {
                         filterViewModel.filterNoBlockTime ||
                         filterViewModel.filterNoCrewNames ||
                         filterViewModel.filterNoFlightNumber ||
+                        filterViewModel.filterNoAircraftType ||
+                        filterViewModel.filterNoAircraftReg ||
                         filterViewModel.filterTypeSummary
 
         // Scroll to top when filters are active
@@ -1054,6 +1070,8 @@ struct FlightsView: View {
                !filterViewModel.filterNoBlockTime &&
                !filterViewModel.filterNoCrewNames &&
                !filterViewModel.filterNoFlightNumber &&
+               !filterViewModel.filterNoAircraftType &&
+               !filterViewModel.filterNoAircraftReg &&
                !filterViewModel.filterTypeSummary
     }
 
@@ -1180,6 +1198,8 @@ struct FilterSheet: View {
     @Binding var filterNoBlockTime: Bool
     @Binding var filterNoCrewNames: Bool
     @Binding var filterNoFlightNumber: Bool
+    @Binding var filterNoAircraftType: Bool
+    @Binding var filterNoAircraftReg: Bool
     @Binding var filterTypeSummary: Bool
     @Binding var filterKeywordSearch: String
     @Binding var selectedDateRange: FlightsView.DateRangeOption
@@ -1437,6 +1457,8 @@ struct FilterSheet: View {
                     Toggle("No Block Time", isOn: $filterNoBlockTime)
                     Toggle("No Crew Names", isOn: $filterNoCrewNames)
                     Toggle("No Flight Number", isOn: $filterNoFlightNumber)
+                    Toggle("No Type Assigned", isOn: $filterNoAircraftType)
+                    Toggle("No Registration", isOn: $filterNoAircraftReg)
                 }
                 
                 

@@ -919,9 +919,13 @@ class FlightDatabaseService: ObservableObject {
             // Indexed with ±1 day offsets to absorb the UTC/local midnight difference between
             // manually-entered flights (stored at local midnight) and WebCIS imports (stored at UTC midnight).
             var fuzzyDuplicates = Set<String>()
+            // Sim-specific duplicate set: keyed on "date|simTime" with ±1 day tolerance.
+            // WebCIS sim rows have no reg/route; the user may have added those manually after
+            // import, so we match purely on date + sim time to avoid re-importing.
+            var simDuplicates = Set<String>()
             do {
                 let allFlightsRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-                allFlightsRequest.propertiesToFetch = ["date", "flightNumber", "fromAirport", "toAirport", "aircraftReg", "aircraftType", "blockTime"]
+                allFlightsRequest.propertiesToFetch = ["date", "flightNumber", "fromAirport", "toAirport", "aircraftReg", "aircraftType", "blockTime", "simTime"]
                 let allFlights = try viewContext.fetch(allFlightsRequest)
 
                 for flight in allFlights {
@@ -949,8 +953,21 @@ class FlightDatabaseService: ObservableObject {
                             fuzzyDuplicates.insert("\(d)|\(aircraftReg)|\(normFrom)|\(normTo)")
                         }
                     }
+
+                    // Build sim duplicate index: any entry with simTime > 0 is indexed by
+                    // date ±1 day + simTime so webCIS sim rows are caught even when the
+                    // stored entry has a different reg/route added by the user after import.
+                    let simTime = flight.simTime ?? ""
+                    if !simTime.isEmpty, simTime != "0.00", simTime != "0.0", simTime != "0" {
+                        for dayOffset in [-1, 0, 1] {
+                            if let offsetDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: date) {
+                                let d = dateFormatter.string(from: offsetDate)
+                                simDuplicates.insert("\(d)|\(simTime)")
+                            }
+                        }
+                    }
                 }
-                LogManager.shared.info("Built content signature map with \(contentBasedDuplicates.count) unique flights, \(fuzzyDuplicates.count) fuzzy entries")
+                LogManager.shared.info("Built content signature map with \(contentBasedDuplicates.count) unique flights, \(fuzzyDuplicates.count) fuzzy entries, \(simDuplicates.count) sim entries")
             } catch {
                 LogManager.shared.error("Error building content-based duplicate check: \(error.localizedDescription)")
                 // Continue without content-based checking if it fails
@@ -985,6 +1002,19 @@ class FlightDatabaseService: ObservableObject {
                     if fuzzyDuplicates.contains(fuzzyKey) {
                         duplicateCount += 1
                         LogManager.shared.info("⊘ Skipping duplicate (fuzzy match): \(sector.date) \(sector.aircraftReg) \(sector.fromAirport)→\(sector.toAirport) [\(normFrom)→\(normTo)]")
+                        continue
+                    }
+                }
+
+                // Sim duplicate check: if this sector has sim time, check whether any existing
+                // entry already has the same date + sim time — regardless of reg/route, which
+                // the user may have edited after the original import.
+                let incomingSimTime = sector.simTime
+                if !incomingSimTime.isEmpty, incomingSimTime != "0.00", incomingSimTime != "0.0", incomingSimTime != "0" {
+                    let simKey = "\(sector.date)|\(incomingSimTime)"
+                    if simDuplicates.contains(simKey) {
+                        duplicateCount += 1
+                        LogManager.shared.info("⊘ Skipping duplicate (sim match): \(sector.date) sim=\(incomingSimTime)")
                         continue
                     }
                 }

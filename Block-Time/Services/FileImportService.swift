@@ -604,10 +604,12 @@ class FileImportService {
         // Create deterministic ID based on flight data to prevent duplicates
         // Use date + flight number + aircraft type + aircraft reg + from + to + block time as unique identifier
         // For flights without flight numbers, use OUT/IN times for additional uniqueness
+        // simTime is appended for sim-only rows (no route, no block time) so two sim sessions
+        // on the same date produce distinct UUIDs and re-imports don't create duplicates.
         let uniqueString: String
         if flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            // No flight number - use OUT/IN times for additional uniqueness
-            uniqueString = "\(date)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(outTime)-\(inTime)-\(blockTime)"
+            // No flight number - use OUT/IN times and sim time for additional uniqueness
+            uniqueString = "\(date)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(outTime)-\(inTime)-\(blockTime)-\(simTime)"
         } else {
             // Normal flight with flight number
             uniqueString = "\(date)-\(flightNumber)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(blockTime)"

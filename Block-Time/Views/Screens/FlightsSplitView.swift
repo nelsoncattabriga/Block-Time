@@ -523,6 +523,8 @@ private struct FlightsListContent: View {
                 filterNoBlockTime: $filterViewModel.filterNoBlockTime,
                 filterNoCrewNames: $filterViewModel.filterNoCrewNames,
                 filterNoFlightNumber: $filterViewModel.filterNoFlightNumber,
+                filterNoAircraftType: $filterViewModel.filterNoAircraftType,
+                filterNoAircraftReg: $filterViewModel.filterNoAircraftReg,
                 filterTypeSummary: $filterViewModel.filterTypeSummary,
                 filterKeywordSearch: $filterViewModel.filterKeywordSearch,
                 selectedDateRange: $filterViewModel.selectedDateRange,
@@ -856,6 +858,18 @@ private struct FlightsListContent: View {
                 return false
             }
 
+            // No Aircraft Type filter
+            if filterViewModel.filterNoAircraftType &&
+               !sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return false
+            }
+
+            // No Aircraft Registration filter
+            if filterViewModel.filterNoAircraftReg &&
+               !sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return false
+            }
+
             // Type Summary filter - show only SUMMARY entries
             if filterViewModel.filterTypeSummary && sector.flightNumber != "SUMMARY" {
                 return false
@@ -945,6 +959,8 @@ private struct FlightsListContent: View {
                         filterViewModel.filterNoBlockTime ||
                         filterViewModel.filterNoCrewNames ||
                         filterViewModel.filterNoFlightNumber ||
+                        filterViewModel.filterNoAircraftType ||
+                        filterViewModel.filterNoAircraftReg ||
                         filterViewModel.filterTypeSummary
 
         // Scroll to top when filters are active
@@ -1152,6 +1168,8 @@ private struct FlightsListContent: View {
                !filterViewModel.filterNoBlockTime &&
                !filterViewModel.filterNoCrewNames &&
                !filterViewModel.filterNoFlightNumber &&
+               !filterViewModel.filterNoAircraftType &&
+               !filterViewModel.filterNoAircraftReg &&
                !filterViewModel.filterTypeSummary
     }
 
