@@ -43,7 +43,32 @@ struct FlightsView: View {
         return formatter
     }()
 
-    @State private var isFilterActive: Bool = false
+    private var isFilterActive: Bool {
+        let isCustomDateRange = !(filterViewModel.filterStartDate == Date.distantPast && filterViewModel.filterEndDate == Date.distantFuture)
+        return isCustomDateRange ||
+            !filterViewModel.filterAircraftType.isEmpty ||
+            !filterViewModel.filterAircraftReg.isEmpty ||
+            !filterViewModel.filterCaptainName.isEmpty ||
+            !filterViewModel.filterFOName.isEmpty ||
+            !filterViewModel.filterSOName.isEmpty ||
+            !filterViewModel.filterFromAirport.isEmpty ||
+            !filterViewModel.filterToAirport.isEmpty ||
+            !filterViewModel.filterFlightNumber.isEmpty ||
+            filterViewModel.filterPilotFlyingOnly ||
+            filterViewModel.filterApproachType != nil ||
+            filterViewModel.filterContainsRemarks ||
+            filterViewModel.filterSimulator ||
+            filterViewModel.filterPositioning ||
+            filterViewModel.filterSpIns ||
+            filterViewModel.filterNoBlockTime ||
+            filterViewModel.filterNoCrewNames ||
+            filterViewModel.filterNoFlightNumber ||
+            filterViewModel.filterNoAircraftType ||
+            filterViewModel.filterNoAircraftReg ||
+            filterViewModel.filterTypeSummary ||
+            filterViewModel.filterImportSessionID != nil
+    }
+    @State private var filterActiveVersion: Int = 0
     @State private var flightToDelete: FlightSector?
     @State private var showingDeleteAlert = false
     @State private var isSelectMode: Bool = false
@@ -375,6 +400,7 @@ struct FlightsView: View {
                                     }
                                 }
                             }
+                            .id(filterActiveVersion)
                         }
                     }
                 }
@@ -873,31 +899,8 @@ struct FlightsView: View {
             sortedFiltered.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly ? 0 : $1.simTimeValue) }
         }
 
-        // Update filter active state - includes custom date range and other filters
-        let isCustomDateRange = !(filterViewModel.filterStartDate == Date.distantPast && filterViewModel.filterEndDate == Date.distantFuture)
-
-        isFilterActive = isCustomDateRange ||
-                        !filterViewModel.filterAircraftType.isEmpty ||
-                        !filterViewModel.filterAircraftReg.isEmpty ||
-                        !filterViewModel.filterCaptainName.isEmpty ||
-                        !filterViewModel.filterFOName.isEmpty ||
-                        !filterViewModel.filterSOName.isEmpty ||
-                        !filterViewModel.filterFromAirport.isEmpty ||
-                        !filterViewModel.filterToAirport.isEmpty ||
-                        !filterViewModel.filterFlightNumber.isEmpty ||
-                        filterViewModel.filterPilotFlyingOnly ||
-                        filterViewModel.filterApproachType != nil ||
-                        filterViewModel.filterContainsRemarks ||
-                        filterViewModel.filterSimulator ||
-                        filterViewModel.filterPositioning ||
-                        filterViewModel.filterSpIns ||
-                        filterViewModel.filterNoBlockTime ||
-                        filterViewModel.filterNoCrewNames ||
-                        filterViewModel.filterNoFlightNumber ||
-                        filterViewModel.filterNoAircraftType ||
-                        filterViewModel.filterNoAircraftReg ||
-                        filterViewModel.filterTypeSummary ||
-                        filterViewModel.filterImportSessionID != nil
+        // Increment version so toolbar re-evaluates isFilterActive
+        filterActiveVersion &+= 1
 
         // Scroll to top when filters are active
         if isFilterActive {

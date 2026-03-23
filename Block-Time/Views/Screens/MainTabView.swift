@@ -111,6 +111,10 @@ struct MainTabView: View {
             )
             .interactiveDismissDisabled()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .reviewImportSession)) { _ in
+            // Switch to Logbook tab — FlightsSplitView will pick up the notification once visible
+            selectedTab = 0
+        }
         .onAppear {
             // Initialize settings on app launch for both iPhone and iPad
             // This ensures iPad loads saved settings even when AddFlightView is hidden

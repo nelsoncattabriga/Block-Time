@@ -45,12 +45,17 @@ struct ImportSessionReviewSheet: View {
                 // Review button — posts notification with session ID, FlightsView applies filter
                 if result.successCount > 0 {
                     Button {
-                        NotificationCenter.default.post(
-                            name: .reviewImportSession,
-                            object: nil,
-                            userInfo: ["sessionID": result.sessionID]
-                        )
                         dismiss()
+                        // Delay so the sheet dismisses and the tab switch animation completes
+                        // before FlightsSplitView receives and applies the session filter
+                        let sessionID = result.sessionID
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            NotificationCenter.default.post(
+                                name: .reviewImportSession,
+                                object: nil,
+                                userInfo: ["sessionID": sessionID]
+                            )
+                        }
                     } label: {
                         HStack {
                             Image(systemName: "magnifyingglass")
