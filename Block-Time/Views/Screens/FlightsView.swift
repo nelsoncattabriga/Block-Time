@@ -1323,6 +1323,7 @@ struct FilterSheet: View {
     @State private var showingFromAirportPicker = false
     @State private var showingToAirportPicker = false
     @State private var recentSessions: [(id: UUID, date: Date, count: Int)] = []
+    @State private var showRecentImports: Bool = false
     private let databaseService = FlightDatabaseService.shared
 
     // Cache filter data to avoid repeated database scans
@@ -1333,28 +1334,67 @@ struct FilterSheet: View {
         NavigationStack {
             Form {
                 if !recentSessions.isEmpty {
-                    Section(header: Text("Recent Imports")) {
-                        ForEach(recentSessions, id: \.id) { session in
+                    Section {
+                        // Collapsible header row
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                showRecentImports.toggle()
+                            }
+                        }) {
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(formatSessionDate(session.date))
-                                        .font(.subheadline)
-                                    Text("\(session.count) flights")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                Image(systemName: "tray.and.arrow.down")
+                                    .font(.subheadline)
+                                    .foregroundColor(filterImportSessionID != nil ? .orange : .secondary)
+                                    .frame(width: 20)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("Recent Imports")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundColor(.primary)
+                                    if let selected = recentSessions.first(where: { $0.id == filterImportSessionID }) {
+                                        Text(formatSessionDate(selected.date))
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                    } else {
+                                        Text("\(recentSessions.count) \(recentSessions.count == 1 ? "session" : "sessions")")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
                                 Spacer()
-                                if filterImportSessionID == session.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
-                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(.secondary)
+                                    .rotationEffect(.degrees(showRecentImports ? 90 : 0))
                             }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if filterImportSessionID == session.id {
-                                    filterImportSessionID = nil
-                                } else {
-                                    filterImportSessionID = session.id
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        if showRecentImports {
+                            ForEach(recentSessions, id: \.id) { session in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(formatSessionDate(session.date))
+                                            .font(.subheadline)
+                                        Text("\(session.count) \(session.count == 1 ? "flight" : "flights")")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                    if filterImportSessionID == session.id {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    HapticManager.shared.impact(.light)
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        if filterImportSessionID == session.id {
+                                            filterImportSessionID = nil
+                                        } else {
+                                            filterImportSessionID = session.id
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1615,6 +1655,10 @@ struct FilterSheet: View {
             .onAppear {
                 loadAllFilterData()
                 recentSessions = FlightDatabaseService.shared.fetchRecentImportSessions()
+                // Auto-expand if a session is already selected
+                if filterImportSessionID != nil {
+                    showRecentImports = true
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
                 // Invalidate cache when flight data changes (e.g., new summary added)
