@@ -147,10 +147,11 @@ struct SummaryRow: View, Equatable {
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
                         GridItem(.flexible()),
+                        GridItem(.flexible()),
                         GridItem(.flexible())
                     ], spacing: 8) {
                         ForEach(timeEntries, id: \.label) { entry in
-                            HStack(spacing: 4) {
+                            VStack(spacing: 4) {
                                 Text(entry.label)
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
@@ -159,7 +160,7 @@ struct SummaryRow: View, Equatable {
                                     .font(.subheadline.bold())
                                     .foregroundColor(.teal.opacity(0.9))
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
                 }
