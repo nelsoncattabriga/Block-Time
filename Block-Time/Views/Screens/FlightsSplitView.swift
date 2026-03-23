@@ -328,13 +328,17 @@ private struct FlightsListContent: View {
     }
 
     @ViewBuilder
-    private var importReviewBanner: some View {
-        if filterViewModel.filterImportSessionID != nil {
+    private var filterStatusBanner: some View {
+        let isImportReview = filterViewModel.filterImportSessionID != nil
+        if isImportReview || isFilterActive {
+            let accentColor: Color = isImportReview ? .orange : .blue
+            let icon = isImportReview ? "tray.and.arrow.down.fill" : "line.3.horizontal.decrease.circle.fill"
+            let label = isImportReview ? "Showing imported flights" : "Showing filtered list"
             HStack(spacing: 10) {
-                Image(systemName: "tray.and.arrow.down.fill")
+                Image(systemName: icon)
                     .font(.subheadline)
-                    .foregroundColor(.orange)
-                Text("Showing imported flights")
+                    .foregroundColor(accentColor)
+                Text(label)
                     .font(.subheadline.weight(.medium))
                     .foregroundColor(.primary)
                 Spacer()
@@ -349,7 +353,7 @@ private struct FlightsListContent: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
-                        .background(Color.orange)
+                        .background(accentColor)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -360,7 +364,7 @@ private struct FlightsListContent: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.orange.opacity(0.4), lineWidth: 1)
+                    .strokeBorder(accentColor.opacity(0.4), lineWidth: 1)
             )
             .padding(.horizontal, 12)
             .padding(.bottom, 4)
@@ -378,7 +382,7 @@ private struct FlightsListContent: View {
                 flightCountHeader
                     .background(Color.clear)
                 searchBar
-                importReviewBanner
+                filterStatusBanner
                 flightListContent
             }
         }
@@ -532,13 +536,6 @@ private struct FlightsListContent: View {
                             ZStack {
                                 Image(systemName: "line.3.horizontal.decrease.circle")
                                     .font(.title3)
-
-                                if isFilterActive {
-                                    Circle()
-                                        .fill(Color.red)
-                                        .frame(width: 8, height: 8)
-                                        .offset(x: 10, y: -10)
-                                }
                             }
                         }
                     }
