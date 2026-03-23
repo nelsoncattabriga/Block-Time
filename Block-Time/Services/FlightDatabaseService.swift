@@ -921,10 +921,12 @@ class FlightDatabaseService: ObservableObject {
             // Step 2: Build a content-based duplicate check for flights not caught by UUID
             // This catches flights that are the same but have different UUIDs (e.g., from backup restore)
             var contentBasedDuplicates = Set<String>()
-            // Fuzzy map for WebCIS imports (no flight number): keyed on "date|reg|from|to".
-            // Indexed with ±1 day offsets to absorb the UTC/local midnight difference between
-            // manually-entered flights (stored at local midnight) and WebCIS imports (stored at UTC midnight).
-            var fuzzyDuplicates = Set<String>()
+            // Fuzzy map for WebCIS imports (no flight number): keyed on "date|from|to".
+            // Reg is intentionally excluded — the user may have entered the wrong reg manually,
+            // and webCIS is the authoritative source. Indexed with ±1 day offsets to absorb the
+            // UTC/local midnight difference between manually-entered and WebCIS dates.
+            // Maps fuzzy key → entity objectID so we can merge reg/type on match.
+            var fuzzyDuplicates = [String: NSManagedObjectID]()
             // Sim-specific duplicate set: keyed on "date|simTime" with ±1 day tolerance.
             // WebCIS sim rows have no reg/route; the user may have added those manually after
             // import, so we match purely on date + sim time to avoid re-importing.
@@ -937,9 +939,9 @@ class FlightDatabaseService: ObservableObject {
                 for flight in allFlights {
                     guard let date = flight.date,
                           let fromAirport = flight.fromAirport,
-                          let toAirport = flight.toAirport,
-                          let aircraftReg = flight.aircraftReg
+                          let toAirport = flight.toAirport
                     else { continue }
+                    let aircraftReg = flight.aircraftReg ?? ""
 
                     let flightNumber = flight.flightNumber ?? ""
                     let aircraftType = flight.aircraftType ?? ""
@@ -947,16 +949,15 @@ class FlightDatabaseService: ObservableObject {
                     let signature = "\(dateString)|\(flightNumber)|\(fromAirport)|\(toAirport)|\(aircraftReg)|\(aircraftType)"
                     contentBasedDuplicates.insert(signature)
 
-                    // Index reg+from+to under date-1, date, date+1 for fuzzy matching.
+                    // Index from+to under date-1, date, date+1 for fuzzy matching.
+                    // Reg intentionally excluded — webCIS reg wins on merge.
                     // Normalise to ICAO so manually-entered ICAO codes match WebCIS IATA codes.
-                    // Does not require flightNumber or aircraftType — catches WebCIS imports
-                    // which have no flight number, against manually-entered flights which do.
                     let normFrom = AirportService.shared.convertToICAO(fromAirport)
                     let normTo   = AirportService.shared.convertToICAO(toAirport)
                     for dayOffset in [-1, 0, 1] {
                         if let offsetDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: date) {
                             let d = dateFormatter.string(from: offsetDate)
-                            fuzzyDuplicates.insert("\(d)|\(aircraftReg)|\(normFrom)|\(normTo)")
+                            fuzzyDuplicates["\(d)|\(normFrom)|\(normTo)"] = flight.objectID
                         }
                     }
 
@@ -1020,17 +1021,37 @@ class FlightDatabaseService: ObservableObject {
                 }
 
                 // Fuzzy duplicate check for WebCIS imports (no flight number):
-                // matches on date ±1 day + reg + from + to.
+                // matches on date ±1 day + from + to (reg excluded — webCIS reg wins on merge).
                 // The ±1 day tolerance handles the UTC/local midnight offset that occurs
                 // when manually-entered flights are stored with a local-time date but
                 // WebCIS imports always store midnight UTC.
                 if sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     let normFrom = AirportService.shared.convertToICAO(sector.fromAirport)
                     let normTo   = AirportService.shared.convertToICAO(sector.toAirport)
-                    let fuzzyKey = "\(sector.date)|\(sector.aircraftReg)|\(normFrom)|\(normTo)"
-                    if fuzzyDuplicates.contains(fuzzyKey) {
+                    let fuzzyKey = "\(sector.date)|\(normFrom)|\(normTo)"
+                    if let existingObjectID = fuzzyDuplicates[fuzzyKey],
+                       let existing = try? viewContext.existingObject(with: existingObjectID) as? FlightEntity {
+                        // Merge: webCIS reg always wins (more reliable than manual entry).
+                        // Type only fills in if existing is blank.
+                        var patched = false
+                        let incomingReg  = sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let incomingType = sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let existingType = (existing.aircraftType ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !incomingReg.isEmpty {
+                            existing.aircraftReg = incomingReg
+                            existing.modifiedAt = Date()
+                            patched = true
+                        }
+                        if existingType.isEmpty && !incomingType.isEmpty {
+                            existing.aircraftType = incomingType
+                            existing.modifiedAt = Date()
+                            patched = true
+                        }
+                        if patched {
+                            LogManager.shared.info("✎ Merged fields (fuzzy match): \(sector.date) \(sector.fromAirport)→\(sector.toAirport) reg=\(incomingReg) type=\(incomingType)")
+                        }
                         duplicateCount += 1
-                        LogManager.shared.info("⊘ Skipping duplicate (fuzzy match): \(sector.date) \(sector.aircraftReg) \(sector.fromAirport)→\(sector.toAirport) [\(normFrom)→\(normTo)]")
+                        LogManager.shared.info("⊘ Skipping duplicate (fuzzy match): \(sector.date) \(sector.fromAirport)→\(sector.toAirport) [\(normFrom)→\(normTo)]")
                         continue
                     }
                 }

@@ -204,6 +204,129 @@ private struct FlightsListContent: View {
         .padding()
     }
 
+    @ViewBuilder
+    private var searchBar: some View {
+        if showSearchBar {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 12)
+                TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .focused($isSearchFieldFocused)
+                    .onChange(of: filterViewModel.filterKeywordSearch) { _, _ in
+                        applyFilters()
+                    }
+                if !filterViewModel.filterKeywordSearch.isEmpty {
+                    Button(action: {
+                        filterViewModel.filterKeywordSearch = ""
+                        applyFilters()
+                        hasPerformedInitialScroll = false
+                        shouldScrollToLastFlight = true
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.trailing, 12)
+                }
+            }
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6))
+            .cornerRadius(10)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    @ViewBuilder
+    private var flightListContent: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 4) {
+                    ForEach(filteredFlightSectors, id: \.id) { sector in
+                        if isSelectMode {
+                            selectModeRow(for: sector)
+                        } else {
+                            normalModeRow(for: sector)
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 8)
+            }
+            .scrollIndicators(.visible)
+            .refreshable {
+                await refreshFlights()
+            }
+            .onAppear {
+                scrollToFirstNonDimmedFlight(proxy: proxy)
+            }
+            .onChange(of: shouldScrollToLastFlight) { _, newValue in
+                if newValue {
+                    scrollToFirstNonDimmedFlight(proxy: proxy)
+                    shouldScrollToLastFlight = false
+                }
+            }
+            .onChange(of: shouldScrollToTop) { _, newValue in
+                if newValue, let firstFlight = filteredFlightSectors.first {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(firstFlight.id, anchor: .top)
+                        }
+                        shouldScrollToTop = false
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var selectModeOverlay: some View {
+        if isSelectMode {
+            HStack(spacing: 12) {
+                Button(action: {
+                    HapticManager.shared.impact(.medium)
+                    showingBulkEditSheet = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "pencil").font(.body)
+                        Text("Edit \(selectedFlightsForDeletion.count)").font(.headline)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, actionButtonVerticalPadding)
+                    .background(selectedFlightsForDeletion.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
+                    .cornerRadius(actionButtonCornerRadius)
+                    .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
+                .disabled(selectedFlightsForDeletion.isEmpty)
+
+                Button(action: {
+                    HapticManager.shared.notification(.warning)
+                    showingBulkDeleteAlert = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "trash.fill").font(.body)
+                        Text("Delete \(selectedFlightsForDeletion.count)").font(.headline)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, actionButtonVerticalPadding)
+                    .background(selectedFlightsForDeletion.isEmpty ? Color.red.opacity(0.5) : Color.red)
+                    .cornerRadius(actionButtonCornerRadius)
+                    .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
+                .disabled(selectedFlightsForDeletion.isEmpty)
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 20)
+            .transition(.scale.combined(with: .opacity))
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
@@ -211,135 +334,14 @@ private struct FlightsListContent: View {
             } else if filteredFlightSectors.isEmpty && allFlightSectors.isEmpty {
                 EmptyFlightsView()
             } else {
-                // Flight count header
                 flightCountHeader
-                .background(Color.clear)
-
-                // Search bar (collapsible)
-                if showSearchBar {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                            .padding(.leading, 12)
-
-                        TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .focused($isSearchFieldFocused)
-                            .onChange(of: filterViewModel.filterKeywordSearch) { _, _ in
-                                applyFilters()
-                            }
-
-                        if !filterViewModel.filterKeywordSearch.isEmpty {
-                            Button(action: {
-                                filterViewModel.filterKeywordSearch = ""
-                                applyFilters()
-                                // Reset scroll flag and trigger scroll to last flight
-                                hasPerformedInitialScroll = false
-                                shouldScrollToLastFlight = true
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .padding(.trailing, 12)
-                        }
-                    }
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 4) {
-                            ForEach(filteredFlightSectors, id: \.id) { sector in
-                                if isSelectMode {
-                                    selectModeRow(for: sector)
-                                } else {
-                                    normalModeRow(for: sector)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 8)
-                    }
-                    .scrollIndicators(.visible)
-                    .refreshable {
-                        await refreshFlights()
-                    }
-                    .onAppear {
-                        scrollToFirstNonDimmedFlight(proxy: proxy)
-                    }
-                    .onChange(of: shouldScrollToLastFlight) { _, newValue in
-                        if newValue {
-                            scrollToFirstNonDimmedFlight(proxy: proxy)
-                            shouldScrollToLastFlight = false
-                        }
-                    }
-                    .onChange(of: shouldScrollToTop) { _, newValue in
-                        if newValue, let firstFlight = filteredFlightSectors.first {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    proxy.scrollTo(firstFlight.id, anchor: .top)
-                                }
-                                shouldScrollToTop = false
-                            }
-                        }
-                    }
-                }
+                    .background(Color.clear)
+                searchBar
+                flightListContent
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if isSelectMode {
-                HStack(spacing: 12) {
-                    // Edit button
-                    Button(action: {
-                        HapticManager.shared.impact(.medium)
-                        showingBulkEditSheet = true
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "pencil")
-                                .font(.body)
-                            Text("Edit \(selectedFlightsForDeletion.count)")
-                                .font(.headline)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, actionButtonVerticalPadding)
-                        .background(selectedFlightsForDeletion.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
-                        .cornerRadius(actionButtonCornerRadius)
-                        .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
-                    }
-                    .disabled(selectedFlightsForDeletion.isEmpty)
-
-                    // Delete button
-                    Button(action: {
-                        HapticManager.shared.notification(.warning)
-                        showingBulkDeleteAlert = true
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "trash.fill")
-                                .font(.body)
-                            Text("Delete \(selectedFlightsForDeletion.count)")
-                                .font(.headline)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, actionButtonVerticalPadding)
-                        .background(selectedFlightsForDeletion.isEmpty ? Color.red.opacity(0.5) : Color.red)
-                        .cornerRadius(actionButtonCornerRadius)
-                        .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
-                    }
-                    .disabled(selectedFlightsForDeletion.isEmpty)
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 20)
-                .transition(.scale.combined(with: .opacity))
-            }
+            selectModeOverlay
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelectMode)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedFlightsForDeletion.count)
@@ -563,6 +565,14 @@ private struct FlightsListContent: View {
             if let sessionID = notification.userInfo?["sessionID"] as? UUID {
                 filterViewModel.filterImportSessionID = sessionID
                 loadSessionFilterIDs(sessionID)
+            }
+        }
+        .onChange(of: filterViewModel.filterImportSessionID) { _, newSessionID in
+            if let sessionID = newSessionID {
+                loadSessionFilterIDs(sessionID)
+            } else {
+                sessionFilterIDs = []
+                applyFilters()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
