@@ -880,7 +880,7 @@ class FlightDatabaseService: ObservableObject {
 
     /// OPTIMIZED: Save multiple flights in a single batch operation
     /// This is dramatically faster than individual saves for large imports
-    func saveFlightsBatch(_ sectors: [FlightSector]) -> (successCount: Int, failureCount: Int, duplicateCount: Int) {
+    func saveFlightsBatch(_ sectors: [FlightSector], sessionID: UUID = UUID()) -> (successCount: Int, failureCount: Int, duplicateCount: Int, sessionID: UUID) {
         var successCount = 0
         var failureCount = 0
         var duplicateCount = 0
@@ -1090,6 +1090,8 @@ class FlightDatabaseService: ObservableObject {
                 flight.inTime = sector.inTime
                 flight.scheduledDeparture = sector.scheduledDeparture
                 flight.scheduledArrival = sector.scheduledArrival
+                flight.importSessionID = sessionID
+                flight.importedAt = Date()
                 flight.createdAt = Date()
                 flight.modifiedAt = Date()
 
@@ -1118,7 +1120,59 @@ class FlightDatabaseService: ObservableObject {
             }
         }
 
-        return (successCount, failureCount, duplicateCount)
+        return (successCount, failureCount, duplicateCount, sessionID)
+    }
+
+    /// Returns the most recent import sessions (up to 5), ordered newest first.
+    /// Each entry contains the session UUID, import date, and flight count.
+    func fetchRecentImportSessions() -> [(id: UUID, date: Date, count: Int)] {
+        var sessions: [(id: UUID, date: Date, count: Int)] = []
+        viewContext.performAndWait {
+            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "importSessionID != nil")
+            request.propertiesToFetch = ["importSessionID", "importedAt"]
+            guard let flights = try? viewContext.fetch(request) else { return }
+
+            var sessionMap: [UUID: (date: Date, count: Int)] = [:]
+            for flight in flights {
+                guard let sid = flight.importSessionID else { continue }
+                let date = flight.importedAt ?? Date.distantPast
+                if let existing = sessionMap[sid] {
+                    sessionMap[sid] = (date: max(existing.date, date), count: existing.count + 1)
+                } else {
+                    sessionMap[sid] = (date: date, count: 1)
+                }
+            }
+            sessions = sessionMap
+                .map { (id: $0.key, date: $0.value.date, count: $0.value.count) }
+                .sorted { $0.date > $1.date }
+                .prefix(5)
+                .map { $0 }
+        }
+        return sessions
+    }
+
+    /// Deletes all flights belonging to a specific import session.
+    /// - Returns: Number of flights deleted.
+    @discardableResult
+    func deleteImportSession(_ sessionID: UUID) -> Int {
+        var deletedCount = 0
+        viewContext.performAndWait {
+            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "importSessionID == %@", sessionID as CVarArg)
+            guard let flights = try? viewContext.fetch(request) else { return }
+            deletedCount = flights.count
+            for flight in flights {
+                viewContext.delete(flight)
+            }
+            try? viewContext.save()
+        }
+        if deletedCount > 0 {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+            }
+        }
+        return deletedCount
     }
 
     /// Regenerate UUIDs for all flights using the current deterministic UUID algorithm

@@ -34,6 +34,7 @@ class FlightsFilterViewModel: ObservableObject {
     @Published var filterKeywordSearch: String = ""
     @Published var selectedDateRange: FlightsView.DateRangeOption = .allFlights
     @Published var sortOrderReversed: Bool = false
+    @Published var filterImportSessionID: UUID? = nil
 
     func clearFilters() {
         filterStartDate = Date.distantPast
@@ -60,5 +61,6 @@ class FlightsFilterViewModel: ObservableObject {
         filterTypeSummary = false
         filterKeywordSearch = ""
         selectedDateRange = .allFlights
+        filterImportSessionID = nil
     }
 }

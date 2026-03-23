@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct FlightsSplitView: View {
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
@@ -162,6 +163,8 @@ private struct FlightsListContent: View {
     @State private var showingBulkDeleteAlert = false
     @State private var showingBulkEditSheet = false
     @State private var summaryToEdit: FlightSector?
+    @State private var sessionFilterIDs: Set<UUID> = []
+    @State private var showingDeleteSessionAlert = false
     @State private var cachedTotalHours: Double = 0.0
     @State private var hasPerformedInitialScroll: Bool = false
     @State private var shouldScrollToLastFlight: Bool = false
@@ -497,6 +500,17 @@ private struct FlightsListContent: View {
                     }
                     .labelStyle(.iconOnly)
                 }
+
+                if filterViewModel.filterImportSessionID != nil {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(role: .destructive) {
+                            showingDeleteSessionAlert = true
+                        } label: {
+                            Label("Delete Import", systemImage: "trash")
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
             }
         }
         .fullScreenCover(isPresented: $showingPaywall) {
@@ -528,6 +542,7 @@ private struct FlightsListContent: View {
                 filterTypeSummary: $filterViewModel.filterTypeSummary,
                 filterKeywordSearch: $filterViewModel.filterKeywordSearch,
                 selectedDateRange: $filterViewModel.selectedDateRange,
+                filterImportSessionID: $filterViewModel.filterImportSessionID,
                 onApply: {
                     applyFilters()
                     showingFilterSheet = false
@@ -543,6 +558,12 @@ private struct FlightsListContent: View {
                 viewModel.exitEditingMode()
             }
             loadFlights()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .reviewImportSession)) { notification in
+            if let sessionID = notification.userInfo?["sessionID"] as? UUID {
+                filterViewModel.filterImportSessionID = sessionID
+                loadSessionFilterIDs(sessionID)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             let selectedFlightId = selectedFlight?.id
@@ -575,6 +596,18 @@ private struct FlightsListContent: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("This action cannot be undone.")
+        }
+        .alert("Delete Import Batch?", isPresented: $showingDeleteSessionAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete All", role: .destructive) {
+                if let sessionID = filterViewModel.filterImportSessionID {
+                    FlightDatabaseService.shared.deleteImportSession(sessionID)
+                    filterViewModel.filterImportSessionID = nil
+                    sessionFilterIDs = []
+                }
+            }
+        } message: {
+            Text("This will permanently delete all flights from this import. This cannot be undone.")
         }
         .sheet(isPresented: $showingBulkEditSheet) {
             let flights = filteredFlightSectors.filter { selectedFlightsForDeletion.contains($0.id) }
@@ -870,6 +903,12 @@ private struct FlightsListContent: View {
                 return false
             }
 
+            // Import Session filter
+            if filterViewModel.filterImportSessionID != nil,
+               !sessionFilterIDs.contains(sector.id) {
+                return false
+            }
+
             // Type Summary filter - show only SUMMARY entries
             if filterViewModel.filterTypeSummary && sector.flightNumber != "SUMMARY" {
                 return false
@@ -961,7 +1000,8 @@ private struct FlightsListContent: View {
                         filterViewModel.filterNoFlightNumber ||
                         filterViewModel.filterNoAircraftType ||
                         filterViewModel.filterNoAircraftReg ||
-                        filterViewModel.filterTypeSummary
+                        filterViewModel.filterTypeSummary ||
+                        filterViewModel.filterImportSessionID != nil
 
         // Scroll to top when filters are active
         if isFilterActive {
@@ -1001,10 +1041,26 @@ private struct FlightsListContent: View {
 
     private func clearFilters() {
         filterViewModel.clearFilters()
+        sessionFilterIDs = []
         applyFilters()
         // Reset scroll flag and trigger scroll to last flight after clearing filters
         hasPerformedInitialScroll = false
         shouldScrollToLastFlight = true
+    }
+
+    private func loadSessionFilterIDs(_ sessionID: UUID) {
+        let context = FlightDatabaseService.shared.viewContext
+        context.perform {
+            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "importSessionID == %@", sessionID as CVarArg)
+            request.propertiesToFetch = ["id"]
+            let flights = (try? context.fetch(request)) ?? []
+            let ids = Set(flights.compactMap { $0.id })
+            DispatchQueue.main.async {
+                sessionFilterIDs = ids
+                applyFilters()
+            }
+        }
     }
 
     private func deleteFlight(at offsets: IndexSet) {
@@ -1170,7 +1226,8 @@ private struct FlightsListContent: View {
                !filterViewModel.filterNoFlightNumber &&
                !filterViewModel.filterNoAircraftType &&
                !filterViewModel.filterNoAircraftReg &&
-               !filterViewModel.filterTypeSummary
+               !filterViewModel.filterTypeSummary &&
+               filterViewModel.filterImportSessionID == nil
     }
 
     private func scrollToFirstNonDimmedFlight(proxy: ScrollViewProxy) {

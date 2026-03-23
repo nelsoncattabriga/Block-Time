@@ -292,12 +292,14 @@ class FileImportService {
             // Use optimized batch save - dramatically faster than individual saves
             let flights = flightsToImport.map { $0.flight }
             var duplicateCount = 0
+            var importSessionID: UUID? = nil
 
             DispatchQueue.main.sync {
                 let result = databaseService.saveFlightsBatch(flights)
                 successCount = result.successCount
                 let dbFailures = result.failureCount
                 duplicateCount = result.duplicateCount
+                importSessionID = result.sessionID
 
                 // Track database failures (NOT duplicates) in the import result
                 if dbFailures > 0 {
@@ -311,7 +313,8 @@ class FileImportService {
                 failureCount: failureCount,
                 duplicateCount: duplicateCount,
                 failureReasons: failureReasons,
-                sampleFailures: sampleFailures
+                sampleFailures: sampleFailures,
+                sessionID: importSessionID
             )
 
             // Re-enable CloudKit sync if it was previously enabled
@@ -1619,6 +1622,7 @@ struct ImportResult {
     let duplicateCount: Int
     let failureReasons: [String: Int] // Reason -> Count
     let sampleFailures: [(row: Int, reason: String)] // First 10 failures with row numbers
+    let sessionID: UUID?
 }
 
 // MARK: - Import Error

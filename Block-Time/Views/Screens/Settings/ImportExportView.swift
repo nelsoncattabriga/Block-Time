@@ -64,6 +64,7 @@ struct ImportExportView: View {
     // Results
     @State private var showingResult = false
     @State private var resultMessage = ""
+    @State private var lastImportResult: ImportSessionResult? = nil
 
     // Delete state
     @State private var showingDeleteWarning = false
@@ -174,6 +175,9 @@ struct ImportExportView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(resultMessage)
+        }
+        .sheet(item: $lastImportResult) { result in
+            ImportSessionReviewSheet(result: result)
         }
         .alert("Delete All Logbook Data", isPresented: $showingDeleteWarning) {
             Button("Cancel", role: .cancel) { }
@@ -535,40 +539,20 @@ struct ImportExportView: View {
 
             switch result {
             case .success(let importResult):
-                var message = "webCIS Import Summary\n\n"
-                message += "✓ Successfully imported: \(importResult.successCount) flights\n"
-
-                if importResult.duplicateCount > 0 {
-                    message += "⊘ Skipped (already exists): \(importResult.duplicateCount) flights\n"
-                }
-
-                if importResult.failureCount > 0 {
-                    message += "Failed to import: \(importResult.failureCount) flights\n\n"
-                    message += "Failure Details:\n\n"
-
-                    for (reason, count) in importResult.failureReasons.sorted(by: { $0.value > $1.value }) {
-                        message += "• \(reason): \(count) occurrence(s)\n"
-                    }
-
-                    if !importResult.sampleFailures.isEmpty {
-                        message += "\nSample Failures (first 5):\n"
-                        for (row, reason) in importResult.sampleFailures.prefix(5) {
-                            message += "  Row \(row): \(reason)\n"
-                        }
-                    }
-                } else if importResult.duplicateCount == 0 {
-                    message += "\n✓ All flights imported successfully with no errors!"
-                }
-
-                resultMessage = message
                 // Database service observers will automatically post debounced .flightDataChanged notification
                 viewModel.reloadSavedCrewNames()
 
+                lastImportResult = ImportSessionResult(
+                    sessionID: importResult.sessionID ?? UUID(),
+                    successCount: importResult.successCount,
+                    duplicateCount: importResult.duplicateCount,
+                    mergedCount: 0
+                )
+
             case .failure(let error):
                 resultMessage = "webCIS import failed: \(error.localizedDescription)"
+                showingResult = true
             }
-
-            showingResult = true
         }
     }
 }
@@ -623,6 +607,15 @@ private struct ActionButton: View {
         }
         .buttonStyle(PlainButtonStyle())
     }
+}
+
+// MARK: - Import Session Result
+struct ImportSessionResult: Identifiable {
+    let id = UUID()
+    let sessionID: UUID
+    let successCount: Int
+    let duplicateCount: Int
+    let mergedCount: Int
 }
 
 // MARK: - webCIS Mapping View
