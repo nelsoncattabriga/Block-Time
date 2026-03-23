@@ -327,6 +327,47 @@ private struct FlightsListContent: View {
         }
     }
 
+    @ViewBuilder
+    private var importReviewBanner: some View {
+        if filterViewModel.filterImportSessionID != nil {
+            HStack(spacing: 10) {
+                Image(systemName: "tray.and.arrow.down.fill")
+                    .font(.subheadline)
+                    .foregroundColor(.orange)
+                Text("Showing imported flights")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                Button(action: {
+                    HapticManager.shared.impact(.light)
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        clearFilters()
+                    }
+                }) {
+                    Text("Clear")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Color.orange)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.orange.opacity(0.4), lineWidth: 1)
+            )
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
@@ -337,6 +378,7 @@ private struct FlightsListContent: View {
                 flightCountHeader
                     .background(Color.clear)
                 searchBar
+                importReviewBanner
                 flightListContent
             }
         }
