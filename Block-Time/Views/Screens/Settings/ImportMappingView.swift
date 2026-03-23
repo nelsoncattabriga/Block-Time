@@ -409,10 +409,11 @@ struct ImportMappingView: View {
             ("Remarks", "Remarks/notes", false, false)
         ]
 
+        // Detect app profile once for all fields
+        let profileMap = detectAppProfile(headers: headers)
+
         let mappings = logbookFields.map { (field, description, required, supportsMultiple) in
-            print("🔍 Detecting columns for: \(field)")
-            let detectedColumns = detectColumns(for: field, in: headers, allowMultiple: supportsMultiple)
-            print("🔍 Found \(detectedColumns.count) columns for \(field)")
+            let detectedColumns = detectColumns(for: field, in: headers, allowMultiple: supportsMultiple, profileMap: profileMap)
             return FieldMapping(
                 logbookField: field,
                 logbookFieldDescription: description,
@@ -421,83 +422,238 @@ struct ImportMappingView: View {
                 supportsMultipleColumns: supportsMultiple
             )
         }
-        print("🔍 createInitialMappings completed")
         return mappings
     }
 
-    private static func detectColumns(for logbookField: String, in headers: [String], allowMultiple: Bool) -> [String] {
-        let normalized = logbookField.lowercased().replacingOccurrences(of: " ", with: "")
+    // MARK: - Column Detection
 
-        // Cache normalized headers to avoid repeated string operations
-        let normalizedHeaders = headers.map { ($0, $0.lowercased().replacingOccurrences(of: " ", with: "")) }
+    /// Strips punctuation, underscores, spaces and lowercases for fuzzy matching
+    private static func normalize(_ s: String) -> String {
+        s.lowercased()
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "/", with: "")
+            .replacingOccurrences(of: ".", with: "")
+            .replacingOccurrences(of: "(", with: "")
+            .replacingOccurrences(of: ")", with: "")
+            .replacingOccurrences(of: " ", with: "")
+    }
 
-        var matches: [String] = []
+    // MARK: - Known App Profiles
+    // Maps logbook field keys → exact header strings as exported by each app.
+    // Detected by scoring how many signature headers are present in the file.
+    private static let appProfiles: [String: [String: String]] = [
 
-        // Try exact match first
-        if let match = normalizedHeaders.first(where: { $0.1 == normalized }) {
-            return [match.0]
+        // LogTen Pro (Coradine Aviation) — exact export headers
+        "LogTen Pro": [
+            "date":           "flight_flightDate",
+            "flightnumber":   "flight_flightNumber",
+            "aircraftreg":    "aircraft_aircraftID",
+            "aircrafttype":   "aircraftType_type",
+            "fromairport":    "flight_from",
+            "toairport":      "flight_to",
+            "captainname":    "flight_selectedCrewPIC",
+            "f/oname":        "flight_selectedCrewSIC",
+            "s/o1name":       "flight_selectedCrewRelief",
+            "s/o2name":       "flight_selectedCrewRelief2",
+            "std":            "flight_scheduledDepartureTime",
+            "sta":            "flight_scheduledArrivalTime",
+            "outtime":        "flight_actualDepartureTime",
+            "intime":         "flight_actualArrivalTime",
+            "blocktime":      "flight_totalTime",
+            "nighttime":      "flight_night",
+            "p1time":         "flight_pic",
+            "p1ustime":       "flight_p1us",
+            "p2time":         "flight_sic",
+            "instrumenttime": "flight_actualInstrument",
+            "simtime":        "flight_simulator",
+            "pilotflying":    "flight_pilotFlyingCapacity",
+            "daytakeoffs":    "flight_dayTakeoffs",
+            "daylandings":    "flight_dayLanding",
+            "remarks":        "flight_remarks",
+        ],
+
+        // Safelog — typical CSV export headers
+        "Safelog": [
+            "date":           "DATE",
+            "flightnumber":   "FLT_NUM",
+            "aircraftreg":    "AC_REG",
+            "aircrafttype":   "AC_TYP",
+            "fromairport":    "FROM",
+            "toairport":      "TO",
+            "captainname":    "CAPTAIN",
+            "f/oname":        "FIRST_OFFICER",
+            "blocktime":      "TOTAL",
+            "p1time":         "PIC",
+            "p2time":         "SIC",
+            "nighttime":      "NIGHT",
+            "instrumenttime": "IFR",
+            "simtime":        "SIM_TIME",
+            "daytakeoffs":    "DAY_TO",
+            "nighttakeoffs":  "NIGHT_TO",
+            "daylandings":    "DAY_LDG",
+            "nightlandings":  "NIGHT_LDG",
+            "remarks":        "REMARKS",
+        ],
+
+        // mccPilotLog — typical CSV export headers
+        "mccPilotLog": [
+            "date":           "Date",
+            "fromairport":    "Departure Place",
+            "toairport":      "Arrival Place",
+            "aircrafttype":   "Aircraft Model",
+            "aircraftreg":    "Registration",
+            "blocktime":      "Total Time",
+            "p1time":         "PIC",
+            "p2time":         "SIC/Co-Pilot",
+            "nighttime":      "Night",
+            "instrumenttime": "IFR",
+            "pilotflying":    "PF",
+            "daytakeoffs":    "TO Day",
+            "nighttakeoffs":  "TO Night",
+            "daylandings":    "LDG Day",
+            "nightlandings":  "LDG Night",
+            "remarks":        "Remarks",
+        ],
+
+        // Logbook Pro (NC Software) — typical CSV export headers
+        "Logbook Pro": [
+            "date":           "Date",
+            "flightnumber":   "Flight No",
+            "fromairport":    "From",
+            "toairport":      "To",
+            "aircraftreg":    "Tail Number",
+            "aircrafttype":   "Aircraft Type",
+            "blocktime":      "Total Duration",
+            "p1time":         "PIC",
+            "p2time":         "SIC",
+            "nighttime":      "Night",
+            "instrumenttime": "Actual IMC",
+            "simtime":        "Simulated IMC",
+            "daytakeoffs":    "Day Takeoffs",
+            "nighttakeoffs":  "Night Takeoffs",
+            "daylandings":    "Day Landings",
+            "nightlandings":  "Night Landings",
+            "remarks":        "Remarks",
+        ],
+    ]
+
+    /// Returns the best-matching app profile for a given set of headers, or nil if none scores well enough.
+    private static func detectAppProfile(headers: [String]) -> [String: String]? {
+        let normalizedHeaders = Set(headers.map { normalize($0) })
+        var bestProfile: [String: String]? = nil
+        var bestScore = 0
+
+        for (_, mapping) in appProfiles {
+            // Score = number of profile header values whose normalized form is in the file headers
+            let score = mapping.values.filter { normalizedHeaders.contains(normalize($0)) }.count
+            // Require at least 4 distinctive matches to use a profile
+            if score > bestScore && score >= 4 {
+                bestScore = score
+                bestProfile = mapping
+            }
+        }
+        return bestProfile
+    }
+
+    // MARK: - Synonym Fallback Table
+    // Keys are normalized logbook field names.
+    // Values are ordered lists of normalized synonyms — more specific first to avoid greedy matches.
+    // A synonym only matches if it appears as a WHOLE TOKEN in the normalized header
+    // (i.e. the header equals the synonym, or the header contains it surrounded by word boundaries).
+    private static let synonyms: [String: [String]] = [
+        "date":           ["flightdate", "flightday", "date"],
+        "flightnumber":   ["flightnumber", "flightno", "fltno", "flt"],
+        "aircraftreg":    ["aircraftreg", "registration", "tailnumber", "tail", "acident", "acid", "regno"],
+        "aircrafttype":   ["aircrafttype", "aircraftmodel", "makemodel", "actype", "type", "model", "make"],
+        "fromairport":    ["fromairport", "departureplace", "depairport", "departure", "origin", "from", "dep"],
+        "toairport":      ["toairport", "arrivalplace", "arrairport", "destination", "arrival", "dest", "arr"],
+        "captainname":    ["captainname", "crewpic", "p1crew", "picname", "captain", "cpt", "pic"],
+        "f/oname":        ["f/oname", "crewsic", "p2crew", "sicname", "firstofficer", "copilot", "fo"],
+        "s/o1name":       ["relief1", "crewrelief", "secondofficer1", "so1", "relief", "cruise", "p3"],
+        "s/o2name":       ["relief2", "crewrelief2", "secondofficer2", "so2", "p4"],
+        "std":            ["scheduleddeparturetime", "scheduleddeparture", "scheduleddep", "scheddep", "std", "etd"],
+        "sta":            ["scheduledarrivaltime", "scheduledarrival", "scheduledarr", "schedarr", "sta", "eta"],
+        "outtime":        ["actualdeparturetime", "blockout", "outtime", "out"],
+        "intime":         ["actualarrivaltime", "blockin", "intime"],
+        "blocktime":      ["totaltime", "totalduration", "blocktime", "total", "block", "tot"],
+        "nighttime":      ["nighttime", "picnight", "p1night", "sicnight", "p2night", "fonight", "captainnight", "night"],
+        "p1time":         ["pictime", "p1time", "pic"],
+        "p1ustime":       ["p1ustime", "icustime", "p1supervisedtime", "spte", "p1us", "icus"],
+        "p2time":         ["sictime", "p2time", "siccopilot", "copilottime", "sic", "p2"],
+        "instrumenttime": ["actualinstrument", "actualimc", "instrumenttime", "instrument", "actualifr", "ifrtime", "ifr", "inst"],
+        "simtime":        ["simulatortime", "simtime", "simulator", "synthetic", "simimc", "sim"],
+        "pilotflying":    ["pilotflyingcapacity", "pilotflying", "flying", "pf"],
+        "pax":            ["positioning", "deadhead", "passengerflight", "dh", "pax"],
+        "daytakeoffs":    ["daytakeoffs", "takeoffsday", "today", "tday", "dayt/o", "dto"],
+        "daylandings":    ["daylanding", "daylandings", "landingsday", "ldgday", "dayldg"],
+        "nighttakeoffs":  ["nighttakeoffs", "takeoffsnight", "tonight", "nightt/o", "nto"],
+        "nightlandings":  ["nightlanding", "nightlandings", "landingsnight", "ldgnight", "nightldg"],
+        "rnp":            ["rnpapproach", "rnpar", "rnav", "rnp"],
+        "ils":            ["ilsapproach", "catii", "cati", "cat2", "cat1", "ils"],
+        "gls":            ["glsapproach", "gls"],
+        "npa":            ["npaapproach", "npa"],
+        "aiii":           ["aiiiapproach", "catiii", "cat3", "aiii"],
+        "remarks":        ["remarks", "endorsements", "comments", "notes"],
+    ]
+
+    /// Returns true if `synonym` matches `header` as a whole token or exact equality.
+    /// This prevents "to" matching "totaltime", "type" matching "aircrafttype", etc.
+    private static func tokenMatches(_ header: String, synonym: String) -> Bool {
+        guard !synonym.isEmpty else { return false }
+        if header == synonym { return true }
+        // Whole-word containment: synonym must not be surrounded by other word characters
+        // We check by seeing if splitting on the synonym leaves only empty/non-alpha boundaries
+        let parts = header.components(separatedBy: synonym)
+        guard parts.count >= 2 else { return false }
+        let before = parts.first ?? ""
+        let after = parts.dropFirst().joined(separator: synonym) // rejoin in case synonym appears twice
+        let beforeOK = before.isEmpty || !before.last!.isLetter && !before.last!.isNumber
+        let afterOK = after.isEmpty || !after.first!.isLetter && !after.first!.isNumber
+        return beforeOK && afterOK
+    }
+
+    private static func detectColumns(for logbookField: String, in headers: [String], allowMultiple: Bool, profileMap: [String: String]?) -> [String] {
+        let fieldKey = normalize(logbookField)
+        let normalizedHeaders = headers.map { (original: $0, norm: normalize($0)) }
+
+        // TIER 1: Exact match on raw header string (case-insensitive)
+        let fieldNorm = normalize(logbookField)
+        if let exact = normalizedHeaders.first(where: { $0.norm == fieldNorm }) {
+            return [exact.original]
         }
 
-        // Try common variations
-        let variations: [String: [String]] = [
-            "date": ["date", "flightdate", "flightday"],
-            "flightnumber": ["flight", "flightnumber", "flightno", "flt"],
-            "aircraftreg": ["reg", "registration", "aircraft", "aircraftreg", "tail", "id"],
-            "aircrafttype": ["type", "aircrafttype", "make", "model","make/model"],
-            "fromairport": ["from", "departure", "dep", "origin"],
-            "toairport": ["to", "arrival", "arr", "destination", "dest", "des"],
-            "captainname": ["captain", "cpt", "pic", "captainname","PIC/P1 Crew","P1 Crew"],
-            "f/oname": ["fo", "firstofficer", "copilot", "sic","SIC/P2 Crew","P2 Crew","P2"],
-            "s/o1name": ["so1", "so", "secondofficer","relief","cruise","P3"],
-            "s/o2name": ["so2", "so", "secondofficer","relief","cruise","P4"],
-            "std": ["std", "scheduleddeparture", "scheduleddep", "scheddep", "etd"],
-            "sta": ["sta", "scheduledarrival", "scheduledarr", "schedarr", "eta"],
-            "outtime": ["out", "outtime", "blockout", "off"],
-            "intime": ["in", "intime", "blockin", "on"],
-            "blocktime": ["block", "blocktime", "total", "totaltime"],
-            "nighttime": ["night", "nighttime", "picnight", "p1night", "sicnight", "p2night", "fonight", "captainnight", "firstofficernight"],
-            "p1time": ["p1", "p1time", "pictime"],
-            "p1ustime": ["p1us", "icus", "p1u/s", "p1ustime", "icustime", "p1supervisedtime"],
-            "p2time": ["p2", "sic", "p2time", "sictime", "firstofficer", "copilot", "copilottime", "relief"],
-            "instrumenttime": ["instrument", "ifr", "inst", "instr", "actualinstrument", "hood"],
-            "simtime": ["sim", "simulator","synthetic","cyclic"],
-            "pilotflying": ["pf", "pilotflying", "flying"],
-            "pax": ["pax", "positioning", "deadhead", "passenger"],
-            "daytakeoffs": ["daytakeoffs", "dayt/o", "dayto", "takeoffsday", "to_day"],
-            "daylandings": ["daylandings", "dayldg", "daylandings", "landingsday", "ldg_day"],
-            "nighttakeoffs": ["nighttakeoffs", "nightt/o", "nightto", "takeoffsnight", "to_night"],
-            "nightlandings": ["nightlandings", "nightldg", "landingsnight", "ldgnight"],
-            "rnp": ["rnp", "rnav", "rnp-ar", "rnv"],
-            "ils": ["ils", "cat1","cat2"],
-            "gls": ["gls"],
-            "npa": ["npa"],
-            "aiii": ["aiii","cat3"],
-            "remarks": ["remarks", "notes", "comments","endorsements"]
-        ]
-
-        if let possibleMatches = variations[normalized] {
-            if allowMultiple {
-                // For fields that support multiple columns, find all matches
-                var seen = Set<String>()
-                for variation in possibleMatches {
-                    for (original, norm) in normalizedHeaders {
-                        if norm.contains(variation) && !seen.contains(original) {
-                            matches.append(original)
-                            seen.insert(original)
-                        }
-                    }
-                }
-            } else {
-                // For single column fields, find first match
-                for variation in possibleMatches {
-                    if let match = normalizedHeaders.first(where: { $0.1.contains(variation) }) {
-                        return [match.0]
-                    }
-                }
+        // TIER 2: Known app profile — look up by normalized profile header value
+        if let profileMap = profileMap, let profileHeader = profileMap[fieldKey] {
+            let profileNorm = normalize(profileHeader)
+            if let match = normalizedHeaders.first(where: { $0.norm == profileNorm }) {
+                return [match.original]
             }
         }
 
-        return matches
+        // TIER 3: Synonym fallback
+        guard let fieldSynonyms = synonyms[fieldKey] else { return [] }
+
+        if allowMultiple {
+            var matches: [String] = []
+            var seen = Set<String>()
+            for synonym in fieldSynonyms {
+                for entry in normalizedHeaders {
+                    if tokenMatches(entry.norm, synonym: synonym) && !seen.contains(entry.original) {
+                        matches.append(entry.original)
+                        seen.insert(entry.original)
+                    }
+                }
+            }
+            return matches
+        } else {
+            for synonym in fieldSynonyms {
+                if let match = normalizedHeaders.first(where: { tokenMatches($0.norm, synonym: synonym) }) {
+                    return [match.original]
+                }
+            }
+            return []
+        }
     }
 }
 
