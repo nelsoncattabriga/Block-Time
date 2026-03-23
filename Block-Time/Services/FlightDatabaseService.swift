@@ -895,12 +895,18 @@ class FlightDatabaseService: ObservableObject {
 
             let checkRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
             checkRequest.predicate = NSPredicate(format: "id IN %@", sectorIDs)
-            checkRequest.propertiesToFetch = ["id"]
+            checkRequest.propertiesToFetch = ["id", "aircraftType", "aircraftReg"]
 
+            // Maps UUID → existing entity so we can patch blank fields on UUID-matched duplicates
+            var existingByID = [UUID: FlightEntity]()
             var existingIDs = Set<UUID>()
             do {
                 let existingFlights = try viewContext.fetch(checkRequest)
-                existingIDs = Set(existingFlights.compactMap { $0.id })
+                for entity in existingFlights {
+                    guard let id = entity.id else { continue }
+                    existingByID[id] = entity
+                    existingIDs.insert(id)
+                }
                 LogManager.shared.info("Found \(existingIDs.count) existing flights by UUID in database")
                 if !existingIDs.isEmpty {
                     LogManager.shared.info("   First few existing UUIDs: \(existingIDs.prefix(3).map { $0.uuidString })")
@@ -977,6 +983,29 @@ class FlightDatabaseService: ObservableObject {
             for sector in sectors {
                 // Check UUID-based duplicate first
                 if existingIDs.contains(sector.id) {
+                    // Merge: fill in blank aircraftType / aircraftReg on the existing record
+                    // if the incoming sector has a non-blank value. Never overwrite a value
+                    // the user has already set — only fill genuinely empty fields.
+                    if let existing = existingByID[sector.id] {
+                        var patched = false
+                        let incomingType = sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let incomingReg  = sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let existingType = (existing.aircraftType ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        let existingReg  = (existing.aircraftReg  ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        if existingType.isEmpty && !incomingType.isEmpty {
+                            existing.aircraftType = incomingType
+                            existing.modifiedAt = Date()
+                            patched = true
+                        }
+                        if existingReg.isEmpty && !incomingReg.isEmpty {
+                            existing.aircraftReg = incomingReg
+                            existing.modifiedAt = Date()
+                            patched = true
+                        }
+                        if patched {
+                            LogManager.shared.info("✎ Merged blank fields (UUID match): \(sector.date) \(sector.flightNumber) type=\(incomingType) reg=\(incomingReg)")
+                        }
+                    }
                     duplicateCount += 1
                     LogManager.shared.info("⊘ Skipping duplicate (UUID match): \(sector.date) \(sector.flightNumber) \(sector.aircraftReg) (UUID: \(sector.id))")
                     continue

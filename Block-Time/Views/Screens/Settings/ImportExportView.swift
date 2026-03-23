@@ -668,101 +668,105 @@ struct WebCISMappingView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                // Header
-                VStack(spacing: 8) {
-                    Image(systemName: "doc.text.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.green)
-
-                    Text("webCIS Import")
-                        .font(.title2)
-                        .fontWeight(.bold)
-
-                    Text("\(importData.rows.count) flights ready to import")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top)
-
-                // Registration Mappings Section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Aircraft Type Mapping")
-                        .font(.headline)
-
-                    if allTypesResolved {
-                        // All types auto-detected — show summary with edit option
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Header
                         VStack(spacing: 8) {
-                            ForEach(registrationMappings) { mapping in
-                                HStack {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                    Text(mapping.pattern)
-                                        .foregroundColor(.secondary)
-                                    Text("→")
-                                        .foregroundColor(.secondary)
-                                    Text(mapping.aircraftType)
-                                        .fontWeight(.medium)
-                                    Spacer()
-                                }
-                                .font(.subheadline)
-                            }
-                        }
-                        .padding()
-                        .background(Color.green.opacity(0.08))
-                        .cornerRadius(8)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.green.opacity(0.3), lineWidth: 1))
+                            Image(systemName: "doc.text.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(.green)
 
-                        Button(action: { showingRegistrationMapping = true }) {
-                            HStack {
-                                Image(systemName: "pencil")
-                                    .foregroundColor(.blue)
-                                Text("Edit Mappings")
-                                    .foregroundColor(.blue)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(Color.blue.opacity(0.7))
-                            }
-                            .padding()
-                            .background(Color.blue.opacity(0.08))
-                            .cornerRadius(8)
-                        }
-                    } else {
-                        // Some types missing — prompt user to set them up
-                        if !registrationMappings.isEmpty {
-                            Text("\(registrationMappings.filter { $0.aircraftType.isEmpty }.count) registration pattern(s) need a type assigned")
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                        } else {
-                            Text("Map registration patterns to aircraft types (optional)")
-                                .font(.caption)
+                            Text("webCIS Import")
+                                .font(.title2)
+                                .fontWeight(.bold)
+
+                            Text("\(importData.rows.count) flights ready to import")
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
+                        .padding(.top)
 
-                        Button(action: { showingRegistrationMapping = true }) {
-                            HStack {
-                                Image(systemName: "airplane")
-                                    .foregroundColor(.blue)
-                                Text(registrationMappings.isEmpty ? "Setup Aircraft Types" : "Edit Aircraft Types")
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(Color.blue.opacity(0.7))
+                        // Registration Mappings Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Aircraft Type Mapping")
+                                .font(.headline)
+
+                            if allTypesResolved {
+                                // All types auto-detected — show summary with edit option
+                                VStack(spacing: 8) {
+                                    ForEach(registrationMappings) { mapping in
+                                        HStack {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                            Text(mapping.pattern)
+                                                .foregroundColor(.secondary)
+                                            Text("→")
+                                                .foregroundColor(.secondary)
+                                            Text(mapping.aircraftType)
+                                                .fontWeight(.medium)
+                                            Spacer()
+                                        }
+                                        .font(.subheadline)
+                                    }
+                                }
+                                .padding()
+                                .background(Color.green.opacity(0.08))
+                                .cornerRadius(8)
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.green.opacity(0.3), lineWidth: 1))
+
+                                Button(action: { showingRegistrationMapping = true }) {
+                                    HStack {
+                                        Image(systemName: "pencil")
+                                            .foregroundColor(.blue)
+                                        Text("Edit Mappings")
+                                            .foregroundColor(.blue)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(Color.blue.opacity(0.7))
+                                    }
+                                    .padding()
+                                    .background(Color.blue.opacity(0.08))
+                                    .cornerRadius(8)
+                                }
+                            } else {
+                                // Some types missing — prompt user to set them up
+                                if !registrationMappings.isEmpty {
+                                    Text("\(registrationMappings.filter { $0.aircraftType.isEmpty }.count) registration pattern(s) need a type assigned")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                } else {
+                                    Text("Map registration patterns to aircraft types (optional)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Button(action: { showingRegistrationMapping = true }) {
+                                    HStack {
+                                        Image(systemName: "airplane")
+                                            .foregroundColor(.blue)
+                                        Text(registrationMappings.isEmpty ? "Setup Aircraft Types" : "Edit Aircraft Types")
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(Color.blue.opacity(0.7))
+                                    }
+                                    .padding()
+                                    .background(Color.blue.opacity(0.12))
+                                    .cornerRadius(8)
+                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue.opacity(0.4), lineWidth: 1))
+                                }
                             }
-                            .padding()
-                            .background(Color.blue.opacity(0.12))
-                            .cornerRadius(8)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue.opacity(0.4), lineWidth: 1))
                         }
+                        .padding(.horizontal)
                     }
+                    .padding(.bottom, 8)
                 }
-                .padding(.horizontal)
 
-                Spacer()
-
-                // Import Button
+                // Import Button — always visible, pinned outside the scroll
+                Divider()
                 Button(action: {
                     dismiss()
                     onImport(registrationMappings)
