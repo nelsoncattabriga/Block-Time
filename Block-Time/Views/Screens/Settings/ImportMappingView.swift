@@ -427,16 +427,9 @@ struct ImportMappingView: View {
 
     // MARK: - Column Detection
 
-    /// Strips punctuation, underscores, spaces and lowercases for fuzzy matching
+    /// Strips all non-alphanumeric characters and lowercases for fuzzy matching
     private static func normalize(_ s: String) -> String {
-        s.lowercased()
-            .replacingOccurrences(of: "_", with: "")
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: "/", with: "")
-            .replacingOccurrences(of: ".", with: "")
-            .replacingOccurrences(of: "(", with: "")
-            .replacingOccurrences(of: ")", with: "")
-            .replacingOccurrences(of: " ", with: "")
+        s.lowercased().filter { $0.isLetter || $0.isNumber }
     }
 
     // MARK: - Known App Profiles
@@ -539,6 +532,7 @@ struct ImportMappingView: View {
     ]
 
     /// Returns the best-matching app profile for a given set of headers, or nil if none scores well enough.
+    /// Keys in the returned map are normalized (letters/numbers only, lowercase).
     private static func detectAppProfile(headers: [String]) -> [String: String]? {
         let normalizedHeaders = Set(headers.map { normalize($0) })
         var bestProfile: [String: String]? = nil
@@ -550,7 +544,8 @@ struct ImportMappingView: View {
             // Require at least 4 distinctive matches to use a profile
             if score > bestScore && score >= 4 {
                 bestScore = score
-                bestProfile = mapping
+                // Return with normalized keys so lookup works correctly
+                bestProfile = Dictionary(uniqueKeysWithValues: mapping.map { (normalize($0.key), $0.value) })
             }
         }
         return bestProfile
@@ -564,7 +559,7 @@ struct ImportMappingView: View {
     private static let synonyms: [String: [String]] = [
         "date":           ["flightdate", "flightday", "date"],
         "flightnumber":   ["flightnumber", "flightno", "fltno", "flt"],
-        "aircraftreg":    ["aircraftreg", "registration", "tailnumber", "tail", "acident", "acid", "regno"],
+        "aircraftreg":    ["aircraftreg", "registration", "tailnumber", "tail", "reg", "rego", "regno"],
         "aircrafttype":   ["aircrafttype", "aircraftmodel", "makemodel", "actype", "type", "model", "make"],
         "fromairport":    ["fromairport", "departureplace", "depairport", "departure", "origin", "from", "dep"],
         "toairport":      ["toairport", "arrivalplace", "arrairport", "destination", "arrival", "dest", "arr"],
