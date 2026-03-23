@@ -1996,12 +1996,13 @@ class FlightDatabaseService: ObservableObject {
             let results = try viewContext.fetch(request)
             let aircraftRegs = results.compactMap { result -> String? in
                 guard let dict = result as? [String: Any],
-                      let aircraftReg = dict["aircraftReg"] as? String else {
+                      let aircraftReg = dict["aircraftReg"] as? String,
+                      !aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                     return nil
                 }
-                return aircraftReg
+                return aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines)
             }
-            return aircraftRegs.sorted()
+            return Array(Set(aircraftRegs)).sorted()
         } catch {
             return []
         }
