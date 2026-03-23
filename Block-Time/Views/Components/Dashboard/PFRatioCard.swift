@@ -37,7 +37,7 @@ struct PFRatioCard: View {
             }
 
             if filtered.isEmpty {
-                ContentUnavailableView("No Data", systemImage: "airplane.slash")
+                ContentUnavailableView("No Data", systemImage: "airplane")
                     .frame(height: 160)
             } else {
                 Chart {

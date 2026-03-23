@@ -63,7 +63,7 @@ struct FlyingActivityChartCard: View {
             if filtered.isEmpty {
                 ContentUnavailableView(
                     "No Activity",
-                    systemImage: "airplane.slash",
+                    systemImage: "airplane",
                     description: Text("No flights recorded in this period")
                 )
                 .frame(height: 180)

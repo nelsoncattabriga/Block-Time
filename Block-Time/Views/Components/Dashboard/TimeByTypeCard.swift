@@ -55,7 +55,7 @@ struct TimeByTypeCard: View {
             .pickerStyle(.segmented)
 
             if data.isEmpty {
-                ContentUnavailableView("No Data", systemImage: "airplane.slash")
+                ContentUnavailableView("No Data", systemImage: "airplane")
                     .frame(height: 160)
             } else {
                 HStack(alignment: .center, spacing: 16) {

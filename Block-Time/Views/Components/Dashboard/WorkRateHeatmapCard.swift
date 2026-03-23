@@ -138,7 +138,7 @@ struct WorkRateHeatmapCard: View {
     private var emptyState: some View {
         ContentUnavailableView(
             "No Flight Data",
-            systemImage: "airplane.slash",
+            systemImage: "airplane",
             description: Text("Log flights to see your activity")
         )
         .frame(height: 100)

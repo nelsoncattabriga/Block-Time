@@ -58,7 +58,7 @@ struct TopRegistrationsCard: View {
             if registrations.isEmpty {
                 ContentUnavailableView(
                     "No Registration Data",
-                    systemImage: "airplane.slash",
+                    systemImage: "airplane",
                     description: Text("Log aircraft registrations to see your most-flown tails")
                 )
                 .frame(height: 120)
