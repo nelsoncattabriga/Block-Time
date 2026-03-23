@@ -1316,6 +1316,14 @@ struct FilterSheet: View {
     @State private var availableFromAirports: [String] = []
     @State private var availableToAirports: [String] = []
     @State private var showCustomDatePicker = false
+    @State private var showingStartDatePicker = false
+    @State private var showingEndDatePicker = false
+    private static let customRangeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
     @State private var showingCaptainPicker = false
     @State private var showingFOPicker = false
     @State private var showingSOPicker = false
@@ -1401,85 +1409,134 @@ struct FilterSheet: View {
                     }
                 }
                 Section {
-                    VStack(spacing: 12) {
-                        HStack(spacing: 8) {
-                            DateRangeButton(
-                                title: "All Flights",
-                                isSelected: selectedDateRange == .allFlights && !showCustomDatePicker
-                            ) {
-                                filterStartDate = Date.distantPast
-                                filterEndDate = Date.distantFuture
-                                showCustomDatePicker = false
-                                selectedDateRange = .allFlights
-                            }
-
-                            DateRangeButton(
-                                title: "Prev 12 Mths",
-                                isSelected: selectedDateRange == .twelveMonths && !showCustomDatePicker
-                            ) {
-                                let calendar = Calendar.current
+                    // Quick-select chips
+                    let chips: [(title: String, range: FlightsView.DateRangeOption)] = [
+                        ("All", .allFlights),
+                        ("28 Days", .twentyEightDays),
+                        ("6 Mths", .sixMonths),
+                        ("12 Mths", .twelveMonths),
+                    ]
+                    HStack(spacing: 8) {
+                        ForEach(chips, id: \.title) { chip in
+                            let isSelected = selectedDateRange == chip.range && !showCustomDatePicker
+                            Button {
+                                HapticManager.shared.impact(.light)
+                                let cal = Calendar.current
                                 let now = Date()
-                                // Include all of today back to 12 months ago
-                                filterStartDate = calendar.date(byAdding: .month, value: -12, to: calendar.startOfDay(for: now)) ?? Date()
-                                filterEndDate = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? Date()
                                 showCustomDatePicker = false
-                                selectedDateRange = .twelveMonths
+                                selectedDateRange = chip.range
+                                switch chip.range {
+                                case .allFlights:
+                                    filterStartDate = Date.distantPast
+                                    filterEndDate = Date.distantFuture
+                                case .twentyEightDays:
+                                    filterStartDate = cal.date(byAdding: .day, value: -27, to: cal.startOfDay(for: now)) ?? now
+                                    filterEndDate = cal.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
+                                case .sixMonths:
+                                    filterStartDate = cal.date(byAdding: .month, value: -6, to: cal.startOfDay(for: now)) ?? now
+                                    filterEndDate = cal.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
+                                case .twelveMonths:
+                                    filterStartDate = cal.date(byAdding: .month, value: -12, to: cal.startOfDay(for: now)) ?? now
+                                    filterEndDate = cal.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
+                                case .custom:
+                                    break
+                                }
+                            } label: {
+                                Text(chip.title)
+                                    .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(isSelected ? Color.green.opacity(0.15) : Color(.systemGray6))
+                                    .foregroundColor(isSelected ? .green : .primary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .strokeBorder(isSelected ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                                    )
                             }
-                        }
-
-                        HStack(spacing: 8) {
-                            DateRangeButton(
-                                title: "Prev 6 Mths",
-                                isSelected: selectedDateRange == .sixMonths && !showCustomDatePicker
-                            ) {
-                                let calendar = Calendar.current
-                                let now = Date()
-                                // Include all of today back to 6 months ago
-                                filterStartDate = calendar.date(byAdding: .month, value: -6, to: calendar.startOfDay(for: now)) ?? Date()
-                                filterEndDate = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? Date()
-                                showCustomDatePicker = false
-                                selectedDateRange = .sixMonths
-                            }
-
-                            DateRangeButton(
-                                title: "Prev 28 Days",
-                                isSelected: selectedDateRange == .twentyEightDays && !showCustomDatePicker
-                            ) {
-                                let calendar = Calendar.current
-                                let now = Date()
-                                // Include all of today back to 27 days ago (28 days total including today)
-                                filterStartDate = calendar.date(byAdding: .day, value: -27, to: calendar.startOfDay(for: now)) ?? Date()
-                                filterEndDate = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? Date()
-                                showCustomDatePicker = false
-                                selectedDateRange = .twentyEightDays
-                            }
-                        }
-
-                        DateRangeButton(
-                            title: "Custom Date Range",
-                            isSelected: showCustomDatePicker,
-                            icon: showCustomDatePicker ? "chevron.up" : "chevron.down"
-                        ) {
-                            // Set to current date when opening custom date picker
-                            if !showCustomDatePicker {
-                                filterStartDate = Date()
-                                filterEndDate = Date()
-                            }
-                            showCustomDatePicker.toggle()
-                            selectedDateRange = .custom
-                        }
-
-                        if showCustomDatePicker {
-                            VStack(spacing: 12) {
-                                Divider()
-                                DatePicker("Start Date", selection: $filterStartDate, displayedComponents: .date)
-                                    .datePickerStyle(.compact)
-                                DatePicker("End Date", selection: $filterEndDate, displayedComponents: .date)
-                                    .datePickerStyle(.compact)
-                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
-                    .padding(.vertical, 4)
+
+                    // Custom range toggle row
+                    Button {
+                        HapticManager.shared.impact(.light)
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            if !showCustomDatePicker && selectedDateRange != .custom {
+                                // Only reset dates when opening fresh (not restoring an existing custom range)
+                                filterStartDate = Date()
+                                filterEndDate = Date()
+                                selectedDateRange = .custom
+                            }
+                            showCustomDatePicker.toggle()
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "calendar.badge.plus")
+                                .font(.subheadline)
+                                .foregroundColor(showCustomDatePicker ? .green : .secondary)
+                                .frame(width: 20)
+                            Text("Custom Range")
+                                .font(.subheadline.weight(showCustomDatePicker ? .semibold : .regular))
+                                .foregroundColor(showCustomDatePicker ? .green : .primary)
+                            Spacer()
+                            if showCustomDatePicker {
+                                Text("\(FilterSheet.customRangeFormatter.string(from: filterStartDate)) – \(FilterSheet.customRangeFormatter.string(from: filterEndDate))")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                    .lineLimit(1)
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.secondary)
+                                .rotationEffect(.degrees(showCustomDatePicker ? 90 : 0))
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    if showCustomDatePicker {
+                        // From row
+                        Button {
+                            showingStartDatePicker = true
+                        } label: {
+                            HStack {
+                                Text("From")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 44, alignment: .leading)
+                                Text(FilterSheet.customRangeFormatter.string(from: filterStartDate))
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Image(systemName: "calendar")
+                                    .font(.subheadline)
+                                    .foregroundColor(.green)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        // To row
+                        Button {
+                            showingEndDatePicker = true
+                        } label: {
+                            HStack {
+                                Text("To")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 44, alignment: .leading)
+                                Text(FilterSheet.customRangeFormatter.string(from: filterEndDate))
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Image(systemName: "calendar")
+                                    .font(.subheadline)
+                                    .foregroundColor(.green)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
                 } header: {
                     Text("Date Range")
                 }
@@ -1659,6 +1716,10 @@ struct FilterSheet: View {
                 if filterImportSessionID != nil {
                     showRecentImports = true
                 }
+                // Auto-expand custom date range if it was previously applied
+                if selectedDateRange == .custom {
+                    showCustomDatePicker = true
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
                 // Invalidate cache when flight data changes (e.g., new summary added)
@@ -1715,6 +1776,46 @@ struct FilterSheet: View {
                     useIATACodes: viewModel.useIATACodes,
                     onDismiss: { showingToAirportPicker = false }
                 )
+            }
+            .sheet(isPresented: $showingStartDatePicker) {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("From Date")
+                            .font(.headline)
+                        Spacer()
+                        Button("Done") { showingStartDatePicker = false }
+                            .fontWeight(.semibold)
+                    }
+                    .padding()
+                    DatePicker("", selection: $filterStartDate, in: ...filterEndDate, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .padding(.horizontal)
+                        .onChange(of: filterStartDate) { _, _ in
+                            showingStartDatePicker = false
+                        }
+                }
+                .presentationDetents([.height(420)])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showingEndDatePicker) {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("To Date")
+                            .font(.headline)
+                        Spacer()
+                        Button("Done") { showingEndDatePicker = false }
+                            .fontWeight(.semibold)
+                    }
+                    .padding()
+                    DatePicker("", selection: $filterEndDate, in: filterStartDate..., displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .padding(.horizontal)
+                        .onChange(of: filterEndDate) { _, _ in
+                            showingEndDatePicker = false
+                        }
+                }
+                .presentationDetents([.height(420)])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -1784,38 +1885,3 @@ private struct FilterDataCache {
     let toAirports: [String]
 }
 
-// MARK: - Date Range Button Component
-// Made internal so it can be used by FilterSheet
-struct DateRangeButton: View {
-    let title: String
-    let isSelected: Bool
-    var icon: String? = nil
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(isSelected ? .semibold : .regular)
-
-                if let icon = icon {
-                    Spacer()
-                    Image(systemName: icon)
-                        .font(.caption)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .background(isSelected ? Color.green.opacity(0.15) : Color(.systemGray6))
-            .foregroundColor(isSelected ? .green : .primary)
-            .cornerRadius(10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1.5)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
