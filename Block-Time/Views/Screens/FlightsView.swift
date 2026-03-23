@@ -1639,13 +1639,6 @@ struct FilterSheet: View {
         return formatter.string(from: date)
     }
 
-    private func formatSessionDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-
     /// Load all filter data with caching (5 minute cache)
     private func loadAllFilterData() {
         // Check if cache is still valid (less than 5 minutes old)
