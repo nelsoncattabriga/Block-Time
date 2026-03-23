@@ -156,32 +156,7 @@ private struct FlightsListContent: View {
     @State private var allFlightSectors: [FlightSector] = []
     @State private var filteredFlightSectors: [FlightSector] = []
     @State private var showingFilterSheet = false
-    @State private var filterActiveVersion: Int = 0
-    private var isFilterActive: Bool {
-        let isCustomDateRange = !(filterViewModel.filterStartDate == Date.distantPast && filterViewModel.filterEndDate == Date.distantFuture)
-        return isCustomDateRange ||
-            !filterViewModel.filterAircraftType.isEmpty ||
-            !filterViewModel.filterAircraftReg.isEmpty ||
-            !filterViewModel.filterCaptainName.isEmpty ||
-            !filterViewModel.filterFOName.isEmpty ||
-            !filterViewModel.filterSOName.isEmpty ||
-            !filterViewModel.filterFromAirport.isEmpty ||
-            !filterViewModel.filterToAirport.isEmpty ||
-            !filterViewModel.filterFlightNumber.isEmpty ||
-            filterViewModel.filterPilotFlyingOnly ||
-            filterViewModel.filterApproachType != nil ||
-            filterViewModel.filterContainsRemarks ||
-            filterViewModel.filterSimulator ||
-            filterViewModel.filterPositioning ||
-            filterViewModel.filterSpIns ||
-            filterViewModel.filterNoBlockTime ||
-            filterViewModel.filterNoCrewNames ||
-            filterViewModel.filterNoFlightNumber ||
-            filterViewModel.filterNoAircraftType ||
-            filterViewModel.filterNoAircraftReg ||
-            filterViewModel.filterTypeSummary ||
-            filterViewModel.filterImportSessionID != nil
-    }
+    @State private var isFilterActive: Bool = false
     @State private var flightToDelete: FlightSector?
     @State private var showingDeleteAlert = false
     @State private var selectedFlightsForDeletion: Set<UUID> = []
@@ -524,7 +499,6 @@ private struct FlightsListContent: View {
                         }
                     }
                     .labelStyle(.iconOnly)
-                    .id(filterActiveVersion)
                 }
 
                 if filterViewModel.filterImportSessionID != nil {
@@ -1003,8 +977,31 @@ private struct FlightsListContent: View {
             sorted.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly ? 0 : $1.simTimeValue) }
         }
 
-        // Increment version so toolbar re-evaluates isFilterActive
-        filterActiveVersion &+= 1
+        // Update filter active state
+        let isCustomDateRange = !(filterViewModel.filterStartDate == Date.distantPast && filterViewModel.filterEndDate == Date.distantFuture)
+
+        isFilterActive = isCustomDateRange ||
+                        !filterViewModel.filterAircraftType.isEmpty ||
+                        !filterViewModel.filterAircraftReg.isEmpty ||
+                        !filterViewModel.filterCaptainName.isEmpty ||
+                        !filterViewModel.filterFOName.isEmpty ||
+                        !filterViewModel.filterSOName.isEmpty ||
+                        !filterViewModel.filterFromAirport.isEmpty ||
+                        !filterViewModel.filterToAirport.isEmpty ||
+                        !filterViewModel.filterFlightNumber.isEmpty ||
+                        filterViewModel.filterPilotFlyingOnly ||
+                        filterViewModel.filterApproachType != nil ||
+                        filterViewModel.filterContainsRemarks ||
+                        filterViewModel.filterSimulator ||
+                        filterViewModel.filterPositioning ||
+                        filterViewModel.filterSpIns ||
+                        filterViewModel.filterNoBlockTime ||
+                        filterViewModel.filterNoCrewNames ||
+                        filterViewModel.filterNoFlightNumber ||
+                        filterViewModel.filterNoAircraftType ||
+                        filterViewModel.filterNoAircraftReg ||
+                        filterViewModel.filterTypeSummary ||
+                        filterViewModel.filterImportSessionID != nil
 
         // Scroll to top when filters are active
         if isFilterActive {
