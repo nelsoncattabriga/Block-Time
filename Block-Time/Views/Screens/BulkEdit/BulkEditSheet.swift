@@ -70,6 +70,25 @@ struct BulkEditSheet: View {
                         }
                     }
 
+                    // Route Card
+                    SectionCard(title: "Route", icon: "map", color: .cyan) {
+                        VStack(spacing: 12) {
+                            BulkEditTextField(
+                                label: viewModel.useIATACodes ? "From (IATA)" : "From (ICAO)",
+                                fieldState: $bulkEditViewModel.fromAirport,
+                                keyboardType: .asciiCapable,
+                                placeholder: viewModel.useIATACodes ? "e.g. SYD" : "e.g. YSSY"
+                            )
+
+                            BulkEditTextField(
+                                label: viewModel.useIATACodes ? "To (IATA)" : "To (ICAO)",
+                                fieldState: $bulkEditViewModel.toAirport,
+                                keyboardType: .asciiCapable,
+                                placeholder: viewModel.useIATACodes ? "e.g. MEL" : "e.g. YMML"
+                            )
+                        }
+                    }
+
                     // Crew Card
                     SectionCard(title: "Crew", icon: "person.2.fill", color: .green) {
                         VStack(spacing: 12) {

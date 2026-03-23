@@ -95,6 +95,10 @@ class BulkEditViewModel: ObservableObject {
     @Published var nightTakeoffs: FieldState<Int> = .notEdited
     @Published var nightLandings: FieldState<Int> = .notEdited
 
+    // Route
+    @Published var fromAirport: FieldState<String> = .notEdited
+    @Published var toAirport: FieldState<String> = .notEdited
+
     // Remarks
     @Published var remarks: FieldState<String> = .notEdited
 
@@ -170,6 +174,9 @@ class BulkEditViewModel: ObservableObject {
         dayLandings = Self.analyzeIntField(selectedFlights) { $0.dayLandings }
         nightTakeoffs = Self.analyzeIntField(selectedFlights) { $0.nightTakeoffs }
         nightLandings = Self.analyzeIntField(selectedFlights) { $0.nightLandings }
+
+        fromAirport = Self.analyzeStringField(selectedFlights) { $0.fromAirport }
+        toAirport = Self.analyzeStringField(selectedFlights) { $0.toAirport }
 
         remarks = Self.analyzeStringField(selectedFlights) { $0.remarks }
     }
@@ -284,6 +291,8 @@ class BulkEditViewModel: ObservableObject {
             "dayLandings": dayLandings,
             "nightTakeoffs": nightTakeoffs,
             "nightLandings": nightLandings,
+            "fromAirport": fromAirport,
+            "toAirport": toAirport,
             "remarks": remarks
         ]
     }
@@ -372,6 +381,14 @@ class BulkEditViewModel: ObservableObject {
         }
         .store(in: &cancellables)
 
+        Publishers.CombineLatest(
+            $fromAirport, $toAirport
+        )
+        .sink { [weak self] _ in
+            self?.checkForModifications()
+        }
+        .store(in: &cancellables)
+
         $remarks
             .sink { [weak self] _ in
                 self?.checkForModifications()
@@ -416,6 +433,8 @@ class BulkEditViewModel: ObservableObject {
                           hasFieldBeenModified(dayLandings, key: "dayLandings") ||
                           hasFieldBeenModified(nightTakeoffs, key: "nightTakeoffs") ||
                           hasFieldBeenModified(nightLandings, key: "nightLandings") ||
+                          hasFieldBeenModified(fromAirport, key: "fromAirport") ||
+                          hasFieldBeenModified(toAirport, key: "toAirport") ||
                           hasFieldBeenModified(remarks, key: "remarks")
     }
 
@@ -651,6 +670,13 @@ class BulkEditViewModel: ObservableObject {
             }
             if case .value(let nightLdg) = nightLandings {
                 updated.nightLandings = nightLdg
+            }
+
+            if case .value(let from) = fromAirport {
+                updated.fromAirport = from
+            }
+            if case .value(let to) = toAirport {
+                updated.toAirport = to
             }
 
             if case .value(let rem) = remarks {
