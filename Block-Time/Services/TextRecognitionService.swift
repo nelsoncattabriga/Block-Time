@@ -10,6 +10,7 @@ import UIKit
 import Foundation
 import ImageIO
 import Combine
+import Photos
 
 // MARK: - Data Models
 struct FlightData {
@@ -54,6 +55,80 @@ enum FleetType {
 // MARK: - Text Recognition Service
 class TextRecognitionService: ObservableObject {
 
+    // Reused across calls — CIContext creation is expensive
+    private static let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+
+    // MARK: - Image Pre-processing
+
+    /// Cleans an ACARS screen photo before passing it to Vision OCR.
+    /// Pipeline: greyscale → contrast boost → unsharp mask → binarise.
+    /// Returns the original CGImage unchanged if any step fails.
+    private func preprocessForOCR(_ cgImage: CGImage) -> CGImage {
+        var image = CIImage(cgImage: cgImage)
+
+        // 1. Strip colour — Vision reads monochrome text more reliably
+        if let greyscale = CIFilter(name: "CIColorControls", parameters: [
+            kCIInputImageKey: image,
+            "inputSaturation": 0.0,
+            "inputBrightness": 0.05,
+            "inputContrast": 1.3
+        ])?.outputImage {
+            image = greyscale
+        }
+
+        // 2. Sharpen — compensates for soft focus through dusty cover panels
+        if let sharpened = CIFilter(name: "CIUnsharpMask", parameters: [
+            kCIInputImageKey: image,
+            kCIInputRadiusKey: 2.5,
+            kCIInputIntensityKey: 0.8
+        ])?.outputImage {
+            image = sharpened
+        }
+
+        // 3. Binarise — threshold 0.5 turns dust/smudge artefacts into clean black-or-white
+        //    CIColorThreshold is available from iOS 17; fall back gracefully on older OS.
+        if #available(iOS 17, *) {
+            if let binary = CIFilter(name: "CIColorThreshold", parameters: [
+                kCIInputImageKey: image,
+                "inputThreshold": 0.5
+            ])?.outputImage {
+                image = binary
+            }
+        }
+
+        guard let output = Self.ciContext.createCGImage(image, from: image.extent) else {
+            LogManager.shared.debug("Image pre-processing: CIContext render failed, using original")
+            return cgImage
+        }
+        LogManager.shared.debug("Image pre-processing complete")
+
+        #if DEBUG
+        // Save the processed image to Photos so you can inspect OCR pre-processing effects.
+        // Remove or set to false when no longer needed.
+        let saveDebugImage = false
+        if saveDebugImage {
+            let debugImage = UIImage(cgImage: output)
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+                guard status == .authorized || status == .limited else {
+                    LogManager.shared.debug("Debug image save skipped — no Photos permission")
+                    return
+                }
+                PHPhotoLibrary.shared().performChanges({
+                    PHAssetChangeRequest.creationRequestForAsset(from: debugImage)
+                }) { success, error in
+                    if success {
+                        LogManager.shared.debug("Debug: processed ACARS image saved to Photos")
+                    } else {
+                        LogManager.shared.debug("Debug: failed to save processed image — \(error?.localizedDescription ?? "unknown")")
+                    }
+                }
+            }
+        }
+        #endif
+
+        return output
+    }
+
     // MARK: - Public Methods
 
     /// Extract flight data from an image using Vision OCR
@@ -70,10 +145,11 @@ class TextRecognitionService: ObservableObject {
         }
         LogManager.shared.info("Starting text recognition for \(fleetName) ACARS image")
 
-        guard let cgImage = image.cgImage else {
+        guard let rawCGImage = image.cgImage else {
             LogManager.shared.error("Failed to convert UIImage to CGImage for text recognition")
             throw TextRecognitionError(message: "Failed to process image")
         }
+        let cgImage = preprocessForOCR(rawCGImage)
 
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
@@ -121,10 +197,7 @@ class TextRecognitionService: ObservableObject {
             // Convert UIImage.Orientation to CGImagePropertyOrientation for Vision framework
             let orientation = CGImagePropertyOrientation(image.imageOrientation)
 
-            // Use image orientation and better options for improved accuracy
-            let options: [VNImageOption: Any] = [
-                .ciContext: CIContext(options: nil)
-            ]
+            let options: [VNImageOption: Any] = [.ciContext: Self.ciContext]
             let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: options)
 
             do {
