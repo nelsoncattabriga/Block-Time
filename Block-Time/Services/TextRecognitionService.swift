@@ -102,29 +102,16 @@ class TextRecognitionService: ObservableObject {
         }
         LogManager.shared.debug("Image pre-processing complete")
 
-        #if DEBUG
-        // Save the processed image to Photos so you can inspect OCR pre-processing effects.
-        // Remove or set to false when no longer needed.
-        let saveDebugImage = false
-        if saveDebugImage {
-            let debugImage = UIImage(cgImage: output)
-            PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
-                guard status == .authorized || status == .limited else {
-                    LogManager.shared.debug("Debug image save skipped — no Photos permission")
-                    return
-                }
-                PHPhotoLibrary.shared().performChanges({
-                    PHAssetChangeRequest.creationRequestForAsset(from: debugImage)
-                }) { success, error in
-                    if success {
-                        LogManager.shared.debug("Debug: processed ACARS image saved to Photos")
-                    } else {
-                        LogManager.shared.debug("Debug: failed to save processed image — \(error?.localizedDescription ?? "unknown")")
-                    }
-                }
-            }
-        }
-        #endif
+        // To inspect pre-processing output, uncomment the block below (DEBUG builds only):
+        // #if DEBUG
+        // let debugImage = UIImage(cgImage: output)
+        // PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+        //     guard status == .authorized || status == .limited else { return }
+        //     PHPhotoLibrary.shared().performChanges({
+        //         PHAssetChangeRequest.creationRequestForAsset(from: debugImage)
+        //     }, completionHandler: nil)
+        // }
+        // #endif
 
         return output
     }
