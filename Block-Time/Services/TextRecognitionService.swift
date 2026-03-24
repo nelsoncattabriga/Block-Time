@@ -404,6 +404,10 @@ class TextRecognitionService: ObservableObject {
         // D = digit class including slashed-zero variants OCR'd from the B737 FMC (Ø, ø, O, o)
         let d = "[\\dØøOo]"
         let inPatterns: [NSRegularExpression] = [
+            // OCR variants: "I.N", "I N", "l.N" etc. (Vision sometimes inserts period or space in "IN")
+            try! NSRegularExpression(pattern: "I[\\. ]N\\s*\\n\\s*(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "I[\\. ]N[ \\t]+(\(d){2}:\(d){2})"),
+            try! NSRegularExpression(pattern: "I[\\. ]N[^\(d)]{0,10}(\(d){2}:\(d){2})"),
             // SPECIAL CASE: ON and IN on consecutive lines followed by TWO times (capture second time for IN)
             // Pattern: ON\n IN\n HH:MM\n HH:MM - we want the second HH:MM
             try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*\(d){2}:\(d){2}\\s*\\n\\s*(\(d){2}:\(d){2})"),
