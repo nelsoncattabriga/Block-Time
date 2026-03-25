@@ -106,6 +106,7 @@ struct ModernTogglesSection: View {
                         .foregroundColor(.secondary)
                     Spacer()
                 }
+                .padding(.top, 10)
 
                 VStack(spacing: 8) {
                     HStack(spacing: 8) {
@@ -194,52 +195,52 @@ struct ModernTogglesSection: View {
             }
 
             // Footer note line
-            HStack(spacing: 4) {
-                if viewModel.isTimeCreditManualOverride {
-                    Text("Time logged as")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                    Text(timeCreditLabel)
-                        .font(.footnote.bold())
-                        .foregroundColor(.primary)
-                    Text("(manual)")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
+            HStack(spacing: 6) {
+                Spacer()
+                Text("Time logged as")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+
+                // Tappable credit pill
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        if viewModel.isTimeCreditManualOverride {
                             showingOverride = false
-                        }
-                        viewModel.resetTimeCreditOverride()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    Text("Time logged as")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                    Text(timeCreditLabel)
-                        .font(.footnote.bold())
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.resetTimeCreditOverride()
+                        } else {
                             showingOverride.toggle()
                         }
-                    } label: {
-                        HStack(spacing: 2) {
-                            Text("Override")
-                                .font(.footnote)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
-                        }
-                        .foregroundColor(.secondary)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(timeCreditLabel)
+                            .font(.footnote.bold())
+                            .foregroundColor(viewModel.isTimeCreditManualOverride ? .white : .primary)
+                        if viewModel.isTimeCreditManualOverride {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 7, weight: .bold))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(
+                        viewModel.isTimeCreditManualOverride
+                            ? Color.orange.opacity(0.85)
+                            : Color(.tertiarySystemFill)
+                    )
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                viewModel.isTimeCreditManualOverride
+                                    ? Color.orange
+                                    : Color(.separator).opacity(0.6),
+                                lineWidth: 0.5
+                            )
+                    )
                 }
+                .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal, 4)
             .padding(.top, 6)
