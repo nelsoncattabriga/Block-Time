@@ -103,15 +103,15 @@ class TextRecognitionService: ObservableObject {
         LogManager.shared.debug("Image pre-processing complete")
 
         // To inspect pre-processing output, uncomment the block below (DEBUG builds only):
-        // #if DEBUG
-        // let debugImage = UIImage(cgImage: output)
-        // PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
-        //     guard status == .authorized || status == .limited else { return }
-        //     PHPhotoLibrary.shared().performChanges({
-        //         PHAssetChangeRequest.creationRequestForAsset(from: debugImage)
-        //     }, completionHandler: nil)
-        // }
-        // #endif
+         #if DEBUG
+         let debugImage = UIImage(cgImage: output)
+         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+             guard status == .authorized || status == .limited else { return }
+             PHPhotoLibrary.shared().performChanges({
+                 PHAssetChangeRequest.creationRequestForAsset(from: debugImage)
+             }, completionHandler: nil)
+         }
+         #endif
 
         return output
     }
@@ -437,7 +437,7 @@ class TextRecognitionService: ObservableObject {
 
     private func extractOutTime(from text: String) -> String {
         // D = digit class including slashed-zero variants OCR'd from the B737 FMC (Ø, ø, O, o)
-        let d = "[\\dØøOo]"
+        let d = "[\\dØøOo@]"
         let outPatterns: [NSRegularExpression] = [
             try! NSRegularExpression(pattern: "OUT\\s+(\(d){2}:\(d){2})"),
             try! NSRegularExpression(pattern: "OUT\\s*\\n\\s*(\(d){2}:\(d){2})"),
@@ -462,7 +462,7 @@ class TextRecognitionService: ObservableObject {
     
     private func extractInTime(from text: String) -> String {
         // D = digit class including slashed-zero variants OCR'd from the B737 FMC (Ø, ø, O, o)
-        let d = "[\\dØøOo]"
+        let d = "[\\dØøOo@]"
         let inPatterns: [NSRegularExpression] = [
             // OCR variants: "I.N", "I N", "l.N" etc. (Vision sometimes inserts period or space in "IN")
             try! NSRegularExpression(pattern: "I[\\. ]N\\s*\\n\\s*(\(d){2}:\(d){2})"),
@@ -499,7 +499,7 @@ class TextRecognitionService: ObservableObject {
     }
 
     private func extractOffTime(from text: String) -> String {
-        let d = "[\\dØøOo]"
+        let d = "[\\dØøOo@]"
         let offPatterns: [NSRegularExpression] = [
             try! NSRegularExpression(pattern: "OFF\\s+(\(d){2}:\(d){2})"),
             try! NSRegularExpression(pattern: "OFF\\s*\\n\\s*(\(d){2}:\(d){2})"),
@@ -520,7 +520,7 @@ class TextRecognitionService: ObservableObject {
     }
 
     private func extractOnTime(from text: String) -> String {
-        let d = "[\\dØøOo]"
+        let d = "[\\dØøOo@]"
         let onPatterns: [NSRegularExpression] = [
             // SPECIAL CASE: ON and IN on consecutive lines followed by TWO times (capture first time for ON)
             try! NSRegularExpression(pattern: "ON\\s*\\n\\s*IN\\s*\\n\\s*([8\(d)]{2}:[\(d)]{2})"),
@@ -553,7 +553,7 @@ class TextRecognitionService: ObservableObject {
     }
 
     private func extractBlockTime(from text: String) -> String {
-        let d = "[\\dØøOo]"
+        let d = "[\\dØøOo@]"
         let blockPatterns: [NSRegularExpression] = [
             try! NSRegularExpression(pattern: "BLK\\s+(\(d){2}:\(d){2})"),
             try! NSRegularExpression(pattern: "BLK\\s*\\n\\s*(\(d){2}:\(d){2})"),
@@ -571,7 +571,7 @@ class TextRecognitionService: ObservableObject {
     }
 
     private func extractFlightTime(from text: String) -> String {
-        let d = "[\\dØøOo]"
+        let d = "[\\dØøOo@]"
         let flightPatterns: [NSRegularExpression] = [
             try! NSRegularExpression(pattern: "FLT\\s+(\(d){2}:\(d){2})"),
             try! NSRegularExpression(pattern: "FLT\\s*\\n\\s*(\(d){2}:\(d){2})"),
@@ -594,7 +594,7 @@ class TextRecognitionService: ObservableObject {
     /// Builds patterns from strict (same-line) to relaxed (multi-line, OCR noise),
     /// then delegates to extractTimeWithPatterns for footer filtering and smartCorrectTime.
     private func extractTimeField(label: String, from text: String) -> String {
-        let d = "[\\dØøOo]"
+        let d = "[\\dØøOo@]"
         let esc = NSRegularExpression.escapedPattern(for: label)
         let patterns: [NSRegularExpression] = [
             // Strict: label + whitespace + HH:MM on same line (with OCR noise)
@@ -700,6 +700,8 @@ class TextRecognitionService: ObservableObject {
         // First pass: Replace common OCR character errors
         // $ is often misread as 0 (e.g., $7:25 → 07:25, $9:10 → 09:10)
         correctedTime = correctedTime.replacingOccurrences(of: "$", with: "0")
+        // @ is sometimes misread as 0 (e.g., @7:22 → 07:22)
+        correctedTime = correctedTime.replacingOccurrences(of: "@", with: "0")
         // Ø (Scandinavian O with stroke) is often misread as 0 (e.g., 0Ø:25 → 00:25, ØØ:25 → 00:00)
         correctedTime = correctedTime.replacingOccurrences(of: "Ø", with: "0")
         correctedTime = correctedTime.replacingOccurrences(of: "ø", with: "0")
