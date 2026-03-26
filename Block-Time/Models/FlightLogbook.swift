@@ -215,6 +215,12 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return abs(simTimeValue - spVal) < 0.01
     }
 
+    /// True when this entry is aircraft instruction (INS in FLT):
+    /// spInsTime is set AND blockTime > 0 (flew the actual aircraft while instructing).
+    var isAircraftInstruction: Bool {
+        spInsTimeValue > 0 && blockTimeValue > 0
+    }
+
     // MARK: - Database Integration Methods
     
     /// Create FlightSector from Core Data entity

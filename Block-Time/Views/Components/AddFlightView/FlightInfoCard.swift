@@ -124,6 +124,89 @@ struct ModernCapturedDataCard: View {
         )
     }
 
+    // Environment row shown below the type selector when INS is active
+    @ViewBuilder
+    private var insEnvironmentRow: some View {
+        HStack(spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.2, dampingFraction: 0.75)) {
+                    viewModel.isInstructingInAircraft = true
+                    viewModel.spInsTime = ""
+                    viewModel.blockTime = ""
+                    if viewModel.captainName.isEmpty {
+                        viewModel.captainName = viewModel.defaultCaptainName
+                    }
+                }
+                HapticManager.shared.impact(.light)
+            } label: {
+                Text("Aircraft")
+                    .font(.footnote.bold())
+                    .foregroundColor(viewModel.isInstructingInAircraft ? .white : .secondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 26)
+                    .background(viewModel.isInstructingInAircraft ? Color.blue : Color.clear)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            Button {
+                withAnimation(.spring(response: 0.2, dampingFraction: 0.75)) {
+                    viewModel.isInstructingInAircraft = false
+                    viewModel.spInsTime = ""
+                    viewModel.blockTime = ""
+                }
+                HapticManager.shared.impact(.light)
+            } label: {
+                Text("Simulator")
+                    .font(.footnote.bold())
+                    .foregroundColor(!viewModel.isInstructingInAircraft ? .white : .secondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 26)
+                    .background(!viewModel.isInstructingInAircraft ? Color.purple : Color.clear)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.purple.opacity(0.4), lineWidth: 1)
+        )
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // INS button: plain label, tapping selects INS mode with default environment
+    @ViewBuilder
+    private var insButton: some View {
+        Button {
+            if !viewModel.isSpIns {
+                viewModel.isSpIns = true
+                viewModel.isSimulator = false
+                viewModel.isPositioning = false
+                viewModel.blockTime = ""
+                viewModel.nightTime = ""
+                viewModel.isInstructingInAircraft = viewModel.defaultInstructionEnvironment == .aircraft
+                if viewModel.isInstructingInAircraft && viewModel.captainName.isEmpty {
+                    viewModel.captainName = viewModel.defaultCaptainName
+                }
+                HapticManager.shared.impact(.medium)
+            }
+        } label: {
+            Text("INS")
+                .font(.subheadline.bold())
+                .foregroundColor(viewModel.isSpIns ? .purple : .secondary)
+                .frame(width: 50, height: 30)
+                .background(Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(viewModel.isSpIns ? Color.purple : Color.clear, lineWidth: 2)
+                        .padding(2)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
     private func timeFieldLabel(_ base: String, tzLabel: String) -> String {
         base
     }
@@ -247,29 +330,7 @@ struct ModernCapturedDataCard: View {
                     .buttonStyle(PlainButtonStyle())
 
                     if viewModel.showSpInsSelector || viewModel.isSpIns {
-                        Button(action: {
-                            if !viewModel.isSpIns {
-                                viewModel.isSpIns = true
-                                viewModel.isSimulator = false
-                                viewModel.isPositioning = false
-                                viewModel.blockTime = ""
-                                viewModel.nightTime = ""
-                                HapticManager.shared.impact(.medium)
-                            }
-                        }) {
-                            Text("INS")
-                                .font(.subheadline.bold())
-                                .foregroundColor(viewModel.isSpIns ? .purple : .secondary)
-                                .frame(width: 50, height: 30)
-                                .background(Color.clear)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(viewModel.isSpIns ? Color.purple : Color.clear, lineWidth: 2)
-                                        .padding(2)
-                                )
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                        insButton
                     }
                 }
                 .overlay(
@@ -277,6 +338,10 @@ struct ModernCapturedDataCard: View {
                         .stroke(viewModel.isPositioning ? Color.orange : (viewModel.isSimulator || viewModel.isSpIns ? Color.purple : Color.blue), lineWidth: 2)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            if viewModel.isSpIns {
+                insEnvironmentRow
             }
 
             VStack(spacing: 12) {
@@ -327,7 +392,7 @@ struct ModernCapturedDataCard: View {
 
                     // Flight Number field with search button
                     ModernFlightNumberField(
-                        label: (viewModel.isSimulator || viewModel.isSpIns) ? "SIM #" : "FLIGHT #",
+                        label: (viewModel.isSimulator || (viewModel.isSpIns && !viewModel.isInstructingInAircraft)) ? "SIM #" : "FLIGHT #",
                         value: Binding(
                             get: { viewModel.flightNumber },
                             set: { viewModel.updateFlightNumber($0) }
@@ -345,7 +410,7 @@ struct ModernCapturedDataCard: View {
                             // But not for simulator flights (allows custom sim flight numbers like SIM06B)
                             if viewModel.flightNumber.isEmpty &&
                                viewModel.includeAirlinePrefixInFlightNumber &&
-                               !viewModel.isSimulator && !viewModel.isSpIns {
+                               !viewModel.isSimulator && !(viewModel.isSpIns && !viewModel.isInstructingInAircraft) {
                                 viewModel.updateFlightNumber(viewModel.airlinePrefix)
                             }
                         }
@@ -441,8 +506,8 @@ struct ModernCapturedDataCard: View {
                         )
                     }
 
-                    if viewModel.isSpIns {
-                        // INS mode: only SP/INS Time field
+                    if viewModel.isSpIns && !viewModel.isInstructingInAircraft {
+                        // SIM instruction: SP/INS Time field only (no time credit)
                         ModernDecimalTimeField(
                             label: "SP/INS Time",
                             value: $viewModel.spInsTime,

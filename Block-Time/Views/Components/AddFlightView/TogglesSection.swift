@@ -6,7 +6,9 @@ struct ModernTogglesSection: View {
     @State private var showingOverride = false
 
     private var isDisabled: Bool {
-        viewModel.isPositioning || viewModel.isSimulator || viewModel.isSpIns
+        // Time credit is disabled for positioning, sim, and sim-instruction.
+        // Aircraft instruction counts as P1 so credit controls remain enabled.
+        viewModel.isPositioning || viewModel.isSimulator || (viewModel.isSpIns && !viewModel.isInstructingInAircraft)
     }
 
     private var timeCreditLabel: String {
@@ -79,7 +81,7 @@ struct ModernTogglesSection: View {
                                     viewModel.updateSelectedApproachType(newValue)
                                 }
                             ),
-                            isDisabled: (!viewModel.isPilotFlying && !viewModel.isSimulator) || viewModel.isSpIns
+                            isDisabled: (!viewModel.isPilotFlying && !viewModel.isSimulator) || (viewModel.isSpIns && !viewModel.isInstructingInAircraft)
                         )
                     }
                 }
@@ -197,6 +199,7 @@ struct ModernTogglesSection: View {
             // Footer note line
             HStack(spacing: 6) {
                 Spacer()
+                if !isDisabled {
                 Text("Time logged as")
                     .font(.footnote)
                     .foregroundColor(.secondary)
@@ -241,6 +244,7 @@ struct ModernTogglesSection: View {
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
+                } // end if !isDisabled
             }
             .padding(.horizontal, 4)
             .padding(.top, 6)

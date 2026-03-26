@@ -390,6 +390,21 @@ private struct ModernDefaultCrewNamesCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
+                ModernToggleRow(
+                    title: "Log Instructor Time",
+                    subtitle: "Show INS in flight type selector",
+                    isOn: Binding(
+                        get: { viewModel.showSpInsSelector },
+                        set: { viewModel.updateShowSpInsSelector($0) }
+                    ),
+                    color: .blue,
+                    icon: "person.fill.badge.plus"
+                )
+
+                if viewModel.showSpInsSelector {
+                    instructionEnvironmentPicker
+                }
+
                 // F/O PF Time Credit Picker (only show when F/O is selected)
                 if viewModel.flightTimePosition == .firstOfficer {
                     HStack(spacing: 12) {
@@ -470,17 +485,6 @@ private struct ModernDefaultCrewNamesCard: View {
                     color: .blue,
                     icon: "person.2.badge.key"
                 )
-
-                ModernToggleRow(
-                    title: "Log Sp/INS Times",
-                    subtitle: "Log Instructor Times",
-                    isOn: Binding(
-                        get: { viewModel.showSpInsSelector },
-                        set: { viewModel.updateShowSpInsSelector($0) }
-                    ),
-                    color: .blue,
-                    icon: "person.fill.badge.plus"
-                )
             }
         }
         .padding(16)
@@ -491,6 +495,61 @@ private struct ModernDefaultCrewNamesCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.blue.opacity(0.2), lineWidth: 1)
         )
+    }
+
+    @ViewBuilder
+    private var instructionEnvironmentPicker: some View {
+        let caption: String = viewModel.defaultInstructionEnvironment == .simulator
+            ? "Sim instruction hours are tracked but do not count towards totals."
+            : "Aircraft instruction hours counted as P1 time by default."
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Default instruction environment")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 4)
+
+            HStack(spacing: 0) {
+                ForEach([InstructionEnvironment.aircraft, .simulator], id: \.self) { env in
+                    instructionEnvButton(env: env)
+                }
+            }
+            .padding(3)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(.separator).opacity(0.5), lineWidth: 0.5)
+            )
+
+            Text(caption)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 4)
+        }
+        .padding(.horizontal, 4)
+        .padding(.top, 2)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private func instructionEnvButton(env: InstructionEnvironment) -> some View {
+        let isSelected = viewModel.defaultInstructionEnvironment == env
+        let icon = env == .simulator ? "desktopcomputer" : "airplane"
+        let label = env == .simulator ? "Simulator" : "Aircraft"
+        let activeColor: Color = env == .simulator ? .purple : .blue
+        return Button {
+            viewModel.updateDefaultInstructionEnvironment(env)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.caption)
+                Text(label).font(.footnote.bold())
+            }
+            .foregroundColor(isSelected ? .white : .secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(isSelected ? activeColor : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

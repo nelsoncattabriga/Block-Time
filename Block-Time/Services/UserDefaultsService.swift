@@ -8,6 +8,11 @@ import Foundation
 import Combine
 
 
+enum InstructionEnvironment: String, CaseIterable {
+    case simulator = "simulator"
+    case aircraft = "aircraft"
+}
+
 enum LogbookDestination: String, CaseIterable {
     case internalLogbook = "Block-Time"
     case logTenPro = "LogTen"
@@ -95,6 +100,7 @@ struct AppSettings {
     var savePhotosToLibrary: Bool  // NEW SETTING
     var showSONameFields: Bool  // Show/hide SO 1 and SO 2 fields
     var showSpInsSelector: Bool // Show/hide the INS toggle for Sp/Ins time logging
+    var defaultInstructionEnvironment: InstructionEnvironment // Default environment for instruction logging
     var pfAutoInstrumentMinutes: Int
     var logbookDestination: LogbookDestination
     var displayFlightsInLocalTime: Bool
@@ -134,6 +140,7 @@ struct AppSettings {
         savePhotosToLibrary: false,
         showSONameFields: false,
         showSpInsSelector: false,
+        defaultInstructionEnvironment: .simulator,
         pfAutoInstrumentMinutes: 30,
         logbookDestination: .internalLogbook,
         displayFlightsInLocalTime: true,
@@ -176,6 +183,7 @@ class UserDefaultsService: ObservableObject {
         static let savePhotosToLibrary = "savePhotosToLibrary"
         static let showSONameFields = "showSONameFields"
         static let showSpInsSelector = "showSpInsSelector"
+        static let defaultInstructionEnvironment = "defaultInstructionEnvironment"
         static let logbookDestination = "logbookDestination"
         static let pfAutoInstrumentMinutes = "pfAutoInstrumentMinutes"
         static let displayFlightsInLocalTime = "displayFlightsInLocalTime"
@@ -240,6 +248,7 @@ class UserDefaultsService: ObservableObject {
             savePhotosToLibrary: userDefaults.bool(forKey: Keys.savePhotosToLibrary),
             showSONameFields: userDefaults.bool(forKey: Keys.showSONameFields),
             showSpInsSelector: userDefaults.bool(forKey: Keys.showSpInsSelector),
+            defaultInstructionEnvironment: InstructionEnvironment(rawValue: userDefaults.string(forKey: Keys.defaultInstructionEnvironment) ?? "") ?? .simulator,
             pfAutoInstrumentMinutes: (userDefaults.object(forKey: Keys.pfAutoInstrumentMinutes) as? Int) ?? 30,
             logbookDestination: logbookDestination,
             displayFlightsInLocalTime: userDefaults.bool(forKey: Keys.displayFlightsInLocalTime),
@@ -279,6 +288,7 @@ class UserDefaultsService: ObservableObject {
         userDefaults.set(settings.savePhotosToLibrary, forKey: Keys.savePhotosToLibrary)
         userDefaults.set(settings.showSONameFields, forKey: Keys.showSONameFields)
         userDefaults.set(settings.showSpInsSelector, forKey: Keys.showSpInsSelector)
+        userDefaults.set(settings.defaultInstructionEnvironment.rawValue, forKey: Keys.defaultInstructionEnvironment)
         userDefaults.set(settings.pfAutoInstrumentMinutes, forKey: Keys.pfAutoInstrumentMinutes)
         userDefaults.set(settings.logbookDestination.rawValue, forKey: Keys.logbookDestination)
         userDefaults.set(settings.displayFlightsInLocalTime, forKey: Keys.displayFlightsInLocalTime)
@@ -394,6 +404,12 @@ class UserDefaultsService: ObservableObject {
     func setShowSpInsSelector(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.showSpInsSelector)
+        syncToCloudAfterChange()
+    }
+
+    func setDefaultInstructionEnvironment(_ value: InstructionEnvironment) {
+        markModificationAndSyncToCloud()
+        userDefaults.set(value.rawValue, forKey: Keys.defaultInstructionEnvironment)
         syncToCloudAfterChange()
     }
 
