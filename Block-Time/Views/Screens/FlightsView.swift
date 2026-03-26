@@ -803,8 +803,8 @@ struct FlightsView: View {
                 return false
             }
 
-            // Sp/Ins filter
-            if filterViewModel.filterSpIns && !sector.isSpInsOnly {
+            // Sp/Ins filter (sim instruction OR aircraft instruction)
+            if filterViewModel.filterSpIns && !sector.isSpInsOnly && !sector.isAircraftInstruction {
                 return false
             }
 
@@ -1675,7 +1675,7 @@ struct FilterSheet: View {
 
                     Toggle("PAX", isOn: $filterPositioning)
 
-                    Toggle("Sp/INS", isOn: $filterSpIns)
+                    Toggle("Instructor", isOn: $filterSpIns)
 
                     Toggle("Type Summary", isOn: $filterTypeSummary)
                 }

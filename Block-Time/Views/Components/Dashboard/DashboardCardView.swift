@@ -135,14 +135,7 @@ struct DashboardCardView: View {
                 fraction: stats.totalFlightTime > 0 ? stats.totalSIMTime / stats.totalFlightTime : nil
             )
         case .insTime:
-            StatCard(
-                title: "Sp/INS Time",
-                value: stats.formattedSpInsTime(asHoursMinutes: showTimesInHoursMinutes),
-                subtitle: stats.totalSpInsTime > 0 ? String(format: "%.0f%% of total flight time", stats.totalSpInsTime / stats.totalFlightTime * 100) : "Specialist / Instructor",
-                color: .purple,
-                icon: "person.fill.badge.plus",
-                fraction: stats.totalFlightTime > 0 ? stats.totalSpInsTime / stats.totalFlightTime : nil
-            )
+            SpInsTimeCard(stats: stats, showTimesInHoursMinutes: showTimesInHoursMinutes)
 //        case .pfRatioStat:
 //            StatCard(
 //                title: "PF Ratio",
@@ -173,6 +166,76 @@ struct DashboardCardView: View {
             AverageMetricCard(statistics: stats, isEditMode: false)
         default:
             EmptyView()
+        }
+    }
+}
+
+// MARK: - Instructor Time Card
+struct SpInsTimeCard: View {
+    let stats: FlightStatistics
+    let showTimesInHoursMinutes: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            CardHeader(title: "Instructor Time", icon: "person.fill.badge.plus", iconColor: .purple)
+
+            VStack(alignment: .leading, spacing: 10) {
+                // Total — large primary value
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stats.formattedSpInsTime(asHoursMinutes: showTimesInHoursMinutes))
+                        .iPadScaledFont(.subheadline)
+                        .fontWeight(.semibold)
+                        .fontDesign(.rounded)
+                        .foregroundStyle(.primary)
+
+                    if stats.totalFlightTime > 0 && stats.totalSpInsTime > 0 {
+                        ProgressView(value: min(stats.totalSpInsTime / stats.totalFlightTime, 1))
+                            .tint(.purple)
+                            .frame(height: 6)
+                    } else {
+                        Spacer().frame(height: 6)
+                    }
+
+                    Text("Total")
+                        .iPadScaledFont(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                // FLT / SIM breakdown row
+                if stats.totalSpInsTime > 0 {
+                    HStack(spacing: 0) {
+                        breakdownItem(
+                            label: "FLT",
+                            value: stats.formattedSpInsFltTime(asHoursMinutes: showTimesInHoursMinutes),
+                            color: .blue
+                        )
+                        Spacer()
+                        breakdownItem(
+                            label: "SIM",
+                            value: stats.formattedSpInsSimTime(asHoursMinutes: showTimesInHoursMinutes),
+                            color: .purple
+                        )
+                    }
+                } else {
+                    Text("Simulator & aircraft instruction")
+                        .iPadScaledFont(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(16)
+        .appCardStyle()
+    }
+
+    private func breakdownItem(label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .iPadScaledFont(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .iPadScaledFont(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(color.opacity(0.85))
         }
     }
 }

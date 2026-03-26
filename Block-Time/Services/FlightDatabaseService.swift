@@ -1527,6 +1527,8 @@ class FlightDatabaseService: ObservableObject {
             var totalInstrument: Double = 0
             var totalSIM: Double = 0
             var totalSpIns: Double = 0
+            var totalSpInsSim: Double = 0
+            var totalSpInsFlt: Double = 0
             let totalSectors = flights.count
             var aiiiSectors = 0
             var pfSectors = 0
@@ -1540,7 +1542,13 @@ class FlightDatabaseService: ObservableObject {
                 totalNight += safeDoubleFromString(flight.nightTime)
                 totalInstrument += safeDoubleFromString(flight.instrumentTime)
                 totalSIM += entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
-                totalSpIns += safeDoubleFromString(flight.spInsTime)
+                let spVal = safeDoubleFromString(flight.spInsTime)
+                totalSpIns += spVal
+                if entityIsSpInsOnly(flight) {
+                    totalSpInsSim += spVal
+                } else if spVal > 0 {
+                    totalSpInsFlt += spVal
+                }
 
                 if flight.isAIII {
                     aiiiSectors += 1
@@ -1561,6 +1569,8 @@ class FlightDatabaseService: ObservableObject {
                 totalInstrumentTime: totalInstrument,
                 totalSIMTime: totalSIM,
                 totalSpInsTime: totalSpIns,
+                totalSpInsSimTime: totalSpInsSim,
+                totalSpInsFltTime: totalSpInsFlt,
                 aiiiSectors: aiiiSectors,
                 pfSectors: pfSectors
             )
@@ -1591,6 +1601,8 @@ class FlightDatabaseService: ObservableObject {
         var totalInstrument: Double = 0
         var totalSIM: Double = 0
         var totalSpIns: Double = 0
+        var totalSpInsSim: Double = 0
+        var totalSpInsFlt: Double = 0
         let totalSectors = flights.count
         var aiiiSectors = 0
         var pfSectors = 0
@@ -1603,7 +1615,13 @@ class FlightDatabaseService: ObservableObject {
             totalNight += flight.nightTimeValue
             totalInstrument += flight.instrumentTimeValue
             totalSIM += flight.isSpInsOnly ? 0 : flight.simTimeValue
-            totalSpIns += flight.spInsTimeValue
+            let spVal = flight.spInsTimeValue
+            totalSpIns += spVal
+            if flight.isSpInsOnly {
+                totalSpInsSim += spVal
+            } else if spVal > 0 {
+                totalSpInsFlt += spVal
+            }
 
             if flight.isAIII {
                 aiiiSectors += 1
@@ -1624,6 +1642,8 @@ class FlightDatabaseService: ObservableObject {
             totalInstrumentTime: totalInstrument,
             totalSIMTime: totalSIM,
             totalSpInsTime: totalSpIns,
+            totalSpInsSimTime: totalSpInsSim,
+            totalSpInsFltTime: totalSpInsFlt,
             aiiiSectors: aiiiSectors,
             pfSectors: pfSectors
         )
@@ -2811,6 +2831,8 @@ struct FlightStatistics {
     let totalInstrumentTime: Double
     let totalSIMTime: Double
     let totalSpInsTime: Double
+    let totalSpInsSimTime: Double   // Sp/INS in simulator
+    let totalSpInsFltTime: Double   // Sp/INS in aircraft (aircraft instruction)
     let aiiiSectors: Int
     let pfSectors: Int
 
@@ -2824,6 +2846,8 @@ struct FlightStatistics {
         totalInstrumentTime: 0,
         totalSIMTime: 0,
         totalSpInsTime: 0,
+        totalSpInsSimTime: 0,
+        totalSpInsFltTime: 0,
         aiiiSectors: 0,
         pfSectors: 0
     )
@@ -2904,6 +2928,14 @@ struct FlightStatistics {
 
     func formattedSpInsTime(asHoursMinutes: Bool) -> String {
         return formatTime(totalSpInsTime, asHoursMinutes: asHoursMinutes)
+    }
+
+    func formattedSpInsSimTime(asHoursMinutes: Bool) -> String {
+        return formatTime(totalSpInsSimTime, asHoursMinutes: asHoursMinutes)
+    }
+
+    func formattedSpInsFltTime(asHoursMinutes: Bool) -> String {
+        return formatTime(totalSpInsFltTime, asHoursMinutes: asHoursMinutes)
     }
 
     var pfPercentage: Double {

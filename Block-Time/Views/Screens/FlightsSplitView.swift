@@ -915,8 +915,8 @@ private struct FlightsListContent: View {
                 return false
             }
 
-            // Sp/Ins filter
-            if filterViewModel.filterSpIns && !sector.isSpInsOnly {
+            // Sp/Ins filter (sim instruction OR aircraft instruction)
+            if filterViewModel.filterSpIns && !sector.isSpInsOnly && !sector.isAircraftInstruction {
                 return false
             }
 

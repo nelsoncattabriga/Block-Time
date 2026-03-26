@@ -392,7 +392,7 @@ private struct ModernDefaultCrewNamesCard: View {
 
                 ModernToggleRow(
                     title: "Log Instructor Time",
-                    subtitle: "Show INS in flight type selector",
+                    subtitle: "Log SIM & FLT Instructor Times",
                     isOn: Binding(
                         get: { viewModel.showSpInsSelector },
                         set: { viewModel.updateShowSpInsSelector($0) }

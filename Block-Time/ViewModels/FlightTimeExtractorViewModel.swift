@@ -1547,7 +1547,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         // Determine flight mode
         let simTimeValue = Double(sector.simTime) ?? 0.0
-        isSpIns = sector.isSpInsOnly
+        let isAircraftIns = sector.isAircraftInstruction
+        isSpIns = sector.isSpInsOnly || isAircraftIns
+        isInstructingInAircraft = isAircraftIns
         isSimulator = simTimeValue > 0.0 && !isSpIns
 
         // For future flights (imported rosters) with empty crew names,
