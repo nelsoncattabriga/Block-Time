@@ -1857,7 +1857,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                outTime != original.outTime ||
                inTime != original.inTime ||
                scheduledDeparture != original.scheduledDeparture ||
-               scheduledArrival != original.scheduledArrival
+               scheduledArrival != original.scheduledArrival ||
+               !timeValuesEqual(spInsTime, original.spInsTime)
     }
 
     var changesSummary: String {
@@ -1923,6 +1924,10 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         if nightTime != original.nightTime {
             changes.append("Night: \(original.nightTime) → \(nightTime)")
+        }
+
+        if (Double(spInsTime) ?? 0.0) != (Double(original.spInsTime) ?? 0.0) {
+            changes.append("INS: \(original.spInsTime) → \(spInsTime)")
         }
 
         if isPilotFlying != original.isPilotFlying {
