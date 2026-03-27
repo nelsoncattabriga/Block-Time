@@ -1123,27 +1123,29 @@ class FileImportService {
             return (0, 0, 0, 0)
         }
 
-        // Need valid data to calculate
+        // Need valid data to calculate day/night; fall back to 1 day T/O + 1 day landing if unavailable
+        let dayFallback = (dayTakeoffs: 1, dayLandings: 1, nightTakeoffs: 0, nightLandings: 0)
+
         guard !fromAirport.isEmpty, !toAirport.isEmpty,
               !outTime.isEmpty, !blockTime.isEmpty else {
-            return (0, 0, 0, 0)
+            return dayFallback
         }
 
         // Get airport coordinates
         let nightCalcService = NightCalcService()
         guard let fromCoords = nightCalcService.getAirportCoordinates(for: fromAirport),
               let toCoords = nightCalcService.getAirportCoordinates(for: toAirport) else {
-            return (0, 0, 0, 0)
+            return dayFallback
         }
 
         // Parse departure time
         guard let departureTime = nightCalcService.parseUTCTime(outTime) else {
-            return (0, 0, 0, 0)
+            return dayFallback
         }
 
         // Parse block time to calculate arrival time
         guard let blockTimeValue = Double(blockTime), blockTimeValue > 0 else {
-            return (0, 0, 0, 0)
+            return dayFallback
         }
 
         let arrivalTime = departureTime.addingTimeInterval(blockTimeValue * 3600)
