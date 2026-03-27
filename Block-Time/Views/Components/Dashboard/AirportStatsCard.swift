@@ -118,16 +118,16 @@ struct AirportStatsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            CardHeader(title: "Airport Stats", icon: "building.columns.fill", iconColor: .teal) {
-                airportPickerButton
-            }
+            CardHeader(title: "Airport Stats", icon: "building.columns.fill", iconColor: .teal)
 
             Spacer().frame(height: 14)
 
             if selectedICAO.isEmpty {
                 emptyState
             } else {
-                statsContent.opacity(contentOpacity)
+                statsContent
+                    .opacity(contentOpacity)
+                    .onTapGesture { showPicker = true }
             }
         }
         .padding(16)
@@ -147,41 +147,16 @@ struct AirportStatsCard: View {
         .onChange(of: selectedICAO) { loadStats() }
     }
 
-    // MARK: - Picker button
-
-    private var airportPickerButton: some View {
-        Button { showPicker = true } label: {
-            HStack(spacing: 5) {
-                Text(selectedICAO.isEmpty
-                     ? "Select…"
-                     : AirportCodeCache.shared.displayString(for: selectedICAO))
-                    .font(.system(.caption, design: .monospaced, weight: .bold))
-                    .foregroundStyle(selectedICAO.isEmpty ? Color.secondary : Color.teal)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.teal.opacity(0.1))
-                    .overlay(RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.teal.opacity(0.3), lineWidth: 1))
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: - Empty state
 
     private var emptyState: some View {
         ContentUnavailableView(
             "No Airport Selected",
             systemImage: "building.columns",
-            description: Text("Tap \"Select…\" above to choose an airport from your logbook")
+            description: Text("Tap here to choose an airport from your logbook")
         )
         .frame(height: 120)
+        .onTapGesture { showPicker = true }
     }
 
     // MARK: - Stats content
@@ -195,12 +170,15 @@ struct AirportStatsCard: View {
 
     private var heroBanner: some View {
         HStack(alignment: .center, spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 5) {
                 Text(stats.displayCode)
                     .font(.system(.title2, design: .monospaced, weight: .black))
                     .foregroundStyle(.teal)
                     .scaleEffect(stampScale, anchor: .leading)
                     .animation(.spring(response: 0.35, dampingFraction: 0.55), value: stampScale)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.teal.opacity(0.5))
             }
 
             Spacer()
