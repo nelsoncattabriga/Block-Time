@@ -1828,7 +1828,11 @@ class FRMSCalculationService {
             nightTime: nightTime,
             sectors: 1,  // Each FlightSector is 1 sector
             isInternational: isInternational,
-            hasActualINTime: !flightSector.outTime.isEmpty && !flightSector.inTime.isEmpty,
+            hasActualINTime: (!flightSector.outTime.isEmpty && !flightSector.inTime.isEmpty) ||
+                             // PAX/positioning flights with only STD/STA and a past date count as operated
+                             (flightSector.outTime.isEmpty && !flightSector.scheduledDeparture.isEmpty &&
+                              !flightSector.scheduledArrival.isEmpty &&
+                              (Self.cachedDateFormatter.date(from: flightSector.date) ?? Date()) < Date()),
             toAirport: flightSector.toAirport,
             homeBaseTimeZone: homeTimeZone
         )

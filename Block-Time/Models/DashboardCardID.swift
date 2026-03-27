@@ -14,6 +14,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case frmsFlightTime    // 2-ring flight time gauge (28d/365d)
     case frmsDutyTime      // 2-ring duty time gauge (7d/14d)
     case frmsRestWindow    // Rest window timeline (sign-off → earliest sign-on)
+    case frmsLimitsGauge   // Horizontal fuel-bar gauges for all 5 rolling limits
+    case frmsRollingLine   // Rolling-total line/area chart with projected dashed line
     case activityChart     // Monthly block hours bar chart
     case timeByType        // Time by Type distribution pie chart
     case pfRatioChart      // PF ratio trend line
@@ -51,6 +53,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .frmsFlightTime:    return "FRMS Flight Time"
         case .frmsDutyTime:      return "FRMS Duty Time"
         case .frmsRestWindow:    return "FRMS SH Rest"
+        case .frmsLimitsGauge:   return "FRMS Limits"
+        case .frmsRollingLine:   return "FRMS Rolling Line"
         case .activityChart:     return "Flying Activity"
         case .timeByType:        return "Time by Type"
         case .pfRatioChart:      return "PF Ratio"
@@ -86,6 +90,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .frmsFlightTime:    return "airplane.circle.fill"
         case .frmsDutyTime:      return "briefcase.fill"
         case .frmsRestWindow:    return "bed.double.fill"
+        case .frmsLimitsGauge:   return "gauge.with.needle.fill"
+        case .frmsRollingLine:   return "chart.line.uptrend.xyaxis"
         case .activityChart:     return "chart.bar.fill"
         case .timeByType:        return "chart.pie.fill"
         case .pfRatioChart:      return "chart.line.uptrend.xyaxis"
@@ -121,6 +127,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .frmsFlightTime:    return .orange
         case .frmsDutyTime:      return .teal
         case .frmsRestWindow:    return .orange
+        case .frmsLimitsGauge:   return .orange
+        case .frmsRollingLine:   return .blue
         case .activityChart:     return .blue
         case .timeByType:        return .purple
         case .pfRatioChart:      return .orange

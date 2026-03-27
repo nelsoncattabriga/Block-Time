@@ -113,6 +113,68 @@ struct NDCareerStats {
     }
 }
 
+// MARK: - FRMS Rolling Time Series
+
+/// One data point in a rolling FRMS time-series chart.
+struct NDFRMSRollingPoint: Identifiable {
+    let id = UUID()
+    let date: Date          // The day this rolling total is computed for
+    let total: Double       // Rolling total ending on this day (hours)
+    let isProjected: Bool   // true = future rostered flight, false = actual
+}
+
+/// A single FRMS limit expressed as a labelled time series.
+struct NDFRMSRollingSeries {
+    let limitLabel: String           // e.g. "28-Day Flight"
+    let limit: Double                // Hard cap (hours)
+    let warnAt: Double               // Warning threshold
+    let points: [NDFRMSRollingPoint] // Sorted ascending by date
+    let fleet: FRMSFleet
+    let chartStart: Date             // x-axis domain start (today - windowDays)
+    let chartEnd: Date               // x-axis domain end (today + windowDays, capped at last roster day)
+}
+
+/// All rolling series for the FRMS limits card charts.
+struct NDFRMSRollingData {
+    let flight28d:  NDFRMSRollingSeries
+    let flight365d: NDFRMSRollingSeries
+    let duty7d:     NDFRMSRollingSeries
+    let duty14d:    NDFRMSRollingSeries
+    let flight7d:   NDFRMSRollingSeries? // LH fleet only
+
+    static let empty: NDFRMSRollingData = {
+        let now = Date()
+        func emptySeries(_ label: String, limit: Double, warn: Double) -> NDFRMSRollingSeries {
+            NDFRMSRollingSeries(limitLabel: label, limit: limit, warnAt: warn, points: [],
+                                fleet: .a320B737, chartStart: now, chartEnd: now)
+        }
+        return NDFRMSRollingData(
+            flight28d:  emptySeries("28-Day Flight",  limit: 100,  warn: 90),
+            flight365d: emptySeries("365-Day Flight", limit: 1000, warn: 900),
+            duty7d:     emptySeries("7-Day Duty",     limit: 60,   warn: 54),
+            duty14d:    emptySeries("14-Day Duty",    limit: 90,   warn: 81),
+            flight7d:   nil
+        )
+    }()
+}
+
+struct NDProjectedFRMSData {
+    /// Peak rolling total for each limit across all future duty days.
+    /// e.g. flightHours28d = max over all future duty days D of:
+    ///      (actual block hours in [D-27, today]) + (projected block hours in [D-27, D])
+    /// This represents the highest your rolling total will reach if all rostered duties are flown.
+    let flightHours7d: Double
+    let flightHours28d: Double
+    let flightHours365d: Double
+    let dutyHours7d: Double
+    let dutyHours14d: Double
+
+    static let empty = NDProjectedFRMSData(
+        flightHours7d: 0, flightHours28d: 0, flightHours365d: 0,
+        dutyHours7d: 0, dutyHours14d: 0
+    )
+}
+
 struct NDFRMSStripData {
     let hours7d: Double
     let hours28d: Double
@@ -153,6 +215,8 @@ final class NewDashboardViewModel {
     var tlStats: NDTakeoffLandingStats = .empty
     var careerStats: NDCareerStats = .empty
     var frmsStrip: NDFRMSStripData = .empty
+    var projectedFRMS: NDProjectedFRMSData = .empty
+    var frmsRolling: NDFRMSRollingData = .empty
     var flightStatistics: FlightStatistics = .empty
     var isLoading = true
 
@@ -170,6 +234,8 @@ final class NewDashboardViewModel {
         tlStats          = data.tlStats
         careerStats      = data.careerStats
         frmsStrip        = data.frmsStrip
+        projectedFRMS    = data.projectedFRMS
+        frmsRolling      = data.frmsRolling
         flightStatistics = data.flightStatistics
         isLoading = false
     }
