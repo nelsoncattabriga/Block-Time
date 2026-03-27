@@ -12,32 +12,45 @@ import SwiftUI
 
 private struct AirportVisitStats {
     let icao: String
-    let iata: String?             // nil if unknown
-    let totalVisits: Int
+    let iata: String?
     let departures: Int
     let arrivals: Int
-    let topReg: (reg: String, count: Int)?  // single top registration
+    let firstDate: Date?
+    let lastDate: Date?
 
     static let empty = AirportVisitStats(
-        icao: "", iata: nil, totalVisits: 0, departures: 0, arrivals: 0, topReg: nil
+        icao: "", iata: nil, departures: 0, arrivals: 0, firstDate: nil, lastDate: nil
     )
 
-    /// Display string: "YPPH / PER" or just "YPPH"
+    /// visits = max(dep, arr) — handles asymmetric deadhead/positioning sectors
+    var totalVisits: Int { max(departures, arrivals) }
+
     var displayCode: String {
         if let iata { return "\(icao) / \(iata)" }
         return icao
     }
+
+    private static let monthYearFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM yyyy"
+        return f
+    }()
+
+    var dateRangeString: String? {
+        guard let first = firstDate, let last = lastDate else { return nil }
+        let from = Self.monthYearFormatter.string(from: first)
+        let to   = Self.monthYearFormatter.string(from: last)
+        return from == to ? from : "\(from) – \(to)"
+    }
 }
 
-// MARK: - ICAO → IATA lookup (loaded once, shared across instances)
+// MARK: - ICAO ↔ IATA cache (loaded once, process-wide)
 
 private final class AirportCodeCache {
     static let shared = AirportCodeCache()
     private init() {}
 
-    /// Maps ICAO → IATA (e.g. "YPPH" → "PER")
     private var icaoToIata: [String: String] = [:]
-    /// Maps IATA → ICAO (e.g. "PER" → "YPPH") for normalising logbook codes
     private var iataToIcao: [String: String] = [:]
     private var loaded = false
 
@@ -46,17 +59,14 @@ private final class AirportCodeCache {
         return icaoToIata[icao]
     }
 
-    /// Normalise any stored code to ICAO.
-    /// If the logbook stored an IATA code (e.g. "BNE"), returns the ICAO ("YBBN").
-    /// If already ICAO or unknown, returns the code unchanged.
+    /// Normalise a stored code to ICAO (converts 3-letter IATA → ICAO).
     func toICAO(_ code: String) -> String {
         if !loaded { load() }
-        // 3-letter codes are IATA; look up the ICAO equivalent
         if code.count == 3, let icao = iataToIcao[code] { return icao }
         return code
     }
 
-    /// Build a display string: "YPPH / PER" or just the raw code if unknown.
+    /// "YPPH / PER" or just the ICAO if no IATA known.
     func displayString(for icao: String) -> String {
         if !loaded { load() }
         if let iata = icaoToIata[icao] { return "\(icao) / \(iata)" }
@@ -67,14 +77,12 @@ private final class AirportCodeCache {
         loaded = true
         guard let url = Bundle.main.url(forResource: "airports.dat", withExtension: "txt"),
               let content = try? String(contentsOf: url, encoding: .utf8) else { return }
-
         for line in content.components(separatedBy: .newlines) where !line.isEmpty {
             let fields = parseCSV(line)
             guard fields.count >= 14 else { continue }
             let iata = fields[4].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
             let icao = fields[5].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-            guard !icao.isEmpty, icao != "\\N",
-                  !iata.isEmpty, iata != "\\N" else { continue }
+            guard !icao.isEmpty, icao != "\\N", !iata.isEmpty, iata != "\\N" else { continue }
             icaoToIata[icao] = iata
             iataToIcao[iata] = icao
         }
@@ -98,7 +106,8 @@ private final class AirportCodeCache {
 
 struct AirportStatsCard: View {
 
-    @State private var allAirports: [String] = []   // ICAO codes from logbook
+    @State private var allAirports: [String] = []          // normalised ICAO codes
+    @State private var visitCounts: [String: Int] = [:]    // ICAO → visit count (for picker sort)
     @AppStorage("airportStatsCard_selectedICAO") private var selectedICAO: String = ""
     @State private var stats: AirportVisitStats = .empty
     @State private var showPicker: Bool = false
@@ -118,16 +127,22 @@ struct AirportStatsCard: View {
             if selectedICAO.isEmpty {
                 emptyState
             } else {
-                statsContent
-                    .opacity(contentOpacity)
+                statsContent.opacity(contentOpacity)
             }
         }
         .padding(16)
         .appCardStyle()
-        .onAppear { buildAirportList() }
+        .onAppear {
+            buildAirportList()
+            loadStats()
+        }
         .sheet(isPresented: $showPicker) {
-            AirportStatsPickerSheet(airports: allAirports, selected: $selectedICAO)
-                .presentationDetents([.large])
+            AirportStatsPickerSheet(
+                airports: allAirports,
+                visitCounts: visitCounts,
+                selected: $selectedICAO
+            )
+            .presentationDetents([.large])
         }
         .onChange(of: selectedICAO) { loadStats() }
     }
@@ -173,86 +188,38 @@ struct AirportStatsCard: View {
 
     @ViewBuilder
     private var statsContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            heroBanner
-
-            if let topReg = stats.topReg {
-                Rectangle()
-                    .fill(Color.primary.opacity(0.07))
-                    .frame(height: 1)
-                topRegRow(topReg)
-            }
-        }
+        heroBanner
     }
 
     // MARK: - Hero banner
 
     private var heroBanner: some View {
         HStack(alignment: .center, spacing: 0) {
-
-            // ICAO / IATA stamp
             VStack(alignment: .leading, spacing: 2) {
                 Text(stats.displayCode)
                     .font(.system(.title2, design: .monospaced, weight: .black))
                     .foregroundStyle(.teal)
                     .scaleEffect(stampScale, anchor: .leading)
                     .animation(.spring(response: 0.35, dampingFraction: 0.55), value: stampScale)
-
-                Text("ICAO / IATA")
-                    .font(.system(.caption2, design: .monospaced, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .tracking(2)
             }
 
             Spacer()
 
-            // Visits + DEP / ARR
-            VStack(alignment: .trailing, spacing: 6) {
+            VStack(alignment: .trailing, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
                     Text("\(stats.totalVisits)")
                         .font(.system(.title, design: .rounded, weight: .bold))
                         .foregroundStyle(.primary)
                     Text("visits")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                HStack(spacing: 6) {
-                    statPill(label: "DEP", value: stats.departures, color: .blue)
-                    statPill(label: "ARR", value: stats.arrivals,   color: .green)
+                if let range = stats.dateRangeString {
+                    Text(range)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
-        }
-    }
-
-    private func statPill(label: String, value: Int, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                .foregroundStyle(color)
-            Text("\(value)")
-                .font(.system(.caption, design: .rounded, weight: .bold))
-                .foregroundStyle(.primary)
-        }
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .background(Capsule().fill(color.opacity(0.1)))
-    }
-
-    // MARK: - Top registration (single)
-
-    private func topRegRow(_ topReg: (reg: String, count: Int)) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "tag.fill")
-                .font(.caption2).foregroundStyle(.secondary)
-            Text("Top Aircraft")
-                .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
-            Spacer()
-            Text(topReg.reg)
-                .font(.system(.caption, design: .monospaced, weight: .bold))
-                .foregroundStyle(.teal)
-            Text("· \(topReg.count) sectors")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
         }
     }
 
@@ -261,13 +228,33 @@ struct AirportStatsCard: View {
     private func buildAirportList() {
         let cache = AirportCodeCache.shared
         let flights = FlightDatabaseService.shared.fetchAllFlights()
-        var seen = Set<String>()
+
+        // Count deps and arrs per normalised ICAO
+        var depCounts: [String: Int] = [:]
+        var arrCounts: [String: Int] = [:]
+
         for f in flights {
-            if !f.fromAirport.isEmpty { seen.insert(cache.toICAO(f.fromAirport)) }
-            if !f.toAirport.isEmpty   { seen.insert(cache.toICAO(f.toAirport))   }
+            if !f.fromAirport.isEmpty {
+                let icao = cache.toICAO(f.fromAirport)
+                depCounts[icao, default: 0] += 1
+            }
+            if !f.toAirport.isEmpty {
+                let icao = cache.toICAO(f.toAirport)
+                arrCounts[icao, default: 0] += 1
+            }
         }
-        allAirports = seen.sorted()
-        // If the persisted value is an IATA code, normalise it once
+
+        // visits = max(dep, arr) per airport
+        let allICAOs = Set(depCounts.keys).union(arrCounts.keys)
+        var counts: [String: Int] = [:]
+        for icao in allICAOs {
+            counts[icao] = max(depCounts[icao, default: 0], arrCounts[icao, default: 0])
+        }
+
+        visitCounts = counts
+        allAirports = allICAOs.sorted()
+
+        // Normalise any persisted IATA code
         if !selectedICAO.isEmpty {
             let normalised = cache.toICAO(selectedICAO)
             if normalised != selectedICAO { selectedICAO = normalised }
@@ -280,12 +267,15 @@ struct AirportStatsCard: View {
     private func loadStats() {
         guard !selectedICAO.isEmpty else { return }
         let apt = selectedICAO
-        // Also match the IATA equivalent in case some flights were stored that way
         let aptIATA = AirportCodeCache.shared.iata(for: apt)
         let flights = FlightDatabaseService.shared.fetchAllFlights()
 
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
+
         var deps = 0, arrs = 0
-        var regCounts: [String: Int] = [:]
+        var firstDate: Date? = nil
+        var lastDate: Date?  = nil
 
         for f in flights {
             let from = f.fromAirport
@@ -295,22 +285,19 @@ struct AirportStatsCard: View {
             guard isDep || isArr else { continue }
             if isDep { deps += 1 }
             if isArr { arrs += 1 }
-            let reg = f.aircraftReg
-            if !reg.isEmpty { regCounts[reg, default: 0] += 1 }
+            if let d = dateFormatter.date(from: f.date) {
+                if firstDate == nil || d < firstDate! { firstDate = d }
+                if lastDate  == nil || d > lastDate!  { lastDate  = d }
+            }
         }
-
-        let topReg = regCounts.sorted { $0.value > $1.value }.first
-            .map { (reg: $0.key, count: $0.value) }
-
-        let iata = AirportCodeCache.shared.iata(for: apt)
 
         let newStats = AirportVisitStats(
             icao: apt,
-            iata: iata,
-            totalVisits: deps + arrs,
+            iata: AirportCodeCache.shared.iata(for: apt),
             departures: deps,
             arrivals: arrs,
-            topReg: topReg
+            firstDate: firstDate,
+            lastDate: lastDate
         )
 
         stampScale = 0.8
@@ -324,16 +311,31 @@ struct AirportStatsCard: View {
 
 // MARK: - Picker sheet
 
+private enum AirportSortOrder: String {
+    case alpha    = "ABC"
+    case visits   = "123"
+}
+
 private struct AirportStatsPickerSheet: View {
-    let airports: [String]      // ICAO codes
+    let airports: [String]              // normalised ICAO codes
+    let visitCounts: [String: Int]      // ICAO → visit count
     @Binding var selected: String
     @Environment(\.dismiss) private var dismiss
+
     @State private var search: String = ""
+    @State private var sortOrder: AirportSortOrder = .alpha
+
+    private var sorted: [String] {
+        switch sortOrder {
+        case .alpha:  return airports.sorted()
+        case .visits: return airports.sorted { (visitCounts[$0] ?? 0) > (visitCounts[$1] ?? 0) }
+        }
+    }
 
     private var filtered: [String] {
-        guard !search.isEmpty else { return airports }
+        guard !search.isEmpty else { return sorted }
         let q = search.uppercased()
-        return airports.filter { icao in
+        return sorted.filter { icao in
             if icao.contains(q) { return true }
             if let iata = AirportCodeCache.shared.iata(for: icao) { return iata.contains(q) }
             return false
@@ -352,10 +354,16 @@ private struct AirportStatsPickerSheet: View {
                             .font(.system(.body, design: .monospaced, weight: .semibold))
                             .foregroundStyle(.primary)
                         Spacer()
+                        if sortOrder == .visits, let count = visitCounts[icao] {
+                            Text("\(count)")
+                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
                         if icao == selected {
                             Image(systemName: "checkmark")
                                 .foregroundStyle(.teal)
                                 .fontWeight(.semibold)
+                                .padding(.leading, 4)
                         }
                     }
                 }
@@ -364,6 +372,14 @@ private struct AirportStatsPickerSheet: View {
             .navigationTitle("Select Airport")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Picker("Sort", selection: $sortOrder) {
+                        Text("ABC").tag(AirportSortOrder.alpha)
+                        Text("123").tag(AirportSortOrder.visits)
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
