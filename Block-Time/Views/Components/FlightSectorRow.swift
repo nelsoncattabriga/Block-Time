@@ -225,28 +225,26 @@ struct FlightSectorRow: View, Equatable {
                         .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
 
                     // PAX / INS badge
-                    if !cachedIsFutureFlight {
-                        if isPositioning {
-                            Text("PAX")
-                                .font(.subheadline.monospaced())
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(Color.orange, lineWidth: 1)
-                                )
-                        } else if sector.isSpInsOnly || sector.isAircraftInstruction {
-                            Text("INS")
-                                .font(.subheadline.monospaced())
-                                .foregroundColor(.purple)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(Color.purple, lineWidth: 1)
-                                )
-                        }
+                    if isPositioning {
+                        Text("PAX")
+                            .font(.subheadline.monospaced())
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.orange, lineWidth: 1)
+                            )
+                    } else if sector.isSpInsOnly || sector.isAircraftInstruction {
+                        Text("INS")
+                            .font(.subheadline.monospaced())
+                            .foregroundColor(.purple)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.purple, lineWidth: 1)
+                            )
                     }
 
                     Spacer()
