@@ -16,7 +16,7 @@ private enum ApproachPeriod: String, CaseIterable {
 
 struct ApproachTypesCard: View {
     @AppStorage("logApproaches") private var logApproaches = true
-    @State private var period: ApproachPeriod = .oneMonth
+    @AppStorage("approachTypesCard_period") private var period: ApproachPeriod = .oneMonth
     @State private var data: [NDApproachTypeStat] = []
 
     private var maxCount: Double { Double(data.map { $0.count }.max() ?? 1) }

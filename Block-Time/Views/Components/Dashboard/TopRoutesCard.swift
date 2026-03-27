@@ -14,7 +14,7 @@ private enum RoutesPeriod: String, CaseIterable {
 }
 
 struct TopRoutesCard: View {
-    @State private var period: RoutesPeriod = .oneMonth
+    @AppStorage("topRoutesCard_period") private var period: RoutesPeriod = .oneMonth
     @State private var routes: [NDRouteFrequency] = []
 
     private var maxSectors: Double { Double(routes.map { $0.sectors }.max() ?? 1) }

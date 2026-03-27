@@ -14,7 +14,7 @@ private enum TLPeriod: String, CaseIterable {
 }
 
 struct TakeoffLandingCard: View {
-    @State private var period: TLPeriod = .oneMonth
+    @AppStorage("takeoffLandingCard_period") private var period: TLPeriod = .oneMonth
     @State private var stats: NDTakeoffLandingStats = .empty
 
     var body: some View {

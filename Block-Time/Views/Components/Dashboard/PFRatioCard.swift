@@ -11,7 +11,7 @@ import Charts
 struct PFRatioCard: View {
     let data: [NDMonthlyPFRatio]
 
-    @State private var selectedMonths = 12
+    @AppStorage("pfRatioCard_selectedMonths") private var selectedMonths = 12
 
     private var filtered: [NDMonthlyPFRatio] {
         guard selectedMonths > 0 else { return data }

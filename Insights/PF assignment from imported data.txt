@@ -1,0 +1,23 @@
+ PF Determination                                                                                                                                       
+                                                                                                                                                         
+  When the import data doesn't explicitly include a "Pilot Flying" field (or it's false/missing):                                                        
+                                                                                                                                                         
+  1. Explicit field — reads "Pilot Flying" boolean from the mapped column if present                                                                     
+  2. Instrument time inference — if Pilot Flying is false/absent but Instrument Time > 0, it assumes PF = true                                           
+                                                                                                                                                         
+  So if your source data has instrument time but no PF column, it'll be inferred as pilot flying.                                                        
+                                                                                                                                                         
+  Takeoffs & Landings Assignment                                                                                                                         
+                                                                                                                                                         
+  Three-tier priority (FileImportService.swift ~line 1095):                                                                                              
+   
+  1. Imported values win — if the file has any non-zero Day/Night Takeoffs/Landings columns, those are used as-is                                        
+  2. Non-PF = zero — if PF is false, all takeoffs/landings are set to 0
+  3. Calculated from airports + time — if PF is true and no explicit values were imported:                                                               
+    - Looks up coordinates for departure and arrival airports                                                                                            
+    - Calculates arrival time = OUT time + block time                                                                                                    
+    - Uses NightCalcService (solar position) to determine if departure/arrival are day or night                                                          
+    - Assigns 1 day or 1 night takeoff at departure, 1 day or 1 night landing at arrival                                                                 
+                                                                                                                                                         
+  So for the common case (no explicit T/O-LDG data, no PF column), a flight will get 1 takeoff + 1 landing only if it has instrument time > 0 (PF        
+  inferred), and the day/night split is computed astronomically from the airport + time.                

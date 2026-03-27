@@ -25,7 +25,7 @@ private func fleetColor(at index: Int) -> Color {
 struct TimeByTypeCard: View {
     let data: [NDFleetHours]
 
-    @State private var displayMode: FleetDisplayMode = .hours
+    @AppStorage("timeByTypeCard_displayMode") private var displayMode: FleetDisplayMode = .hours
 
     // Sort by active mode, then collapse tail beyond top-5 into "Other"
     private var chartData: [NDFleetHours] {

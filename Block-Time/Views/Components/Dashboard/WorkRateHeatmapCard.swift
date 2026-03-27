@@ -24,7 +24,7 @@ struct WorkRateHeatmapCard: View {
     let monthlyActivity: [NDMonthlyActivity]
     let dailyActivity: [NDDailyActivity]
 
-    @State private var period: HeatmapPeriod = .oneMonth
+    @AppStorage("workRateCard_period") private var period: HeatmapPeriod = .oneMonth
 
     private let accentColor       = Color.orange
     private let spacing: CGFloat  = 3

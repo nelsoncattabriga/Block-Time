@@ -22,8 +22,8 @@ private struct ChartBar: Identifiable {
 struct FlyingActivityChartCard: View {
     let data: [NDMonthlyActivity]
 
-    @State private var selectedMonths = 12
-    @State private var displayMode: DisplayMode = .hours
+    @AppStorage("flyingActivityCard_selectedMonths") private var selectedMonths = 12
+    @AppStorage("flyingActivityCard_displayMode") private var displayMode: DisplayMode = .hours
 
     private var filtered: [NDMonthlyActivity] {
         guard selectedMonths > 0 else { return data }

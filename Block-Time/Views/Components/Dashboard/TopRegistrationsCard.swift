@@ -19,8 +19,8 @@ private enum RegDisplayMode: String, CaseIterable {
 }
 
 struct TopRegistrationsCard: View {
-    @State private var period: RegPeriod = .oneMonth
-    @State private var displayMode: RegDisplayMode = .hours
+    @AppStorage("topRegistrationsCard_period") private var period: RegPeriod = .oneMonth
+    @AppStorage("topRegistrationsCard_displayMode") private var displayMode: RegDisplayMode = .hours
     @State private var registrations: [NDRegistrationHours] = []
 
     private var maxValue: Double {
