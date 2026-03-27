@@ -1620,8 +1620,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
 
-        // Load Sp/Ins time — clear sentinel "-1" (future INS marker, type already set via isSpIns above)
-        spInsTime = sector.isFutureInstruction ? "" : sector.spInsTime
+        // Load Sp/Ins time
+        spInsTime = sector.spInsTime
 
         if let nightValue = Double(sector.nightTime) {
             nightTime = String(format: "%.2f", nightValue)
@@ -1750,16 +1750,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // For sim Sp/Ins: simTime must equal spInsTime so isSpInsOnly is true (simTime==spInsTime>0)
         let simTimeValue = isSimulator ? blockTime : (isSimInstruction ? spInsTime : "0.0")
         // For aircraft instruction: store blockTime in spInsTime so it can be identified and badged
-        // For future INS (no times yet): store sentinel "-1" so the INS type survives the round-trip
-        let isFutureIns = isSpIns && (Double(blockTime) ?? 0) == 0 && (Double(simTimeValue) ?? 0) == 0
-        let spInsTimeValue: String
-        if isFutureIns {
-            spInsTimeValue = "-1"
-        } else if isSpIns && isInstructingInAircraft {
-            spInsTimeValue = blockTime
-        } else {
-            spInsTimeValue = spInsTime
-        }
+        let spInsTimeValue = isSpIns && isInstructingInAircraft ? blockTime : spInsTime
 
 //        print("DEBUG: Saving flight with approach - AIII: \(isAIII), RNP: \(isRNP), ILS: \(isILS), GLS: \(isGLS), NPA: \(isNPA)")
 

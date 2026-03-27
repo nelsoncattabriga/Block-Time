@@ -235,7 +235,7 @@ struct FlightSectorRow: View, Equatable {
                                 RoundedRectangle(cornerRadius: 4)
                                     .stroke(Color.orange, lineWidth: 1)
                             )
-                    } else if sector.isSpInsOnly || sector.isAircraftInstruction {
+                    } else if !cachedIsFutureFlight && (sector.isSpInsOnly || sector.isAircraftInstruction) {
                         Text("INS")
                             .font(.subheadline.monospaced())
                             .foregroundColor(.purple)

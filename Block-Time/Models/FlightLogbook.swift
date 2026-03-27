@@ -206,16 +206,10 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return safeDoubleValue(spInsTime)
     }
 
-    /// True when this entry is a future (unflown) INS flight — sentinel value "-1" in spInsTime.
-    var isFutureInstruction: Bool {
-        spInsTime.trimmingCharacters(in: .whitespacesAndNewlines) == "-1"
-    }
-
     /// True when this entry is a pure Sp/Ins (instructor) session:
     /// spInsTime is set AND simTime equals spInsTime (pilot ran the sim but didn't fly it).
     /// In this case neither simTime nor spInsTime counts toward flight totals.
     var isSpInsOnly: Bool {
-        if isFutureInstruction { return true }
         let spVal = spInsTimeValue
         guard spVal > 0 else { return false }
         return abs(simTimeValue - spVal) < 0.01
