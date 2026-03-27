@@ -808,9 +808,14 @@ struct FlightsView: View {
                 return false
             }
 
-            // No Block Time filter
-            if filterViewModel.filterNoBlockTime && sector.blockTimeValue != 0.0 {
-                return false
+            // No Block Time filter (exclude PAX and SIM flights — they legitimately have no block time)
+            if filterViewModel.filterNoBlockTime {
+                if sector.isPositioning || sector.simTimeValue > 0 {
+                    return false
+                }
+                if sector.blockTimeValue != 0.0 {
+                    return false
+                }
             }
 
             // No Crew Names filter
