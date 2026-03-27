@@ -43,7 +43,7 @@ struct DashboardCardView: View {
         switch id {
         case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .activityChart, .timeByType,
              .pfRatioChart, .takeoffLanding, .approachTypes, .topRoutes,
-             .topRegistrations, .workRateHeatmap, .careerMilestones:
+             .topRegistrations, .airportStats, .workRateHeatmap, .careerMilestones:
             return true
         default:
             return false
@@ -75,6 +75,8 @@ struct DashboardCardView: View {
             TopRoutesCard()
         case .topRegistrations:
             TopRegistrationsCard()
+        case .airportStats:
+            AirportStatsCard()
         case .workRateHeatmap:
             WorkRateHeatmapCard(monthlyActivity: viewModel.monthlyActivity, dailyActivity: viewModel.dailyActivity)
         case .careerMilestones:

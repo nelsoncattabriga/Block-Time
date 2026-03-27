@@ -21,6 +21,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case approachTypes     // Approach type breakdown
     case topRoutes         // Most-flown route pairs
     case topRegistrations  // Most-flown registrations
+    case airportStats      // Airport visit breakdown (visits, dep/arr, top reg)
     case workRateHeatmap      // Work Rate calendar heatmap
     case careerMilestones  // Career overview & milestone progress
 
@@ -57,6 +58,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .approachTypes:     return "Approach Types"
         case .topRoutes:         return "Top Routes"
         case .topRegistrations:  return "Top Registrations"
+        case .airportStats:      return "Airport Stats"
         case .workRateHeatmap:   return "Work Rate"
         case .careerMilestones:  return "Career Overview"
         case .totalTime:         return "Total Time"
@@ -91,6 +93,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .approachTypes:     return "airplane.arrival"
         case .topRoutes:         return "map.fill"
         case .topRegistrations:  return "tag.fill"
+        case .airportStats:      return "building.columns.fill"
         case .workRateHeatmap:      return "chart.bar.xaxis"
         case .careerMilestones:  return "trophy.fill"
         case .totalTime:         return "clock.fill"
@@ -125,6 +128,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .approachTypes:     return .indigo
         case .topRoutes:         return .red
         case .topRegistrations:  return .cyan
+        case .airportStats:      return .teal
         case .workRateHeatmap:      return .indigo
         case .careerMilestones:  return .yellow
         case .totalTime:         return .blue
