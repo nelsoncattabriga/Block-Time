@@ -13,13 +13,14 @@ import SwiftUI
 private struct AirportVisitStats {
     let icao: String
     let iata: String?
+    let city: String?
     let departures: Int
     let arrivals: Int
     let firstDate: Date?
     let lastDate: Date?
 
     static let empty = AirportVisitStats(
-        icao: "", iata: nil, departures: 0, arrivals: 0, firstDate: nil, lastDate: nil
+        icao: "", iata: nil, city: nil, departures: 0, arrivals: 0, firstDate: nil, lastDate: nil
     )
 
     /// visits = max(dep, arr) — handles asymmetric deadhead/positioning sectors
@@ -52,11 +53,17 @@ private final class AirportCodeCache {
 
     private var icaoToIata: [String: String] = [:]
     private var iataToIcao: [String: String] = [:]
+    private var icaoToCity: [String: String] = [:]
     private var loaded = false
 
     func iata(for icao: String) -> String? {
         if !loaded { load() }
         return icaoToIata[icao]
+    }
+
+    func city(for icao: String) -> String? {
+        if !loaded { load() }
+        return icaoToCity[icao]
     }
 
     /// Normalise a stored code to ICAO (converts 3-letter IATA → ICAO).
@@ -82,9 +89,13 @@ private final class AirportCodeCache {
             guard fields.count >= 14 else { continue }
             let iata = fields[4].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
             let icao = fields[5].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-            guard !icao.isEmpty, icao != "\\N", !iata.isEmpty, iata != "\\N" else { continue }
-            icaoToIata[icao] = iata
-            iataToIcao[iata] = icao
+            let city = fields[2].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+            guard !icao.isEmpty, icao != "\\N" else { continue }
+            if !iata.isEmpty, iata != "\\N" {
+                icaoToIata[icao] = iata
+                iataToIcao[iata] = icao
+            }
+            if !city.isEmpty { icaoToCity[icao] = city }
         }
     }
 
@@ -170,15 +181,22 @@ struct AirportStatsCard: View {
 
     private var heroBanner: some View {
         HStack(alignment: .center, spacing: 0) {
-            HStack(spacing: 5) {
-                Text(stats.displayCode)
-                    .font(.system(.title2, design: .monospaced, weight: .black))
-                    .foregroundStyle(.teal)
-                    .scaleEffect(stampScale, anchor: .leading)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.55), value: stampScale)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.teal.opacity(0.5))
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Text(stats.displayCode)
+                        .font(.system(.title2, design: .monospaced, weight: .black))
+                        .foregroundStyle(.teal)
+                        .scaleEffect(stampScale, anchor: .leading)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.55), value: stampScale)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.teal.opacity(0.5))
+                }
+                if let city = stats.city {
+                    Text(city)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
@@ -269,9 +287,11 @@ struct AirportStatsCard: View {
             }
         }
 
+        let cache = AirportCodeCache.shared
         let newStats = AirportVisitStats(
             icao: apt,
-            iata: AirportCodeCache.shared.iata(for: apt),
+            iata: cache.iata(for: apt),
+            city: cache.city(for: apt),
             departures: deps,
             arrivals: arrs,
             firstDate: firstDate,
