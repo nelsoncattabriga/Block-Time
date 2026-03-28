@@ -66,6 +66,14 @@ struct AddFlightView: View {
             } message: {
                 Text(viewModel.errorMessage)
             }
+            .alert("Capture Not Complete", isPresented: $viewModel.showingCaptureError) {
+                Button("Try Again") {
+                    viewModel.showingCamera = true
+                }
+                Button("Enter Manually", role: .cancel) { }
+            } message: {
+                Text(viewModel.captureErrorMessage)
+            }
             .sheet(isPresented: $viewModel.showingSegmentSelection) {
                 FlightSegmentSelectionSheet(
                     flightSegments: viewModel.flightSegments,

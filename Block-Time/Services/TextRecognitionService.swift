@@ -241,13 +241,20 @@ class TextRecognitionService: ObservableObject {
 
         // Fall back to standard pattern-based extraction
                 LogManager.shared.debug("✓ Using standard pattern-based extraction")
-        let outTime = extractOutTime(from: recognizedText)
-        let inTime = extractInTime(from: recognizedText)
-        let offTime = extractOffTime(from: recognizedText)
-        let onTime = extractOnTime(from: recognizedText)
+        let rawOutTime = extractOutTime(from: recognizedText)
+        let rawInTime = extractInTime(from: recognizedText)
+        let rawOffTime = extractOffTime(from: recognizedText)
+        let rawOnTime = extractOnTime(from: recognizedText)
         let blockTime = extractBlockTime(from: recognizedText)
         let fltTime = extractFlightTime(from: recognizedText)
         let flightDetails = extractFlightDetails(from: recognizedText)
+
+        // If the time sequence is invalid, try correcting a leading '8' → '0' OCR error on any
+        // time field before accepting a midnight crossing or flagging a violation.
+        // e.g. OUT=08:44 should be 00:44 when OFF=01:02, ON=05:59, IN=06:02
+        let (outTime, offTime, onTime, inTime) = correctLeadingEightIfNeeded(
+            out: rawOutTime, off: rawOffTime, on: rawOnTime, in: rawInTime
+        )
 
         // Validate time sequence (OUT < OFF < ON < IN) and cross-check with FLT/BLK
         validateAndCorrectTimeSequence(out: outTime, off: offTime, on: onTime, in: inTime, fltTime: fltTime, blkTime: blockTime)
@@ -278,7 +285,7 @@ class TextRecognitionService: ObservableObject {
         // If we have missing critical fields, throw error but it will be caught with partial data
         if !missingFields.isEmpty {
                     LogManager.shared.debug("Partial extraction - missing: \(missingFields.joined(separator: ", "))")
-            throw PartialExtractionError(message: "Could not extract: \(missingFields.joined(separator: ", ")). Please verify and fill in missing fields.", partialData: flightData)
+            throw PartialExtractionError(message: "Missing: \(missingFields.joined(separator: ", "))", partialData: flightData)
         }
 
         return flightData
@@ -617,14 +624,17 @@ class TextRecognitionService: ObservableObject {
         guard !missingFields.isEmpty else { return }
         LogManager.shared.debug("Partial extraction — missing: \(missingFields.joined(separator: ", "))")
         throw PartialExtractionError(
-            message: "Could not extract: \(missingFields.joined(separator: ", ")). Please verify and fill in missing fields.",
+            message: "Missing: \(missingFields.joined(separator: ", "))",
             partialData: partialData
         )
     }
 
     private func extractTimeWithPatterns(_ patterns: [NSRegularExpression], from text: String, timeType: String) -> String {
-        // Footer keywords that indicate non-flight times (like print timestamps)
-        let footerKeywords = ["<RETURN", "<PRINT", "SENSORS", "MENU", "EXEC", "INIT", "REF", "FIX", "PREV", "PAGE"]
+        // Footer keywords that indicate non-flight times (like print timestamps).
+        // Also checked inside the full match span, so "HF IN\n<RETURN 06:05" is rejected
+        // even though <RETURN appears after the label rather than before the captured time.
+        let footerKeywords = ["<RETURN", "<PRINT", "SENSORS", "MENU", "EXEC", "INIT", "REF", "FIX", "PREV", "PAGE",
+                              "HF IN", "HF\nIN"]
 
         for (index, pattern) in patterns.enumerated() {
             let matches = pattern.matches(in: text, range: NSRange(text.startIndex..., in: text))
@@ -662,16 +672,18 @@ class TextRecognitionService: ObservableObject {
                     continue
                 }
 
-                // Check if time appears AFTER footer keywords (not before)
-                // Only skip times that are part of the footer section
+                // Reject matches whose full span (label + time) or 30-char prefix contains a
+                // footer keyword. This catches both "HF IN\n<RETURN 06:05" (keyword inside span)
+                // and times that appear after a footer line (keyword before span).
                 if let matchRange = Range(match.range, in: text) {
-                    // Check 30 chars BEFORE the time for footer keywords
+                    let fullMatchText = String(text[matchRange])
+
                     let contextStart = text.index(matchRange.lowerBound, offsetBy: -30, limitedBy: text.startIndex) ?? text.startIndex
                     let beforeContext = String(text[contextStart..<matchRange.lowerBound])
 
-                    // If a footer keyword appears before this time, skip it
-                    if footerKeywords.contains(where: { beforeContext.contains($0) }) {
-                                LogManager.shared.debug("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - appears after footer keyword")
+                    let combined = beforeContext + fullMatchText
+                    if footerKeywords.contains(where: { combined.contains($0) }) {
+                        LogManager.shared.debug("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - footer keyword in match context")
                         continue  // Try next match
                     }
                 }
@@ -754,6 +766,43 @@ class TextRecognitionService: ObservableObject {
         return correctedTime
     }
     
+    /// If the four extracted times don't form a valid sequence, try replacing a leading '8'
+    /// with '0' on each field in priority order (OUT first, then IN, OFF, ON) and return
+    /// the first combination that produces a valid sequence without a midnight crossing.
+    /// Returns the originals unchanged if no single-field correction helps.
+    private func correctLeadingEightIfNeeded(
+        out: String, off: String, on: String, in inTime: String
+    ) -> (String, String, String, String) {
+        // Already valid — nothing to do
+        if isValidTimeSequence(out: out, off: off, on: on, in: inTime) {
+            return (out, off, on, inTime)
+        }
+
+        func fix8(_ t: String) -> String? {
+            guard t.hasPrefix("8") else { return nil }
+            let candidate = "0" + t.dropFirst()
+            return isValidTimeFormat(candidate) ? candidate : nil
+        }
+
+        // Try correcting each field individually, prioritise OUT then IN
+        for (fixedOut, fixedOff, fixedOn, fixedIn) in [
+            (fix8(out) ?? out, off,           on,           inTime),
+            (out,              off,           on,           fix8(inTime) ?? inTime),
+            (out,              fix8(off) ?? off, on,        inTime),
+            (out,              off,           fix8(on) ?? on, inTime),
+        ] {
+            if isValidTimeSequence(out: fixedOut, off: fixedOff, on: fixedOn, in: fixedIn) {
+                if fixedOut != out   { LogManager.shared.debug("🔧 Corrected OUT '8'→'0': \(out) → \(fixedOut)") }
+                if fixedOff != off   { LogManager.shared.debug("🔧 Corrected OFF '8'→'0': \(off) → \(fixedOff)") }
+                if fixedOn != on     { LogManager.shared.debug("🔧 Corrected ON '8'→'0': \(on) → \(fixedOn)") }
+                if fixedIn != inTime { LogManager.shared.debug("🔧 Corrected IN '8'→'0': \(inTime) → \(fixedIn)") }
+                return (fixedOut, fixedOff, fixedOn, fixedIn)
+            }
+        }
+
+        return (out, off, on, inTime)
+    }
+
     private func findHourForMinutes(_ minutes: String, in text: String) -> String? {
         let hourPattern = try! NSRegularExpression(pattern: "(\\d{2})\\s*[:\\-;\\.]?\\s*\(minutes)")
         let hourMatches = hourPattern.matches(in: text, range: NSRange(text.startIndex..., in: text))

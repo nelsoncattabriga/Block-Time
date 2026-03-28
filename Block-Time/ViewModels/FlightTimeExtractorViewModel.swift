@@ -70,6 +70,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var showingCamera = false
     @Published var showingError = false
     @Published var errorMessage = ""
+    @Published var showingCaptureError = false
+    @Published var captureErrorMessage = ""
     @Published var statusMessage = ""
     @Published var statusColor: Color = .primary
 
@@ -1166,25 +1168,22 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 }
 
             } catch let error as PartialExtractionError {
-                // Handle partial extraction - populate what we have and show warning
+                // Handle partial extraction - populate what we have and show capture-retry alert
                 await MainActor.run {
                     self.updateFieldsWithFlightData(error.partialData)
                     self.isExtracting = false
-                    // Reset image state to allow retry
                     self.selectedImage = nil
                     self.selectedPhotoItem = nil
                     self.statusMessage = "Partial extraction"
                     self.statusColor = .orange
-                    // Show warning with specific missing fields
-                    self.showError(error.localizedDescription)
+                    self.showCaptureError(error.localizedDescription)
                 }
             } catch {
                 await MainActor.run {
                     self.isExtracting = false
-                    // Reset image state on failure to allow fresh retry
                     self.selectedImage = nil
                     self.selectedPhotoItem = nil
-                    self.showError(error.localizedDescription)
+                    self.showCaptureError(error.localizedDescription)
                 }
             }
         }
@@ -2492,6 +2491,14 @@ class FlightTimeExtractorViewModel: ObservableObject {
         showingError = true
         statusMessage = "Error: \(message)"
         statusColor = .red
+    }
+
+    private func showCaptureError(_ message: String) {
+        HapticManager.shared.notification(.error)
+        captureErrorMessage = message
+        showingCaptureError = true
+        statusMessage = "Capture incomplete"
+        statusColor = .orange
     }
     
     /// Convert a string in HH:mm to decimal hours string (e.g., "01:30" -> "1.5"). Returns input if parsing fails.
