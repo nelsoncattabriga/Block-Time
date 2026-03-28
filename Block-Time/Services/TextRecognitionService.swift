@@ -149,11 +149,17 @@ class TextRecognitionService: ObservableObject {
 
                 guard let results = request.results as? [VNRecognizedTextObservation] else {
                     LogManager.shared.warning("No text observations found in image")
-                    continuation.resume(throwing: TextRecognitionError(message: "No text found in image"))
+                    continuation.resume(throwing: TextRecognitionError(message: "No text found in image. Make sure you're photographing the ACARS screen."))
                     return
                 }
 
                 LogManager.shared.debug("Found \(results.count) text observations in image")
+
+                guard results.count >= 5 else {
+                    LogManager.shared.warning("Too few text observations (\(results.count)) — image is probably not an ACARS screen")
+                    continuation.resume(throwing: TextRecognitionError(message: "Make sure you're photographing the ACARS screen directly."))
+                    return
+                }
 
                 do {
                     let flightData: FlightData
@@ -1381,6 +1387,9 @@ class TextRecognitionService: ObservableObject {
 
     /// Process B787 ACARS text recognition results
     private func processB787TextRecognitionResults(_ results: [VNRecognizedTextObservation]) throws -> FlightData {
+        guard results.count >= 5 else {
+            throw TextRecognitionError(message: "Make sure you're photographing the ACARS screen directly.")
+        }
         // Combine all recognized text
         var recognizedText = ""
         for observation in results {
@@ -1553,6 +1562,9 @@ class TextRecognitionService: ObservableObject {
     // MARK: - A330 Parser
 
     private func processA330TextRecognitionResults(_ results: [VNRecognizedTextObservation]) throws -> FlightData {
+        guard results.count >= 5 else {
+            throw TextRecognitionError(message: "Make sure you're photographing the ACARS screen directly.")
+        }
         let recognizedText = results.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
         LogManager.shared.debug("A330 Recognized text: \(recognizedText)")
 
