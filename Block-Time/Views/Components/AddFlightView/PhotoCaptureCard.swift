@@ -132,7 +132,6 @@ struct ModernButtonContent: View {
 struct ModernActionButton: View {
     let title: String
     var subtitle: String?
-    var requirementDots: FlightTimeExtractorViewModel.SaveRequirements? = nil
     let icon: String
     let color: Color
     let isEnabled: Bool
@@ -151,9 +150,7 @@ struct ModernActionButton: View {
                         .fontWeight(.semibold)
                         .foregroundColor(isEnabled ? .white : .gray)
 
-                    if let dots = requirementDots {
-                        RequirementDotsView(requirements: dots)
-                    } else if let sub = subtitle {
+                    if let sub = subtitle {
                         Text(sub)
                             .font(.caption)
                             .foregroundColor(isEnabled ? .white.opacity(0.8) : .gray)
@@ -168,33 +165,5 @@ struct ModernActionButton: View {
         }
         .disabled(!isEnabled)
         .buttonStyle(PlainButtonStyle())
-    }
-}
-
-private struct RequirementDotsView: View {
-    let requirements: FlightTimeExtractorViewModel.SaveRequirements
-
-    private func dot(filled: Bool, label: String) -> some View {
-        HStack(spacing: 3) {
-            Circle()
-                .fill(filled ? Color.green.opacity(0.85) : Color.red.opacity(0.85))
-                .frame(width: 7, height: 7)
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.primary)
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            dot(filled: requirements.date, label: "Date")
-            if requirements.needsAirports {
-                dot(filled: requirements.airports, label: "Airports")
-                dot(filled: requirements.times, label: "Times")
-            }
-            if requirements.needsBlockOrInsTime {
-                dot(filled: requirements.blockOrInsTime, label: requirements.blockOrInsTimeLabel)
-            }
-        }
     }
 }

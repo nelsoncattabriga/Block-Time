@@ -853,6 +853,57 @@ class FlightDatabaseService: ObservableObject {
         return success
     }
     
+    /// Duplicate multiple flights, assigning each a new UUID and today's createdAt
+    @discardableResult
+    func duplicateFlights(_ sectors: [FlightSector]) -> Int {
+        var savedCount = 0
+        for sector in sectors {
+            var copy = sector
+            copy = FlightSector(
+                id: UUID(),
+                date: sector.date,
+                flightNumber: sector.flightNumber,
+                aircraftReg: sector.aircraftReg,
+                aircraftType: sector.aircraftType,
+                fromAirport: sector.fromAirport,
+                toAirport: sector.toAirport,
+                captainName: sector.captainName,
+                foName: sector.foName,
+                so1Name: sector.so1Name,
+                so2Name: sector.so2Name,
+                blockTime: sector.blockTime,
+                nightTime: sector.nightTime,
+                p1Time: sector.p1Time,
+                p1usTime: sector.p1usTime,
+                p2Time: sector.p2Time,
+                instrumentTime: sector.instrumentTime,
+                simTime: sector.simTime,
+                spInsTime: sector.spInsTime,
+                isPilotFlying: sector.isPilotFlying,
+                isPositioning: sector.isPositioning,
+                isAIII: sector.isAIII,
+                isRNP: sector.isRNP,
+                isILS: sector.isILS,
+                isGLS: sector.isGLS,
+                isNPA: sector.isNPA,
+                remarks: sector.remarks,
+                dayTakeoffs: sector.dayTakeoffs,
+                dayLandings: sector.dayLandings,
+                nightTakeoffs: sector.nightTakeoffs,
+                nightLandings: sector.nightLandings,
+                outTime: sector.outTime,
+                inTime: sector.inTime,
+                scheduledDeparture: sector.scheduledDeparture,
+                scheduledArrival: sector.scheduledArrival
+            )
+            if saveFlight(copy) { savedCount += 1 }
+        }
+        if savedCount > 0 {
+            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+        }
+        return savedCount
+    }
+
     /// Delete all flight entries from the database
     func clearAllFlights() -> Bool {
         var success = false

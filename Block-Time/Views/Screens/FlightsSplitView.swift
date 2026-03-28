@@ -161,6 +161,7 @@ private struct FlightsListContent: View {
     @State private var showingDeleteAlert = false
     @State private var selectedFlightsForDeletion: Set<UUID> = []
     @State private var showingBulkDeleteAlert = false
+    @State private var showingBulkDuplicateAlert = false
     @State private var showingBulkEditSheet = false
     @State private var summaryToEdit: FlightSector?
     @State private var sessionFilterIDs: Set<UUID> = []
@@ -183,6 +184,11 @@ private struct FlightsListContent: View {
     // Device-dependent corner radius for action buttons
     private var actionButtonCornerRadius: CGFloat {
         UIDevice.current.userInterfaceIdiom == .pad ? 10 : 25
+    }
+
+    private var bulkDuplicateAlertTitle: String {
+        let n = selectedFlightsForDeletion.count
+        return "Duplicate \(n) \(n == 1 ? "Entry" : "Entries")?"
     }
 
     // Device-dependent vertical padding for action buttons
@@ -286,44 +292,60 @@ private struct FlightsListContent: View {
     @ViewBuilder
     private var selectModeOverlay: some View {
         if isSelectMode {
-            HStack(spacing: 12) {
-                Button(action: {
+            let isEmpty = selectedFlightsForDeletion.isEmpty
+            HStack(spacing: 0) {
+                // Edit
+                Button {
                     HapticManager.shared.impact(.medium)
                     showingBulkEditSheet = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "pencil").font(.body)
-                        Text("Edit \(selectedFlightsForDeletion.count)").font(.headline)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, actionButtonVerticalPadding)
-                    .background(selectedFlightsForDeletion.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
-                    .cornerRadius(actionButtonCornerRadius)
-                    .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                } label: {
+                    Text("Edit")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(isEmpty ? Color.primary.opacity(0.3) : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                 }
-                .disabled(selectedFlightsForDeletion.isEmpty)
+                .disabled(isEmpty)
 
-                Button(action: {
+                Divider()
+                    .frame(height: 20)
+
+                // Duplicate
+                Button {
+                    HapticManager.shared.impact(.medium)
+                    showingBulkDuplicateAlert = true
+                } label: {
+                    Text("Duplicate")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(isEmpty ? Color.primary.opacity(0.3) : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .disabled(isEmpty)
+
+                Divider()
+                    .frame(height: 20)
+
+                // Delete
+                Button {
                     HapticManager.shared.notification(.warning)
                     showingBulkDeleteAlert = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "trash.fill").font(.body)
-                        Text("Delete \(selectedFlightsForDeletion.count)").font(.headline)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, actionButtonVerticalPadding)
-                    .background(selectedFlightsForDeletion.isEmpty ? Color.red.opacity(0.5) : Color.red)
-                    .cornerRadius(actionButtonCornerRadius)
-                    .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                } label: {
+                    Text("Delete")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(isEmpty ? Color.red.opacity(0.35) : .red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                 }
-                .disabled(selectedFlightsForDeletion.isEmpty)
+                .disabled(isEmpty)
             }
-            .padding(.trailing, 20)
+            .background(.regularMaterial)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.1), lineWidth: 1))
+            .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 4)
+            .padding(.horizontal, 20)
             .padding(.bottom, 20)
-            .transition(.scale.combined(with: .opacity))
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
@@ -441,6 +463,11 @@ private struct FlightsListContent: View {
             }
 
             if isSelectMode {
+                ToolbarItem(placement: .principal) {
+                    Text(selectedFlightsForDeletion.isEmpty ? "Select Entries" : "\(selectedFlightsForDeletion.count) Selected")
+                        .font(.headline)
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     // Show Select All / Deselect All button in select mode
                     if !filteredFlightSectors.isEmpty {
@@ -645,6 +672,15 @@ private struct FlightsListContent: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("This action cannot be undone.")
+        }
+        .alert(bulkDuplicateAlertTitle, isPresented: $showingBulkDuplicateAlert) {
+            Button("Duplicate") {
+                HapticManager.shared.notification(.success)
+                performBulkDuplicate()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Copies will be added to your logbook with the same details.")
         }
         .alert("Delete Import Batch?", isPresented: $showingDeleteSessionAlert) {
             Button("Cancel", role: .cancel) { }
@@ -1139,6 +1175,15 @@ private struct FlightsListContent: View {
             HapticManager.shared.notification(.error)
         }
         flightToDelete = nil
+    }
+
+    private func performBulkDuplicate() {
+        let flightsToDuplicate = filteredFlightSectors.filter { selectedFlightsForDeletion.contains($0.id) }
+        guard !flightsToDuplicate.isEmpty else { return }
+        databaseService.duplicateFlights(flightsToDuplicate)
+        selectedFlightsForDeletion.removeAll()
+        isSelectMode = false
+        loadFlights()
     }
 
     private func performBulkDelete() {

@@ -37,7 +37,6 @@ struct ModernActionButtonsCard: View {
                     ModernActionButton(
                         title: "Update Flight",
                         subtitle: "Save changes",
-                        requirementDots: nil,
                         icon: "checkmark.circle.fill",
                         color: .green,
                         isEnabled: viewModel.hasUnsavedChanges && purchaseService.canAddFlight,
@@ -105,7 +104,6 @@ struct ModernActionButtonsCard: View {
                     ModernActionButton(
                         title: "Add to Logbook",
                         subtitle: nil,
-                        requirementDots: viewModel.saveRequirements,
                         icon: "plus.circle.fill",
                         color: .green,
                         isEnabled: viewModel.canSendToLogTen,
@@ -159,7 +157,7 @@ struct ModernActionButtonsCard: View {
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         )
     }
 }
