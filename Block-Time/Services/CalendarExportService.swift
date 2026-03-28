@@ -48,7 +48,6 @@ final class CalendarExportService {
         guard let dtStart, let dtEnd else { return nil }
 
         let title = eventTitle(for: flight)
-        let description = eventDescription(for: flight)
         let uid = flight.id.uuidString + "@block-time"
         let now = iCalTimestamp(Date())
 
@@ -63,10 +62,6 @@ final class CalendarExportService {
         } else {
             lines.append("DTSTART:\(dtStart)")
             lines.append("DTEND:\(dtEnd)")
-        }
-
-        if !description.isEmpty {
-            lines.append("DESCRIPTION:\(icsEscape(description))")
         }
 
         lines.append("END:VEVENT")
@@ -123,32 +118,7 @@ final class CalendarExportService {
     }
 
     private func eventDescription(for flight: FlightSector) -> String {
-        var parts: [String] = []
-
-        if !flight.aircraftReg.isEmpty  { parts.append("Aircraft: \(flight.aircraftReg)") }
-        if !flight.aircraftType.isEmpty { parts.append("Type: \(flight.aircraftType)") }
-
-        let block = Double(flight.blockTime) ?? 0
-        if block > 0 { parts.append("Block: \(formatHours(block))") }
-
-        let roles = roleString(for: flight)
-        if !roles.isEmpty { parts.append("Role: \(roles)") }
-
-        if !flight.remarks.isEmpty { parts.append("Remarks: \(flight.remarks)") }
-
-        return parts.joined(separator: "\\n")
-    }
-
-    private func roleString(for flight: FlightSector) -> String {
-        if flight.isPositioning { return "Positioning" }
-        if flight.isPilotFlying  { return "PF" }
-        return "PM"
-    }
-
-    private func formatHours(_ hours: Double) -> String {
-        let h = Int(hours)
-        let m = Int((hours - Double(h)) * 60)
-        return String(format: "%d:%02d", h, m)
+        return ""
     }
 
     // MARK: - Date/Time Helpers
