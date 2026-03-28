@@ -85,12 +85,13 @@ class TextRecognitionService: ObservableObject {
             image = sharpened
         }
 
-        // 3. Binarise — threshold 0.5 turns dust/smudge artefacts into clean black-or-white
+        // 3. Binarise — threshold 0.35 turns dust/smudge artefacts into clean black-or-white
+        //    whilst preserving dim green MCDU pixels that a 0.5 threshold kills.
         //    CIColorThreshold is available from iOS 17; fall back gracefully on older OS.
         if #available(iOS 17, *) {
             if let binary = CIFilter(name: "CIColorThreshold", parameters: [
                 kCIInputImageKey: image,
-                "inputThreshold": 0.5
+                "inputThreshold": 0.35
             ])?.outputImage {
                 image = binary
             }
@@ -207,7 +208,37 @@ class TextRecognitionService: ObservableObject {
 
         LogManager.shared.debug("Recognized text: \(recognizedText)")
 
-        // Try columnar ACARS extraction first (where labels and values are in separate sections)
+        // Pre-process: rejoin split times where OCR breaks "HH\n:MM" across two lines.
+        // e.g. "09\n:57" → "09:57", "09\n:4.7" → "09:47"
+        recognizedText = rejoinSplitTimes(in: recognizedText)
+
+        // Try interleaved layout first (OUT\nHH:MM\nOFF\nHH:MM\nON\nHH:MM\nIN\nHH:MM)
+        if let interleavedTimes = extractTimesFromInterleavedLayout(from: recognizedText) {
+            LogManager.shared.debug("✓ Using interleaved ACARS layout extraction")
+            let flightDetails = extractFlightDetails(from: recognizedText)
+            validateAndCorrectTimeSequence(
+                out: interleavedTimes.out, off: interleavedTimes.off,
+                on: interleavedTimes.on, in: interleavedTimes.in,
+                fltTime: interleavedTimes.flt, blkTime: interleavedTimes.blk
+            )
+            let interleavedData = FlightData(
+                outTime: interleavedTimes.out, inTime: interleavedTimes.in,
+                offTime: interleavedTimes.off, onTime: interleavedTimes.on,
+                blockTime: interleavedTimes.blk.isEmpty ? "" : interleavedTimes.blk,
+                flightNumber: flightDetails.flightNumber,
+                fromAirport: flightDetails.fromAirport, toAirport: flightDetails.toAirport,
+                dayOfMonth: flightDetails.dayOfMonth, aircraftRegistration: nil, fullDate: nil
+            )
+            var missing: [String] = []
+            if interleavedTimes.out.isEmpty { missing.append("OUT time") }
+            if interleavedTimes.in.isEmpty  { missing.append("IN time") }
+            if interleavedTimes.off.isEmpty { missing.append("OFF time") }
+            if interleavedTimes.on.isEmpty  { missing.append("ON time") }
+            try throwIfMissingCritical(missing, partialData: interleavedData)
+            return interleavedData
+        }
+
+        // Try columnar ACARS extraction next (where all labels come first, then all values)
         if let columnarTimes = extractTimesFromColumnarLayout(from: recognizedText) {
         LogManager.shared.debug("✓ Using columnar ACARS layout extraction")
             let flightDetails = extractFlightDetails(from: recognizedText)
@@ -241,13 +272,20 @@ class TextRecognitionService: ObservableObject {
 
         // Fall back to standard pattern-based extraction
                 LogManager.shared.debug("✓ Using standard pattern-based extraction")
-        let outTime = extractOutTime(from: recognizedText)
-        let inTime = extractInTime(from: recognizedText)
-        let offTime = extractOffTime(from: recognizedText)
-        let onTime = extractOnTime(from: recognizedText)
+        let rawOutTime = extractOutTime(from: recognizedText)
+        let rawInTime = extractInTime(from: recognizedText)
+        let rawOffTime = extractOffTime(from: recognizedText)
+        let rawOnTime = extractOnTime(from: recognizedText)
         let blockTime = extractBlockTime(from: recognizedText)
         let fltTime = extractFlightTime(from: recognizedText)
         let flightDetails = extractFlightDetails(from: recognizedText)
+
+        // If the time sequence is invalid, try correcting a leading '8' → '0' OCR error on any
+        // time field before accepting a midnight crossing or flagging a violation.
+        // e.g. OUT=08:44 should be 00:44 when OFF=01:02, ON=05:59, IN=06:02
+        let (outTime, offTime, onTime, inTime) = correctLeadingEightIfNeeded(
+            out: rawOutTime, off: rawOffTime, on: rawOnTime, in: rawInTime
+        )
 
         // Validate time sequence (OUT < OFF < ON < IN) and cross-check with FLT/BLK
         validateAndCorrectTimeSequence(out: outTime, off: offTime, on: onTime, in: inTime, fltTime: fltTime, blkTime: blockTime)
@@ -278,7 +316,7 @@ class TextRecognitionService: ObservableObject {
         // If we have missing critical fields, throw error but it will be caught with partial data
         if !missingFields.isEmpty {
                     LogManager.shared.debug("Partial extraction - missing: \(missingFields.joined(separator: ", "))")
-            throw PartialExtractionError(message: "Could not extract: \(missingFields.joined(separator: ", ")). Please verify and fill in missing fields.", partialData: flightData)
+            throw PartialExtractionError(message: "Missing: \(missingFields.joined(separator: ", "))", partialData: flightData)
         }
 
         return flightData
@@ -310,7 +348,7 @@ class TextRecognitionService: ObservableObject {
             let line3 = lines[i + 2].trimmingCharacters(in: .whitespaces)
             let line4 = lines[i + 3].trimmingCharacters(in: .whitespaces)
 
-            if line1 == "OUT" && line2 == "OFF" && line3 == "ON" && line4 == "IN" {
+            if line1 == "OUT" && line2 == "OFF" && line3 == "ON" && (line4 == "IN" || line4 == "IN.") {
                 labelStartIndex = i
                         LogManager.shared.debug("Found columnar ACARS layout starting at line \(i)")
                 break
@@ -323,8 +361,8 @@ class TextRecognitionService: ObservableObject {
 
         // Extract times that appear after the labels
         // Look for times in the format HH:MM or with OCR errors (Ø, O, 8, etc.)
-        // Also handles A321/MCDU format where OCR introduces a space after the colon: "03: 21"
-        let timePattern = try! NSRegularExpression(pattern: "^\\s*([0-9ØøOo8]{2}: ?[0-9ØøOo]{2})\\s*$")
+        // Also handles OCR spaces around the colon: "03: 21" or "09 :47"
+        let timePattern = try! NSRegularExpression(pattern: "^\\s*([0-9ØøOo8]{2} ?: ?[0-9ØøOo]{2})\\s*$")
 
         // Track which label we're capturing for
         let skipLabelsOnly = ["ON-BLX", "FUEL", "STATE", "*PRINT", "SENSORS", "INIT", "REF", "FIX", "MENU", "<RETURN"]
@@ -433,6 +471,103 @@ class TextRecognitionService: ObservableObject {
             flt: fltTime,
             blk: blkTime
         )
+    }
+
+    /// Rejoin OCR-split times where the hour and minutes land on separate lines.
+    /// Handles patterns like:
+    ///   "09\n:57"   → "09:57"
+    ///   "09\n:4.7"  → "09:47"  (dot-for-digit corrected later by smartCorrectTime)
+    ///   "02\n:00"   → "02:00"
+    private func rejoinSplitTimes(in text: String) -> String {
+        // Match a line that is just 1-2 digits, followed by a line starting with ":"
+        // and containing 1-2 digit/dot characters (minutes fragment).
+        let pattern = try! NSRegularExpression(
+            pattern: "([0-9]{1,2})\\n(:[0-9.]{1,2})",
+            options: []
+        )
+        var result = text
+        // Work backwards through matches so ranges stay valid
+        let matches = pattern.matches(in: result, range: NSRange(result.startIndex..., in: result)).reversed()
+        for match in matches {
+            guard let fullRange = Range(match.range, in: result),
+                  let hoursRange = Range(match.range(at: 1), in: result),
+                  let minsRange  = Range(match.range(at: 2), in: result) else { continue }
+            let hours = String(result[hoursRange])
+            let mins  = String(result[minsRange])  // still has leading ":"
+            let rejoined = hours + mins             // e.g. "09" + ":57" → "09:57"
+            LogManager.shared.debug("  Rejoined split time: '\(hours)\\n\(mins)' → '\(rejoined)'")
+            result.replaceSubrange(fullRange, with: rejoined)
+        }
+        return result
+    }
+
+    /// Detect and extract times from interleaved ACARS layout where each label is immediately
+    /// followed by its time on the next line:
+    ///   OUT          OFF          ON           IN / IN.
+    ///   HH:MM        HH:MM        HH:MM        HH:MM
+    /// The four pairs may appear in any order but must all be present.
+    private func extractTimesFromInterleavedLayout(from text: String) -> (out: String, off: String, on: String, in: String, flt: String, blk: String)? {
+        let lines = text.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }
+
+        // Loose time pattern: accepts OCR noise around the colon and common OCR digit substitutions
+        let timeRegex = try! NSRegularExpression(pattern: "^[0-9ØøOo8$@]{1,2} ?[:\\-] ?[0-9ØøOo.]{1,2}$")
+
+        func isTimelike(_ s: String) -> Bool {
+            timeRegex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil
+        }
+
+        func isLabel(_ s: String) -> Bool {
+            ["OUT", "OFF", "ON", "IN", "IN."].contains(s)
+        }
+
+        // Scan for label→time pairs
+        var out = "", off = "", on = "", inTime = "", flt = "", blk = ""
+        var found = 0
+
+        for i in 0..<(lines.count - 1) {
+            let label = lines[i]
+            let next = lines[i + 1]
+            guard isLabel(label) && isTimelike(next) else { continue }
+
+            let corrected = smartCorrectTime(next)
+            switch label {
+            case "OUT":
+                if out.isEmpty { out = corrected; found += 1
+                    LogManager.shared.debug("  Interleaved OUT at line \(i+1): \(next)\(next != corrected ? " → \(corrected)" : "")") }
+            case "OFF":
+                if off.isEmpty { off = corrected; found += 1
+                    LogManager.shared.debug("  Interleaved OFF at line \(i+1): \(next)\(next != corrected ? " → \(corrected)" : "")") }
+            case "ON":
+                if on.isEmpty { on = corrected; found += 1
+                    LogManager.shared.debug("  Interleaved ON at line \(i+1): \(next)\(next != corrected ? " → \(corrected)" : "")") }
+            case "IN", "IN.":
+                if inTime.isEmpty { inTime = corrected; found += 1
+                    LogManager.shared.debug("  Interleaved IN at line \(i+1): \(next)\(next != corrected ? " → \(corrected)" : "")") }
+            default: break
+            }
+        }
+
+        // Also pick up FLT / BLK the same way
+        for i in 0..<(lines.count - 1) {
+            let label = lines[i]
+            let next = lines[i + 1]
+            if (label == "FLT" || label == "FLT.") && isTimelike(next) && flt.isEmpty {
+                flt = smartCorrectTime(next)
+                LogManager.shared.debug("  Interleaved FLT at line \(i+1): \(next)")
+            }
+            if (label == "BLK" || label == "BLK.") && isTimelike(next) && blk.isEmpty {
+                blk = smartCorrectTime(next)
+                LogManager.shared.debug("  Interleaved BLK at line \(i+1): \(next)")
+            }
+        }
+
+        guard found >= 3 else {
+            if found > 0 { LogManager.shared.debug("⚠️ Interleaved layout found only \(found)/4 times — skipping") }
+            return nil
+        }
+        if found < 4 { LogManager.shared.debug("⚠️ Interleaved layout found \(found)/4 times — partial result") }
+
+        return (out: out, off: off, on: on, in: inTime, flt: flt, blk: blk)
     }
 
     private func extractOutTime(from text: String) -> String {
@@ -617,14 +752,17 @@ class TextRecognitionService: ObservableObject {
         guard !missingFields.isEmpty else { return }
         LogManager.shared.debug("Partial extraction — missing: \(missingFields.joined(separator: ", "))")
         throw PartialExtractionError(
-            message: "Could not extract: \(missingFields.joined(separator: ", ")). Please verify and fill in missing fields.",
+            message: "Missing: \(missingFields.joined(separator: ", "))",
             partialData: partialData
         )
     }
 
     private func extractTimeWithPatterns(_ patterns: [NSRegularExpression], from text: String, timeType: String) -> String {
-        // Footer keywords that indicate non-flight times (like print timestamps)
-        let footerKeywords = ["<RETURN", "<PRINT", "SENSORS", "MENU", "EXEC", "INIT", "REF", "FIX", "PREV", "PAGE"]
+        // Footer keywords that indicate non-flight times (like print timestamps).
+        // Also checked inside the full match span, so "HF IN\n<RETURN 06:05" is rejected
+        // even though <RETURN appears after the label rather than before the captured time.
+        let footerKeywords = ["<RETURN", "<PRINT", "SENSORS", "MENU", "EXEC", "INIT", "REF", "FIX", "PREV", "PAGE",
+                              "HF IN", "HF\nIN"]
 
         for (index, pattern) in patterns.enumerated() {
             let matches = pattern.matches(in: text, range: NSRange(text.startIndex..., in: text))
@@ -662,16 +800,18 @@ class TextRecognitionService: ObservableObject {
                     continue
                 }
 
-                // Check if time appears AFTER footer keywords (not before)
-                // Only skip times that are part of the footer section
+                // Reject matches whose full span (label + time) or 30-char prefix contains a
+                // footer keyword. This catches both "HF IN\n<RETURN 06:05" (keyword inside span)
+                // and times that appear after a footer line (keyword before span).
                 if let matchRange = Range(match.range, in: text) {
-                    // Check 30 chars BEFORE the time for footer keywords
+                    let fullMatchText = String(text[matchRange])
+
                     let contextStart = text.index(matchRange.lowerBound, offsetBy: -30, limitedBy: text.startIndex) ?? text.startIndex
                     let beforeContext = String(text[contextStart..<matchRange.lowerBound])
 
-                    // If a footer keyword appears before this time, skip it
-                    if footerKeywords.contains(where: { beforeContext.contains($0) }) {
-                                LogManager.shared.debug("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - appears after footer keyword")
+                    let combined = beforeContext + fullMatchText
+                    if footerKeywords.contains(where: { combined.contains($0) }) {
+                        LogManager.shared.debug("⚠️ Skipping \(timeType) time \(extractedTime) (pattern \(index)) - footer keyword in match context")
                         continue  // Try next match
                     }
                 }
@@ -694,8 +834,17 @@ class TextRecognitionService: ObservableObject {
     private func smartCorrectTime(_ time: String) -> String {
         var correctedTime = time
 
-        // Strip OCR-introduced space after colon (e.g. "03: 21" → "03:21")
+        // Strip OCR-introduced spaces around colon (e.g. "03: 21" → "03:21", "09 :47" → "09:47")
         correctedTime = correctedTime.replacingOccurrences(of: ": ", with: ":")
+        correctedTime = correctedTime.replacingOccurrences(of: " :", with: ":")
+
+        // Replace dot used as digit in minutes (e.g. "09:4.7" → "09:47", ":4.7" → ":47")
+        // Only replace dots between digits in the minutes portion
+        if let colonIdx = correctedTime.firstIndex(of: ":") {
+            let minutesPart = correctedTime[correctedTime.index(after: colonIdx)...]
+            let fixedMinutes = minutesPart.replacingOccurrences(of: ".", with: "")
+            correctedTime = correctedTime[...colonIdx] + fixedMinutes
+        }
 
         // First pass: Replace common OCR character errors
         // $ is often misread as 0 (e.g., $7:25 → 07:25, $9:10 → 09:10)
@@ -750,10 +899,58 @@ class TextRecognitionService: ObservableObject {
             }
         }
 
+        // Pad a single-digit minute to two digits (e.g. "01:0" → "01:00", "9:5" → "09:05")
+        let paddingComponents = correctedTime.split(separator: ":", maxSplits: 1)
+        if paddingComponents.count == 2 {
+            var hour = String(paddingComponents[0])
+            var minute = String(paddingComponents[1])
+            if hour.count == 1 { hour = "0" + hour }
+            if minute.count == 1 { minute = minute + "0" }
+            let padded = "\(hour):\(minute)"
+            if isValidTimeFormat(padded) { return padded }
+        }
+
         // Return corrected time (with character replacements) if no valid correction found
         return correctedTime
     }
     
+    /// If the four extracted times don't form a valid sequence, try replacing a leading '8'
+    /// with '0' on each field in priority order (OUT first, then IN, OFF, ON) and return
+    /// the first combination that produces a valid sequence without a midnight crossing.
+    /// Returns the originals unchanged if no single-field correction helps.
+    private func correctLeadingEightIfNeeded(
+        out: String, off: String, on: String, in inTime: String
+    ) -> (String, String, String, String) {
+        // Already valid — nothing to do
+        if isValidTimeSequence(out: out, off: off, on: on, in: inTime) {
+            return (out, off, on, inTime)
+        }
+
+        func fix8(_ t: String) -> String? {
+            guard t.hasPrefix("8") else { return nil }
+            let candidate = "0" + t.dropFirst()
+            return isValidTimeFormat(candidate) ? candidate : nil
+        }
+
+        // Try correcting each field individually, prioritise OUT then IN
+        for (fixedOut, fixedOff, fixedOn, fixedIn) in [
+            (fix8(out) ?? out, off,           on,           inTime),
+            (out,              off,           on,           fix8(inTime) ?? inTime),
+            (out,              fix8(off) ?? off, on,        inTime),
+            (out,              off,           fix8(on) ?? on, inTime),
+        ] {
+            if isValidTimeSequence(out: fixedOut, off: fixedOff, on: fixedOn, in: fixedIn) {
+                if fixedOut != out   { LogManager.shared.debug("🔧 Corrected OUT '8'→'0': \(out) → \(fixedOut)") }
+                if fixedOff != off   { LogManager.shared.debug("🔧 Corrected OFF '8'→'0': \(off) → \(fixedOff)") }
+                if fixedOn != on     { LogManager.shared.debug("🔧 Corrected ON '8'→'0': \(on) → \(fixedOn)") }
+                if fixedIn != inTime { LogManager.shared.debug("🔧 Corrected IN '8'→'0': \(inTime) → \(fixedIn)") }
+                return (fixedOut, fixedOff, fixedOn, fixedIn)
+            }
+        }
+
+        return (out, off, on, inTime)
+    }
+
     private func findHourForMinutes(_ minutes: String, in text: String) -> String? {
         let hourPattern = try! NSRegularExpression(pattern: "(\\d{2})\\s*[:\\-;\\.]?\\s*\(minutes)")
         let hourMatches = hourPattern.matches(in: text, range: NSRange(text.startIndex..., in: text))
