@@ -162,7 +162,7 @@ struct ModernCapturedDataCard: View {
                     .foregroundColor(!viewModel.isInstructingInAircraft ? .white : .secondary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 26)
-                    .background(!viewModel.isInstructingInAircraft ? Color.purple : Color.clear)
+                    .background(!viewModel.isInstructingInAircraft ? AppColors.insColor : Color.clear)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
@@ -170,7 +170,7 @@ struct ModernCapturedDataCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.purple.opacity(0.4), lineWidth: 1)
+                .stroke(AppColors.insColor.opacity(0.4), lineWidth: 1)
         )
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
