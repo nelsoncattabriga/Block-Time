@@ -55,6 +55,9 @@ struct ImportExportView: View {
     // Roster import state
     @State private var showingRosterImport = false
 
+    // Calendar export state
+    @State private var showingCalendarExport = false
+
     // Migration import state
     @State private var showingMigrationImport = false
 
@@ -201,6 +204,11 @@ struct ImportExportView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showingCalendarExport) {
+            CalendarExportView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showingExportView) {
             ExportLogbookView()
                 .presentationDetents([.large])
@@ -260,6 +268,17 @@ struct ImportExportView: View {
                     isLoading: false
                 ) {
                     showingRosterImport = true
+                }
+
+                // Export flights to calendar
+                ActionButton(
+                    title: "Export to Calendar",
+                    subtitle: "Save flights as .ics file",
+                    icon: "calendar.badge.checkmark",
+                    color: .blue,
+                    isLoading: false
+                ) {
+                    showingCalendarExport = true
                 }
 
                 //Divider()
