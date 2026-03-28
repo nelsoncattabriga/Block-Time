@@ -238,12 +238,12 @@ struct FlightSectorRow: View, Equatable {
                     } else if !cachedIsFutureFlight && (sector.isSpInsOnly || sector.isAircraftInstruction) {
                         Text("INS")
                             .font(.subheadline.monospaced())
-                            .foregroundColor(.purple)
+                            .foregroundColor(AppColors.insColor)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.purple, lineWidth: 1)
+                                    .stroke(AppColors.insColor, lineWidth: 1)
                             )
                     }
 
@@ -309,11 +309,11 @@ struct FlightSectorRow: View, Equatable {
                             .font(.subheadline.italic())
                             .foregroundColor(.secondary)
                     } else if !isPositioning {
-                        // For Sp/Ins flights show spInsTime in purple, sim in purple, block in orange
+                        // For Sp/Ins flights show spInsTime in pink, sim in purple, block in orange
                         if sector.isSpInsOnly {
                             Text(sector.getFormattedSpInsTime(asHoursMinutes: showTimesInHoursMinutes))
                                 .font(.headline.bold())
-                                .foregroundColor(.purple.opacity(0.8))
+                                .foregroundColor(AppColors.insColor.opacity(0.8))
                         } else if sector.simTimeValue > 0 {
                             Text("\(sector.getFormattedSimTime(asHoursMinutes: showTimesInHoursMinutes))")
                                 .font(.headline.bold())

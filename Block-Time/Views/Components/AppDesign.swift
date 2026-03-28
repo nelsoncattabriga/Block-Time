@@ -13,6 +13,7 @@ enum AppColors {
     static let accentOrange = Color.orange.opacity(0.85)
     static let accentBlue   = Color.blue.opacity(0.8)
     static let cardShadow   = Color.black.opacity(0.06)
+    static let insColor     = Color.pink
 }
 
 // MARK: - Card ViewModifier

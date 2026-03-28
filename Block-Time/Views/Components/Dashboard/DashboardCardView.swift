@@ -192,7 +192,7 @@ struct SpInsTimeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Instructor Time", icon: "person.fill.badge.plus", iconColor: .purple)
+            CardHeader(title: "Instructor Time", icon: "person.fill.badge.plus", iconColor: AppColors.insColor)
 
             VStack(alignment: .leading, spacing: 10) {
                 // Total — large primary value
@@ -205,7 +205,7 @@ struct SpInsTimeCard: View {
 
                     if stats.totalFlightTime > 0 && stats.totalSpInsTime > 0 {
                         ProgressView(value: min(stats.totalSpInsTime / stats.totalFlightTime, 1))
-                            .tint(.purple)
+                            .tint(AppColors.insColor)
                             .frame(height: 6)
                     } else {
                         Spacer().frame(height: 6)
@@ -228,7 +228,7 @@ struct SpInsTimeCard: View {
                         breakdownItem(
                             label: "SIM",
                             value: stats.formattedSpInsSimTime(asHoursMinutes: showTimesInHoursMinutes),
-                            color: .purple
+                            color: AppColors.insColor
                         )
                     }
                 } else {
