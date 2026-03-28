@@ -244,7 +244,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 out: false,
                 in: false,
                 blockOrInsTime: !blockTime.isEmpty,
-                blockOrInsTimeLabel: "SIM",
+                blockOrInsTimeLabel: "SIM Time",
                 needsAirports: false,
                 needsBlockOrInsTime: true
             )
@@ -256,7 +256,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 out: false,
                 in: false,
                 blockOrInsTime: !spInsTime.isEmpty,
-                blockOrInsTimeLabel: "INS",
+                blockOrInsTimeLabel: "INS Time",
                 needsAirports: false,
                 needsBlockOrInsTime: true
             )

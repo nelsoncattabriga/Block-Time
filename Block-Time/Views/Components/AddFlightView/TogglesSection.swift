@@ -3,8 +3,6 @@ import SwiftUI
 // MARK: - Modern Toggles Section
 struct ModernTogglesSection: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @State private var showingOverride = false
-
     private var isDisabled: Bool {
         // Time credit is disabled for positioning, sim, and sim-instruction.
         // Aircraft instruction counts as P1 so credit controls remain enabled.
@@ -157,80 +155,49 @@ struct ModernTogglesSection: View {
 
     @ViewBuilder
     private var timeCreditFooter: some View {
-        VStack(spacing: 0) {
-            // Override selector — slides in when tapped
-            if showingOverride {
-                HStack(alignment: .center, spacing: 0) {
-                    ForEach([TimeCreditType.p1, .p1us, .p2], id: \.self) { credit in
-                        let label: String = credit == .p1us ? "ICUS" : credit.rawValue
-                        let isSelected = viewModel.selectedTimeCredit == credit
-
-                        Button {
-                            viewModel.setTimeCreditWithOverride(credit)
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showingOverride = false
-                            }
-                        } label: {
-                            Text(label)
-                                .font(.footnote.bold())
-                                .foregroundColor(isSelected ? .white : .secondary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 28)
-                                .background(isSelected ? Color.blue.opacity(0.8) : Color(.secondarySystemBackground))
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-
-                        if credit != .p2 {
-                            Divider().frame(height: 28)
-                        }
-                    }
-                }
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.blue.opacity(0.25), lineWidth: 1)
-                )
-                .padding(.top, 4)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
-            // Footer note line
+        if !isDisabled {
             HStack(spacing: 6) {
                 Spacer()
-                if !isDisabled {
                 Text("Time logged as")
                     .font(.footnote)
                     .foregroundColor(.secondary)
 
-                // Tappable credit pill
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        if viewModel.isTimeCreditManualOverride {
-                            showingOverride = false
+                Menu {
+                    ForEach([TimeCreditType.p1, .p1us, .p2], id: \.self) { credit in
+                        let label: String = credit == .p1us ? "ICUS" : credit.rawValue
+                        Button {
+                            viewModel.setTimeCreditWithOverride(credit)
+                        } label: {
+                            if viewModel.selectedTimeCredit == credit {
+                                Label(label, systemImage: "checkmark")
+                            } else {
+                                Text(label)
+                            }
+                        }
+                    }
+                    if viewModel.isTimeCreditManualOverride {
+                        Divider()
+                        Button(role: .destructive) {
                             viewModel.resetTimeCreditOverride()
-                        } else {
-                            showingOverride.toggle()
+                        } label: {
+                            Label("Reset", systemImage: "arrow.uturn.backward")
                         }
                     }
                 } label: {
                     HStack(spacing: 3) {
                         Text(timeCreditLabel)
                             .font(.footnote.bold())
-                            .foregroundColor(viewModel.isTimeCreditManualOverride ? .white : .primary)
-                        if viewModel.isTimeCreditManualOverride {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 7, weight: .bold))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
+                            .foregroundColor(viewModel.isTimeCreditManualOverride ? .white : .blue)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 7, weight: .semibold))
+                            .foregroundColor(viewModel.isTimeCreditManualOverride ? .white.opacity(0.8) : .blue.opacity(0.7))
                     }
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
                     .background(
                         viewModel.isTimeCreditManualOverride
                             ? Color.orange.opacity(0.85)
-                            : Color(.tertiarySystemFill)
+                            : Color.blue.opacity(0.1)
                     )
                     .clipShape(Capsule())
                     .overlay(
@@ -238,24 +205,14 @@ struct ModernTogglesSection: View {
                             .stroke(
                                 viewModel.isTimeCreditManualOverride
                                     ? Color.orange
-                                    : Color(.separator).opacity(0.6),
+                                    : Color.blue.opacity(0.3),
                                 lineWidth: 0.5
                             )
                     )
                 }
-                .buttonStyle(PlainButtonStyle())
-                } // end if !isDisabled
             }
             .padding(.horizontal, 4)
             .padding(.top, 6)
-        }
-        .onChange(of: viewModel.selectedTimeCredit) {
-            // Collapse override panel if auto-value changes externally (e.g. PF/PM toggle)
-            if !viewModel.isTimeCreditManualOverride {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showingOverride = false
-                }
-            }
         }
     }
 }
