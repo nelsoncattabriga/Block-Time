@@ -210,10 +210,10 @@ struct FlightsView: View {
                 }
                 .disabled(isEmpty)
             }
-            .background(.regularMaterial)
+            .background(.thickMaterial)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color.primary.opacity(0.1), lineWidth: 1))
-            .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 4)
+            .overlay(Capsule().stroke(Color.primary.opacity(0.25), lineWidth: 1))
+            .shadow(color: Color.black.opacity(0.35), radius: 16, x: 0, y: 6)
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
             .transition(.move(edge: .bottom).combined(with: .opacity))
