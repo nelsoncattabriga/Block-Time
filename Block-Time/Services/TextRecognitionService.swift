@@ -212,33 +212,7 @@ class TextRecognitionService: ObservableObject {
         // e.g. "09\n:57" → "09:57", "09\n:4.7" → "09:47"
         recognizedText = rejoinSplitTimes(in: recognizedText)
 
-        // Try interleaved layout first (OUT\nHH:MM\nOFF\nHH:MM\nON\nHH:MM\nIN\nHH:MM)
-        if let interleavedTimes = extractTimesFromInterleavedLayout(from: recognizedText) {
-            LogManager.shared.debug("✓ Using interleaved ACARS layout extraction")
-            let flightDetails = extractFlightDetails(from: recognizedText)
-            validateAndCorrectTimeSequence(
-                out: interleavedTimes.out, off: interleavedTimes.off,
-                on: interleavedTimes.on, in: interleavedTimes.in,
-                fltTime: interleavedTimes.flt, blkTime: interleavedTimes.blk
-            )
-            let interleavedData = FlightData(
-                outTime: interleavedTimes.out, inTime: interleavedTimes.in,
-                offTime: interleavedTimes.off, onTime: interleavedTimes.on,
-                blockTime: interleavedTimes.blk.isEmpty ? "" : interleavedTimes.blk,
-                flightNumber: flightDetails.flightNumber,
-                fromAirport: flightDetails.fromAirport, toAirport: flightDetails.toAirport,
-                dayOfMonth: flightDetails.dayOfMonth, aircraftRegistration: nil, fullDate: nil
-            )
-            var missing: [String] = []
-            if interleavedTimes.out.isEmpty { missing.append("OUT time") }
-            if interleavedTimes.in.isEmpty  { missing.append("IN time") }
-            if interleavedTimes.off.isEmpty { missing.append("OFF time") }
-            if interleavedTimes.on.isEmpty  { missing.append("ON time") }
-            try throwIfMissingCritical(missing, partialData: interleavedData)
-            return interleavedData
-        }
-
-        // Try columnar ACARS extraction next (where all labels come first, then all values)
+        // Try columnar ACARS extraction first (where all labels come first, then all values)
         if let columnarTimes = extractTimesFromColumnarLayout(from: recognizedText) {
         LogManager.shared.debug("✓ Using columnar ACARS layout extraction")
             let flightDetails = extractFlightDetails(from: recognizedText)
@@ -312,6 +286,31 @@ class TextRecognitionService: ObservableObject {
             aircraftRegistration: nil, // B737 ACARS doesn't include tail number
             fullDate: nil // B737 uses dayOfMonth only
         )
+
+        // Last resort: try interleaved layout (OUT\nHH:MM\nOFF\nHH:MM…) for degraded OCR images
+        if !missingFields.isEmpty, let interleavedTimes = extractTimesFromInterleavedLayout(from: recognizedText) {
+            LogManager.shared.debug("✓ Using interleaved ACARS layout extraction (last resort)")
+            let interleavedData = FlightData(
+                outTime: interleavedTimes.out, inTime: interleavedTimes.in,
+                offTime: interleavedTimes.off, onTime: interleavedTimes.on,
+                blockTime: interleavedTimes.blk.isEmpty ? "" : interleavedTimes.blk,
+                flightNumber: flightDetails.flightNumber,
+                fromAirport: flightDetails.fromAirport, toAirport: flightDetails.toAirport,
+                dayOfMonth: flightDetails.dayOfMonth, aircraftRegistration: nil, fullDate: nil
+            )
+            validateAndCorrectTimeSequence(
+                out: interleavedTimes.out, off: interleavedTimes.off,
+                on: interleavedTimes.on, in: interleavedTimes.in,
+                fltTime: interleavedTimes.flt, blkTime: interleavedTimes.blk
+            )
+            var interleavedMissing: [String] = []
+            if interleavedTimes.out.isEmpty { interleavedMissing.append("OUT time") }
+            if interleavedTimes.in.isEmpty  { interleavedMissing.append("IN time") }
+            if interleavedTimes.off.isEmpty { interleavedMissing.append("OFF time") }
+            if interleavedTimes.on.isEmpty  { interleavedMissing.append("ON time") }
+            try throwIfMissingCritical(interleavedMissing, partialData: interleavedData)
+            return interleavedData
+        }
 
         // If we have missing critical fields, throw error but it will be caught with partial data
         if !missingFields.isEmpty {
