@@ -1193,12 +1193,10 @@ class FlightTimeExtractorViewModel: ObservableObject {
         outTime = flightData.outTime
         inTime = flightData.inTime
 
-        // Convert OCR block time (HH:mm) to decimal for storage; if empty, compute from OUT/IN
-        if !flightData.blockTime.isEmpty {
-            blockTime = Self.hhmmToDecimal(flightData.blockTime)
-        } else {
-            blockTime = calculateFlightTime() // already returns decimal string
-        }
+        // Always calculate block time from OUT/IN times.
+        // The extracted BLK from ACARS is used only for validation (in validateAndCorrectTimeSequence)
+        // and is not used directly here.
+        blockTime = calculateFlightTime()
 
         if !flightData.flightNumber.isEmpty {
             // Don't format flight numbers for simulator flights
