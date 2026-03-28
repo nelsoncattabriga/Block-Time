@@ -210,6 +210,7 @@ struct ModernAirportField: View {
     let useIATACodes: Bool
     let recentAirports: [String]
     let onAirportSelected: (String) -> Void
+    var isRequired: Bool = false
     @State private var showingPicker = false
     @State private var searchText = ""
 
@@ -237,9 +238,16 @@ struct ModernAirportField: View {
                     .frame(width: 20)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(label)
-                        .font(.caption.bold())
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 3) {
+                        Text(label)
+                            .font(.caption.bold())
+                            .foregroundColor(.secondary)
+                        if isRequired && value.isEmpty {
+                            Circle()
+                                .fill(Color.red.opacity(0.7))
+                                .frame(width: 7, height: 7)
+                        }
+                    }
 
                     Text(displayCode.isEmpty ? placeholderText : displayCode)
                         .font(.subheadline.bold())

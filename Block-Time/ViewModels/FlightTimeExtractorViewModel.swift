@@ -213,6 +213,66 @@ class FlightTimeExtractorViewModel: ObservableObject {
         return !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty && (hasActualTimes || hasScheduledTimes)
     }
 
+    /// Named requirement checks used to drive the dot indicators on the Save button and field labels.
+    struct SaveRequirements {
+        let date: Bool
+        let airports: Bool
+        let out: Bool
+        let `in`: Bool
+        let blockOrInsTime: Bool
+        let blockOrInsTimeLabel: String
+        let needsAirports: Bool
+        let needsBlockOrInsTime: Bool
+
+        /// True when OUT+IN are both filled, or STD+STA are both filled
+        var times: Bool { out && `in` }
+    }
+
+    var saveRequirements: SaveRequirements {
+        let hasOut = !outTime.isEmpty
+        let hasIn  = !inTime.isEmpty
+        let hasStd = !scheduledDeparture.isEmpty
+        let hasSta = !scheduledArrival.isEmpty
+        // Either actual or scheduled pair counts as times satisfied
+        let timesOut = hasOut || hasStd
+        let timesIn  = hasIn  || hasSta
+
+        if isSimulator {
+            return SaveRequirements(
+                date: !flightDate.isEmpty,
+                airports: false,
+                out: false,
+                in: false,
+                blockOrInsTime: !blockTime.isEmpty,
+                blockOrInsTimeLabel: "SIM",
+                needsAirports: false,
+                needsBlockOrInsTime: true
+            )
+        }
+        if isSpIns && !isInstructingInAircraft {
+            return SaveRequirements(
+                date: !flightDate.isEmpty,
+                airports: false,
+                out: false,
+                in: false,
+                blockOrInsTime: !spInsTime.isEmpty,
+                blockOrInsTimeLabel: "INS",
+                needsAirports: false,
+                needsBlockOrInsTime: true
+            )
+        }
+        return SaveRequirements(
+            date: !flightDate.isEmpty,
+            airports: !fromAirport.isEmpty && !toAirport.isEmpty,
+            out: timesOut,
+            in: timesIn,
+            blockOrInsTime: false,
+            blockOrInsTimeLabel: "",
+            needsAirports: true,
+            needsBlockOrInsTime: false
+        )
+    }
+
     var formattedFlightNumber: String {
         // Don't format flight numbers for simulator or Sp/Ins flights
         if isSimulator || isSpIns {

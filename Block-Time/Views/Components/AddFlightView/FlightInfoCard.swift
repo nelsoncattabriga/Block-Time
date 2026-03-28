@@ -356,7 +356,8 @@ struct ModernCapturedDataCard: View {
                             recentAirports: viewModel.recentAirports,
                             onAirportSelected: { airport in
                                 viewModel.trackAirportUsage(airport)
-                            }
+                            },
+                            isRequired: viewModel.saveRequirements.needsAirports
                         )
 
                         ModernAirportField(
@@ -370,7 +371,8 @@ struct ModernCapturedDataCard: View {
                             recentAirports: viewModel.recentAirports,
                             onAirportSelected: { airport in
                                 viewModel.trackAirportUsage(airport)
-                            }
+                            },
+                            isRequired: viewModel.saveRequirements.needsAirports
                         )
                     }
 
@@ -477,6 +479,7 @@ struct ModernCapturedDataCard: View {
                             airportCode: viewModel.fromAirport,
                             showLocalTime: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                             useIATACodes: viewModel.useIATACodes,
+                            isRequired: viewModel.saveRequirements.needsAirports && !viewModel.saveRequirements.times,
                             hintText: utcHintText(utcTime: viewModel.outTime, tzLabel: viewModel.outTimezoneLabel),
                             onSave: { viewModel.recalculateTimesAfterManualEdit() }
                         )
@@ -496,6 +499,7 @@ struct ModernCapturedDataCard: View {
                             airportCode: viewModel.toAirport,
                             showLocalTime: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                             useIATACodes: viewModel.useIATACodes,
+                            isRequired: viewModel.saveRequirements.needsAirports && !viewModel.saveRequirements.times,
                             hintText: utcHintText(utcTime: viewModel.inTime, tzLabel: viewModel.inTimezoneLabel),
                             onSave: { viewModel.recalculateTimesAfterManualEdit() }
                         )
@@ -508,7 +512,8 @@ struct ModernCapturedDataCard: View {
                             value: $viewModel.spInsTime,
                             icon: "person.fill.badge.plus",
                             isReadOnly: false,
-                            showAsHHMM: viewModel.showTimesInHoursMinutes
+                            showAsHHMM: viewModel.showTimesInHoursMinutes,
+                            isRequired: viewModel.saveRequirements.needsBlockOrInsTime
                         )
                     } else {
                         HStack {
@@ -517,7 +522,8 @@ struct ModernCapturedDataCard: View {
                                 value: $viewModel.blockTime,
                                 icon: viewModel.isSimulator ? "desktopcomputer" : "timer",
                                 isReadOnly: viewModel.isPositioning,
-                                showAsHHMM: viewModel.showTimesInHoursMinutes
+                                showAsHHMM: viewModel.showTimesInHoursMinutes,
+                                isRequired: viewModel.saveRequirements.needsBlockOrInsTime
                             )
 
                             ModernDecimalTimeField(

@@ -37,6 +37,7 @@ struct ModernActionButtonsCard: View {
                     ModernActionButton(
                         title: "Update Flight",
                         subtitle: "Save changes",
+                        requirementDots: nil,
                         icon: "checkmark.circle.fill",
                         color: .green,
                         isEnabled: viewModel.hasUnsavedChanges && purchaseService.canAddFlight,
@@ -103,7 +104,8 @@ struct ModernActionButtonsCard: View {
                     // Add to internal logbook button
                     ModernActionButton(
                         title: "Add to Logbook",
-                        subtitle: "Save to internal logbook",
+                        subtitle: nil,
+                        requirementDots: viewModel.saveRequirements,
                         icon: "plus.circle.fill",
                         color: .green,
                         isEnabled: viewModel.canSendToLogTen,

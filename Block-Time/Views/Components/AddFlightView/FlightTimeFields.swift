@@ -10,6 +10,7 @@ struct ModernTimeField: View {
     var airportCode: String = ""
     var showLocalTime: Bool = false
     var useIATACodes: Bool = false
+    var isRequired: Bool = false
     /// Optional override hint shown below the field. When set, takes priority over the
     /// auto-computed local time hint. Use for "= HH:MM UTC" in local-entry mode.
     var hintText: String? = nil
@@ -74,9 +75,16 @@ struct ModernTimeField: View {
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                HStack(spacing: 3) {
+                    Text(label)
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                    if isRequired && value.isEmpty {
+                        Circle()
+                            .fill(Color.red.opacity(0.7))
+                            .frame(width: 7, height: 7)
+                    }
+                }
 
                 if isReadOnly {
                     HStack {
@@ -153,6 +161,7 @@ struct ModernDecimalTimeField: View {
     let icon: String
     var isReadOnly: Bool = false
     var showAsHHMM: Bool = false  // Whether to display/accept HH:MM format
+    var isRequired: Bool = false
     @FocusState private var decimalFieldFocused: Bool
     var onSave: (() -> Void)? = nil
 
@@ -225,9 +234,16 @@ struct ModernDecimalTimeField: View {
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                HStack(spacing: 3) {
+                    Text(label)
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                    if isRequired && value.isEmpty {
+                        Circle()
+                            .fill(Color.red.opacity(0.7))
+                            .frame(width: 7, height: 7)
+                    }
+                }
 
                 if isReadOnly {
                     HStack {
