@@ -190,8 +190,7 @@ private struct RequirementDotsView: View {
             dot(filled: requirements.date, label: "Date")
             if requirements.needsAirports {
                 dot(filled: requirements.airports, label: "Airports")
-                dot(filled: requirements.out, label: "OUT")
-                dot(filled: requirements.in, label: "IN")
+                dot(filled: requirements.times, label: "Times")
             }
             if requirements.needsBlockOrInsTime {
                 dot(filled: requirements.blockOrInsTime, label: requirements.blockOrInsTimeLabel)
