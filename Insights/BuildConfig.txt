@@ -1,0 +1,56 @@
+⏺ Yes, "No configurations set" is correct and expected — that's the default state. It means no additional per-configuration settings have been
+  overridden at the project level, which is fine because our compilation flags are set at the target level.
+                                                                                                                                                        
+  Here's how the whole system connects:
+                                                                                                                                                        
+  ---                                                                                                                                                   
+  The Chain                              
+                                                                                                                                                        
+  Xcode Scheme                          
+      ↓ selects                          
+  Build Configuration (Debug / TestFlight / AppStore)                                                                                                   
+      ↓ activates                                                                                                                                       
+  Active Compilation Condition (DEBUG / TESTFLIGHT / APPSTORE)                                                                                          
+      ↓ evaluated by                                                                                                                                    
+  Distribution.current                   
+      ↓ passed into                                                                                                                                     
+  FeatureFlags(distribution: .current)                                                                                                                  
+      ↓ injected via                     
+  .environment(\.featureFlags, ...)  in Block_TimeApp                                                                                                   
+      ↓ read by                                                                                                                                         
+  @Environment(\.featureFlags) in any view                                                                                                              
+                                                                                                                                                        
+  ---                                    
+  What each piece does                                                                                                                                  
+                                        
+  Build Configuration — just a named slot in Xcode. You created TestFlight and AppStore as duplicates of Release. They have identical settings except
+  for the compilation condition you added.                                                                                                              
+   
+  Active Compilation Condition — a flag the Swift compiler sees at build time. When you build with the TestFlight config, TESTFLIGHT is defined. The #if
+   TESTFLIGHT block in Distribution.swift fires, and Distribution.current returns .testFlight. This happens at compile time — the other branches don't
+  even exist in the binary.                                                                                                                             
+                                        
+  Distribution — a simple enum that translates the #if flags into a Swift value. Keeps all the ugly #if in one place.                                   
+   
+  FeatureFlags — a plain struct that maps each Distribution case to concrete Bool values. Adding a new beta feature in future means adding one property 
+  here and setting it per case — no #if scattered through views.
+                                                                                                                                                        
+  Environment injection — FeatureFlags is pushed into the SwiftUI environment at the app root, so any view can read it with @Environment(\.featureFlags)
+   without needing to pass it down manually.
+                                                                                                                                                        
+  ---                                   
+  When you Archive                       
+                                                                                                                                                        
+  ┌───────────────────────┬────────────┬────────────┬──────────────────────┬──────────┬─────────────┐
+  │        Scheme         │   Config   │ Condition  │ Distribution.current │ Paywall  │ Debug tools │                                                   
+  ├───────────────────────┼────────────┼────────────┼──────────────────────┼──────────┼─────────────┤
+  │ Default (dev)         │ Debug      │ DEBUG      │ .debug               │ bypassed │ tap-gated   │                                                   
+  ├───────────────────────┼────────────┼────────────┼──────────────────────┼──────────┼─────────────┤
+  │ Block Time TestFlight │ TestFlight │ TESTFLIGHT │ .testFlight          │ bypassed │ tap-gated   │                                                   
+  ├───────────────────────┼────────────┼────────────┼──────────────────────┼──────────┼─────────────┤                                                   
+  │ Block Time AppStore   │ AppStore   │ APPSTORE   │ .appStore            │ enforced │ hidden      │                                                   
+  └───────────────────────┴────────────┴────────────┴──────────────────────┴──────────┴─────────────┘                                                   
+                                         
+  The "No configurations set" at the project level is irrelevant — all the meaningful settings (compilation conditions) are on the target, which is     
+  where Swift code lives.               
+                              
