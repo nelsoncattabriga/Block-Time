@@ -70,7 +70,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .icusTime:          return "ICUS Time"
         case .nightTime:         return "Night Time"
         case .simTime:           return "Simulator Time"
-        case .insTime:           return "Sp/INS Time"
+        case .insTime:           return "Instructor Time"
 //        case .pfRatioStat:       return "PF Ratio"
         case .recentActivity7:   return "Last 7 Days"
         case .recentActivity28:  return "Last 28 Days"

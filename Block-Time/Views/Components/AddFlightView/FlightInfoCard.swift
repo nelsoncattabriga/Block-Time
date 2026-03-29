@@ -508,7 +508,7 @@ struct ModernCapturedDataCard: View {
                     if viewModel.isSpIns && !viewModel.isInstructingInAircraft {
                         // SIM instruction: SP/INS Time field only (no time credit)
                         ModernDecimalTimeField(
-                            label: "SP/INS Time",
+                            label: "INS Time",
                             value: $viewModel.spInsTime,
                             icon: "person.fill.badge.plus",
                             isReadOnly: false,
