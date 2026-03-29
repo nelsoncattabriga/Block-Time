@@ -1749,6 +1749,34 @@ private struct ModernFRMSCard: View {
                 .cornerRadius(8)
 
                 // Default Limits removed - always using operational limits
+
+                // Accuracy note
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "clock.badge.exclamationmark")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.green)
+                        .frame(width: 20)
+                        .padding(.top, 1)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Accurate FRMS Tracking")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.primary.opacity(0.85))
+
+                        Text("STD, STA, OUT and IN times are required for Flight & Duty time calculations. Flights logged with any of these times missing will have inaccurate FRMS times.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(12)
+                .background(Color.green.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.green.opacity(0.25), lineWidth: 1)
+                )
             }
         }
         .padding(16)

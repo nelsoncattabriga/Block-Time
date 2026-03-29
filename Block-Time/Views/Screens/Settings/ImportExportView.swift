@@ -270,30 +270,22 @@ struct ImportExportView: View {
                     showingRosterImport = true
                 }
 
-                // Export flights to calendar
-                ActionButton(
-                    title: "Export to Calendar",
-                    subtitle: "Save flights as .ics file",
-                    icon: "calendar.badge.checkmark",
-                    color: .blue,
-                    isLoading: false
-                ) {
-                    showingCalendarExport = true
-                }
-
-                //Divider()
+               
+                
+                Divider()
+                
                 // Add Aircraft Summary
                 ActionButton(
                     title: "Add Aircraft Summary",
                     subtitle: "Add previous hours by type",
                     icon: "clock.badge.checkmark.fill",
-                    color: .green.opacity(0.7),
+                    color: .teal,
                     isLoading: false
                 ) {
                     showingAircraftSummary = true
                 }
 
-                Divider()
+               
 
                 // webCIS Import Button
                 if isImportingWebCIS {
@@ -326,18 +318,30 @@ struct ImportExportView: View {
                     title: "Import from File",
                     subtitle: "CSV or Tab-Delimited files",
                     icon: "square.and.arrow.down.on.square.fill",
-                    color: .indigo.opacity(0.6),
+                    color: .green.opacity(0.7),
                     isLoading: false
                 ) {
                     activeFilePickerMode = .importWithMapping
                 }
                 .disabled(isImporting)
 
-                //Divider()
+                Divider()
 
+                // Export flights to calendar
+                ActionButton(
+                    title: "Export to Calendar",
+                    subtitle: "Save flights as .ics file",
+                    icon: "calendar.badge.checkmark",
+                    color: .indigo.opacity(0.6),
+                    isLoading: false
+                ) {
+                    showingCalendarExport = true
+                }
+                
+            
                 // Export Data
                 ActionButton(
-                    title: "Export This Logbook",
+                    title: "Export Entire Logbook",
                     subtitle: "Save as a CSV file",
                     icon: "square.and.arrow.up.fill",
                     color: .indigo.opacity(0.6),
