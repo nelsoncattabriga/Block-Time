@@ -325,9 +325,19 @@ struct FlightSectorRow: View, Equatable {
                         }
                     }
 
-                    // PF / PM badge
-                    if !cachedIsFutureFlight && !isPositioning && !sector.isSpInsOnly {
-                        if sector.isPilotFlying {
+                    // PF / PM badge (invisible spacer for INS/SIM to keep time column aligned)
+                    if !cachedIsFutureFlight && !isPositioning {
+                        if sector.isSpInsOnly || sector.simTimeValue > 0 {
+                            Text("PF")
+                                .font(.subheadline.monospaced())
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.clear, lineWidth: 1)
+                                )
+                                .opacity(0)
+                        } else if sector.isPilotFlying {
                             Text("PF")
                                 .font(.subheadline.monospaced())
                                 .foregroundColor(.green)
