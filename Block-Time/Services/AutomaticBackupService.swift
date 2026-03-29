@@ -274,6 +274,7 @@ class AutomaticBackupService: ObservableObject {
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
+            defer { self.endBackgroundTask() }
 
             do {
                 // Get all flights
@@ -307,7 +308,6 @@ class AutomaticBackupService: ObservableObject {
                 DispatchQueue.main.async {
                     self.isBackupInProgress = false
                     self.refreshAvailableBackups()
-
                     LogManager.shared.info("Automatic backup completed: \(backupURL.lastPathComponent)")
                     completion?(.success(backupURL))
                 }
@@ -320,8 +320,6 @@ class AutomaticBackupService: ObservableObject {
                     completion?(.failure(error))
                 }
             }
-
-            self.endBackgroundTask()
         }
     }
 
