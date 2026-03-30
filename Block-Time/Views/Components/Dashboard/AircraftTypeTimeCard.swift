@@ -109,33 +109,14 @@ struct AircraftTypeTimeCard: View {
         // If orientation is unknown/flat/faceup/facedown, keep current state
     }
 
-    // Get time entries that have values (similar to SummaryRow)
-    // On iPad landscape or iPhone single-column mode: show all time breakdowns
-    // On iPad portrait or iPhone 2-column grid mode: show only Total
+    // All time entries that have values — always show full breakdown
     private var timeEntries: [(label: String, value: Double)] {
         var entries: [(String, Double)] = []
-
-        if aircraftStats.totalHours > 0 {
-            entries.append(("Total", aircraftStats.totalHours))
-        }
-
-        // Show detailed breakdowns on iPad (any orientation) or iPhone single-column mode
-        let showFullDetails = isIPad || settings.isCompactView
-        if showFullDetails {
-            if aircraftStats.p1Time > 0 {
-                entries.append(("P1", aircraftStats.p1Time))
-            }
-            if aircraftStats.p1usTime > 0 {
-                entries.append(("P1US", aircraftStats.p1usTime))
-            }
-            if aircraftStats.p2Time > 0 {
-                entries.append(("P2", aircraftStats.p2Time))
-            }
-            if aircraftStats.simTime > 0 {
-                entries.append(("SIM", aircraftStats.simTime))
-            }
-        }
-
+        if aircraftStats.totalHours > 0  { entries.append(("Total", aircraftStats.totalHours)) }
+        if aircraftStats.p1Time > 0      { entries.append(("P1",    aircraftStats.p1Time)) }
+        if aircraftStats.p1usTime > 0    { entries.append(("P1US",  aircraftStats.p1usTime)) }
+        if aircraftStats.p2Time > 0      { entries.append(("P2",    aircraftStats.p2Time)) }
+        if aircraftStats.simTime > 0     { entries.append(("SIM",   aircraftStats.simTime)) }
         return entries
     }
 
@@ -158,51 +139,10 @@ struct AircraftTypeTimeCard: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                if isIPad {
-                    if !timeEntries.isEmpty {
-                        if isLandscape {
-                            // iPad landscape: single row, enough horizontal room
-                            HStack(spacing: 12) {
-                                ForEach(timeEntries, id: \.label) { entry in
-                                    HStack(spacing: 0) {
-                                        Text("\(entry.label): ")
-                                            .iPadScaledFont(.caption, phoneFont: .footnote)
-                                            .foregroundStyle(.secondary)
-                                        Text(formatTime(entry.value))
-                                            .iPadScaledFont(.caption, phoneFont: .footnote)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
-                            }
-                        } else {
-                            // iPad portrait: 2-column grid to avoid wrapping
-                            LazyVGrid(columns: [
-                                GridItem(.flexible()),
-                                GridItem(.flexible())
-                            ], spacing: 6) {
-                                ForEach(timeEntries, id: \.label) { entry in
-                                    HStack(spacing: 0) {
-                                        Text("\(entry.label): ")
-                                            .iPadScaledFont(.caption, phoneFont: .footnote)
-                                            .foregroundStyle(.secondary)
-                                        Text(formatTime(entry.value))
-                                            .iPadScaledFont(.caption, phoneFont: .footnote)
-                                            .fontWeight(.semibold)
-                                            .foregroundStyle(.primary)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                            }
-                        }
-                    }
-                } else if settings.isCompactView {
-                    // iPhone single-column mode: show all time entries in 2-column grid
-                    if !timeEntries.isEmpty {
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 6) {
+                if !timeEntries.isEmpty {
+                    ViewThatFits(in: .horizontal) {
+                        // Wide layout: single row (used when it fits)
+                        HStack(spacing: 16) {
                             ForEach(timeEntries, id: \.label) { entry in
                                 HStack(spacing: 0) {
                                     Text("\(entry.label): ")
@@ -213,16 +153,25 @@ struct AircraftTypeTimeCard: View {
                                         .fontWeight(.semibold)
                                         .foregroundStyle(.primary)
                                 }
+                            }
+                            Spacer()
+                        }
+                        // Narrow fallback: 2-column grid
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                            ForEach(timeEntries, id: \.label) { entry in
+                                HStack(spacing: 0) {
+                                    Text("\(entry.label): ")
+                                        .iPadScaledFont(.caption, phoneFont: .subheadline)
+                                        .foregroundStyle(.secondary)
+                                    Text(formatTime(entry.value))
+                                        .iPadScaledFont(.caption, phoneFont: .subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.primary)
+                                }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
                     }
-                } else {
-                    // iPad portrait or iPhone 2-column grid mode: show just total hours
-                    Text(formatTime(aircraftStats.totalHours))
-                        .iPadScaledFont(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
                 }
 
                 // Spacer to match progress bar height in other cards
@@ -230,7 +179,7 @@ struct AircraftTypeTimeCard: View {
                     .frame(height: 6)
 
                 Text("\(aircraftStats.totalSectors) sector\(aircraftStats.totalSectors == 1 ? "" : "s")")
-                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .iPadScaledFont(.caption, phoneFont: .subheadline)
                     .foregroundStyle(.secondary)
             }
         }
