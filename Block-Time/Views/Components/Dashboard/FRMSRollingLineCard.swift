@@ -139,7 +139,7 @@ struct FRMSRollingLineCard: View {
     private var xAxisLabelFormat: Date.FormatStyle {
         switch selectedLimit {
         case .duty7:              return .dateTime.day().month(.abbreviated)
-        case .duty14:             return isCompact ? .dateTime.day().month(.narrow) : .dateTime.day().month(.abbreviated)
+        case .duty14:             return .dateTime.day()   // month shown separately in custom label
         case .flight28:           return .dateTime.day().month(.abbreviated)
         case .flight365:          return .dateTime.month(.abbreviated)
         }
@@ -215,9 +215,21 @@ struct FRMSRollingLineCard: View {
         }
         .chartXScale(domain: series.chartStart...series.chartEnd)
         .chartXAxis {
-            AxisMarks(values: .stride(by: xAxisStride, count: xAxisStrideCount)) {
+            AxisMarks(values: .stride(by: xAxisStride, count: xAxisStrideCount)) { value in
                 AxisGridLine()
-                AxisValueLabel(format: xAxisLabelFormat, centered: true)
+                if selectedLimit == .duty14, let date = value.as(Date.self) {
+                    AxisValueLabel(centered: true) {
+                        VStack(spacing: 0) {
+                            Text(date.formatted(.dateTime.day()))
+                                .font(.caption2)
+                            Text(date.formatted(.dateTime.month(.abbreviated)))
+                                .font(.caption2)
+                                
+                        }
+                    }
+                } else {
+                    AxisValueLabel(format: xAxisLabelFormat, centered: true)
+                }
             }
         }
         .chartYAxis {
