@@ -1580,6 +1580,8 @@ class FlightDatabaseService: ObservableObject {
             var totalSpIns: Double = 0
             var totalSpInsSim: Double = 0
             var totalSpInsFlt: Double = 0
+            var spInsFltCount = 0
+            var spInsSimCount = 0
             let totalSectors = flights.count
             var aiiiSectors = 0
             var pfSectors = 0
@@ -1597,8 +1599,10 @@ class FlightDatabaseService: ObservableObject {
                 totalSpIns += spVal
                 if entityIsSpInsOnly(flight) {
                     totalSpInsSim += spVal
+                    if spVal > 0 { spInsSimCount += 1 }
                 } else if spVal > 0 {
                     totalSpInsFlt += spVal
+                    spInsFltCount += 1
                 }
 
                 if flight.isAIII {
@@ -1622,6 +1626,8 @@ class FlightDatabaseService: ObservableObject {
                 totalSpInsTime: totalSpIns,
                 totalSpInsSimTime: totalSpInsSim,
                 totalSpInsFltTime: totalSpInsFlt,
+                spInsFltCount: spInsFltCount,
+                spInsSimCount: spInsSimCount,
                 aiiiSectors: aiiiSectors,
                 pfSectors: pfSectors
             )
@@ -1654,6 +1660,8 @@ class FlightDatabaseService: ObservableObject {
         var totalSpIns: Double = 0
         var totalSpInsSim: Double = 0
         var totalSpInsFlt: Double = 0
+        var spInsFltCount = 0
+        var spInsSimCount = 0
         let totalSectors = flights.count
         var aiiiSectors = 0
         var pfSectors = 0
@@ -1670,8 +1678,10 @@ class FlightDatabaseService: ObservableObject {
             totalSpIns += spVal
             if flight.isSpInsOnly {
                 totalSpInsSim += spVal
+                if spVal > 0 { spInsSimCount += 1 }
             } else if spVal > 0 {
                 totalSpInsFlt += spVal
+                spInsFltCount += 1
             }
 
             if flight.isAIII {
@@ -1695,6 +1705,8 @@ class FlightDatabaseService: ObservableObject {
             totalSpInsTime: totalSpIns,
             totalSpInsSimTime: totalSpInsSim,
             totalSpInsFltTime: totalSpInsFlt,
+            spInsFltCount: spInsFltCount,
+            spInsSimCount: spInsSimCount,
             aiiiSectors: aiiiSectors,
             pfSectors: pfSectors
         )
@@ -2884,6 +2896,8 @@ struct FlightStatistics {
     let totalSpInsTime: Double
     let totalSpInsSimTime: Double   // Sp/INS in simulator
     let totalSpInsFltTime: Double   // Sp/INS in aircraft (aircraft instruction)
+    let spInsFltCount: Int          // Number of FLT sessions with Sp/INS
+    let spInsSimCount: Int          // Number of SIM sessions with Sp/INS
     let aiiiSectors: Int
     let pfSectors: Int
 
@@ -2899,6 +2913,8 @@ struct FlightStatistics {
         totalSpInsTime: 0,
         totalSpInsSimTime: 0,
         totalSpInsFltTime: 0,
+        spInsFltCount: 0,
+        spInsSimCount: 0,
         aiiiSectors: 0,
         pfSectors: 0
     )

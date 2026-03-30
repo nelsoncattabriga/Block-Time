@@ -221,12 +221,15 @@ struct SpInsTimeCard: View {
                     HStack(spacing: 0) {
                         breakdownItem(
                             label: "FLT",
+                            count: stats.spInsFltCount,
                             value: stats.formattedSpInsFltTime(asHoursMinutes: showTimesInHoursMinutes),
-                            color: .blue
+                            color: .blue,
+                            countLabel: "flight"
                         )
                         Spacer()
                         breakdownItem(
                             label: "SIM",
+                            count: stats.spInsSimCount,
                             value: stats.formattedSpInsSimTime(asHoursMinutes: showTimesInHoursMinutes),
                             color: AppColors.insColor
                         )
@@ -242,15 +245,22 @@ struct SpInsTimeCard: View {
         .appCardStyle()
     }
 
-    private func breakdownItem(label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .iPadScaledFont(.caption2)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .iPadScaledFont(.caption, phoneFont: .footnote)
-                .fontWeight(.semibold)
-                .foregroundStyle(color.opacity(0.85))
+    private func breakdownItem(label: String, count: Int, value: String, color: Color, countLabel: String = "session") -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 4) {
+                Text(label)
+                    .iPadScaledFont(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(color.opacity(0.85))
+            }
+            if count > 0 {
+                Text("\(count) \(countLabel)\(count == 1 ? "" : "s")")
+                    .iPadScaledFont(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
     }
 }
