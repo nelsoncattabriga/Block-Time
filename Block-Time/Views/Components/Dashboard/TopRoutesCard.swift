@@ -93,7 +93,7 @@ struct TopRoutesCard: View {
 
             // Route label
             Text(route.routeString)
-                .iPadScaledFont(.caption).fontWeight(.semibold)
+                .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold)
                 .foregroundStyle(.primary)
 
             // Bar + count
@@ -111,7 +111,7 @@ struct TopRoutesCard: View {
             .frame(minWidth: 60, maxWidth: .infinity )
 
             Text("\(route.sectors)")
-                .iPadScaledFont(.caption).fontWeight(.bold)
+                .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.bold)
                 .foregroundStyle(.secondary)
         }
     }

@@ -24,11 +24,11 @@ struct FRMSDutyStripCard: View {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini)
                     Text("Loading FRMS…")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
                 }
             } else if totals == nil {
                 Text("Duty data will appear after FRMS loads.")
-                    .font(.caption).foregroundStyle(.secondary).italic()
+                    .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary).italic()
             } else {
                 HStack(spacing: 0) {
                     ringGauge(

@@ -57,7 +57,7 @@ struct RecencyCard: View {
                         .frame(height: 6)
 
                 Text(expirationDate)
-                    .iPadScaledFont(.caption)
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
                     .foregroundStyle(.secondary)
             }
         }

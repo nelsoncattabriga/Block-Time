@@ -261,12 +261,12 @@ struct WorkRateHeatmapCard: View {
             let total  = dailyActivity.reduce(0.0) { $0 + $1.totalHours }
             let active = dailyActivity.filter { $0.totalHours > 0 }.count
             Label(String(format: "%.0f hrs · %d active days", total, active), systemImage: "airplane")
-                .font(.caption).foregroundStyle(.secondary)
+                .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
         default:
             let total  = filteredMonthly.reduce(0.0) { $0 + $1.totalHours }
             let active = filteredMonthly.filter { $0.totalHours > 0 }.count
             Label(String(format: "%.0f hrs · %d months", total, active), systemImage: "airplane")
-                .font(.caption).foregroundStyle(.secondary)
+                .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
         }
     }
 

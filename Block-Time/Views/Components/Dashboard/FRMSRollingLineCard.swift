@@ -44,14 +44,7 @@ struct FRMSRollingLineCard: View {
     }
 
     private var actualPoints: [NDFRMSRollingPoint] {
-        var pts = series.points.filter { !$0.isProjected }
-        // Ensure the last actual point lands exactly on today so the area fill
-        // reaches the Today marker regardless of when the last flight was.
-        let todayStart = Calendar.current.startOfDay(for: Date())
-        if let last = pts.last, !Calendar.current.isDate(last.date, inSameDayAs: todayStart) {
-            pts.append(NDFRMSRollingPoint(date: todayStart, total: last.total, isProjected: false))
-        }
-        return pts
+        series.points.filter { !$0.isProjected }
     }
 
     private var projectedPoints: [NDFRMSRollingPoint] {
@@ -270,7 +263,7 @@ struct FRMSRollingLineCard: View {
     private func summaryChip(label: String, value: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(label)
-                .font(.caption2)
+                .iPadScaledFont(.caption, phoneFont: .footnote)
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.system(.footnote, design: .rounded, weight: .semibold))

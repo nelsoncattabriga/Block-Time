@@ -166,10 +166,10 @@ struct AircraftTypeTimeCard: View {
                                 ForEach(timeEntries, id: \.label) { entry in
                                     HStack(spacing: 0) {
                                         Text("\(entry.label): ")
-                                            .iPadScaledFont(.caption)
+                                            .iPadScaledFont(.caption, phoneFont: .footnote)
                                             .foregroundStyle(.secondary)
                                         Text(formatTime(entry.value))
-                                            .iPadScaledFont(.caption)
+                                            .iPadScaledFont(.caption, phoneFont: .footnote)
                                             .fontWeight(.semibold)
                                             .foregroundStyle(.primary)
                                     }
@@ -184,10 +184,10 @@ struct AircraftTypeTimeCard: View {
                                 ForEach(timeEntries, id: \.label) { entry in
                                     HStack(spacing: 0) {
                                         Text("\(entry.label): ")
-                                            .iPadScaledFont(.caption)
+                                            .iPadScaledFont(.caption, phoneFont: .footnote)
                                             .foregroundStyle(.secondary)
                                         Text(formatTime(entry.value))
-                                            .iPadScaledFont(.caption)
+                                            .iPadScaledFont(.caption, phoneFont: .footnote)
                                             .fontWeight(.semibold)
                                             .foregroundStyle(.primary)
                                     }
@@ -206,10 +206,10 @@ struct AircraftTypeTimeCard: View {
                             ForEach(timeEntries, id: \.label) { entry in
                                 HStack(spacing: 0) {
                                     Text("\(entry.label): ")
-                                        .iPadScaledFont(.caption)
+                                        .iPadScaledFont(.caption, phoneFont: .footnote)
                                         .foregroundStyle(.secondary)
                                     Text(formatTime(entry.value))
-                                        .iPadScaledFont(.caption)
+                                        .iPadScaledFont(.caption, phoneFont: .footnote)
                                         .fontWeight(.semibold)
                                         .foregroundStyle(.primary)
                                 }
@@ -230,7 +230,7 @@ struct AircraftTypeTimeCard: View {
                     .frame(height: 6)
 
                 Text("\(aircraftStats.totalSectors) sector\(aircraftStats.totalSectors == 1 ? "" : "s")")
-                    .iPadScaledFont(.caption)
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
                     .foregroundStyle(.secondary)
             }
         }

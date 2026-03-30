@@ -204,16 +204,18 @@ struct FRMSLimitsGaugeCard: View {
                     if item.hasProjected {
                         HStack(spacing: 2) {
                             Text("→")
-                                .font(.system(.caption, design: .rounded, weight: .medium))
+                                .iPadScaledFont(.caption, phoneFont: .footnote)
+                                .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
                             Text(formattedHours(item.projected))
-                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .iPadScaledFont(.caption, phoneFont: .footnote)
+                                .fontWeight(.semibold)
                                 .foregroundStyle(item.projectedStatusColor.opacity(1.5))
                         }
                     }
 
                     Text("/ \(formattedHours(item.limit))")
-                        .font(.system(.caption, design: .rounded))
+                        .iPadScaledFont(.caption, phoneFont: .footnote)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -277,7 +279,7 @@ struct FRMSLimitsGaugeCard: View {
         HStack(spacing: 6) {
             ProgressView().controlSize(.mini)
             Text("Loading FRMS…")
-                .font(.caption).foregroundStyle(.secondary)
+                .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
         }
     }
 

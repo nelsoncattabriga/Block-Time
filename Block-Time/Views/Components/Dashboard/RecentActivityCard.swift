@@ -63,7 +63,7 @@ struct RecentActivityCard: View {
                     Spacer()
 
                     Image(systemName: "pencil")
-                        .iPadScaledFont(.caption)
+                        .iPadScaledFont(.caption, phoneFont: .footnote)
                         .foregroundStyle(.secondary)
                 }
 
@@ -78,7 +78,7 @@ struct RecentActivityCard: View {
                 }
 
                 Text("\(recentSectors) sector\(recentSectors == 1 ? "" : "s")")
-                    .iPadScaledFont(.caption)
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
                     .foregroundStyle(.secondary)
             }
         }

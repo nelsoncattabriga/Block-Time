@@ -37,7 +37,7 @@ struct SHRestWindowCard: View {
         HStack(spacing: 6) {
             ProgressView().controlSize(.mini)
             Text("Loading FRMS…")
-                .font(.caption).foregroundStyle(.secondary)
+                .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
         }
     }
 

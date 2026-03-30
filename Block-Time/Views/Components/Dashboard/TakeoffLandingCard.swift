@@ -16,6 +16,7 @@ private enum TLPeriod: String, CaseIterable {
 struct TakeoffLandingCard: View {
     @AppStorage("takeoffLandingCard_period") private var period: TLPeriod = .oneMonth
     @State private var stats: NDTakeoffLandingStats = .empty
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -100,14 +101,14 @@ struct TakeoffLandingCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .iPadScaledFont(.caption).foregroundStyle(color)
+                    .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(color)
                 Text(label)
-                    .iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+                    .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             }
 
             HStack(alignment: .center, spacing: 10) {
                 Text("\(total)")
-                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .font(.system(sizeClass == .regular ? .title : .headline, design: .rounded, weight: .bold))
                     .foregroundStyle(color)
 
                 // Stacked horizontal bar
@@ -137,6 +138,14 @@ struct TakeoffLandingCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    // iPad detail pane (regular) → .footnote; iPad sidebar (compact) → .caption; iPhone → .footnote
+    private var legendFont: Font {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            return sizeClass == .regular ? .footnote : .caption
+        }
+        return .footnote
+    }
+
     @ViewBuilder
     private func legendRow(label: String, count: Int, pct: Double, color: Color) -> some View {
         HStack(spacing: 6) {
@@ -144,12 +153,12 @@ struct TakeoffLandingCard: View {
                 .fill(color.opacity(0.8))
                 .frame(width: 6, height: 6)
             Text(label)
-                .iPadScaledFont(.caption).foregroundStyle(.secondary)
+                .font(legendFont).foregroundStyle(.secondary)
             Spacer()
             Text("\(count)")
-                .iPadScaledFont(.caption).fontWeight(.semibold)
+                .font(legendFont).fontWeight(.semibold)
             Text(String(format: "(%.0f%%)", pct * 100))
-                .iPadScaledFont(.caption).foregroundStyle(.secondary)
+                .font(legendFont).foregroundStyle(.secondary)
         }
     }
 }

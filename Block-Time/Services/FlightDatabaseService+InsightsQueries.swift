@@ -384,23 +384,6 @@ extension FlightDatabaseService {
         // Today sits in the centre; past half = history that built up the current total,
         // future half = where the roster takes it.
 
-        func rollingSum(
-            day D: Date,
-            windowDays: Int,
-            actualDict: [Date: Double],
-            futureDict: [Date: Double]
-        ) -> Double {
-            guard let windowStart = cal.date(byAdding: .day, value: -(windowDays - 1), to: D) else { return 0 }
-            var total = 0.0
-            for (date, val) in actualDict where date >= windowStart && date <= min(D, today) {
-                total += val
-            }
-            for (date, val) in futureDict where date > today && date >= windowStart && date <= D {
-                total += val
-            }
-            return total
-        }
-
         func buildSeries(
             label: String,
             limit: Double,
@@ -417,39 +400,57 @@ extension FlightDatabaseService {
             // Cap future end at last rostered duty (no point showing empty future beyond roster)
             let seriesEnd = min(idealEnd, max(lastFutureDay, today))
 
+            // Build a day-by-day sorted array of all values so we can use a sliding window
+            // rather than iterating the full dict on every point (O(n) total vs O(n²)).
+            let allDays: [(date: Date, value: Double, isFuture: Bool)] = {
+                var result: [(Date, Double, Bool)] = []
+                for (d, v) in actualDict where v > 0 { result.append((d, v, false)) }
+                for (d, v) in futureDict  where v > 0 { result.append((d, v, true)) }
+                return result.sorted { $0.0 < $1.0 }
+            }()
+
             var points: [NDFRMSRollingPoint] = []
+            var runningTotal = 0.0
+            // addTail: next index to be consumed into runningTotal (entries with date <= cursor)
+            // evictHead: next index to be evicted when it falls outside the window floor
+            var addTail   = 0
+            var evictHead = 0
             var cursor = seriesStart
-            var sevenDayCounter = 0
 
             while cursor <= seriesEnd {
-                let isPast      = cursor <= today
-                let isFuture    = cursor > today
-                let hasActivity = isPast
-                    ? (actualDict[cursor] ?? 0) > 0
-                    : (futureDict[cursor] ?? 0) > 0
+                let isFuture = cursor > today
 
-                // Emit: any active day, every-7-days anchor in past, and today always
-                let isToday     = cal.isDate(cursor, inSameDayAs: today)
-                let shouldEmit  = hasActivity
-                    || isToday
-                    || (isPast && sevenDayCounter % 7 == 0)
-                    || (isFuture && hasActivity)
-
-                if shouldEmit {
-                    let total = rollingSum(day: cursor, windowDays: windowDays,
-                                           actualDict: actualDict, futureDict: futureDict)
-                    points.append(NDFRMSRollingPoint(date: cursor, total: total, isProjected: isFuture))
+                // Add entries whose date falls on or before cursor
+                while addTail < allDays.count && allDays[addTail].date <= cursor {
+                    let entry = allDays[addTail]
+                    // Past cursor: only count actual (non-projected) values.
+                    // Future cursor: count everything (actual history + projected future).
+                    let shouldCount = isFuture ? true : !entry.isFuture
+                    if shouldCount { runningTotal += entry.value }
+                    addTail += 1
                 }
 
+                // Evict entries that have fallen outside the rolling window floor
+                guard let windowFloor = cal.date(byAdding: .day, value: -(windowDays - 1), to: cursor) else {
+                    cursor = cal.date(byAdding: .day, value: 1, to: cursor) ?? cursor
+                    continue
+                }
+                while evictHead < addTail && allDays[evictHead].date < windowFloor {
+                    let entry = allDays[evictHead]
+                    let wasCounted = isFuture ? true : !entry.isFuture
+                    if wasCounted { runningTotal -= entry.value }
+                    evictHead += 1
+                }
+
+                points.append(NDFRMSRollingPoint(date: cursor, total: max(runningTotal, 0), isProjected: isFuture))
                 cursor = cal.date(byAdding: .day, value: 1, to: cursor) ?? cursor
-                if isPast { sevenDayCounter += 1 }
             }
 
             return NDFRMSRollingSeries(
                 limitLabel: label,
                 limit: limit,
                 warnAt: warnAt,
-                points: points.sorted { $0.date < $1.date },
+                points: points,
                 fleet: fleet,
                 chartStart: seriesStart,
                 chartEnd: seriesEnd

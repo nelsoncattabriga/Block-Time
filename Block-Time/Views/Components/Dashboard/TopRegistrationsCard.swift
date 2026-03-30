@@ -118,9 +118,9 @@ struct TopRegistrationsCard: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(reg.registration)
-                    .iPadScaledFont(.caption).fontWeight(.bold).foregroundStyle(.primary)
+                    .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.bold).foregroundStyle(.primary)
                 Text(reg.aircraftType)
-                    .iPadScaledFont(.caption).foregroundStyle(.secondary)
+                    .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
             }
 
             // Bar
@@ -143,10 +143,10 @@ struct TopRegistrationsCard: View {
             
             if displayMode == .hours {
                 Text(String(format: "%.0f hrs", reg.hours))
-                    .iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+                    .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             } else {
                 Text("\(reg.sectors) sectors")
-                    .iPadScaledFont(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+                    .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             }
         }
     }

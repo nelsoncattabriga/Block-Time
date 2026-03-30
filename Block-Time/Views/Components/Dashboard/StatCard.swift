@@ -30,7 +30,7 @@ struct StatCard: View {
                 }
 
                 Text(subtitle)
-                    .iPadScaledFont(.caption)
+                    .iPadScaledFont(.footnote)
                     .foregroundStyle(.secondary)
             }
         }

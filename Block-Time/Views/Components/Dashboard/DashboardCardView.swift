@@ -212,7 +212,7 @@ struct SpInsTimeCard: View {
                     }
 
                     Text("Total")
-                        .iPadScaledFont(.caption)
+                        .iPadScaledFont(.caption, phoneFont: .footnote)
                         .foregroundStyle(.secondary)
                 }
 
@@ -233,7 +233,7 @@ struct SpInsTimeCard: View {
                     }
                 } else {
                     Text("Simulator & aircraft instruction")
-                        .iPadScaledFont(.caption)
+                        .iPadScaledFont(.caption, phoneFont: .footnote)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -248,7 +248,7 @@ struct SpInsTimeCard: View {
                 .iPadScaledFont(.caption2)
                 .foregroundStyle(.secondary)
             Text(value)
-                .iPadScaledFont(.caption)
+                .iPadScaledFont(.caption, phoneFont: .footnote)
                 .fontWeight(.semibold)
                 .foregroundStyle(color.opacity(0.85))
         }

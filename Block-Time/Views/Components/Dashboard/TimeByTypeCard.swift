@@ -79,13 +79,13 @@ struct TimeByTypeCard: View {
                                 Text(String(format: "%.0f", totalHours))
                                     .font(.system(.title3, design: .rounded, weight: .bold))
                                 Text("hrs")
-                                    .iPadScaledFont(.caption)
+                                    .iPadScaledFont(.caption, phoneFont: .footnote)
                                     .foregroundStyle(.secondary)
                             } else {
                                 Text("\(totalSectors)")
                                     .font(.system(.title3, design: .rounded, weight: .bold))
                                 Text("sectors")
-                                    .iPadScaledFont(.caption)
+                                    .iPadScaledFont(.caption, phoneFont: .footnote)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -102,7 +102,7 @@ struct TimeByTypeCard: View {
                                     .frame(width: 10, height: 10)
 
                                 Text(item.aircraftType)
-                                    .iPadScaledFont(.caption).fontWeight(.medium)
+                                    .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.medium)
                                     .foregroundStyle(.primary)
 
                                 Spacer()
@@ -110,7 +110,7 @@ struct TimeByTypeCard: View {
                                 Text(displayMode == .hours
                                      ? String(format: "%.0f hrs", item.hours)
                                      : "\(item.sectors)")
-                                    .iPadScaledFont(.caption)
+                                    .iPadScaledFont(.caption, phoneFont: .footnote)
                                     .foregroundStyle(.secondary)
                             }
                         }

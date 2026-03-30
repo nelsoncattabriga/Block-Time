@@ -177,7 +177,7 @@ struct AverageMetricCard: View {
                 }
 
                 Text(displaySubtitle)
-                    .iPadScaledFont(.caption)
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
                     .foregroundStyle(.secondary)
             }
         }

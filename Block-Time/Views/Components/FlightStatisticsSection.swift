@@ -11,15 +11,17 @@ extension View {
         }
     }
 
-    // Scale font size for iPad
-    func iPadScaledFont(_ font: Font) -> some View {
-        modifier(IPadFontScaling(font: font))
+    // Scale font size for iPad.
+    // `phoneFont` overrides the iPhone/compact size without affecting iPad scaling.
+    func iPadScaledFont(_ font: Font, phoneFont: Font? = nil) -> some View {
+        modifier(IPadFontScaling(font: font, phoneFont: phoneFont))
     }
 }
 
 // MARK: - iPad Font Scaling Modifier
 struct IPadFontScaling: ViewModifier {
     let font: Font
+    var phoneFont: Font? = nil
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var settings = LogbookSettings.shared
 
@@ -28,8 +30,8 @@ struct IPadFontScaling: ViewModifier {
             // iPad OR iPhone with wide layout - use larger font
             content.font(scaledFont)
         } else {
-            // iPhone with compact layout - use original font
-            content.font(font)
+            // iPhone with compact layout - use phoneFont override if provided, otherwise original font
+            content.font(phoneFont ?? font)
         }
     }
 

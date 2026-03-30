@@ -50,9 +50,9 @@ struct CareerMilestonesCard: View {
             if let firstDate = stats.firstFlightDate {
                 HStack {
                     Image(systemName: "flag.fill")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
                     Text("Logbook Records from \(firstDate.formatted(.dateTime.day().month(.wide).year()))")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
                 }
             }
         }
@@ -71,7 +71,7 @@ struct CareerMilestonesCard: View {
                 .fontDesign(.rounded)
                 .foregroundStyle(.primary)
             Text(label)
-                .font(.caption).foregroundStyle(.secondary)
+                .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
