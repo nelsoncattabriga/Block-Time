@@ -219,20 +219,24 @@ struct SpInsTimeCard: View {
                 // FLT / SIM breakdown row
                 if stats.totalSpInsTime > 0 {
                     HStack(spacing: 0) {
-                        breakdownItem(
-                            label: "FLT",
-                            count: stats.spInsFltCount,
-                            value: stats.formattedSpInsFltTime(asHoursMinutes: showTimesInHoursMinutes),
-                            color: .blue,
-                            countLabel: "flight"
-                        )
+                        if stats.totalSpInsFltTime > 0 {
+                            breakdownItem(
+                                label: "FLT",
+                                count: stats.spInsFltCount,
+                                value: stats.formattedSpInsFltTime(asHoursMinutes: showTimesInHoursMinutes),
+                                color: .blue,
+                                countLabel: "flight"
+                            )
+                        }
                         Spacer()
-                        breakdownItem(
-                            label: "SIM",
-                            count: stats.spInsSimCount,
-                            value: stats.formattedSpInsSimTime(asHoursMinutes: showTimesInHoursMinutes),
-                            color: AppColors.insColor
-                        )
+                        if stats.totalSpInsSimTime > 0 {
+                            breakdownItem(
+                                label: "SIM",
+                                count: stats.spInsSimCount,
+                                value: stats.formattedSpInsSimTime(asHoursMinutes: showTimesInHoursMinutes),
+                                color: AppColors.insColor
+                            )
+                        }
                     }
                 } else {
                     Text("Simulator & aircraft instruction")
@@ -246,19 +250,19 @@ struct SpInsTimeCard: View {
     }
 
     private func breakdownItem(label: String, count: Int, value: String, color: Color, countLabel: String = "session") -> some View {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
                 Text(label)
-                    .iPadScaledFont(.caption2)
+                    .iPadScaledFont(.caption, phoneFont: .caption)
                     .foregroundStyle(.secondary)
                 Text(value)
-                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .iPadScaledFont(.footnote, phoneFont: .subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(color.opacity(0.85))
             }
             if count > 0 {
                 Text("\(count) \(countLabel)\(count == 1 ? "" : "s")")
-                    .iPadScaledFont(.caption2)
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
                     .foregroundStyle(.tertiary)
             }
         }
