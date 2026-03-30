@@ -116,6 +116,7 @@ struct AppSettings {
     var selectedFleetID: String  // Selected fleet for filtering
     var decimalRoundingMode: RoundingMode  // Rounding mode for decimal times (block and night)
     var enterTimesInLocalTime: Bool  // Enter OUT/IN/STD/STA in local airport time instead of UTC
+    var showOutInTimes: Bool  // Show OUT/IN (and STD/STA) times in the flights list
 
 
     static let `default` = AppSettings(
@@ -155,7 +156,8 @@ struct AppSettings {
         showTimesInHoursMinutes: false,
         selectedFleetID: "B737",
         decimalRoundingMode: .standard,  // Default to standard rounding
-        enterTimesInLocalTime: false
+        enterTimesInLocalTime: false,
+        showOutInTimes: true
     )
 }
 
@@ -199,6 +201,7 @@ class UserDefaultsService: ObservableObject {
         static let selectedFleetID = "selectedFleetID"
         static let decimalRoundingMode = "decimalRoundingMode"
         static let enterTimesInLocalTime = "enterTimesInLocalTime"
+        static let showOutInTimes = "showOutInTimes"
         static let onboardingCompleted = "onboardingCompleted"
     }
     
@@ -263,7 +266,8 @@ class UserDefaultsService: ObservableObject {
             showTimesInHoursMinutes: userDefaults.bool(forKey: Keys.showTimesInHoursMinutes),
             selectedFleetID: userDefaults.string(forKey: Keys.selectedFleetID) ?? "B737",
             decimalRoundingMode: roundingMode,
-            enterTimesInLocalTime: userDefaults.bool(forKey: Keys.enterTimesInLocalTime)
+            enterTimesInLocalTime: userDefaults.bool(forKey: Keys.enterTimesInLocalTime),
+            showOutInTimes: userDefaults.object(forKey: Keys.showOutInTimes) as? Bool ?? true
         )
     }
 
@@ -299,6 +303,7 @@ class UserDefaultsService: ObservableObject {
         userDefaults.set(settings.selectedFleetID, forKey: Keys.selectedFleetID)
         userDefaults.set(settings.decimalRoundingMode.rawValue, forKey: Keys.decimalRoundingMode)
         userDefaults.set(settings.enterTimesInLocalTime, forKey: Keys.enterTimesInLocalTime)
+        userDefaults.set(settings.showOutInTimes, forKey: Keys.showOutInTimes)
 
         // Sync to iCloud if enabled
         if syncToCloud {
@@ -476,6 +481,12 @@ class UserDefaultsService: ObservableObject {
     func setEnterTimesInLocalTime(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.enterTimesInLocalTime)
+        syncToCloudAfterChange()
+    }
+
+    func setShowOutInTimes(_ value: Bool) {
+        markModificationAndSyncToCloud()
+        userDefaults.set(value, forKey: Keys.showOutInTimes)
         syncToCloudAfterChange()
     }
 

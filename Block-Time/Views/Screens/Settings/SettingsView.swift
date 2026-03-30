@@ -845,6 +845,19 @@ private struct ModernFormatOptionsCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
+                Divider()
+                
+                ModernToggleRow(
+                    title: "Show OUT/IN Times",
+                    subtitle: "Shows times in Logbook view",
+                    isOn: Binding(
+                        get: { viewModel.showOutInTimes },
+                        set: { viewModel.updateShowOutInTimes($0) }
+                    ),
+                    color: .orange,
+                    icon: "clock"
+                )
+                
                 // Flight Times Format Picker
                 HStack(spacing: 12) {
                     Image(systemName: "clock")
@@ -852,7 +865,7 @@ private struct ModernFormatOptionsCard: View {
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Flight Times Displayed As")
+                        Text("Block Times In")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
