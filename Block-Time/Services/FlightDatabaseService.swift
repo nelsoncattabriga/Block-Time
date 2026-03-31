@@ -10,6 +10,7 @@ import CoreData
 import SwiftUI
 import CloudKit
 import Combine
+import WidgetKit
 
 // MARK: - Detailed Sync Error Information
 struct DetailedSyncError: Identifiable {
@@ -1556,6 +1557,10 @@ class FlightDatabaseService: ObservableObject {
             DispatchQueue.main.async {
                 LogManager.shared.info("FlightDatabaseService: Posting .flightDataChanged (debounced)")
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                // Refresh widget snapshot whenever flight data changes
+                Task { @MainActor in
+                    WidgetDataWriter.shared.updateWidgetSnapshot()
+                }
             }
         }
     }

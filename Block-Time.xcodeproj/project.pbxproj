@@ -8,11 +8,42 @@
 
 /* Begin PBXBuildFile section */
 		52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52E6FD222F51217D008DD58E /* StoreKit.framework */; };
+		52EFA29A2F7B69EB0027B37B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52EFA2992F7B69EB0027B37B /* WidgetKit.framework */; };
+		52EFA29C2F7B69EB0027B37B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52EFA29B2F7B69EB0027B37B /* SwiftUI.framework */; };
+		52EFA2AB2F7B69EC0027B37B /* BlockTimeWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		52EFA2A92F7B69EC0027B37B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 522DB4E62F26FA7E00739A34 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 52EFA2972F7B69EB0027B37B;
+			remoteInfo = BlockTimeWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		52EFA2B02F7B69EC0027B37B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				52EFA2AB2F7B69EC0027B37B /* BlockTimeWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		522DB4EE2F26FA7E00739A34 /* Block-Time.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Block-Time.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		52E6FD222F51217D008DD58E /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlockTimeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		52EFA2992F7B69EB0027B37B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		52EFA29B2F7B69EB0027B37B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		52EFA2B72F7B6A3E0027B37B /* BlockTimeWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlockTimeWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -23,6 +54,21 @@
 			);
 			target = 522DB4ED2F26FA7E00739A34 /* Block-Time */;
 		};
+		52EFA2AF2F7B69EC0027B37B /* Exceptions for "BlockTimeWidget" folder in "BlockTimeWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */;
+		};
+		52EFA2B92F7B6AE10027B37B /* Exceptions for "Block-Time" folder in "BlockTimeWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/WidgetFlightEntry.swift,
+				Resources/airports.dat.txt,
+			);
+			target = 52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -30,8 +76,17 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				522DB4FF2F26FA7F00739A35 /* Exceptions for "Block-Time" folder in "Block-Time" target */,
+				52EFA2B92F7B6AE10027B37B /* Exceptions for "Block-Time" folder in "BlockTimeWidgetExtension" target */,
 			);
 			path = "Block-Time";
+			sourceTree = "<group>";
+		};
+		52EFA29D2F7B69EB0027B37B /* BlockTimeWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				52EFA2AF2F7B69EC0027B37B /* Exceptions for "BlockTimeWidget" folder in "BlockTimeWidgetExtension" target */,
+			);
+			path = BlockTimeWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -45,13 +100,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		52EFA2952F7B69EB0027B37B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				52EFA29C2F7B69EB0027B37B /* SwiftUI.framework in Frameworks */,
+				52EFA29A2F7B69EB0027B37B /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		522DB4E52F26FA7E00739A34 = {
 			isa = PBXGroup;
 			children = (
+				52EFA2B72F7B6A3E0027B37B /* BlockTimeWidgetExtension.entitlements */,
 				522DB4F02F26FA7E00739A34 /* Block-Time */,
+				52EFA29D2F7B69EB0027B37B /* BlockTimeWidget */,
 				52E6FD212F51217D008DD58E /* Frameworks */,
 				522DB4EF2F26FA7E00739A34 /* Products */,
 			);
@@ -61,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				522DB4EE2F26FA7E00739A34 /* Block-Time.app */,
+				52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -69,6 +136,8 @@
 			isa = PBXGroup;
 			children = (
 				52E6FD222F51217D008DD58E /* StoreKit.framework */,
+				52EFA2992F7B69EB0027B37B /* WidgetKit.framework */,
+				52EFA29B2F7B69EB0027B37B /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -83,10 +152,12 @@
 				522DB4EA2F26FA7E00739A34 /* Sources */,
 				522DB4EB2F26FA7E00739A34 /* Frameworks */,
 				522DB4EC2F26FA7E00739A34 /* Resources */,
+				52EFA2B02F7B69EC0027B37B /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				52EFA2AA2F7B69EC0027B37B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				522DB4F02F26FA7E00739A34 /* Block-Time */,
@@ -98,6 +169,28 @@
 			productReference = 522DB4EE2F26FA7E00739A34 /* Block-Time.app */;
 			productType = "com.apple.product-type.application";
 		};
+		52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 52EFA2AC2F7B69EC0027B37B /* Build configuration list for PBXNativeTarget "BlockTimeWidgetExtension" */;
+			buildPhases = (
+				52EFA2942F7B69EB0027B37B /* Sources */,
+				52EFA2952F7B69EB0027B37B /* Frameworks */,
+				52EFA2962F7B69EB0027B37B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				52EFA29D2F7B69EB0027B37B /* BlockTimeWidget */,
+			);
+			name = BlockTimeWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = BlockTimeWidgetExtension;
+			productReference = 52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -105,11 +198,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
+				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					522DB4ED2F26FA7E00739A34 = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					52EFA2972F7B69EB0027B37B = {
+						CreatedOnToolsVersion = 26.4;
 					};
 				};
 			};
@@ -128,12 +224,20 @@
 			projectRoot = "";
 			targets = (
 				522DB4ED2F26FA7E00739A34 /* Block-Time */,
+				52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		522DB4EC2F26FA7E00739A34 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52EFA2962F7B69EB0027B37B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -150,7 +254,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		52EFA2942F7B69EB0027B37B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		52EFA2AA2F7B69EC0027B37B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */;
+			targetProxy = 52EFA2A92F7B69EC0027B37B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		522DB4F72F26FA7F00739A34 /* Debug */ = {
@@ -358,6 +477,70 @@
 			};
 			name = Release;
 		};
+		52EFA2AD2F7B69EC0027B37B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = BlockTimeWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BlockTimeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BlockTimeWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thezoolab.blocktime.BlockTimeWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		52EFA2AE2F7B69EC0027B37B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = BlockTimeWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BlockTimeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BlockTimeWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thezoolab.blocktime.BlockTimeWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -375,6 +558,15 @@
 			buildConfigurations = (
 				522DB4FA2F26FA7F00739A34 /* Debug */,
 				522DB4FB2F26FA7F00739A34 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		52EFA2AC2F7B69EC0027B37B /* Build configuration list for PBXNativeTarget "BlockTimeWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				52EFA2AD2F7B69EC0027B37B /* Debug */,
+				52EFA2AE2F7B69EC0027B37B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

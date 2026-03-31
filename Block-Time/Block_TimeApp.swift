@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import WidgetKit
 
 @main
 struct Block_TimeApp: App {
@@ -15,6 +16,7 @@ struct Block_TimeApp: App {
     @State private var cloudKitService = CloudKitSettingsSyncService.shared
     @State private var purchaseService = PurchaseService.shared
     @ObservedObject private var appState = AppState.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         // Reset debug mode to off every app launch
@@ -36,6 +38,13 @@ struct Block_TimeApp: App {
             SplashScreenView()
                 .task {
                     await purchaseService.listenForTransactions()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        Task { @MainActor in
+                            WidgetDataWriter.shared.updateWidgetSnapshot()
+                        }
+                    }
                 }
                 .preferredColorScheme(colorSchemeForAppearanceMode(themeService.appearanceMode))
                 .environment(themeService)
