@@ -785,20 +785,18 @@ class FileImportService {
 
         guard let firstLine = nonEmptyLines.first else { return false }
 
-        // Tab-separated = saved output from the live WebCIS JS extractor
+        // Saved webCIS files always have "webcis_web_download" in their filename.
+        // Only auto-redirect files with that name signature.
+        let filename = url.lastPathComponent.lowercased()
+        guard filename.contains("webcis_web_download") else { return false }
+
+        // Tab-separated = saved output from the live WebCIS JS extractor or file download.
         if firstLine.contains("\t") {
-            // Must have enough tab-separated columns and first cell looks like a date
             let cells = firstLine.components(separatedBy: "\t")
             return cells.count >= 3 && cells[0].first?.isNumber == true
         }
 
-        // Fixed-width format: look for multiple lines starting with a digit (date)
-        // and containing time-like patterns (h:mm)
-        let dataLines = nonEmptyLines.filter { $0.first?.isNumber == true }
-        guard dataLines.count >= 2 else { return false }
-        let timePattern = #"\d{1,2}:\d{2}"#
-        let matchCount = dataLines.prefix(5).filter { $0.range(of: timePattern, options: .regularExpression) != nil }.count
-        return matchCount >= 2
+        return false
     }
 
     /// Public method to create webCIS field mapping (needed for UI)
