@@ -82,9 +82,14 @@ class LogManager {
         deviceModel = UIDevice.current.model
         iosVersion = UIDevice.current.systemVersion
 
-        // Set up log file location
-        let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        logFileURL = documentsPath.appendingPathComponent(logFileName)
+        // Set up log file location in Caches (excluded from OneDrive/iCloud sync to prevent file locking)
+        let cachesPath = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        logFileURL = cachesPath.appendingPathComponent(logFileName)
+
+        // Migrate: remove old log file from Documents if it exists
+        let oldLogURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(logFileName)
+        try? fileManager.removeItem(at: oldLogURL)
 
         // Create log file if it doesn't exist
         if !fileManager.fileExists(atPath: logFileURL.path) {
