@@ -581,19 +581,39 @@ extension FlightDatabaseService {
             return .empty
         }
 
-        // Aggregate actual flight hours per calendar day
+        // Aggregate actual flight hours per calendar day.
+        // For duty, track the span per day using first STD (duty start anchor) and last actual IN
+        // (duty end anchor), matching the FRMS calculation: duty = (firstSTD - signOn) → (lastIN + signOff).
+        // Multi-sector days receive only one set of sign-on/off margins.
         var actualFlightByDay: [Date: Double] = [:]
-        var actualDutyByDay:   [Date: Double] = [:]
+        var actualDutySpanByDay: [Date: (firstSTD: Int, lastIN: Int)] = [:]
 
         for entity in historicalEntities {
             guard let entityDate = entity.date else { continue }
             let day = cal.startOfDay(for: entityDate)
             actualFlightByDay[day, default: 0] += hrs(entity.blockTime)
-            // Duty: approximate from sign-on/off offsets around actual OUT/IN
-            // For simplicity use block time + margins as duty contribution per sector
-            // (FRMSViewModel does the accurate grouping; we just need relative daily totals here)
-            let bt = hrs(entity.blockTime) + hrs(entity.simTime)
-            actualDutyByDay[day, default: 0] += bt > 0 ? bt + Double(signOnMins + signOffMins) / 60.0 : 0
+
+            // Duty start: STD (always used as sign-on anchor per FRMS rules)
+            // Duty end: actual IN time; fall back to STA if IN not recorded
+            let inStr  = (entity.inTime?.isEmpty  == false) ? entity.inTime  : entity.scheduledArrival
+            guard let stdMins = hhmm(entity.scheduledDeparture), let inMins = hhmm(inStr) else { continue }
+
+            if var span = actualDutySpanByDay[day] {
+                span.firstSTD = min(span.firstSTD, stdMins)
+                span.lastIN   = max(span.lastIN,   inMins)
+                actualDutySpanByDay[day] = span
+            } else {
+                actualDutySpanByDay[day] = (firstSTD: stdMins, lastIN: inMins)
+            }
+        }
+
+        // Convert spans → duty hours: (lastIN - firstSTD) + signOn + signOff, once per day
+        var actualDutyByDay: [Date: Double] = [:]
+        for (day, span) in actualDutySpanByDay {
+            let rawMins = span.lastIN >= span.firstSTD
+                ? span.lastIN - span.firstSTD
+                : (1440 - span.firstSTD) + span.lastIN
+            actualDutyByDay[day] = Double(rawMins + signOnMins + signOffMins) / 60.0
         }
 
         // MARK: Fetch future rostered flights (no OUT time, STD set, date > today)
@@ -660,7 +680,9 @@ extension FlightDatabaseService {
         futureDays.sort { $0.date < $1.date }
 
         // MARK: Rolling peak calculation
-        // For each future duty day D, compute rolling totals ending on D and track the peak.
+        // Evaluate every calendar day from tomorrow through the last rostered day so that
+        // windows ending on gap days (no duty) are also checked. The peak rolling total
+        // can occur on a day between roster entries as flights drop off the back of the window.
 
         var peakFlight7d:   Double = 0
         var peakFlight28d:  Double = 0
@@ -686,9 +708,16 @@ extension FlightDatabaseService {
                       .reduce(0) { $0 + $1.dutyHours }
         }
 
-        for day in futureDays {
-            let D = day.date
+        guard let lastRosteredDay = futureDays.last?.date,
+              let tomorrow = cal.date(byAdding: .day, value: 1, to: today) else {
+            return NDProjectedFRMSData(
+                flightHours7d: peakFlight7d, flightHours28d: peakFlight28d,
+                flightHours365d: peakFlight365d, dutyHours7d: peakDuty7d, dutyHours14d: peakDuty14d
+            )
+        }
 
+        var D = tomorrow
+        while D <= lastRosteredDay {
             // Flight 7-day window ending on D (LH fleet only)
             if fleet.maxFlightTime7Days != nil {
                 let ws = cal.date(byAdding: .day, value: -6, to: D) ?? D
@@ -715,6 +744,8 @@ extension FlightDatabaseService {
             let ws14 = cal.date(byAdding: .day, value: -13, to: D) ?? D
             let rollingDuty14 = actualDutySum(windowStart: ws14) + projectedDutySum(windowStart: ws14, throughDay: D)
             peakDuty14d = max(peakDuty14d, rollingDuty14)
+
+            D = cal.date(byAdding: .day, value: 1, to: D) ?? lastRosteredDay
         }
 
         return NDProjectedFRMSData(
