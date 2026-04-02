@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct BackupNudgeBannerView: View {
-    @ObservedObject private var backupService = AutomaticBackupService.shared
+    @StateObject private var backupService = AutomaticBackupService.shared
     @AppStorage("backupNudgeDismissed") private var dismissed = false
 
     // Injected so the banner can trigger navigation on iPhone
@@ -73,7 +73,6 @@ struct BackupNudgeBannerView: View {
                 navigateToBackups = true
             }
             .transition(.opacity.combined(with: .move(edge: .top)))
-            .animation(.easeInOut(duration: 0.2), value: dismissed)
         }
     }
 }
