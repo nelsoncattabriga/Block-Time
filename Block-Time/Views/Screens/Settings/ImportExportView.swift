@@ -68,6 +68,9 @@ struct ImportExportView: View {
     @State private var showingResult = false
     @State private var resultMessage = ""
     @State private var lastImportResult: ImportSessionResult? = nil
+    @State private var showBackupNudge = false
+    @State private var lastImportSuccessCount = 0
+    @AppStorage("backupNudgeDismissed") private var backupNudgeDismissed = false
 
     // Delete state
     @State private var showingDeleteWarning = false
@@ -181,6 +184,19 @@ struct ImportExportView: View {
         }
         .sheet(item: $lastImportResult) { result in
             ImportSessionReviewSheet(result: result)
+        }
+        .onChange(of: lastImportResult) { oldValue, newValue in
+            // Review sheet was dismissed (non-nil → nil)
+            guard oldValue != nil, newValue == nil else { return }
+            guard lastImportSuccessCount > 0 else { return }
+            guard !AutomaticBackupService.shared.settings.isEnabled else { return }
+            guard !backupNudgeDismissed else { return }
+            showBackupNudge = true
+        }
+        .sheet(isPresented: $showBackupNudge) {
+            BackupNudgeSheet(importedFlightCount: lastImportSuccessCount)
+                .presentationDetents([.height(420)])
+                .presentationDragIndicator(.visible)
         }
         .alert("Delete All Logbook Data", isPresented: $showingDeleteWarning) {
             Button("Cancel", role: .cancel) { }
@@ -450,6 +466,7 @@ struct ImportExportView: View {
 
                 if importResult.successCount > 0 {
                     // Show the same review sheet as WebCIS imports
+                    lastImportSuccessCount = importResult.successCount
                     lastImportResult = ImportSessionResult(
                         sessionID: importResult.sessionID ?? UUID(),
                         successCount: importResult.successCount,
@@ -567,6 +584,7 @@ struct ImportExportView: View {
                 // Database service observers will automatically post debounced .flightDataChanged notification
                 viewModel.reloadSavedCrewNames()
 
+                lastImportSuccessCount = importResult.successCount
                 lastImportResult = ImportSessionResult(
                     sessionID: importResult.sessionID ?? UUID(),
                     successCount: importResult.successCount,
@@ -635,7 +653,10 @@ private struct ActionButton: View {
 }
 
 // MARK: - Import Session Result
-struct ImportSessionResult: Identifiable {
+struct ImportSessionResult: Identifiable, Equatable {
+    static func == (lhs: ImportSessionResult, rhs: ImportSessionResult) -> Bool {
+        lhs.id == rhs.id
+    }
     let id = UUID()
     let sessionID: UUID
     let successCount: Int
