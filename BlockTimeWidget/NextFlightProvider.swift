@@ -12,15 +12,17 @@ import SwiftUI
 // MARK: - Timeline Entry
 
 struct NextFlightTimelineEntry: TimelineEntry {
-    let date: Date                       // When WidgetKit should render this entry
-    let flight: WidgetFlightEntry?       // nil = no upcoming flights
-    let countdownLabel: String           // Pre-computed label for this entry e.g. "3 Days", "1 Hr"
-    var sameDayFlights: [WidgetFlightEntry] = []  // All flights on the same day as `flight` (large widget)
+    let date: Date                               // When WidgetKit should render this entry
+    let flight: WidgetFlightEntry?               // nil = no upcoming flights
+    let countdownLabel: String                   // Pre-computed label e.g. "3 Days", "1 Hr"
+    var sameDayFlights: [WidgetFlightEntry] = [] // All flights on the same day as `flight` (large widget)
+    var configuration: NextFlightIntent = NextFlightIntent()
 }
 
 // MARK: - Provider
 
-struct NextFlightProvider: TimelineProvider {
+struct NextFlightProvider: AppIntentTimelineProvider {
+    typealias Intent = NextFlightIntent
 
     // MARK: Placeholder (shown while widget loads / in gallery)
     func placeholder(in context: Context) -> NextFlightTimelineEntry {
@@ -28,25 +30,24 @@ struct NextFlightProvider: TimelineProvider {
     }
 
     // MARK: Snapshot (shown in widget picker preview)
-    func getSnapshot(in context: Context, completion: @escaping (NextFlightTimelineEntry) -> Void) {
+    func snapshot(for configuration: NextFlightIntent, in context: Context) async -> NextFlightTimelineEntry {
         let flights = readSnapshots()
         let flight = flights.first ?? .placeholder
         let label = Self.label(for: flight.departureDatetime ?? flight.flightDate, at: .now)
         let sameDay = Self.sameDayFlights(as: flight, from: flights)
-        completion(NextFlightTimelineEntry(date: .now, flight: flight, countdownLabel: label, sameDayFlights: sameDay))
+        return NextFlightTimelineEntry(date: .now, flight: flight, countdownLabel: label, sameDayFlights: sameDay, configuration: configuration)
     }
 
     // MARK: Timeline
-    func getTimeline(in context: Context, completion: @escaping (Timeline<NextFlightTimelineEntry>) -> Void) {
+    func timeline(for configuration: NextFlightIntent, in context: Context) async -> Timeline<NextFlightTimelineEntry> {
         let now = Date()
         let flights = readSnapshots()
 
         guard !flights.isEmpty else {
             // No flights — check again in 1 hour
-            let entry = NextFlightTimelineEntry(date: now, flight: nil, countdownLabel: "")
+            let entry = NextFlightTimelineEntry(date: now, flight: nil, countdownLabel: "", configuration: configuration)
             let refresh = Calendar.current.date(byAdding: .hour, value: 1, to: now) ?? now
-            completion(Timeline(entries: [entry], policy: .after(refresh)))
-            return
+            return Timeline(entries: [entry], policy: .after(refresh))
         }
 
         // Checkpoints before departure at which the countdown label changes
@@ -78,27 +79,27 @@ struct NextFlightProvider: TimelineProvider {
             for (offset, label) in checkpointOffsets {
                 let entryDate = departure.addingTimeInterval(offset)
                 if entryDate >= now {
-                    entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight, countdownLabel: label, sameDayFlights: sameDay))
+                    entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight, countdownLabel: label, sameDayFlights: sameDay, configuration: configuration))
                 }
             }
 
             // Current entry (if this is the first flight and no checkpoint covers now)
             if index == 0 && (entries.isEmpty || entries.first!.date > now) {
                 let currentLabel = Self.label(for: departure, at: now)
-                entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel, sameDayFlights: sameDay), at: 0)
+                entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel, sameDayFlights: sameDay, configuration: configuration), at: 0)
             }
 
             // 30 mins after departure: switch to next flight (or show departed if last)
             let switchDate = departure.addingTimeInterval(30 * 60)
             let switchLabel = nextFlight != nil ? Self.label(for: nextFlight!.departureDatetime ?? nextFlight!.flightDate, at: switchDate) : "Departed"
             let switchSameDay = nextFlight != nil ? Self.sameDayFlights(as: nextFlight!, from: flights) : sameDay
-            entries.append(NextFlightTimelineEntry(date: switchDate, flight: nextFlight ?? flight, countdownLabel: switchLabel, sameDayFlights: switchSameDay))
+            entries.append(NextFlightTimelineEntry(date: switchDate, flight: nextFlight ?? flight, countdownLabel: switchLabel, sameDayFlights: switchSameDay, configuration: configuration))
         }
 
         // After the last flight departs, refresh in 1 hour to pick up any new data
         let lastDeparture = (flights.last?.departureDatetime ?? flights.last?.flightDate) ?? now
         let refreshDate = lastDeparture.addingTimeInterval(3600)
-        completion(Timeline(entries: entries, policy: .after(refreshDate)))
+        return Timeline(entries: entries, policy: .after(refreshDate))
     }
 
     // MARK: - Same-day flights helper

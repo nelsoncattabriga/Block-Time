@@ -16,6 +16,8 @@ private enum WT {
     // Orange accent matching AppColors.accentOrange
     static let orange      = Color(red: 1.0, green: 0.62, blue: 0.04).opacity(0.85)
     static let orangeDim   = Color(red: 1.0, green: 0.62, blue: 0.04).opacity(0.18)
+    // Fixed blue — non-adaptive, same value light and dark
+    static let blue        = Color(red: 0.20, green: 0.45, blue: 0.90)
 
     // Backgrounds
     static let darkBG      = Color(red: 0.11, green: 0.11, blue: 0.12)  // #1C1C1E
@@ -39,13 +41,16 @@ private enum WT {
     static let primaryLight = Color(red: 0.1, green: 0.1, blue: 0.12)
     static let secondary   = Color(white: 0.55)
 
+    // Solid backgrounds (original style)
+    static let lightBGSolid = Color(red: 0.98, green: 0.96, blue: 0.93)  // 5. Orange tint (was active)
+
     // Gradient — mirrors defaultTheme in ThemeService (blue→orange, topLeading→bottomTrailing)
     static func gradient(dark: Bool) -> LinearGradient {
         if dark {
             return LinearGradient(
                 colors: [
                     darkBG,
-                    Color.blue.opacity(0.25),
+                    WT.blue.opacity(0.25),
                     Color.orange.opacity(0.18)
                 ],
                 startPoint: .topLeading,
@@ -54,13 +59,23 @@ private enum WT {
         } else {
             return LinearGradient(
                 colors: [
-                    Color.blue.opacity(0.18),
+                    WT.blue.opacity(0.18),
                     Color(red: 0.98, green: 0.96, blue: 0.93),
                     Color.orange.opacity(0.15)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+        }
+    }
+
+    /// Returns the correct background view for the given style and appearance.
+    @ViewBuilder
+    static func background(style: WidgetStyleOption, dark: Bool) -> some View {
+        if style == .gradient {
+            gradient(dark: dark).ignoresSafeArea()
+        } else {
+            (dark ? darkBG : lightBGSolid).ignoresSafeArea()
         }
     }
 }
@@ -139,16 +154,28 @@ private struct TimeFormatHelper {
 
 struct NextFlightWidgetView: View {
     @Environment(\.widgetFamily) var family
-    @Environment(\.colorScheme)  var colorScheme
+    @Environment(\.colorScheme)  var systemScheme
     let entry: NextFlightTimelineEntry
 
-    var body: some View {
-        switch family {
-        case .systemSmall:  SmallView(entry: entry, scheme: colorScheme)
-        case .systemMedium: MediumView(entry: entry, scheme: colorScheme)
-        case .systemLarge:  LargeView(entry: entry, scheme: colorScheme)
-        default:            SmallView(entry: entry, scheme: colorScheme)
+    /// Resolved colour scheme — gradient always follows system; solid respects user override.
+    private var scheme: ColorScheme {
+        switch entry.configuration.resolvedAppearance {
+        case .light:     return .light
+        case .dark:      return .dark
+        case .automatic: return systemScheme
         }
+    }
+
+    var body: some View {
+        Group {
+            switch family {
+            case .systemSmall:  SmallView(entry: entry, scheme: scheme)
+            case .systemMedium: MediumView(entry: entry, scheme: scheme)
+            case .systemLarge:  LargeView(entry: entry, scheme: scheme)
+            default:            SmallView(entry: entry, scheme: scheme)
+            }
+        }
+        .environment(\.colorScheme, scheme)
     }
 }
 
@@ -163,7 +190,7 @@ private struct SmallView: View {
 
     var body: some View {
         ZStack {
-            WT.gradient(dark: isDark).ignoresSafeArea()
+            WT.background(style: entry.configuration.style, dark: isDark)
 
             if let flight = entry.flight {
                 VStack(alignment: .center, spacing: 0) {
@@ -241,12 +268,12 @@ private struct SmallView: View {
                         VStack(alignment: .center, spacing: 2) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(WT.orange)
                                 .minimumScaleFactor(0.7)
                                 .lineLimit(1)
                             Text(TimeFormatHelper.localTime(dep))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(WT.orange)
                                 .minimumScaleFactor(0.7)
                         }
                     }
@@ -271,7 +298,7 @@ private struct MediumView: View {
 
     var body: some View {
         ZStack {
-            WT.gradient(dark: isDark).ignoresSafeArea()
+            WT.background(style: entry.configuration.style, dark: isDark)
 
             if let flight = entry.flight {
                 VStack(spacing: 0) {
@@ -358,10 +385,10 @@ private struct MediumView: View {
                         VStack(alignment: .center, spacing: 1) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(WT.orange)
                             Text(TimeFormatHelper.localTime(dep))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(WT.orange)
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
@@ -396,7 +423,7 @@ private struct LargeView: View {
 
     var body: some View {
         ZStack {
-            WT.gradient(dark: isDark).ignoresSafeArea()
+            WT.background(style: entry.configuration.style, dark: isDark)
 
             if let flight = entry.flight {
                 VStack(spacing: 0) {
@@ -474,10 +501,10 @@ private struct LargeView: View {
                         VStack(alignment: .center, spacing: 2) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
                                 .font(.system(size: 22, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(WT.orange)
                             Text(TimeFormatHelper.localTime(dep))
                                 .font(.system(size: 22, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(WT.orange)
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }

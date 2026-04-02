@@ -17,7 +17,7 @@ struct BlockTimeWidget: Widget {
     let kind = "BlockTimeWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: NextFlightProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: NextFlightIntent.self, provider: NextFlightProvider()) { entry in
             NextFlightWidgetView(entry: entry)
                 .containerBackground(for: .widget) {
                     Color.clear
