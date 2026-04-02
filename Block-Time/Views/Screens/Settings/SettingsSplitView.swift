@@ -44,6 +44,9 @@ struct SettingsSplitView: View {
                 }
             }
             .navigationSplitViewStyle(.balanced)
+            .onReceive(NotificationCenter.default.publisher(for: .navigateToBackupSettings)) { _ in
+                selectedCategory = .backups
+            }
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 // Force sidebar to show when app becomes active, but not while
                 // the webCIS live import sheet is open — rebuilding the split view
@@ -96,6 +99,19 @@ private struct SettingsCategoriesListContent: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
+            }
+
+            // Backup nudge banner
+            Section {
+                BackupNudgeBannerView(navigateToBackups: Binding(
+                    get: { false },
+                    set: { _ in
+                        NotificationCenter.default.post(name: .navigateToBackupSettings, object: nil)
+                    }
+                ))
+                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
 
             ForEach(SettingsCategory.allCases, id: \.self) { category in
