@@ -19,10 +19,23 @@ private enum WT {
 
     // Backgrounds
     static let darkBG      = Color(red: 0.11, green: 0.11, blue: 0.12)  // #1C1C1E
-    static let lightBG     = Color(white: 0.97)
+    // 1. Warm off-white
+//     static let lightBG = Color(red: 0.96, green: 0.95, blue: 0.93)
+    // 2. Cool light grey
+    // static let lightBG = Color(red: 0.93, green: 0.93, blue: 0.95)
+    // 3. Soft warm sand
+//    static let lightBG     = Color(red: 0.95, green: 0.92, blue: 0.87)
+    // 4. System adaptive
+//     static let lightBG = Color(.systemBackground)
+    // 5. Orange tint
+     static let lightBG = Color(red: 0.98, green: 0.96, blue: 0.93)
+    // 6. Light slate
+    // static let lightBG = Color(red: 0.90, green: 0.91, blue: 0.93)
+    // 7. Blue tint
+//     static let lightBG = Color(red: 0.91, green: 0.94, blue: 0.98)
 
     // Text
-    static let primaryDark = Color.white
+    static let primaryDark = Color(white: 0.75)
     static let primaryLight = Color(red: 0.1, green: 0.1, blue: 0.12)
     static let secondary   = Color(white: 0.55)
 }
