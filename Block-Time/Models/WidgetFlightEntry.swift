@@ -42,4 +42,5 @@ struct WidgetFlightEntry: Codable {
 extension WidgetFlightEntry {
     static let appGroupID    = "group.com.thezoolab.blocktime"
     static let defaultsKey   = "nextFlightSnapshot"
+    static let listDefaultsKey = "upcomingFlightsSnapshot"
 }

@@ -20,66 +20,59 @@ final class WidgetDataWriter {
 
     // MARK: - Public API
 
-    /// Fetches the next future flight, writes snapshot, and reloads the widget timeline.
+    /// Fetches the next 5 future flights, writes snapshot array, and reloads the widget timeline.
     /// Safe to call as often as needed — WidgetCenter coalesces rapid calls.
     func updateWidgetSnapshot() {
         let context = FlightDatabaseService.shared.viewContext
+        let snapshots = buildSnapshots(context: context)
 
-        // viewContext is always on the main thread; class is @MainActor — call directly.
-        let snapshot = buildSnapshot(context: context)
-
-        if let snapshot, let encoded = try? JSONEncoder().encode(snapshot) {
-            UserDefaults(suiteName: WidgetFlightEntry.appGroupID)?
-                .set(encoded, forKey: WidgetFlightEntry.defaultsKey)
+        let defaults = UserDefaults(suiteName: WidgetFlightEntry.appGroupID)
+        if !snapshots.isEmpty, let encoded = try? JSONEncoder().encode(snapshots) {
+            defaults?.set(encoded, forKey: WidgetFlightEntry.listDefaultsKey)
         } else {
-            UserDefaults(suiteName: WidgetFlightEntry.appGroupID)?
-                .removeObject(forKey: WidgetFlightEntry.defaultsKey)
+            defaults?.removeObject(forKey: WidgetFlightEntry.listDefaultsKey)
         }
         WidgetCenter.shared.reloadTimelines(ofKind: "BlockTimeWidget")
     }
 
     // MARK: - Private
 
-    /// Builds the snapshot entirely within a Core Data context queue (nonisolated).
-    /// Returns nil if there is no suitable upcoming flight.
-    private func buildSnapshot(context: NSManagedObjectContext) -> WidgetFlightEntry? {
+    /// Returns up to 5 upcoming flights (departure >= now), sorted ascending.
+    private func buildSnapshots(context: NSManagedObjectContext) -> [WidgetFlightEntry] {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         let startOfToday = Calendar.current.startOfDay(for: Date())
         request.predicate = NSPredicate(format: "date >= %@", startOfToday as NSDate)
         request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)]
-        request.fetchLimit = 10
+        request.fetchLimit = 20   // fetch extra so we can filter by effective departure time
 
-        guard let flights = try? context.fetch(request), !flights.isEmpty else { return nil }
+        guard let flights = try? context.fetch(request), !flights.isEmpty else { return [] }
 
         let now = Date()
-        var chosen: FlightEntity?
+        let useIATA = UserDefaults.standard.bool(forKey: "useIATACodes")
+        var results: [WidgetFlightEntry] = []
 
-        for flight in flights {
-            guard let flightDate = flight.date else { continue }
-            let depDatetime = buildDatetime(flightDate: flightDate, timeString: flight.scheduledDeparture)
+        for entity in flights {
+            guard let flightDate = entity.date else { continue }
+            let depDatetime = buildDatetime(flightDate: flightDate, timeString: entity.scheduledDeparture)
             let effectiveTime = depDatetime ?? flightDate
-            if effectiveTime >= now {
-                chosen = flight
-                break
-            }
+            guard effectiveTime >= now else { continue }
+
+            let arrDatetime = buildDatetime(flightDate: flightDate, timeString: entity.scheduledArrival)
+            results.append(WidgetFlightEntry(
+                flightNumber:      (entity.flightNumber ?? "").trimmingCharacters(in: .whitespaces),
+                fromAirport:       (entity.fromAirport ?? "").uppercased(),
+                toAirport:         (entity.toAirport ?? "").uppercased(),
+                flightDate:        flightDate,
+                departureDatetime: depDatetime,
+                arrivalDatetime:   arrDatetime,
+                useIATACodes:      useIATA,
+                snapshotDate:      Date()
+            ))
+
+            if results.count == 5 { break }
         }
 
-        guard let entity = chosen, let flightDate = entity.date else { return nil }
-
-        let depDatetime = buildDatetime(flightDate: flightDate, timeString: entity.scheduledDeparture)
-        let arrDatetime = buildDatetime(flightDate: flightDate, timeString: entity.scheduledArrival)
-        let useIATA = UserDefaults.standard.bool(forKey: "useIATACodes")
-
-        return WidgetFlightEntry(
-            flightNumber:      (entity.flightNumber ?? "").trimmingCharacters(in: .whitespaces),
-            fromAirport:       (entity.fromAirport ?? "").uppercased(),
-            toAirport:         (entity.toAirport ?? "").uppercased(),
-            flightDate:        flightDate,
-            departureDatetime: depDatetime,
-            arrivalDatetime:   arrDatetime,
-            useIATACodes:      useIATA,
-            snapshotDate:      Date()
-        )
+        return results
     }
 
 }

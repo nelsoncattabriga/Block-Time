@@ -28,7 +28,7 @@ struct NextFlightProvider: TimelineProvider {
 
     // MARK: Snapshot (shown in widget picker preview)
     func getSnapshot(in context: Context, completion: @escaping (NextFlightTimelineEntry) -> Void) {
-        let flight = readSnapshot() ?? .placeholder
+        let flight = readSnapshots().first ?? .placeholder
         let label = Self.label(for: flight.departureDatetime ?? flight.flightDate, at: .now)
         completion(NextFlightTimelineEntry(date: .now, flight: flight, countdownLabel: label))
     }
@@ -36,19 +36,18 @@ struct NextFlightProvider: TimelineProvider {
     // MARK: Timeline
     func getTimeline(in context: Context, completion: @escaping (Timeline<NextFlightTimelineEntry>) -> Void) {
         let now = Date()
-        let snapshot = readSnapshot()
+        let flights = readSnapshots()
 
-        guard let flight = snapshot,
-              let departure = flight.departureDatetime ?? Optional(flight.flightDate) else {
-            // No flight — check again in 1 hour
+        guard !flights.isEmpty else {
+            // No flights — check again in 1 hour
             let entry = NextFlightTimelineEntry(date: now, flight: nil, countdownLabel: "")
             let refresh = Calendar.current.date(byAdding: .hour, value: 1, to: now) ?? now
             completion(Timeline(entries: [entry], policy: .after(refresh)))
             return
         }
 
-        // Checkpoints as (offset from departure, label shown from that point)
-        let checkpoints: [(offset: TimeInterval, label: String)] = [
+        // Checkpoints before departure at which the countdown label changes
+        let checkpointOffsets: [(offset: TimeInterval, label: String)] = [
             (-3600 * 24 * 7, "7 Days"),
             (-3600 * 24 * 6, "6 Days"),
             (-3600 * 24 * 5, "5 Days"),
@@ -67,21 +66,33 @@ struct NextFlightProvider: TimelineProvider {
 
         var entries: [NextFlightTimelineEntry] = []
 
-        for (offset, label) in checkpoints {
-            let entryDate = departure.addingTimeInterval(offset)
-            if entryDate >= now {
-                entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight, countdownLabel: label))
+        for (index, flight) in flights.enumerated() {
+            let departure = flight.departureDatetime ?? flight.flightDate
+            let nextFlight: WidgetFlightEntry? = index + 1 < flights.count ? flights[index + 1] : nil
+
+            // Countdown checkpoint entries leading up to this departure
+            for (offset, label) in checkpointOffsets {
+                let entryDate = departure.addingTimeInterval(offset)
+                if entryDate >= now {
+                    entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight, countdownLabel: label))
+                }
             }
+
+            // Current entry (if this is the first flight and no checkpoint covers now)
+            if index == 0 && (entries.isEmpty || entries.first!.date > now) {
+                let currentLabel = Self.label(for: departure, at: now)
+                entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel), at: 0)
+            }
+
+            // 30 mins after departure: switch to next flight (or show departed if last)
+            let switchDate = departure.addingTimeInterval(30 * 60)
+            let switchLabel = nextFlight != nil ? Self.label(for: nextFlight!.departureDatetime ?? nextFlight!.flightDate, at: switchDate) : "Departed"
+            entries.append(NextFlightTimelineEntry(date: switchDate, flight: nextFlight ?? flight, countdownLabel: switchLabel))
         }
 
-        // Always include a current entry with the appropriate label
-        if entries.isEmpty || entries.first!.date > now {
-            let currentLabel = Self.label(for: departure, at: now)
-            entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel), at: 0)
-        }
-
-        // Refresh 1 hour after departure to pick up the next flight
-        let refreshDate = departure.addingTimeInterval(3600)
+        // After the last flight departs, refresh in 1 hour to pick up any new data
+        let lastDeparture = (flights.last?.departureDatetime ?? flights.last?.flightDate) ?? now
+        let refreshDate = lastDeparture.addingTimeInterval(3600)
         completion(Timeline(entries: entries, policy: .after(refreshDate)))
     }
 
@@ -111,13 +122,13 @@ struct NextFlightProvider: TimelineProvider {
 
     // MARK: - Read from App Group
 
-    private func readSnapshot() -> WidgetFlightEntry? {
+    private func readSnapshots() -> [WidgetFlightEntry] {
         guard let defaults = UserDefaults(suiteName: WidgetFlightEntry.appGroupID),
-              let data = defaults.data(forKey: WidgetFlightEntry.defaultsKey),
-              let entry = try? JSONDecoder().decode(WidgetFlightEntry.self, from: data) else {
-            return nil
+              let data = defaults.data(forKey: WidgetFlightEntry.listDefaultsKey),
+              let entries = try? JSONDecoder().decode([WidgetFlightEntry].self, from: data) else {
+            return []
         }
-        return entry
+        return entries
     }
 }
 

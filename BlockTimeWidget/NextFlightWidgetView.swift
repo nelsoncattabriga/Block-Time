@@ -67,6 +67,38 @@ private struct TimeFormatHelper {
         return f.string(from: date)
     }
 
+    /// Returns "Today", "Tomorrow", or "Mon 27th" for a UTC departure date,
+    /// evaluated against the device's local calendar.
+    static func departureDateLabel(_ date: Date) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(date)    { return "Today" }
+        if cal.isDateInTomorrow(date) { return "Tomorrow" }
+        let day      = cal.component(.day, from: date)
+        let ordinal  = ordinalSuffix(for: day)
+        let weekday  = weekdayFormatter.string(from: date)   // "Mon", "Tue" …
+        return "\(weekday) \(day)\(ordinal)"
+    }
+
+    private static let weekdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE"          // locale-independent 3-letter abbreviation
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
+    private static func ordinalSuffix(for day: Int) -> String {
+        switch day {
+        case 11, 12, 13: return "th"
+        default:
+            switch day % 10 {
+            case 1: return "st"
+            case 2: return "nd"
+            case 3: return "rd"
+            default: return "th"
+            }
+        }
+    }
+
     /// Display airport code — ICAO stored; convert to IATA if useIATACodes.
     /// Falls back to stored code if conversion not available.
     static func displayCode(_ icao: String, useIATA: Bool) -> String {
@@ -117,16 +149,17 @@ private struct SmallView: View {
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(WT.orange)
                         Text("NEXT FLIGHT")
-                            .font(.system(size: 9, weight: .semibold))
-                            .kerning(0.8)
+                            .font(.system(size: 10, weight: .semibold))
+                            .kerning(0.6)
                             .foregroundStyle(WT.secondary)
+//                        Spacer()
                     }
 
                     Spacer(minLength: 4)
 
                     // Flight number
                     Text(flight.flightNumber.isEmpty ? "—" : flight.flightNumber)
-                        .font(.system(size: 16, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(WT.secondary)
 
                     Spacer(minLength: 2)
@@ -137,24 +170,38 @@ private struct SmallView: View {
                             .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundStyle(primary)
                         Image(systemName: "arrow.right")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(WT.orange)
                         Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundStyle(primary)
                     }
 
-                    // STD
-                    if let dep = flight.departureDatetime {
-                        Text("STD: \(TimeFormatHelper.utcTime(dep))Z / \(TimeFormatHelper.localTime(dep))")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundStyle(WT.secondary)
-                            .minimumScaleFactor(0.7)
-                            .lineLimit(1)
-                            .padding(.top, 1)
-                    }
-
-                    Spacer(minLength: 8)
+//                    // STD / STA
+//                    HStack(alignment: .top, spacing: 0) {
+//                        VStack(alignment: .leading, spacing: 1) {
+//                            Text("DEP")
+//                                .font(.system(size: 10, weight: .semibold))
+//                                .foregroundStyle(WT.secondary)
+//                            Text(flight.departureDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
+//                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+//                                .foregroundStyle(WT.secondary)
+//                        }
+//                        .frame(maxWidth: .infinity, alignment: .leading)
+//
+//                        VStack(alignment: .trailing, spacing: 1) {
+//                            Text("ARR")
+//                                .font(.system(size: 10, weight: .semibold))
+//                                .foregroundStyle(WT.secondary)
+//                            Text(flight.arrivalDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
+//                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+//                                .foregroundStyle(WT.secondary)
+//                        }
+//                        .frame(maxWidth: .infinity, alignment: .trailing)
+//                    }
+//                    .padding(.top, 2)
+//
+//                    Spacer(minLength: 8)
 
                     // Divider
                     Rectangle()
@@ -163,8 +210,21 @@ private struct SmallView: View {
 
                     Spacer(minLength: 6)
 
-                    // Countdown
-                    CountdownView(label: entry.countdownLabel, large: true)
+                    // Departure date + local time
+                    if let dep = flight.departureDatetime {
+                        
+                        VStack(alignment: .center, spacing: 2) {
+                            Text(TimeFormatHelper.departureDateLabel(dep))
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.orange)
+                                .minimumScaleFactor(0.7)
+                                .lineLimit(1)
+                            Text(TimeFormatHelper.localTime(dep))
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.orange)
+                                .minimumScaleFactor(0.7)
+                        }
+                    }
                 }
                 .padding(14)
 
@@ -192,6 +252,22 @@ private struct MediumView: View {
             if let flight = entry.flight {
                 VStack(spacing: 0) {
 
+                    // ── Header ───────────────────────────────────────────
+                    HStack(spacing: 4) {
+                        Image(systemName: "airplane.departure")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(WT.orange)
+                        Text("NEXT FLIGHT")
+                            .font(.system(size: 10, weight: .semibold))
+                            .kerning(0.8)
+                            .foregroundStyle(WT.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+
+                    Spacer(minLength: 4)
+
                     // ── Top section: route + spine ──────────────────────
                     HStack(alignment: .center, spacing: 0) {
 
@@ -200,13 +276,10 @@ private struct MediumView: View {
                             Text(TimeFormatHelper.displayCode(flight.fromAirport, useIATA: flight.useIATACodes))
                                 .font(.system(size: 30, weight: .bold, design: .rounded))
                                 .foregroundStyle(primary)
-                            Text("STD \(flight.departureDatetime.map { TimeFormatHelper.localTime($0) } ?? "–:––")")
-                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            Text("\(flight.departureDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")")
+                                .font(.system(size: 15, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(WT.secondary)
-                            Text(flight.departureDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
-                                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                .foregroundStyle(WT.secondary.opacity(0.7))
-                        }
+                                                    }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                         // Centre spine: dashes + arrow + flight number
@@ -227,8 +300,8 @@ private struct MediumView: View {
                                 }
                             }
                             Text(flight.flightNumber.isEmpty ? "—" : flight.flightNumber)
-                                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                                .foregroundStyle(WT.orange)
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundStyle(WT.secondary)
                         }
                         .frame(width: 90)
 
@@ -237,17 +310,14 @@ private struct MediumView: View {
                             Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
                                 .font(.system(size: 30, weight: .bold, design: .rounded))
                                 .foregroundStyle(primary)
-                            Text("STA \(flight.arrivalDatetime.map { TimeFormatHelper.localTime($0) } ?? "–:––")")
-                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            Text("\(flight.arrivalDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")")
+                                .font(.system(size: 15, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(WT.secondary)
-                            Text(flight.arrivalDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
-                                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                .foregroundStyle(WT.secondary.opacity(0.7))
+
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 14)
 
                     Spacer(minLength: 8)
 
@@ -259,24 +329,19 @@ private struct MediumView: View {
 
                     Spacer(minLength: 6)
 
-                    // ── Bottom strip: header label + countdown ───────────
-                    HStack(alignment: .center) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "airplane.departure")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(WT.orange)
-                            Text("NEXT FLIGHT")
-                                .font(.system(size: 9, weight: .semibold))
-                                .kerning(0.8)
-                                .foregroundStyle(WT.secondary)
+                    // ── Bottom strip: centred departure date + time ──────
+                    if let dep = flight.departureDatetime {
+                        VStack(alignment: .center, spacing: 1) {
+                            Text(TimeFormatHelper.departureDateLabel(dep))
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.orange)
+                            Text(TimeFormatHelper.localTime(dep))
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.orange)
                         }
-
-                        Spacer()
-
-                        CountdownView(label: entry.countdownLabel, large: false)
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+                    Spacer(minLength: 8)
                 }
 
             } else {
@@ -341,8 +406,8 @@ private let previewEntry = NextFlightTimelineEntry(
         fromAirport: "FAOR",
         toAirport: "YSSY",
         flightDate: Date().addingTimeInterval(3600 * 6),
-        departureDatetime: Date().addingTimeInterval(3600 * 6),
-        arrivalDatetime: Date().addingTimeInterval(3600 * 17),
+        departureDatetime: Date().addingTimeInterval(3600 * 35),
+        arrivalDatetime: Date().addingTimeInterval(3600 * 47),
         useIATACodes: true,
         snapshotDate: .now
     ),
