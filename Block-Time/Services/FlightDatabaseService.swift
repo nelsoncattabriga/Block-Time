@@ -2386,6 +2386,7 @@ class FlightDatabaseService: ObservableObject {
     // Track if we're currently importing from CloudKit
     private var isImportingFromCloudKit = false
 
+
     // Track if we're currently doing a batch import (e.g., roster import)
     // When true, contextDidSave uses debounced notifications instead of immediate
     private var isBatchImporting = false
@@ -2525,6 +2526,7 @@ class FlightDatabaseService: ObservableObject {
             name: .NSPersistentStoreRemoteChange,
             object: nil
         )
+
     }
 
     @objc private func handleRemoteStoreChange(_ notification: Notification) {
@@ -2671,6 +2673,14 @@ class FlightDatabaseService: ObservableObject {
 
                     // NOTE: We no longer notify here - contextDidSave will handle it
                     // if there were actual data changes during the import
+
+                    // After every CloudKit import, check for and remove any duplicate
+                    // FlightEntity rows that may have been inserted during a sync reset
+                    // (change token expiry causes a full re-import that bypasses app-level
+                    // duplicate checks). The dedup is cheap when there are no duplicates.
+                    DispatchQueue.global(qos: .utility).async {
+                        self.deduplicateFlightsByUUID()
+                    }
                 }
             case .export:
                 // Only log export events if there's an error or if changes were actually synced
@@ -2709,6 +2719,48 @@ class FlightDatabaseService: ObservableObject {
                 }
             @unknown default:
                 LogManager.shared.debug("CloudKit: Unknown event")
+            }
+        }
+    }
+
+    /// Remove duplicate FlightEntity rows that share the same `id` UUID.
+    /// Keeps the record with the earliest `createdAt`; deletes the rest.
+    /// Safe to call on a background thread — uses a private context.
+    private func deduplicateFlightsByUUID() {
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        context.performAndWait {
+            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.createdAt, ascending: true)]
+            guard let allFlights = try? context.fetch(request) else { return }
+
+            var seen: [UUID: FlightEntity] = [:]
+            var deletedCount = 0
+            for flight in allFlights {
+                guard let uuid = flight.id else { continue }
+                if seen[uuid] != nil {
+                    // Keep whichever has the earlier createdAt (already sorted ascending,
+                    // so the first-seen is already the older one — delete the current duplicate).
+                    context.delete(flight)
+                    deletedCount += 1
+                } else {
+                    seen[uuid] = flight
+                }
+            }
+
+            guard deletedCount > 0 else {
+                LogManager.shared.debug("CloudKit dedup: No duplicate flights found")
+                return
+            }
+
+            do {
+                try context.save()
+                LogManager.shared.info("CloudKit dedup: Removed \(deletedCount) duplicate flight(s) after sync reset")
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                }
+            } catch {
+                LogManager.shared.error("CloudKit dedup: Failed to save — \(error.localizedDescription)")
             }
         }
     }
