@@ -66,12 +66,6 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
-                    // Hidden programmatic NavigationLink for backup navigation
-                    NavigationLink(
-                        destination: BackupsView(viewModel: viewModel),
-                        isActive: $navigateToBackups
-                    ) { EmptyView() }
-
                     if !purchaseService.isPro {
                         TrialStatusCard()
                     }
@@ -125,6 +119,9 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onReceive(NotificationCenter.default.publisher(for: .navigateToBackupSettings)) { _ in
             navigateToBackups = true
+        }
+        .navigationDestination(isPresented: $navigateToBackups) {
+            BackupsView(viewModel: viewModel)
         }
     }
 
