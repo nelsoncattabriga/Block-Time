@@ -14,6 +14,7 @@ import SwiftUI
 struct NextFlightTimelineEntry: TimelineEntry {
     let date: Date                   // When WidgetKit should render this entry
     let flight: WidgetFlightEntry?   // nil = no upcoming flights
+    let countdownLabel: String       // Pre-computed label for this entry e.g. "3 Days", "1 Hr"
 }
 
 // MARK: - Provider
@@ -22,13 +23,14 @@ struct NextFlightProvider: TimelineProvider {
 
     // MARK: Placeholder (shown while widget loads / in gallery)
     func placeholder(in context: Context) -> NextFlightTimelineEntry {
-        NextFlightTimelineEntry(date: .now, flight: .placeholder)
+        NextFlightTimelineEntry(date: .now, flight: .placeholder, countdownLabel: "6 Hrs")
     }
 
     // MARK: Snapshot (shown in widget picker preview)
     func getSnapshot(in context: Context, completion: @escaping (NextFlightTimelineEntry) -> Void) {
-        let entry = NextFlightTimelineEntry(date: .now, flight: readSnapshot() ?? .placeholder)
-        completion(entry)
+        let flight = readSnapshot() ?? .placeholder
+        let label = Self.label(for: flight.departureDatetime ?? flight.flightDate, at: .now)
+        completion(NextFlightTimelineEntry(date: .now, flight: flight, countdownLabel: label))
     }
 
     // MARK: Timeline
@@ -39,37 +41,72 @@ struct NextFlightProvider: TimelineProvider {
         guard let flight = snapshot,
               let departure = flight.departureDatetime ?? Optional(flight.flightDate) else {
             // No flight — check again in 1 hour
-            let entry = NextFlightTimelineEntry(date: now, flight: nil)
+            let entry = NextFlightTimelineEntry(date: now, flight: nil, countdownLabel: "")
             let refresh = Calendar.current.date(byAdding: .hour, value: 1, to: now) ?? now
             completion(Timeline(entries: [entry], policy: .after(refresh)))
             return
         }
 
-        // Build entries at strategic intervals before departure
-        var entries: [NextFlightTimelineEntry] = []
-        let checkpoints: [TimeInterval] = [
-            0,          // now
-            -3600 * 24, // T-24h
-            -3600 * 6,  // T-6h
-            -3600 * 1,  // T-1h
-            -60 * 30,   // T-30min
+        // Checkpoints as (offset from departure, label shown from that point)
+        let checkpoints: [(offset: TimeInterval, label: String)] = [
+            (-3600 * 24 * 7, "7 Days"),
+            (-3600 * 24 * 6, "6 Days"),
+            (-3600 * 24 * 5, "5 Days"),
+            (-3600 * 24 * 4, "4 Days"),
+            (-3600 * 24 * 3, "3 Days"),
+            (-3600 * 24 * 2, "2 Days"),
+            (-3600 * 24 * 1, "1 Day"),
+            (-3600 * 24,     "24 Hrs"),
+            (-3600 * 18,     "18 Hrs"),
+            (-3600 * 12,     "12 Hrs"),
+            (-3600 * 6,      "6 Hrs"),
+            (-3600 * 3,      "3 Hrs"),
+            (-3600 * 2,      "2 Hrs"),
+            (-3600 * 1,      "1 Hr"),
         ]
 
-        for offset in checkpoints {
+        var entries: [NextFlightTimelineEntry] = []
+
+        for (offset, label) in checkpoints {
             let entryDate = departure.addingTimeInterval(offset)
             if entryDate >= now {
-                entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight))
+                entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight, countdownLabel: label))
             }
         }
 
-        // Always include a current entry
+        // Always include a current entry with the appropriate label
         if entries.isEmpty || entries.first!.date > now {
-            entries.insert(NextFlightTimelineEntry(date: now, flight: flight), at: 0)
+            let currentLabel = Self.label(for: departure, at: now)
+            entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel), at: 0)
         }
 
         // Refresh 1 hour after departure to pick up the next flight
         let refreshDate = departure.addingTimeInterval(3600)
         completion(Timeline(entries: entries, policy: .after(refreshDate)))
+    }
+
+    // MARK: - Derive label for arbitrary point in time
+
+    static func label(for departure: Date, at now: Date) -> String {
+        let interval = departure.timeIntervalSince(now)
+        guard interval > 0 else { return "Departed" }
+        switch interval {
+        case ..<3600:           return "1 Hr"
+        case ..<7200:           return "2 Hrs"
+        case ..<10800:          return "3 Hrs"
+        case ..<21600:          return "6 Hrs"
+        case ..<43200:          return "12 Hrs"
+        case ..<64800:          return "18 Hrs"
+        case ..<86400:          return "24 Hrs"
+        case ..<172800:         return "1 Day"
+        case ..<259200:         return "2 Days"
+        case ..<345600:         return "3 Days"
+        case ..<432000:         return "4 Days"
+        case ..<518400:         return "5 Days"
+        case ..<604800:         return "6 Days"
+        case ..<691200:         return "7 Days"
+        default:                return "Over a Week"
+        }
     }
 
     // MARK: - Read from App Group
