@@ -110,8 +110,11 @@ struct Block_TimeApp: App {
     }
 }
 
-// Helper wrapper to make URL identifiable for sheet presentation
+// Helper wrapper to make URL identifiable for sheet presentation.
+// Using the URL's absolute string as the id ensures that re-evaluating
+// the sheet Binding's get closure doesn't produce a new id, which would
+// cause SwiftUI to dismiss and re-present the sheet mid-animation.
 private struct URLWrapper: Identifiable {
-    let id = UUID()
     let url: URL
+    var id: String { url.absoluteString }
 }

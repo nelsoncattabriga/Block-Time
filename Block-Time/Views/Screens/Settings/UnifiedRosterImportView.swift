@@ -229,7 +229,6 @@ struct UnifiedRosterImportView: View {
 
         }
         .onAppear {
-            // If a preselected file was provided, import it automatically
             if let fileURL = preselectedFileURL {
                 importRoster(from: fileURL)
             }
