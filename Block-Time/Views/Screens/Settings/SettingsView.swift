@@ -57,6 +57,7 @@ struct SettingsView: View {
     var frmsViewModel: FRMSViewModel
     @Environment(ThemeService.self) private var themeService
     @Environment(PurchaseService.self) private var purchaseService
+    @State private var navigateToBackups = false
 
     var body: some View {
         ZStack {
@@ -68,6 +69,8 @@ struct SettingsView: View {
                     if !purchaseService.isPro {
                         TrialStatusCard()
                     }
+
+                    BackupNudgeBannerView(navigateToBackups: $navigateToBackups)
 
                     ForEach(SettingsCategory.allCases) { category in
                         NavigationLink(destination: categoryDetailView(for: category)) {
@@ -114,6 +117,12 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToBackupSettings)) { _ in
+            navigateToBackups = true
+        }
+        .navigationDestination(isPresented: $navigateToBackups) {
+            BackupsView(viewModel: viewModel)
+        }
     }
 
     @ViewBuilder
