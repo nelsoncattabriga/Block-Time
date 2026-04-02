@@ -80,6 +80,10 @@ struct ModernCapturedDataCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
     @Environment(CloudKitSettingsSyncService.self) private var cloudKitService
 
+    // Debounce handle for night-time recalculation triggered by time field changes.
+    // Collapses rapid keystrokes into a single calculation to keep the main thread free.
+    @State private var nightTimeDebounceTask: Task<Void, Never>?
+
     // MARK: - Local Time Entry Bindings
     // The ViewModel always stores times as UTC. When enterTimesInLocalTime is ON,
     // these bindings convert UTC→local for display and local→UTC on set.
@@ -122,6 +126,17 @@ struct ModernCapturedDataCard: View {
                 )
             }
         )
+    }
+
+    // Debounced wrapper so rapid time-field changes (e.g. each digit typed) collapse
+    // into a single updateNightTime() call rather than hammering the main thread.
+    private func scheduleNightTimeUpdate() {
+        nightTimeDebounceTask?.cancel()
+        nightTimeDebounceTask = Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            viewModel.updateNightTime()
+        }
     }
 
     // Environment row shown below the type selector when INS is active
@@ -550,33 +565,30 @@ struct ModernCapturedDataCard: View {
             //viewModel.updateNightTime()
         }
         .onChange(of: viewModel.outTime) {
-            // Only recalculate if not in editing mode and not a PAX flight
             if !viewModel.isEditingMode && !viewModel.isPositioning {
-                viewModel.updateNightTime()
+                scheduleNightTimeUpdate()
             }
         }
         .onChange(of: viewModel.inTime) {
-            // Only recalculate if not in editing mode and not a PAX flight
             if !viewModel.isEditingMode && !viewModel.isPositioning {
-                viewModel.updateNightTime()
+                scheduleNightTimeUpdate()
             }
         }
         .onChange(of: viewModel.blockTime) {
-            // Only recalculate if not in editing mode and not a PAX flight
             if !viewModel.isEditingMode && !viewModel.isPositioning {
-                viewModel.updateNightTime()
+                scheduleNightTimeUpdate()
             }
         }
         .onChange(of: viewModel.fromAirport) {
             // Recalculate night time when FROM airport changes (important for B787 ACARS)
             if !viewModel.isEditingMode && !viewModel.isPositioning && !viewModel.fromAirport.isEmpty && !viewModel.toAirport.isEmpty {
-                viewModel.updateNightTime()
+                scheduleNightTimeUpdate()
             }
         }
         .onChange(of: viewModel.toAirport) {
             // Recalculate night time when TO airport changes (important for B787 ACARS)
             if !viewModel.isEditingMode && !viewModel.isPositioning && !viewModel.fromAirport.isEmpty && !viewModel.toAirport.isEmpty {
-                viewModel.updateNightTime()
+                scheduleNightTimeUpdate()
             }
         }
         .onChange(of: viewModel.isPilotFlying) { viewModel.updateTakeoffsLandings() }
