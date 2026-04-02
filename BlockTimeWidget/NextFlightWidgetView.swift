@@ -333,3 +333,45 @@ private struct NoFlightView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+// MARK: - Previews
+
+private let previewEntry = NextFlightTimelineEntry(
+    date: .now,
+    flight: .placeholder
+)
+
+private let previewEntryNoFlight = NextFlightTimelineEntry(
+    date: .now,
+    flight: nil
+)
+
+#Preview("Small – Dark", as: .systemSmall) {
+    BlockTimeWidget()
+} timeline: {
+    previewEntry
+}
+
+#Preview("Small – Light", as: .systemSmall) {
+    BlockTimeWidget()
+} timeline: {
+    previewEntry
+}
+
+#Preview("Medium – Dark", as: .systemMedium) {
+    BlockTimeWidget()
+} timeline: {
+    previewEntry
+}
+
+#Preview("Medium – Light", as: .systemMedium) {
+    BlockTimeWidget()
+} timeline: {
+    previewEntry
+}
+
+#Preview("Small – No Flight", as: .systemSmall) {
+    BlockTimeWidget()
+} timeline: {
+    previewEntryNoFlight
+}
