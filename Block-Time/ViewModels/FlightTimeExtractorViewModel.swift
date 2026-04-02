@@ -62,6 +62,10 @@ class FlightTimeExtractorViewModel: ObservableObject {
     private let logbookImportService: LogbookImportService
     private let flightAwareService = FlightAwareService.shared
     private let aeroDataBoxService = AeroDataBoxService.shared
+
+    // MARK: - Background task handles
+    private var crewNamesReloadTask: Task<Void, Never>?
+    private var nightTimeCalculationTask: Task<Void, Never>?
     
     // MARK: - Published Properties
     @Published var selectedImage: UIImage?
@@ -341,15 +345,23 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
 
-        // Observe flight data changes to refresh crew names (e.g., after CSV import)
+        // Observe flight data changes to refresh crew names (e.g., after CSV import).
+        // Guard against editing mode: firing during an active edit causes stacked Core Data
+        // fetches on the main thread (CloudKit sync storm scenario → watchdog kill).
+        // Debounce so rapid CloudKit notifications collapse into a single reload.
         NotificationCenter.default.addObserver(
             forName: .flightDataChanged,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            // Isolate to main actor for calling main actor-isolated methods
             Task { @MainActor [weak self] in
-                self?.reloadSavedCrewNames()
+                guard let self, !self.isEditingMode else { return }
+                self.crewNamesReloadTask?.cancel()
+                self.crewNamesReloadTask = Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard !Task.isCancelled else { return }
+                    self.reloadSavedCrewNames()
+                }
             }
         }
     }
@@ -2278,28 +2290,40 @@ class FlightTimeExtractorViewModel: ObservableObject {
             return
         }
 
-        // PERFORMANCE OPTIMIZATION: Build context once and reuse for both calculations
-        // This eliminates duplicate airport lookups and date parsing
-        if let context = timeCalculationManager.buildCalculationContext(
-            fromAirport: fromAirport,
-            toAirport: toAirport,
-            outTime: outTime,
-            blockTime: blockTime,
-            flightDate: flightDate
-        ) {
-            // Use cached context for both calculations
-            nightTime = timeCalculationManager.calculateNightTime(using: context)
-            updateTakeoffsLandings(using: context)
-        } else {
-            // Fallback for cases where context can't be built (missing data, editing mode, etc.)
-            if isEditingMode && outTime.isEmpty {
-                // Preserve existing night time in edit mode
-                nightTime = nightTime
+        let capturedEditingMode = isEditingMode
+
+        // Cancel any queued calculation — only the latest values matter.
+        // This prevents stacking multiple expensive calculations when fields
+        // change rapidly (e.g. pasting times or rapid keystrokes).
+        nightTimeCalculationTask?.cancel()
+        nightTimeCalculationTask = Task { [weak self] in
+            guard let self, !Task.isCancelled else { return }
+
+            // Yield so the current run-loop turn can complete before the heavy work starts.
+            // This keeps the UI responsive during time entry.
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+
+            // Build context and calculate — both happen on @MainActor but any previously
+            // queued calculation has been cancelled above, so only one runs at a time.
+            if let context = self.timeCalculationManager.buildCalculationContext(
+                fromAirport: self.fromAirport,
+                toAirport: self.toAirport,
+                outTime: self.outTime,
+                blockTime: self.blockTime,
+                flightDate: self.flightDate
+            ) {
+                guard !Task.isCancelled else { return }
+                self.nightTime = self.timeCalculationManager.calculateNightTime(using: context)
+                self.updateTakeoffsLandings(using: context)
             } else {
-                nightTime = ""
+                if capturedEditingMode && self.outTime.isEmpty {
+                    // Preserve existing night time in edit mode when OUT is missing
+                } else {
+                    self.nightTime = ""
+                }
+                self.updateTakeoffsLandings(using: nil)
             }
-            // Still need to update takeoffs/landings even if context fails
-            updateTakeoffsLandings(using: nil)
         }
     }
     
