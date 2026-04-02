@@ -56,6 +56,10 @@ struct BackupNudgeBannerView: View {
             }
             .padding(16)
             .appCardStyle()
+            .contentShape(Rectangle())
+            .onTapGesture {
+                navigateToBackups = true
+            }
             .overlay(alignment: .topTrailing) {
                 Button {
                     withAnimation {
@@ -67,10 +71,6 @@ struct BackupNudgeBannerView: View {
                         .foregroundStyle(.secondary)
                         .padding(8)
                 }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                navigateToBackups = true
             }
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
