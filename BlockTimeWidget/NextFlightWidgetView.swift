@@ -139,6 +139,21 @@ private struct TimeFormatHelper {
         }
     }
 
+    /// Format a UTC Date as "HH:mmZ" (UTC) or "HH:mm" in the airport's local timezone,
+    /// accounting for DST on the flight date.
+    static func displayTime(_ date: Date, timeZone: WidgetTimeZoneOption, airportICAO: String) -> String {
+        switch timeZone {
+        case .utc:
+            return utcTime(date) + "Z"
+        case .local:
+            let tz = WidgetAirportCodes.timeZone(for: airportICAO, on: date)
+            let f = DateFormatter()
+            f.dateFormat = "HH:mm"
+            f.timeZone = tz
+            return f.string(from: date)
+        }
+    }
+
     /// Display airport code — ICAO stored; convert to IATA if useIATACodes.
     /// Falls back to stored code if conversion not available.
     static func displayCode(_ icao: String, useIATA: Bool) -> String {
@@ -327,10 +342,10 @@ private struct MediumView: View {
                             Text(TimeFormatHelper.displayCode(flight.fromAirport, useIATA: flight.useIATACodes))
                                 .font(.system(size: 30, weight: .bold, design: .rounded))
                                 .foregroundStyle(primary)
-                            Text("\(flight.departureDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")")
+                            Text(flight.departureDatetime.map { TimeFormatHelper.displayTime($0, timeZone: entry.configuration.timeZone, airportICAO: flight.fromAirport) } ?? "–:––")
                                 .font(.system(size: 15, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(WT.secondary)
-                                                    }
+                        }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                         // Centre spine: dashes + arrow + flight number
@@ -361,10 +376,9 @@ private struct MediumView: View {
                             Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
                                 .font(.system(size: 30, weight: .bold, design: .rounded))
                                 .foregroundStyle(primary)
-                            Text("\(flight.arrivalDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")")
+                            Text(flight.arrivalDatetime.map { TimeFormatHelper.displayTime($0, timeZone: entry.configuration.timeZone, airportICAO: flight.toAirport) } ?? "–:––")
                                 .font(.system(size: 15, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(WT.secondary)
-
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     }
@@ -452,7 +466,7 @@ private struct LargeView: View {
                             Text(TimeFormatHelper.displayCode(flight.fromAirport, useIATA: flight.useIATACodes))
                                 .font(.system(size: 36, weight: .bold, design: .rounded))
                                 .foregroundStyle(primary)
-                            Text(flight.departureDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
+                            Text(flight.departureDatetime.map { TimeFormatHelper.displayTime($0, timeZone: entry.configuration.timeZone, airportICAO: flight.fromAirport) } ?? "–:––")
                                 .font(.system(size: 15, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(WT.secondary)
                         }
@@ -486,7 +500,7 @@ private struct LargeView: View {
                             Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
                                 .font(.system(size: 36, weight: .bold, design: .rounded))
                                 .foregroundStyle(primary)
-                            Text(flight.arrivalDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
+                            Text(flight.arrivalDatetime.map { TimeFormatHelper.displayTime($0, timeZone: entry.configuration.timeZone, airportICAO: flight.toAirport) } ?? "–:––")
                                 .font(.system(size: 15, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(WT.secondary)
                         }
@@ -528,7 +542,7 @@ private struct LargeView: View {
                     } else {
                         VStack(spacing: 8) {
                             ForEach(otherFlights, id: \.flightNumber) { f in
-                                FlightRowView(flight: f, primary: primary)
+                                FlightRowView(flight: f, primary: primary, timeZone: entry.configuration.timeZone)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -549,6 +563,7 @@ private struct LargeView: View {
 private struct FlightRowView: View {
     let flight: WidgetFlightEntry
     let primary: Color
+    let timeZone: WidgetTimeZoneOption
 
     var body: some View {
         HStack(spacing: 0) {
@@ -580,7 +595,7 @@ private struct FlightRowView: View {
                     Text("DEP")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(WT.secondary.opacity(0.7))
-                    Text(flight.departureDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
+                    Text(flight.departureDatetime.map { TimeFormatHelper.displayTime($0, timeZone: timeZone, airportICAO: flight.fromAirport) } ?? "–:––")
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .foregroundStyle(WT.secondary)
                 }
@@ -588,7 +603,7 @@ private struct FlightRowView: View {
                     Text("ARR")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(WT.secondary.opacity(0.7))
-                    Text(flight.arrivalDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
+                    Text(flight.arrivalDatetime.map { TimeFormatHelper.displayTime($0, timeZone: timeZone, airportICAO: flight.toAirport) } ?? "–:––")
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .foregroundStyle(WT.secondary)
                 }

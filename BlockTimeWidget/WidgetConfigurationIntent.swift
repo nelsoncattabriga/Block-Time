@@ -22,6 +22,19 @@ enum WidgetStyleOption: String, AppEnum {
     ]
 }
 
+// MARK: - Time zone option
+
+enum WidgetTimeZoneOption: String, AppEnum {
+    case utc
+    case local
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Times")
+    static var caseDisplayRepresentations: [WidgetTimeZoneOption: DisplayRepresentation] = [
+        .utc:   "UTC (Z)",
+        .local: "Local",
+    ]
+}
+
 // MARK: - Appearance option
 
 enum WidgetAppearanceOption: String, AppEnum {
@@ -50,15 +63,20 @@ struct NextFlightIntent: AppIntents.WidgetConfigurationIntent {
     @Parameter(title: "Appearance", default: .automatic)
     var appearance: WidgetAppearanceOption
 
+    @Parameter(title: "Times", default: .utc)
+    var timeZone: WidgetTimeZoneOption
+
     static var parameterSummary: some ParameterSummary {
         When(\NextFlightIntent.$style, .equalTo, .solid) {
             Summary {
                 \NextFlightIntent.$style
                 \NextFlightIntent.$appearance
+                \NextFlightIntent.$timeZone
             }
         } otherwise: {
             Summary {
                 \NextFlightIntent.$style
+                \NextFlightIntent.$timeZone
             }
         }
     }
