@@ -12,9 +12,10 @@ import SwiftUI
 // MARK: - Timeline Entry
 
 struct NextFlightTimelineEntry: TimelineEntry {
-    let date: Date                   // When WidgetKit should render this entry
-    let flight: WidgetFlightEntry?   // nil = no upcoming flights
-    let countdownLabel: String       // Pre-computed label for this entry e.g. "3 Days", "1 Hr"
+    let date: Date                       // When WidgetKit should render this entry
+    let flight: WidgetFlightEntry?       // nil = no upcoming flights
+    let countdownLabel: String           // Pre-computed label for this entry e.g. "3 Days", "1 Hr"
+    var sameDayFlights: [WidgetFlightEntry] = []  // All flights on the same day as `flight` (large widget)
 }
 
 // MARK: - Provider
@@ -28,9 +29,11 @@ struct NextFlightProvider: TimelineProvider {
 
     // MARK: Snapshot (shown in widget picker preview)
     func getSnapshot(in context: Context, completion: @escaping (NextFlightTimelineEntry) -> Void) {
-        let flight = readSnapshots().first ?? .placeholder
+        let flights = readSnapshots()
+        let flight = flights.first ?? .placeholder
         let label = Self.label(for: flight.departureDatetime ?? flight.flightDate, at: .now)
-        completion(NextFlightTimelineEntry(date: .now, flight: flight, countdownLabel: label))
+        let sameDay = Self.sameDayFlights(as: flight, from: flights)
+        completion(NextFlightTimelineEntry(date: .now, flight: flight, countdownLabel: label, sameDayFlights: sameDay))
     }
 
     // MARK: Timeline
@@ -69,31 +72,45 @@ struct NextFlightProvider: TimelineProvider {
         for (index, flight) in flights.enumerated() {
             let departure = flight.departureDatetime ?? flight.flightDate
             let nextFlight: WidgetFlightEntry? = index + 1 < flights.count ? flights[index + 1] : nil
+            let sameDay = Self.sameDayFlights(as: flight, from: flights)
 
             // Countdown checkpoint entries leading up to this departure
             for (offset, label) in checkpointOffsets {
                 let entryDate = departure.addingTimeInterval(offset)
                 if entryDate >= now {
-                    entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight, countdownLabel: label))
+                    entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight, countdownLabel: label, sameDayFlights: sameDay))
                 }
             }
 
             // Current entry (if this is the first flight and no checkpoint covers now)
             if index == 0 && (entries.isEmpty || entries.first!.date > now) {
                 let currentLabel = Self.label(for: departure, at: now)
-                entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel), at: 0)
+                entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel, sameDayFlights: sameDay), at: 0)
             }
 
             // 30 mins after departure: switch to next flight (or show departed if last)
             let switchDate = departure.addingTimeInterval(30 * 60)
             let switchLabel = nextFlight != nil ? Self.label(for: nextFlight!.departureDatetime ?? nextFlight!.flightDate, at: switchDate) : "Departed"
-            entries.append(NextFlightTimelineEntry(date: switchDate, flight: nextFlight ?? flight, countdownLabel: switchLabel))
+            let switchSameDay = nextFlight != nil ? Self.sameDayFlights(as: nextFlight!, from: flights) : sameDay
+            entries.append(NextFlightTimelineEntry(date: switchDate, flight: nextFlight ?? flight, countdownLabel: switchLabel, sameDayFlights: switchSameDay))
         }
 
         // After the last flight departs, refresh in 1 hour to pick up any new data
         let lastDeparture = (flights.last?.departureDatetime ?? flights.last?.flightDate) ?? now
         let refreshDate = lastDeparture.addingTimeInterval(3600)
         completion(Timeline(entries: entries, policy: .after(refreshDate)))
+    }
+
+    // MARK: - Same-day flights helper
+
+    /// Returns all flights from `allFlights` that share the same local calendar day as `anchor`.
+    static func sameDayFlights(as anchor: WidgetFlightEntry, from allFlights: [WidgetFlightEntry]) -> [WidgetFlightEntry] {
+        let cal = Calendar.current
+        let anchorDate = anchor.departureDatetime ?? anchor.flightDate
+        return allFlights.filter { f in
+            let fDate = f.departureDatetime ?? f.flightDate
+            return cal.isDate(fDate, inSameDayAs: anchorDate)
+        }
     }
 
     // MARK: - Derive label for arbitrary point in time

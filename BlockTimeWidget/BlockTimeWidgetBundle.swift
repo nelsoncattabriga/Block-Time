@@ -24,8 +24,8 @@ struct BlockTimeWidget: Widget {
                 }
         }
         .configurationDisplayName("Next Flight")
-        .description("Shows your next scheduled flight and time to departure.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .description("Shows your next scheduled flight and all flights for the day.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
