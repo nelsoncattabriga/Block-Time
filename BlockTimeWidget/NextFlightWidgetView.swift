@@ -521,7 +521,7 @@ private struct LargeView: View {
 
                     // ── Other flights today ───────────────────────────────
                     if otherFlights.isEmpty {
-                        Text("No other flights today")
+                        Text("No other flights")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(WT.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
