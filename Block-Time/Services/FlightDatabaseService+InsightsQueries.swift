@@ -640,8 +640,14 @@ extension FlightDatabaseService {
             let dutyHours: Double
         }
 
-        // Build per-day aggregates for future duties
-        var futureByDay: [Date: (flight: Double, duty: Double, firstSTD: Int, lastSTA: Int)] = [:]
+        // Build per-day aggregates for future duties.
+        // Sectors are sorted chronologically. When the gap between the previous sector's STA
+        // and the next sector's STD exceeds 10 hours (600 mins), treat as a separate duty period.
+        // This handles days with an early-morning arrival followed by a separate evening departure.
+        let minRestMins = 600 // 10 hours minimum rest between duties
+
+        // Store multiple duty segments per calendar day: [(firstSTD, lastSTA, flightHours)]
+        var futureByDay: [Date: [(firstSTD: Int, lastSTA: Int, flight: Double)]] = [:]
 
         for entity in futureEntities {
             guard let entityDate = entity.date,
@@ -655,27 +661,44 @@ extension FlightDatabaseService {
             let bh  = blockHours(std: std, sta: sta)
             guard bh > 0 else { continue }
 
-            if var existing = futureByDay[day] {
-                existing = (
-                    flight:   existing.flight + bh,
-                    duty:     existing.duty,            // recalculated below
-                    firstSTD: min(existing.firstSTD, stdMins),
-                    lastSTA:  max(existing.lastSTA, staMins)
-                )
-                futureByDay[day] = existing
+
+            if var segments = futureByDay[day] {
+                // Check gap from last segment's STA to this sector's STD
+                let lastSTA = segments[segments.count - 1].lastSTA
+                // Gap calculation handles overnight (STD next day > STA same day)
+                let gap = stdMins >= lastSTA
+                    ? stdMins - lastSTA
+                    : (1440 - lastSTA) + stdMins
+
+                if gap >= minRestMins {
+                    // Rest period — start a new duty segment
+                    segments.append((firstSTD: stdMins, lastSTA: staMins, flight: bh))
+                } else {
+                    // Same duty — extend the last segment
+                    var last = segments[segments.count - 1]
+                    last.lastSTA = staMins
+                    last.flight += bh
+                    segments[segments.count - 1] = last
+                }
+                futureByDay[day] = segments
             } else {
-                futureByDay[day] = (flight: bh, duty: 0, firstSTD: stdMins, lastSTA: staMins)
+                futureByDay[day] = [(firstSTD: stdMins, lastSTA: staMins, flight: bh)]
             }
         }
 
-        // Calculate duty hours per future day from first STD → last STA + margins
+        // Calculate duty hours per future day — sum across all duty segments on that day
         var futureDays: [FutureDayData] = []
-        for (day, data) in futureByDay {
-            let rawMins = data.lastSTA >= data.firstSTD
-                ? data.lastSTA - data.firstSTD
-                : (1440 - data.firstSTD) + data.lastSTA
-            let dutyHours = Double(rawMins + signOnMins + signOffMins) / 60.0
-            futureDays.append(FutureDayData(date: day, flightHours: data.flight, dutyHours: dutyHours))
+        for (day, segments) in futureByDay {
+            var totalFlight = 0.0
+            var totalDuty   = 0.0
+            for seg in segments {
+                let rawMins = seg.lastSTA >= seg.firstSTD
+                    ? seg.lastSTA - seg.firstSTD
+                    : (1440 - seg.firstSTD) + seg.lastSTA
+                totalDuty   += Double(rawMins + signOnMins + signOffMins) / 60.0
+                totalFlight += seg.flight
+            }
+            futureDays.append(FutureDayData(date: day, flightHours: totalFlight, dutyHours: totalDuty))
         }
         futureDays.sort { $0.date < $1.date }
 
