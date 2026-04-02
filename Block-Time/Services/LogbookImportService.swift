@@ -239,13 +239,24 @@ class LogbookImportService {
         let outTime = getValue(for: "outTime")
         let inTime = getValue(for: "inTime")
 
+        let normFrom = airportService.convertToICAO(fromAirport)
+        let normTo = airportService.convertToICAO(toAirport)
+        let uniqueString: String
+        if flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            uniqueString = "\(date)-\(aircraftType)-\(aircraftReg)-\(normFrom)-\(normTo)-\(outTime)-\(inTime)-\(validatedBlockTime)-\(simTime)"
+        } else {
+            uniqueString = "\(date)-\(flightNumber)-\(aircraftType)-\(aircraftReg)-\(normFrom)-\(normTo)-\(validatedBlockTime)"
+        }
+        let deterministicID = UUID(uuidString: uniqueString.md5UUID()) ?? UUID()
+
         return FlightSector(
+            id: deterministicID,
             date: date,
             flightNumber: flightNumber,
             aircraftReg: aircraftReg,
             aircraftType: aircraftType,
-            fromAirport: airportService.convertToICAO(fromAirport),
-            toAirport: airportService.convertToICAO(toAirport),
+            fromAirport: normFrom,
+            toAirport: normTo,
             captainName: captainName,
             foName: foName,
             so1Name: getValue(for: "so1Name").isEmpty ? nil : getValue(for: "so1Name"),
@@ -393,7 +404,16 @@ class LogbookImportService {
         // Don't apply any formatting or airline prefix
         let flightNumber = rawFlightNumber
 
+        let tabUniqueString: String
+        if flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            tabUniqueString = "\(date)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(outTime)-\(inTime)-\(validatedBlockTime)-\(simTime)"
+        } else {
+            tabUniqueString = "\(date)-\(flightNumber)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(validatedBlockTime)"
+        }
+        let tabDeterministicID = UUID(uuidString: tabUniqueString.md5UUID()) ?? UUID()
+
         return FlightSector(
+            id: tabDeterministicID,
             date: date,
             flightNumber: flightNumber,
             aircraftReg: aircraftReg,

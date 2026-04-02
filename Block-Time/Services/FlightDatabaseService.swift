@@ -1283,10 +1283,12 @@ class FlightDatabaseService: ObservableObject {
                 // For flights without a flight number, add OUT/IN times to ensure uniqueness
                 var uniqueString: String
                 if flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    // No flight number - use OUT/IN times for additional uniqueness
+                    // No flight number - use OUT/IN times and simTime for additional uniqueness
+                    // Must match FileImportService uniqueString formula exactly
                     let outTime = flight.outTime ?? ""
                     let inTime = flight.inTime ?? ""
-                    uniqueString = "\(dateString)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(outTime)-\(inTime)-\(blockTime)"
+                    let simTime = flight.simTime ?? ""
+                    uniqueString = "\(dateString)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(outTime)-\(inTime)-\(blockTime)-\(simTime)"
                 } else {
                     // Normal flight with flight number
                     uniqueString = "\(dateString)-\(flightNumber)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(blockTime)"
