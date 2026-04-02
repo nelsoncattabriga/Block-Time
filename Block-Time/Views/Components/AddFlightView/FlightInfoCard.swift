@@ -442,10 +442,7 @@ struct ModernCapturedDataCard: View {
                         ModernTimeField(
                             label: timeFieldLabel("STD", tzLabel: viewModel.outTimezoneLabel),
                             value: localTimeBinding(
-                                utcTime: Binding(
-                                    get: { viewModel.scheduledDeparture },
-                                    set: { viewModel.scheduledDeparture = $0 }
-                                ),
+                                utcTime: $viewModel.scheduledDeparture,
                                 airportCode: viewModel.fromAirport
                             ),
                             icon: "calendar.badge.clock",
@@ -461,10 +458,7 @@ struct ModernCapturedDataCard: View {
                         ModernTimeField(
                             label: timeFieldLabel("STA", tzLabel: viewModel.inTimezoneLabel),
                             value: localTimeBinding(
-                                utcTime: Binding(
-                                    get: { viewModel.scheduledArrival },
-                                    set: { viewModel.scheduledArrival = $0 }
-                                ),
+                                utcTime: $viewModel.scheduledArrival,
                                 airportCode: viewModel.toAirport
                             ),
                             icon: "calendar.badge.clock",
@@ -482,10 +476,7 @@ struct ModernCapturedDataCard: View {
                         ModernTimeField(
                             label: timeFieldLabel("OUT", tzLabel: viewModel.outTimezoneLabel),
                             value: localTimeBinding(
-                                utcTime: Binding(
-                                    get: { viewModel.outTime },
-                                    set: { viewModel.outTime = $0 }
-                                ),
+                                utcTime: $viewModel.outTime,
                                 airportCode: viewModel.fromAirport
                             ),
                             icon: "clock",
@@ -502,10 +493,7 @@ struct ModernCapturedDataCard: View {
                         ModernTimeField(
                             label: timeFieldLabel("IN", tzLabel: viewModel.inTimezoneLabel),
                             value: localTimeBinding(
-                                utcTime: Binding(
-                                    get: { viewModel.inTime },
-                                    set: { viewModel.inTime = $0 }
-                                ),
+                                utcTime: $viewModel.inTime,
                                 airportCode: viewModel.toAirport
                             ),
                             icon: "clock",
