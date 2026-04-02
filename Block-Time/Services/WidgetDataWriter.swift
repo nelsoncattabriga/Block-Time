@@ -88,15 +88,15 @@ final class WidgetDataWriter {
 
 private let _widgetTimeFormatter: DateFormatter = {
     let f = DateFormatter()
-    f.dateFormat = "HHmm"
+    f.dateFormat = "HH:mm"
     f.locale = Locale(identifier: "en_US_POSIX")
     f.timeZone = TimeZone(secondsFromGMT: 0)
     return f
 }()
 
-/// Combines a UTC flight date with a "HHMM" time string into a full UTC Date.
+/// Combines a UTC flight date with a "HH:MM" time string into a full UTC Date.
 private func buildDatetime(flightDate: Date, timeString: String?) -> Date? {
-    guard let raw = timeString, raw.count == 4,
+    guard let raw = timeString, raw.count == 5,
           let timeDate = _widgetTimeFormatter.date(from: raw) else { return nil }
 
     var utcCal = Calendar(identifier: .gregorian)
