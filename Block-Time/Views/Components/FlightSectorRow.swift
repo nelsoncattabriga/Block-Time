@@ -119,15 +119,6 @@ struct FlightSectorRow: View, Equatable {
                lhs.roundingMode == rhs.roundingMode
     }
 
-    // Cached date formatter - shared across all instances
-    private static let cachedDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM/yyyy"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone to match AirportService
-        formatter.locale = Locale(identifier: "en_AU")
-        return formatter
-    }()
-
     // Check if this is a positioning flight
     private var isPositioning: Bool {
         return sector.isPositioning
