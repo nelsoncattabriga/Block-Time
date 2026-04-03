@@ -934,12 +934,33 @@ class FlightDatabaseService: ObservableObject {
         return success
     }
 
+    // MARK: - Merge Proposal
+
+    /// Describes a single field change proposed by duplicate detection before it is committed.
+    /// The caller presents these to the user for approval; only approved proposals are applied.
+    struct MergeProposal: Identifiable {
+        let id: UUID = UUID()
+        /// Human-readable date string for display (e.g. "05/03/2026")
+        let flightDate: String
+        /// Route string for display (e.g. "BNE → MEL")
+        let route: String
+        /// Core Data objectID of the flight to patch
+        let objectID: NSManagedObjectID
+        /// Field name shown to the user (e.g. "Aircraft Reg")
+        let fieldName: String
+        /// Value currently stored in the database (may be empty)
+        let oldValue: String
+        /// Value that the import source wants to write
+        let newValue: String
+    }
+
     /// OPTIMIZED: Save multiple flights in a single batch operation
     /// This is dramatically faster than individual saves for large imports
-    func saveFlightsBatch(_ sectors: [FlightSector], sessionID: UUID = UUID()) -> (successCount: Int, failureCount: Int, duplicateCount: Int, sessionID: UUID) {
+    func saveFlightsBatch(_ sectors: [FlightSector], sessionID: UUID = UUID()) -> (successCount: Int, failureCount: Int, duplicateCount: Int, sessionID: UUID, mergeProposals: [MergeProposal]) {
         var successCount = 0
         var failureCount = 0
         var duplicateCount = 0
+        var mergeProposals: [MergeProposal] = []
 
         viewContext.performAndWait {
             LogManager.shared.info("Database: Starting batch save of \(sectors.count) flights")
@@ -1044,23 +1065,31 @@ class FlightDatabaseService: ObservableObject {
                     // if the incoming sector has a non-blank value. Never overwrite a value
                     // the user has already set — only fill genuinely empty fields.
                     if let existing = existingByID[sector.id] {
-                        var patched = false
                         let incomingType = sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines)
                         let incomingReg  = sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines)
                         let existingType = (existing.aircraftType ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         let existingReg  = (existing.aircraftReg  ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        let displayDate = sector.date
+                        let displayRoute = "\(sector.fromAirport) → \(sector.toAirport)"
                         if existingType.isEmpty && !incomingType.isEmpty {
-                            existing.aircraftType = incomingType
-                            existing.modifiedAt = Date()
-                            patched = true
+                            mergeProposals.append(MergeProposal(
+                                flightDate: displayDate,
+                                route: displayRoute,
+                                objectID: existing.objectID,
+                                fieldName: "Aircraft Type",
+                                oldValue: existingType,
+                                newValue: incomingType
+                            ))
                         }
                         if existingReg.isEmpty && !incomingReg.isEmpty {
-                            existing.aircraftReg = incomingReg
-                            existing.modifiedAt = Date()
-                            patched = true
-                        }
-                        if patched {
-                            LogManager.shared.info("✎ Merged blank fields (UUID match): \(sector.date) \(sector.flightNumber) type=\(incomingType) reg=\(incomingReg)")
+                            mergeProposals.append(MergeProposal(
+                                flightDate: displayDate,
+                                route: displayRoute,
+                                objectID: existing.objectID,
+                                fieldName: "Aircraft Reg",
+                                oldValue: existingReg,
+                                newValue: incomingReg
+                            ))
                         }
                     }
                     duplicateCount += 1
@@ -1087,24 +1116,31 @@ class FlightDatabaseService: ObservableObject {
                     let fuzzyKey = "\(sector.date)|\(normFrom)|\(normTo)"
                     if let existingObjectID = fuzzyDuplicates[fuzzyKey],
                        let existing = try? viewContext.existingObject(with: existingObjectID) as? FlightEntity {
-                        // Merge: webCIS reg always wins (more reliable than manual entry).
-                        // Type only fills in if existing is blank.
-                        var patched = false
                         let incomingReg  = sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines)
                         let incomingType = sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines)
                         let existingType = (existing.aircraftType ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !incomingReg.isEmpty {
-                            existing.aircraftReg = incomingReg
-                            existing.modifiedAt = Date()
-                            patched = true
+                        let existingRegValue = (existing.aircraftReg ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        let displayDate = sector.date
+                        let displayRoute = "\(sector.fromAirport) → \(sector.toAirport)"
+                        if existingRegValue.isEmpty && !incomingReg.isEmpty {
+                            mergeProposals.append(MergeProposal(
+                                flightDate: displayDate,
+                                route: displayRoute,
+                                objectID: existing.objectID,
+                                fieldName: "Aircraft Reg",
+                                oldValue: existingRegValue,
+                                newValue: incomingReg
+                            ))
                         }
                         if existingType.isEmpty && !incomingType.isEmpty {
-                            existing.aircraftType = incomingType
-                            existing.modifiedAt = Date()
-                            patched = true
-                        }
-                        if patched {
-                            LogManager.shared.info("✎ Merged fields (fuzzy match): \(sector.date) \(sector.fromAirport)→\(sector.toAirport) reg=\(incomingReg) type=\(incomingType)")
+                            mergeProposals.append(MergeProposal(
+                                flightDate: displayDate,
+                                route: displayRoute,
+                                objectID: existing.objectID,
+                                fieldName: "Aircraft Type",
+                                oldValue: existingType,
+                                newValue: incomingType
+                            ))
                         }
                         duplicateCount += 1
                         LogManager.shared.info("⊘ Skipping duplicate (fuzzy match): \(sector.date) \(sector.fromAirport)→\(sector.toAirport) [\(normFrom)→\(normTo)]")
@@ -1197,7 +1233,43 @@ class FlightDatabaseService: ObservableObject {
             }
         }
 
-        return (successCount, failureCount, duplicateCount, sessionID)
+        return (successCount, failureCount, duplicateCount, sessionID, mergeProposals)
+    }
+
+    /// Applies a subset of approved merge proposals to Core Data and saves.
+    /// Call this after the user has reviewed and confirmed their selection.
+    func applyMergeProposals(_ proposals: [MergeProposal]) {
+        guard !proposals.isEmpty else { return }
+        viewContext.performAndWait {
+            var appliedCount = 0
+            for proposal in proposals {
+                guard let entity = try? viewContext.existingObject(with: proposal.objectID) as? FlightEntity else {
+                    LogManager.shared.error("applyMergeProposals: could not find entity for \(proposal.flightDate) \(proposal.route)")
+                    continue
+                }
+                switch proposal.fieldName {
+                case "Aircraft Reg":
+                    entity.aircraftReg = proposal.newValue
+                case "Aircraft Type":
+                    entity.aircraftType = proposal.newValue
+                default:
+                    LogManager.shared.error("applyMergeProposals: unknown field '\(proposal.fieldName)'")
+                    continue
+                }
+                entity.modifiedAt = Date()
+                appliedCount += 1
+                LogManager.shared.info("✎ Applied merge: \(proposal.flightDate) \(proposal.route) \(proposal.fieldName): '\(proposal.oldValue)' → '\(proposal.newValue)'")
+            }
+            if viewContext.hasChanges {
+                do {
+                    try viewContext.save()
+                    LogManager.shared.info("applyMergeProposals: saved \(appliedCount) change(s)")
+                } catch {
+                    viewContext.rollback()
+                    LogManager.shared.error("applyMergeProposals: save failed: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 
     /// Returns the most recent import sessions (up to 5), ordered newest first.

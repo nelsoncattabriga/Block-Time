@@ -75,6 +75,11 @@ struct ImportExportView: View {
     // Delete state
     @State private var showingDeleteWarning = false
 
+    // Merge review state
+    @State private var pendingMergeProposals: [MergeProposal] = []
+    @State private var showingMergeReview = false
+    @State private var pendingImportResult: ImportSessionResult? = nil
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -181,6 +186,16 @@ struct ImportExportView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(resultMessage)
+        }
+        .sheet(isPresented: $showingMergeReview, onDismiss: {
+            if let result = pendingImportResult {
+                lastImportResult = result
+                pendingImportResult = nil
+            }
+        }) {
+            ImportMergeReviewSheet(proposals: pendingMergeProposals) { approved in
+                FlightDatabaseService.shared.applyMergeProposals(approved)
+            }
         }
         .sheet(item: $lastImportResult) { result in
             ImportSessionReviewSheet(result: result)
@@ -465,19 +480,32 @@ struct ImportExportView: View {
                 viewModel.reloadSavedCrewNames()
 
                 if importResult.successCount > 0 {
-                    // Show the same review sheet as WebCIS imports
                     lastImportSuccessCount = importResult.successCount
-                    lastImportResult = ImportSessionResult(
+                    let sessionResult = ImportSessionResult(
                         sessionID: importResult.sessionID ?? UUID(),
                         successCount: importResult.successCount,
                         duplicateCount: importResult.duplicateCount,
-                        mergedCount: 0
+                        mergedCount: importResult.mergeProposals.count
                     )
+                    if !importResult.mergeProposals.isEmpty {
+                        pendingMergeProposals = importResult.mergeProposals
+                        pendingImportResult = sessionResult
+                        showingMergeReview = true
+                    } else {
+                        lastImportResult = sessionResult
+                    }
                 } else {
+                    if !importResult.mergeProposals.isEmpty {
+                        pendingMergeProposals = importResult.mergeProposals
+                        showingMergeReview = true
+                    }
                     // Nothing new imported — show a simple summary alert
                     var message = "Import Summary\n\n"
                     if importResult.duplicateCount > 0 {
                         message += "⊘ \(importResult.duplicateCount) flight(s) already exist — nothing new imported.\n"
+                    }
+                    if !importResult.mergeProposals.isEmpty {
+                        message += "✎ \(importResult.mergeProposals.count) field update(s) proposed for review.\n"
                     }
                     if importResult.failureCount > 0 {
                         message += "✗ \(importResult.failureCount) flight(s) failed to import.\n\n"
@@ -585,12 +613,19 @@ struct ImportExportView: View {
                 viewModel.reloadSavedCrewNames()
 
                 lastImportSuccessCount = importResult.successCount
-                lastImportResult = ImportSessionResult(
+                let sessionResult = ImportSessionResult(
                     sessionID: importResult.sessionID ?? UUID(),
                     successCount: importResult.successCount,
                     duplicateCount: importResult.duplicateCount,
-                    mergedCount: 0
+                    mergedCount: importResult.mergeProposals.count
                 )
+                if !importResult.mergeProposals.isEmpty {
+                    pendingMergeProposals = importResult.mergeProposals
+                    pendingImportResult = sessionResult
+                    showingMergeReview = true
+                } else {
+                    lastImportResult = sessionResult
+                }
 
             case .failure(let error):
                 resultMessage = "webCIS import failed: \(error.localizedDescription)"

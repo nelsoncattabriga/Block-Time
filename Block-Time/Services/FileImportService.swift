@@ -293,6 +293,7 @@ class FileImportService {
             let flights = flightsToImport.map { $0.flight }
             var duplicateCount = 0
             var importSessionID: UUID? = nil
+            var mergeProposals: [MergeProposal] = []
 
             DispatchQueue.main.sync {
                 let result = databaseService.saveFlightsBatch(flights)
@@ -300,6 +301,7 @@ class FileImportService {
                 let dbFailures = result.failureCount
                 duplicateCount = result.duplicateCount
                 importSessionID = result.sessionID
+                mergeProposals = result.mergeProposals
 
                 // Track database failures (NOT duplicates) in the import result
                 if dbFailures > 0 {
@@ -314,7 +316,8 @@ class FileImportService {
                 duplicateCount: duplicateCount,
                 failureReasons: failureReasons,
                 sampleFailures: sampleFailures,
-                sessionID: importSessionID
+                sessionID: importSessionID,
+                mergeProposals: mergeProposals
             )
 
             // Re-enable CloudKit sync if it was previously enabled
@@ -1623,6 +1626,7 @@ struct ImportResult {
     let failureReasons: [String: Int] // Reason -> Count
     let sampleFailures: [(row: Int, reason: String)] // First 10 failures with row numbers
     let sessionID: UUID?
+    let mergeProposals: [MergeProposal]
 }
 
 // MARK: - Import Error

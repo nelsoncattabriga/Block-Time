@@ -34,6 +34,10 @@ struct ImportSessionReviewSheet: View {
                         ImportStatRow(icon: "minus.circle.fill", color: .secondary,
                                       label: "Duplicates skipped", value: result.duplicateCount)
                     }
+                    if result.mergedCount > 0 {
+                        ImportStatRow(icon: "pencil.circle.fill", color: .orange,
+                                      label: "Existing flights updated", value: result.mergedCount)
+                    }
                 }
                 .padding()
                 .background(Color(.systemGray6).opacity(0.75))
