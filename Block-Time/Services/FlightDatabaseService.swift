@@ -2538,6 +2538,19 @@ class FlightDatabaseService: ObservableObject {
             object: nil
         )
 
+        // Monitor scene lifecycle to suppress notifications while backgrounded
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidEnterBackground),
+            name: UIScene.didEnterBackgroundNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidBecomeActive),
+            name: UIScene.didActivateNotification,
+            object: nil
+        )
     }
 
     @objc private func handleRemoteStoreChange(_ notification: Notification) {
@@ -2579,6 +2592,24 @@ class FlightDatabaseService: ObservableObject {
                     self.isSyncing = false
                     self.lastSyncDate = Date()
                 }
+            }
+        }
+    }
+
+    @objc private func handleAppDidEnterBackground() {
+        isAppInBackground = true
+        LogManager.shared.debug("FlightDatabaseService: App entered background — notifications suppressed")
+    }
+
+    @objc private func handleAppDidBecomeActive() {
+        isAppInBackground = false
+        LogManager.shared.debug("FlightDatabaseService: App became active — isAppInBackground cleared")
+        if pendingDataChanged {
+            pendingDataChanged = false
+            LogManager.shared.info("FlightDatabaseService: Posting deferred .flightDataChanged (background→foreground)")
+            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+            Task { @MainActor in
+                WidgetDataWriter.shared.updateWidgetSnapshot()
             }
         }
     }
