@@ -8,7 +8,7 @@ struct FlightSectorRow: View, Equatable {
     var showTimesInHoursMinutes: Bool = false
     var roundingMode: RoundingMode = .standard
     @AppStorage("showOutInTimes") private var showOutInTimes: Bool = true
-    @AppStorage("includeAirlinePrefixInFlightNumber") private var includeAirlinePrefixInFlightNumber: Bool = false
+    @AppStorage("includeAirlinePrefixInFlightNumber") private var includeAirlinePrefixInFlightNumber: Bool = true
     @AppStorage("isCustomAirlinePrefix") private var isCustomAirlinePrefix: Bool = false
     @Environment(\.colorScheme) var colorScheme
 
