@@ -33,6 +33,26 @@ struct DetailedSyncError: Identifiable {
     }
 }
 
+// MARK: - Merge Proposal
+
+/// Describes a single field change proposed by duplicate detection before it is committed.
+/// The caller presents these to the user for approval; only approved proposals are applied.
+struct MergeProposal: Identifiable {
+    let id: UUID = UUID()
+    /// Human-readable date string for display (e.g. "05/03/2026")
+    let flightDate: String
+    /// Route string for display (e.g. "BNE → MEL")
+    let route: String
+    /// Core Data objectID of the flight to patch
+    let objectID: NSManagedObjectID
+    /// Field name shown to the user (e.g. "Aircraft Reg")
+    let fieldName: String
+    /// Value currently stored in the database (may be empty)
+    let oldValue: String
+    /// Value that the import source wants to write
+    let newValue: String
+}
+
 // MARK: - Flight Database Service
 class FlightDatabaseService: ObservableObject {
 
@@ -932,26 +952,6 @@ class FlightDatabaseService: ObservableObject {
         }
 
         return success
-    }
-
-    // MARK: - Merge Proposal
-
-    /// Describes a single field change proposed by duplicate detection before it is committed.
-    /// The caller presents these to the user for approval; only approved proposals are applied.
-    struct MergeProposal: Identifiable {
-        let id: UUID = UUID()
-        /// Human-readable date string for display (e.g. "05/03/2026")
-        let flightDate: String
-        /// Route string for display (e.g. "BNE → MEL")
-        let route: String
-        /// Core Data objectID of the flight to patch
-        let objectID: NSManagedObjectID
-        /// Field name shown to the user (e.g. "Aircraft Reg")
-        let fieldName: String
-        /// Value currently stored in the database (may be empty)
-        let oldValue: String
-        /// Value that the import source wants to write
-        let newValue: String
     }
 
     /// OPTIMIZED: Save multiple flights in a single batch operation
