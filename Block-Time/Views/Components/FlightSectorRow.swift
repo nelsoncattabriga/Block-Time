@@ -8,10 +8,11 @@ struct FlightSectorRow: View, Equatable {
     var showTimesInHoursMinutes: Bool = false
     var roundingMode: RoundingMode = .standard
     @AppStorage("showOutInTimes") private var showOutInTimes: Bool = true
+    @AppStorage("includeAirlinePrefixInFlightNumber") private var includeAirlinePrefixInFlightNumber: Bool = false
+    @AppStorage("isCustomAirlinePrefix") private var isCustomAirlinePrefix: Bool = false
     @Environment(\.colorScheme) var colorScheme
 
     // Display values computed once at init
-    private let cachedAirlineLogo: String?
     private let cachedFromAirportCode: String
     private let cachedToAirportCode: String
     private let cachedCrewNames: String
@@ -44,18 +45,6 @@ struct FlightSectorRow: View, Equatable {
         cachedDayOfMonth = sector.getDayOfMonth(useLocalTime: useLocalTime)
         cachedFromAirportCode = AirportService.shared.getDisplayCode(sector.fromAirport, useIATA: useIATACodes)
         cachedToAirportCode = AirportService.shared.getDisplayCode(sector.toAirport, useIATA: useIATACodes)
-
-        // Airline logo
-        let includePrefix = UserDefaults.standard.bool(forKey: "includeAirlinePrefixInFlightNumber")
-        let isCustomPrefix = UserDefaults.standard.bool(forKey: "isCustomAirlinePrefix")
-        if !includePrefix || isCustomPrefix {
-            cachedAirlineLogo = nil
-        } else {
-            let uppercased = sector.flightNumberFormatted.uppercased()
-            cachedAirlineLogo = Airline.airlines.first(where: {
-                !$0.iconName.isEmpty && uppercased.hasPrefix($0.prefix)
-            })?.iconName
-        }
 
         // Crew names
         var crew: [String] = []
@@ -124,6 +113,15 @@ struct FlightSectorRow: View, Equatable {
         return sector.isPositioning
     }
 
+    // Computed logo based on @AppStorage properties — reacts to setting changes
+    private var airlineLogo: String? {
+        guard includeAirlinePrefixInFlightNumber && !isCustomAirlinePrefix else { return nil }
+        let uppercased = sector.flightNumberFormatted.uppercased()
+        return Airline.airlines.first(where: {
+            !$0.iconName.isEmpty && uppercased.hasPrefix($0.prefix)
+        })?.iconName
+    }
+
     var body: some View {
 
         HStack(spacing: 0) {
@@ -154,7 +152,7 @@ struct FlightSectorRow: View, Equatable {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     // Airline logo if applicable
-                    if let logo = cachedAirlineLogo {
+                    if let logo = airlineLogo {
                         Image(logo)
                             .resizable()
                             .scaledToFit()
