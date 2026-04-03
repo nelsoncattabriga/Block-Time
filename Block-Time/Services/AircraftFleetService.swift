@@ -401,6 +401,15 @@ class AircraftFleetService: ObservableObject {
             }
         }
 
-        return fleets
+        // Merge any fleets with duplicate names (e.g. custom aircraft typed "A380" alongside static "A388")
+        var merged: [String: Fleet] = [:]
+        for fleet in fleets {
+            if let existing = merged[fleet.id] {
+                merged[fleet.id] = Fleet(name: existing.name, aircraft: existing.aircraft + fleet.aircraft)
+            } else {
+                merged[fleet.id] = fleet
+            }
+        }
+        return merged.values.sorted { $0.name < $1.name }
     }
 }
