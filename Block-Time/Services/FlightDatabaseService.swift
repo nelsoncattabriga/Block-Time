@@ -2642,8 +2642,13 @@ class FlightDatabaseService: ObservableObject {
             // Local user change - post immediate notification for instant UI feedback
             LogManager.shared.debug("FlightDatabaseService: Context saved (local change): +\(insertedObjects.count) ~\(updatedObjects.count) -\(deletedObjects.count)")
             DispatchQueue.main.async {
-                LogManager.shared.info("FlightDatabaseService: Posting .flightDataChanged (immediate)")
-                NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                if self.isAppInBackground {
+                    self.pendingDataChanged = true
+                    LogManager.shared.debug("FlightDatabaseService: Deferred .flightDataChanged (app in background)")
+                } else {
+                    LogManager.shared.info("FlightDatabaseService: Posting .flightDataChanged (immediate)")
+                    NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                }
             }
         }
     }
