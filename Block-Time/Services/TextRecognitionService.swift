@@ -50,6 +50,7 @@ enum FleetType {
     case b787
     case a330   // auto-detects screen vs printer format
     case a321   // same ACARS layout as A330/B737 screen format
+    case a380   // NSS AVNCS EVENT TIMES screen — same columnar layout as B737
 }
 
 // MARK: - Text Recognition Service
@@ -130,6 +131,7 @@ class TextRecognitionService: ObservableObject {
         case .b787: fleetName = "B787"
         case .a330: fleetName = "A330"
         case .a321: fleetName = "A321"
+        case .a380: fleetName = "A380"
         }
         LogManager.shared.info("Starting text recognition for \(fleetName) ACARS image")
 
@@ -170,6 +172,8 @@ class TextRecognitionService: ObservableObject {
                         flightData = try self.processB787TextRecognitionResults(results)
                     case .a330, .a321:
                         flightData = try self.processA330TextRecognitionResults(results)
+                    case .a380:
+                        flightData = try self.processA380TextRecognitionResults(results)
                     }
                     LogManager.shared.info("Successfully extracted flight data: \(flightData.flightNumber) \(flightData.fromAirport)-\(flightData.toAirport)")
                     continuation.resume(returning: flightData)
@@ -1651,6 +1655,28 @@ class TextRecognitionService: ObservableObject {
         try throwIfMissingCritical(missingFields, partialData: flightData)
 
         return flightData
+    }
+
+    // MARK: - A380 Parser
+
+    /// Process A380 NSS AVNCS "EVENT TIMES" screen.
+    ///
+    /// The screen layout mirrors the B737 ACARS CURRENT-FLT screen:
+    ///   Left column:  OUT / OFF / ON / IN times
+    ///   Right column: FLIGHT TIME / BLOCK TIME (used for validation)
+    /// Flight details — flight number, departure, destination, day — are extracted
+    /// using the same helpers as the B737 parser.
+    ///
+    /// Falls back through columnar → pattern-based → interleaved strategies in
+    /// the same order as processTextRecognitionResults.
+    private func processA380TextRecognitionResults(_ results: [VNRecognizedTextObservation]) throws -> FlightData {
+        guard results.count >= 5 else {
+            throw TextRecognitionError(message: "Make sure you're photographing the ACARS screen directly.")
+        }
+        LogManager.shared.debug("✓ A380 EVENT TIMES screen — delegating to B737 columnar parser")
+        // The A380 NSS AVNCS EVENT TIMES screen uses the same columnar layout as the
+        // B737 ACARS CURRENT-FLT screen; reuse that parser verbatim.
+        return try processTextRecognitionResults(results)
     }
 
     /// Columnar time extractor for the A330 thermal printer format.

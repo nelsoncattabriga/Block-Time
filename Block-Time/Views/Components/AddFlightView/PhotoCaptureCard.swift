@@ -11,6 +11,7 @@ struct ModernPhotoCaptureCard: View {
         case "B787": return "787 Capture"
         case "A330": return "A330 Capture"
         case "A321": return "A321 Capture"
+        case "A380": return "A380 Capture"
         default: return "737 Capture"
         }
     }
@@ -20,6 +21,7 @@ struct ModernPhotoCaptureCard: View {
         case "B787": return "PRINTER"
         case "A330": return "ACARS or PRINTER"
         case "A321": return "ACARS"
+        case "A380": return "ACARS"
         default:     return "ACARS"
         }
     }
@@ -29,6 +31,7 @@ struct ModernPhotoCaptureCard: View {
         case "B787": return "ACARS Printout"
         case "A330": return "CURRENT-FLT Screen or Printout"
         case "A321": return "AOC EVENT TIMES"
+        case "A380": return "EVENT TIMES Screen"
         default:     return "CURRENT-FLT Screen"
         }
     }
