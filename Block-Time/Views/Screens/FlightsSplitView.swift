@@ -707,9 +707,7 @@ private struct FlightsListContent: View {
                     useLocalTime: viewModel.displayFlightsInLocalTime,
                     useIATACodes: viewModel.useIATACodes,
                     showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
-                    roundingMode: viewModel.decimalRoundingMode,
-                    includeAirlinePrefixInFlightNumber: viewModel.includeAirlinePrefixInFlightNumber,
-                    isCustomAirlinePrefix: viewModel.isCustomAirlinePrefix
+                    roundingMode: viewModel.decimalRoundingMode
                 )
                 .equatable()
             }
@@ -752,9 +750,7 @@ private struct FlightsListContent: View {
                     useLocalTime: viewModel.displayFlightsInLocalTime,
                     useIATACodes: viewModel.useIATACodes,
                     showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
-                    roundingMode: viewModel.decimalRoundingMode,
-                    includeAirlinePrefixInFlightNumber: viewModel.includeAirlinePrefixInFlightNumber,
-                    isCustomAirlinePrefix: viewModel.isCustomAirlinePrefix
+                    roundingMode: viewModel.decimalRoundingMode
                 )
                 .equatable()
             }

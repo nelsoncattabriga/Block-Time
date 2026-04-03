@@ -7,22 +7,90 @@ struct FlightSectorRow: View, Equatable {
     var useIATACodes: Bool = false
     var showTimesInHoursMinutes: Bool = false
     var roundingMode: RoundingMode = .standard
-    var includeAirlinePrefixInFlightNumber: Bool = UserDefaults.standard.bool(forKey: "includeAirlinePrefixInFlightNumber")
-    var isCustomAirlinePrefix: Bool = UserDefaults.standard.bool(forKey: "isCustomAirlinePrefix")
     @AppStorage("showOutInTimes") private var showOutInTimes: Bool = true
     @Environment(\.colorScheme) var colorScheme
 
-    // Cached computed values - initialized once
-    @State private var cachedAirlineLogo: String?
-    @State private var cachedFromAirportCode: String = ""
-    @State private var cachedToAirportCode: String = ""
-    @State private var cachedCrewNames: String = ""
-    @State private var cachedIsFutureFlight: Bool = false
-    @State private var cachedOutTime: String = ""
-    @State private var cachedInTime: String = ""
-    @State private var cachedDayOfMonth: String = ""
-    @State private var cachedFormattedDate: String = ""
-    @State private var cachedDisplayDate: String = ""
+    // Display values computed once at init
+    private let cachedAirlineLogo: String?
+    private let cachedFromAirportCode: String
+    private let cachedToAirportCode: String
+    private let cachedCrewNames: String
+    private let cachedIsFutureFlight: Bool
+    private let cachedOutTime: String
+    private let cachedInTime: String
+    private let cachedDayOfMonth: String
+    private let cachedFormattedDate: String
+    private let cachedDisplayDate: String
+
+    init(
+        sector: FlightSector,
+        useLocalTime: Bool = false,
+        useIATACodes: Bool = false,
+        showTimesInHoursMinutes: Bool = false,
+        roundingMode: RoundingMode = .standard
+    ) {
+        self.sector = sector
+        self.useLocalTime = useLocalTime
+        self.useIATACodes = useIATACodes
+        self.showTimesInHoursMinutes = showTimesInHoursMinutes
+        self.roundingMode = roundingMode
+
+        // Compute display values once — avoids onAppear two-render flash
+        let displayDate = sector.getDisplayDate(useLocalTime: useLocalTime)
+        cachedOutTime = sector.getOutTime(useLocalTime: useLocalTime)
+        cachedInTime = sector.getInTime(useLocalTime: useLocalTime)
+        cachedDisplayDate = displayDate
+        cachedFormattedDate = sector.getFormattedDate(useLocalTime: useLocalTime)
+        cachedDayOfMonth = sector.getDayOfMonth(useLocalTime: useLocalTime)
+        cachedFromAirportCode = AirportService.shared.getDisplayCode(sector.fromAirport, useIATA: useIATACodes)
+        cachedToAirportCode = AirportService.shared.getDisplayCode(sector.toAirport, useIATA: useIATACodes)
+
+        // Airline logo
+        let includePrefix = UserDefaults.standard.bool(forKey: "includeAirlinePrefixInFlightNumber")
+        let isCustomPrefix = UserDefaults.standard.bool(forKey: "isCustomAirlinePrefix")
+        if !includePrefix || isCustomPrefix {
+            cachedAirlineLogo = nil
+        } else {
+            let uppercased = sector.flightNumberFormatted.uppercased()
+            cachedAirlineLogo = Airline.airlines.first(where: {
+                !$0.iconName.isEmpty && uppercased.hasPrefix($0.prefix)
+            })?.iconName
+        }
+
+        // Crew names
+        var crew: [String] = []
+        if !sector.captainName.isEmpty { crew.append(sector.captainName) }
+        if !sector.foName.isEmpty { crew.append(sector.foName) }
+        if let so1 = sector.so1Name, !so1.isEmpty { crew.append(so1) }
+        if let so2 = sector.so2Name, !so2.isEmpty { crew.append(so2) }
+        cachedCrewNames = crew.isEmpty ? "Self" : crew.joined(separator: ", ")
+
+        // Future flight flag (depends on displayDate computed above)
+        let blockTime = sector.blockTimeValue
+        let simTime = sector.simTimeValue
+        if blockTime != 0 || simTime != 0 {
+            cachedIsFutureFlight = false
+        } else if sector.isPositioning {
+            let hasOutTime = !sector.outTime.isEmpty
+            let hasInTime = !sector.inTime.isEmpty
+            if hasOutTime && hasInTime {
+                cachedIsFutureFlight = false
+            } else {
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "dd/MM/yyyy"
+                dateFormatter.timeZone = useLocalTime ? TimeZone.current : TimeZone(secondsFromGMT: 0)
+                dateFormatter.locale = Locale(identifier: "en_AU")
+                if let flightDate = dateFormatter.date(from: displayDate) {
+                    let todayMidnight = Calendar.current.startOfDay(for: Date())
+                    cachedIsFutureFlight = flightDate >= todayMidnight
+                } else {
+                    cachedIsFutureFlight = false
+                }
+            }
+        } else {
+            cachedIsFutureFlight = true
+        }
+    }
 
     // Equatable conformance for better SwiftUI diffing
     // Compare key fields that affect the display to detect changes
@@ -48,9 +116,7 @@ struct FlightSectorRow: View, Equatable {
                lhs.useLocalTime == rhs.useLocalTime &&
                lhs.useIATACodes == rhs.useIATACodes &&
                lhs.showTimesInHoursMinutes == rhs.showTimesInHoursMinutes &&
-               lhs.roundingMode == rhs.roundingMode &&
-               lhs.includeAirlinePrefixInFlightNumber == rhs.includeAirlinePrefixInFlightNumber &&
-               lhs.isCustomAirlinePrefix == rhs.isCustomAirlinePrefix
+               lhs.roundingMode == rhs.roundingMode
     }
 
     // Cached date formatter - shared across all instances
@@ -62,119 +128,9 @@ struct FlightSectorRow: View, Equatable {
         return formatter
     }()
 
-    // Check if this is a rostered flight (not yet flown)
-    private func calculateIsFutureFlight() -> Bool {
-        // A flight is considered "rostered" if:
-        // 1. It has no block time AND no sim time (not yet flown)
-        // 2. For positioning (PAX) flights: un-dim when Out and In times are entered
-        // 3. For regular flights: only un-dim when block/sim time is added (ignore date)
-        let blockTime = sector.blockTimeValue
-        let simTime = sector.simTimeValue
-
-        // First check if it has been flown (has block or sim time)
-        guard blockTime == 0 && simTime == 0 else {
-            return false
-        }
-
-        // For positioning flights, un-dim when Out and In times are entered
-        if sector.isPositioning {
-            // Check if both Out and In times are present
-            let hasOutTime = !sector.outTime.isEmpty
-            let hasInTime = !sector.inTime.isEmpty
-
-            // If both times are entered, un-dim the flight
-            if hasOutTime && hasInTime {
-                return false
-            }
-
-            // Otherwise, check if the date is in the future
-            // Create a local formatter with appropriate timezone to avoid mutating the shared static formatter
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "dd/MM/yyyy"
-            dateFormatter.timeZone = useLocalTime ? TimeZone.current : TimeZone(secondsFromGMT: 0)
-            dateFormatter.locale = Locale(identifier: "en_AU")
-            guard let flightDate = dateFormatter.date(from: cachedDisplayDate) else {
-                return false
-            }
-
-            // Get current date at midnight (start of day) for comparison
-            let calendar = Calendar.current
-            let now = Date()
-            guard let todayMidnight = calendar.startOfDay(for: now) as Date? else {
-                return false
-            }
-
-            // Flight is in the future if its date is after today
-            return flightDate >= todayMidnight
-        }
-
-        // For regular flights, remain dimmed until block/sim time is added
-        // (regardless of date)
-        return true
-    }
-
     // Check if this is a positioning flight
     private var isPositioning: Bool {
         return sector.isPositioning
-    }
-
-    // Cache expensive time conversions - computed once per render cycle
-    private var outTime: String {
-        return sector.getOutTime(useLocalTime: useLocalTime)
-    }
-
-    private var inTime: String {
-        return sector.getInTime(useLocalTime: useLocalTime)
-    }
-
-    private var displayDate: String {
-        return sector.getDisplayDate(useLocalTime: useLocalTime)
-    }
-
-    private var formattedDate: String {
-        return sector.getFormattedDate(useLocalTime: useLocalTime)
-    }
-
-    private var dayOfMonth: String {
-        return sector.getDayOfMonth(useLocalTime: useLocalTime)
-    }
-
-    // Calculate airline logo lookup
-    private func calculateAirlineLogo() -> String? {
-        // Don't show airline icon if:
-        // 1. Airline prefix toggle is OFF
-        // 2. User has selected custom prefix
-        if !includeAirlinePrefixInFlightNumber || isCustomAirlinePrefix {
-            return nil
-        }
-
-        let uppercased = sector.flightNumberFormatted.uppercased()
-        for airline in Airline.airlines {
-            if uppercased.hasPrefix(airline.prefix) && !airline.iconName.isEmpty {
-                return airline.iconName
-            }
-        }
-        return nil
-    }
-
-    // Calculate crew names formatting
-    private func calculateCrewNames() -> String {
-        var crew: [String] = []
-
-        if !sector.captainName.isEmpty {
-            crew.append(sector.captainName)
-        }
-        if !sector.foName.isEmpty {
-            crew.append(sector.foName)
-        }
-        if let so1 = sector.so1Name, !so1.isEmpty {
-            crew.append(so1)
-        }
-        if let so2 = sector.so2Name, !so2.isEmpty {
-            crew.append(so2)
-        }
-
-        return crew.isEmpty ? "Self" : crew.joined(separator: ", ")
     }
 
     var body: some View {
@@ -364,7 +320,7 @@ struct FlightSectorRow: View, Equatable {
                     }
                 }
 
-                
+
                 // Crew Information
                 if !isPositioning {
                     HStack {
@@ -396,26 +352,6 @@ struct FlightSectorRow: View, Equatable {
                 )
         )
         .opacity(cachedIsFutureFlight ? 0.65 : 1.0)
-        .onAppear {
-            updateCachedValues()
-        }
-        .onChange(of: sector) { _, _ in
-            updateCachedValues()
-        }
-    }
-
-    // Helper function to update all cached values
-    private func updateCachedValues() {
-        cachedOutTime = sector.getOutTime(useLocalTime: useLocalTime)
-        cachedInTime = sector.getInTime(useLocalTime: useLocalTime)
-        cachedDisplayDate = sector.getDisplayDate(useLocalTime: useLocalTime)
-        cachedFormattedDate = sector.getFormattedDate(useLocalTime: useLocalTime)
-        cachedDayOfMonth = sector.getDayOfMonth(useLocalTime: useLocalTime)
-        cachedAirlineLogo = calculateAirlineLogo()
-        cachedFromAirportCode = AirportService.shared.getDisplayCode(sector.fromAirport, useIATA: useIATACodes)
-        cachedToAirportCode = AirportService.shared.getDisplayCode(sector.toAirport, useIATA: useIATACodes)
-        cachedCrewNames = calculateCrewNames()
-        cachedIsFutureFlight = calculateIsFutureFlight()
     }
 }
 
