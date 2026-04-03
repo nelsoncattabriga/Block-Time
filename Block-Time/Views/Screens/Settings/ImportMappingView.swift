@@ -720,19 +720,28 @@ struct FieldMappingRow: View {
                     }
                 }
             } else {
-                // Single column selection
-                Picker("Source Column", selection: Binding(
-                    get: { mapping.sourceColumns.first },
-                    set: { newValue in
-                        mapping.sourceColumns = newValue != nil ? [newValue!] : []
+                // Single column selection — use sheet picker to avoid eagerly building all header rows
+                Button {
+                    showingColumnPicker.toggle()
+                } label: {
+                    HStack {
+                        if let selected = mapping.sourceColumns.first {
+                            Text(selected)
+                                .lineLimit(1)
+                        } else {
+                            Text("Not Mapped")
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                )) {
-                    Text("Not Mapped").tag(nil as String?)
-                    ForEach(availableHeaders.indices, id: \.self) { index in
-                        Text(availableHeaders[index]).tag(availableHeaders[index] as String?)
-                    }
+                    .padding(8)
+                    .background(Color(.systemGray6).opacity(0.75))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
-                .pickerStyle(.menu)
+                .buttonStyle(.plain)
             }
         }
         .padding(.vertical, 4)
@@ -740,7 +749,8 @@ struct FieldMappingRow: View {
             ColumnPickerView(
                 selectedColumns: $mapping.sourceColumns,
                 availableHeaders: availableHeaders,
-                fieldName: mapping.logbookField
+                fieldName: mapping.logbookField,
+                allowMultiple: mapping.supportsMultipleColumns
             )
         }
     }
@@ -751,13 +761,14 @@ struct ColumnPickerView: View {
     @Binding var selectedColumns: [String]
     let availableHeaders: [String]
     let fieldName: String
+    var allowMultiple: Bool = true
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    Text("Select one or more columns to map to \(fieldName)")
+                    Text(allowMultiple ? "Select one or more columns to map to \(fieldName)" : "Select a column to map to \(fieldName)")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -781,7 +792,7 @@ struct ColumnPickerView: View {
                     }
                 }
 
-                if !selectedColumns.isEmpty {
+                if allowMultiple && !selectedColumns.isEmpty {
                     Section(header: Text("Selected Columns")) {
                         ForEach(selectedColumns.indices, id: \.self) { index in
                             let column = selectedColumns[index]
@@ -799,14 +810,16 @@ struct ColumnPickerView: View {
                     }
                 }
             }
-            .navigationTitle("Select Columns")
+            .navigationTitle("Select Column\(allowMultiple ? "s" : "")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Clear All") {
-                        selectedColumns.removeAll()
+                if allowMultiple {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Clear All") {
+                            selectedColumns.removeAll()
+                        }
+                        .disabled(selectedColumns.isEmpty)
                     }
-                    .disabled(selectedColumns.isEmpty)
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -820,6 +833,11 @@ struct ColumnPickerView: View {
     }
 
     private func toggleSelection(_ header: String) {
+        if !allowMultiple {
+            selectedColumns = selectedColumns.first == header ? [] : [header]
+            dismiss()
+            return
+        }
         if selectedColumns.contains(header) {
             selectedColumns.removeAll { $0 == header }
         } else {
