@@ -118,6 +118,98 @@ class TextRecognitionService: ObservableObject {
         return output
     }
 
+    /// Pre-processes an A380 NSS AVNCS screen image for OCR.
+    ///
+    /// The A380 NSS screen uses a strict two-colour convention:
+    ///   • White  = field labels  (FLIGHT NUMBER, DEPARTURE, …)
+    ///   • Green  = data values   (QF0001, WSSS, 0330, …)
+    ///
+    /// Pipeline:
+    ///   1. Isolate green channel — CIColorMatrix maps (R,G,B) → (G-R, G-R, G-R).
+    ///      Pixels where green dominates become bright; white/grey labels collapse to ~0.
+    ///   2. Clamp negatives — CIColorClamp ensures no sub-zero artefacts.
+    ///   3. Contrast boost + unsharp mask + binarise — same tail as preprocessForOCR.
+    ///
+    /// Result: only the green data values survive as white text on black, and Vision
+    /// reads them top-to-bottom without having to untangle the two-column label layout.
+    private func preprocessForA380OCR(_ cgImage: CGImage) -> CGImage {
+        var image = CIImage(cgImage: cgImage)
+
+        // 1. Green isolation — output = G − max(R, B), all channels equal (greyscale-ish).
+        //    CIColorMatrix: each output channel = dot(inputRGBA, column vector) + bias.
+        //    We map: out.r = out.g = out.b = 0*R + 1*G + 0*B  (green channel only),
+        //    then subtract a scaled copy of red to suppress white pixels.
+        //    Matrix is row-major per CIColorMatrix convention:
+        //      Rout = inputR·rVector + inputG·gVector + inputB·bVector + inputA·aVector + biasVector
+        //    We want:  out = G - 0.5*(R+B)  for all three channels.
+        if let greenOnly = CIFilter(name: "CIColorMatrix", parameters: [
+            kCIInputImageKey: image,
+            "inputRVector": CIVector(x: -0.5, y: 0.0, z: 0.0, w: 0.0),  // R contribution
+            "inputGVector": CIVector(x:  1.0, y: 1.0, z: 1.0, w: 0.0),  // G contribution
+            "inputBVector": CIVector(x: -0.5, y: 0.0, z: 0.0, w: 0.0),  // B contribution
+            "inputAVector": CIVector(x:  0.0, y: 0.0, z: 0.0, w: 1.0),
+            "inputBiasVector": CIVector(x: 0.0, y: 0.0, z: 0.0, w: 0.0)
+        ])?.outputImage {
+            image = greenOnly
+        }
+
+        // 2. Clamp to [0, 1] — negative values from the subtraction above become black.
+        if let clamped = CIFilter(name: "CIColorClamp", parameters: [
+            kCIInputImageKey: image,
+            "inputMinComponents": CIVector(x: 0, y: 0, z: 0, w: 0),
+            "inputMaxComponents": CIVector(x: 1, y: 1, z: 1, w: 1)
+        ])?.outputImage {
+            image = clamped
+        }
+
+        // 3. Contrast boost (brightness −0.05 to compensate filter bias, contrast ×2).
+        if let boosted = CIFilter(name: "CIColorControls", parameters: [
+            kCIInputImageKey: image,
+            "inputSaturation": 0.0,
+            "inputBrightness": -0.05,
+            "inputContrast": 2.0
+        ])?.outputImage {
+            image = boosted
+        }
+
+        // 4. Sharpen.
+        if let sharpened = CIFilter(name: "CIUnsharpMask", parameters: [
+            kCIInputImageKey: image,
+            kCIInputRadiusKey: 2.5,
+            kCIInputIntensityKey: 0.8
+        ])?.outputImage {
+            image = sharpened
+        }
+
+        // 5. Binarise — green values land well above 0.35 after the isolation step.
+        if #available(iOS 17, *) {
+            if let binary = CIFilter(name: "CIColorThreshold", parameters: [
+                kCIInputImageKey: image,
+                "inputThreshold": 0.35
+            ])?.outputImage {
+                image = binary
+            }
+        }
+
+        guard let output = Self.ciContext.createCGImage(image, from: image.extent) else {
+            LogManager.shared.debug("A380 image pre-processing: CIContext render failed, using standard pipeline")
+            return preprocessForOCR(cgImage)
+        }
+        LogManager.shared.debug("A380 green-channel image pre-processing complete")
+
+        #if DEBUG
+        let debugImage = UIImage(cgImage: output)
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else { return }
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAsset(from: debugImage)
+            }, completionHandler: nil)
+        }
+        #endif
+
+        return output
+    }
+
     // MARK: - Public Methods
 
     /// Extract flight data from an image using Vision OCR
@@ -139,7 +231,7 @@ class TextRecognitionService: ObservableObject {
             LogManager.shared.error("Failed to convert UIImage to CGImage for text recognition")
             throw TextRecognitionError(message: "Failed to process image")
         }
-        let cgImage = preprocessForOCR(rawCGImage)
+        let cgImage = fleetType == .a380 ? preprocessForA380OCR(rawCGImage) : preprocessForOCR(rawCGImage)
 
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
@@ -1661,22 +1753,184 @@ class TextRecognitionService: ObservableObject {
 
     /// Process A380 NSS AVNCS "EVENT TIMES" screen.
     ///
-    /// The screen layout mirrors the B737 ACARS CURRENT-FLT screen:
-    ///   Left column:  OUT / OFF / ON / IN times
-    ///   Right column: FLIGHT TIME / BLOCK TIME (used for validation)
-    /// Flight details — flight number, departure, destination, day — are extracted
-    /// using the same helpers as the B737 parser.
-    ///
-    /// Falls back through columnar → pattern-based → interleaved strategies in
-    /// the same order as processTextRecognitionResults.
+    /// Layout differences from B737 CURRENT-FLT screen:
+    ///   • Flight number appears as a standalone line (e.g. "QF0000"), no "/DD" suffix
+    ///   • Day-of-month appears on the line immediately after the flight number
+    ///   • Airports appear on individual lines (not "XXXX/YYYY" pairs) in the right column:
+    ///       DEPARTURE  → line N,  value → line N+1  (e.g. "WSSS" — may have trailing OCR chars)
+    ///       DESTINATION → line M, value → line M+1  (e.g. "YSSY")
+    ///   • Times (OUT/OFF/ON/IN) use the same columnar layout as the B737 screen.
     private func processA380TextRecognitionResults(_ results: [VNRecognizedTextObservation]) throws -> FlightData {
         guard results.count >= 5 else {
             throw TextRecognitionError(message: "Make sure you're photographing the ACARS screen directly.")
         }
-        LogManager.shared.debug("✓ A380 EVENT TIMES screen — delegating to B737 columnar parser")
-        // The A380 NSS AVNCS EVENT TIMES screen uses the same columnar layout as the
-        // B737 ACARS CURRENT-FLT screen; reuse that parser verbatim.
-        return try processTextRecognitionResults(results)
+
+        var recognizedText = results.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+        LogManager.shared.debug("A380 Recognized text: \(recognizedText)")
+        recognizedText = rejoinSplitTimes(in: recognizedText)
+
+        // --- Times (reuse B737 columnar / pattern-based / interleaved pipeline) ---
+        var outTime = "", offTime = "", onTime = "", inTime = "", blockTime = ""
+        if let t = extractTimesFromColumnarLayout(from: recognizedText) {
+            LogManager.shared.debug("✓ A380: using columnar layout")
+            outTime = t.out; offTime = t.off; onTime = t.on; inTime = t.in
+            blockTime = t.blk
+            validateAndCorrectTimeSequence(out: outTime, off: offTime, on: onTime, in: inTime, fltTime: t.flt, blkTime: t.blk)
+        } else {
+            LogManager.shared.debug("✓ A380: columnar failed, using pattern-based extraction")
+            let rawOut = extractOutTime(from: recognizedText)
+            let rawOff = extractOffTime(from: recognizedText)
+            let rawOn  = extractOnTime(from: recognizedText)
+            let rawIn  = extractInTime(from: recognizedText)
+            blockTime  = extractBlockTime(from: recognizedText)
+            let flt    = extractFlightTime(from: recognizedText)
+            (outTime, offTime, onTime, inTime) = correctLeadingEightIfNeeded(out: rawOut, off: rawOff, on: rawOn, in: rawIn)
+            validateAndCorrectTimeSequence(out: outTime, off: offTime, on: onTime, in: inTime, fltTime: flt, blkTime: blockTime)
+        }
+
+        // --- Flight details: A380-specific extraction ---
+        let (flightNumber, dayOfMonth, fromAirport, toAirport) = extractA380FlightDetails(from: recognizedText)
+
+        LogManager.shared.debug("A380 parsed — flight:\(flightNumber) \(fromAirport)-\(toAirport) OUT:\(outTime) OFF:\(offTime) ON:\(onTime) IN:\(inTime) BLK:\(blockTime) day:\(dayOfMonth ?? "nil")")
+
+        let flightData = FlightData(
+            outTime: outTime, inTime: inTime, offTime: offTime, onTime: onTime,
+            blockTime: blockTime,
+            flightNumber: flightNumber,
+            fromAirport: fromAirport, toAirport: toAirport,
+            dayOfMonth: dayOfMonth,
+            aircraftRegistration: nil, fullDate: nil
+        )
+
+        var missingFields: [String] = []
+        if outTime.isEmpty { missingFields.append("OUT time") }
+        if inTime.isEmpty  { missingFields.append("IN time") }
+        if !outTime.isEmpty && !isValidTimeFormat(outTime) { missingFields.append("valid OUT time") }
+        if !inTime.isEmpty  && !isValidTimeFormat(inTime)  { missingFields.append("valid IN time") }
+        try throwIfMissingCritical(missingFields, partialData: flightData)
+
+        return flightData
+    }
+
+    /// Extract flight number, day-of-month and airports from the A380 EVENT TIMES screen.
+    ///
+    /// Pattern-based approach — no label hunting:
+    ///   1. Flight number: first line matching an airline prefix + 3–4 digits (e.g. "QF0000").
+    ///      OCR sometimes misreads O→0, so we normalise after finding the prefix.
+    ///   2. Day-of-month: the line immediately after the flight number line that is 1–2 digits.
+    ///   3. Airports: scan all lines for exactly 4 uppercase letters (ICAO code pattern).
+    ///      The first two found that are not known non-airport words are departure + destination.
+    ///      Trailing OCR noise (e.g. "WSSSR") is stripped to 4 letters.
+    private func extractA380FlightDetails(from text: String) -> (flightNumber: String, dayOfMonth: String?, fromAirport: String, toAirport: String) {
+        let lines = text.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }
+
+        // QF A380 route network — all airports the type serves.
+        // Used as a whitelist: only lines matching one of these (after stripping 1 trailing
+        // noise char) are accepted as airport codes.
+        let a380Airports: Set<String> = [
+            "YSSY",
+            "YMML",
+            "YBBN",
+            "YPPH",
+            "YPAD",
+            "YPDN",
+            "YMAV",
+            "YSCB",
+            "WSSS",
+            "VTBS",
+            "VHHH",
+            "ZBAA",
+            "ZSPD",
+            "RJAA",
+            "RKSI",
+            "OMDB",
+            "EGLL",
+            "LIRF",
+            "LFPG",
+            "EGCC",
+            "LTAC",
+            "KLAX",
+            "KLAS",
+            "KSFO",
+            "KSEA",
+            "KDFW",
+            "KJFK",
+            "OTHH",
+            "OERK",
+            "EHAM",
+            "EDDM",
+            "FAOR",
+            "FACT",
+            "HECA",
+            "FALE",
+            "FIMP",
+            "FMEE",
+            "GMMN",
+            "HAAB",
+        ]
+
+        // Regex patterns
+        let flightNumRegex  = try! NSRegularExpression(pattern: #"^([A-Z]{2,3})([0-9O]{3,4})$"#, options: .caseInsensitive)
+        let dayOnlyRegex    = try! NSRegularExpression(pattern: #"^\d{1,2}$"#)
+
+        // OCR substitution for digits inside flight number suffix
+        let digitMap: [Character: Character] = [
+            "O": "0", "o": "0", "Ø": "0", "ø": "0",
+            "I": "1", "l": "1", "Z": "2", "S": "5", "B": "8", "G": "6"
+        ]
+
+        func matchesRegex(_ regex: NSRegularExpression, _ s: String) -> Bool {
+            regex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil
+        }
+
+        // 1. Find flight number
+        var flightNumber = ""
+        var flightNumberLineIndex: Int? = nil
+        for (i, line) in lines.enumerated() {
+            let upper = line.uppercased()
+            guard let m = flightNumRegex.firstMatch(in: upper, range: NSRange(upper.startIndex..., in: upper)),
+                  let prefixRange = Range(m.range(at: 1), in: upper),
+                  let suffixRange = Range(m.range(at: 2), in: upper) else { continue }
+            let prefix = String(upper[prefixRange])
+            let suffix = String(upper[suffixRange])
+            var corrected = ""
+            for ch in suffix { corrected.append(digitMap[ch] ?? ch) }
+            let digits = corrected.filter { $0.isNumber }
+            flightNumber = prefix + String(digits.prefix(4))
+            flightNumberLineIndex = i
+            LogManager.shared.debug("A380: flight number line '\(line)' → '\(flightNumber)'")
+            break
+        }
+
+        // 2. Day-of-month: line immediately after flight number that is 1–2 digits
+        var dayOfMonth: String? = nil
+        if let idx = flightNumberLineIndex, idx + 1 < lines.count {
+            let candidate = lines[idx + 1]
+            if matchesRegex(dayOnlyRegex, candidate) {
+                let digits = candidate.filter { $0.isNumber }
+                dayOfMonth = digits.count == 1 ? "0\(digits)" : String(digits)
+                LogManager.shared.debug("A380: day '\(candidate)' → '\(dayOfMonth!)'")
+            }
+        }
+
+        // 3. Airports: scan for lines matching known A380 route airports.
+        //    Accept exact 4-letter match OR 5-letter line where first 4 chars match
+        //    (handles OCR trailing-noise like "WSSSR" → "WSSS").
+        var airports: [String] = []
+        for line in lines {
+            let upper = line.uppercased().filter { $0.isLetter }
+            guard upper.count == 4 || upper.count == 5 else { continue }
+            let code = String(upper.prefix(4))
+            guard a380Airports.contains(code) else { continue }
+            if !airports.contains(code) { airports.append(code) }
+            if airports.count == 2 { break }
+        }
+
+        let fromAirport = airports.count > 0 ? airports[0] : ""
+        let toAirport   = airports.count > 1 ? airports[1] : ""
+        LogManager.shared.debug("A380 details: flight=\(flightNumber) day=\(dayOfMonth ?? "nil") dep=\(fromAirport) dest=\(toAirport)")
+
+        return (flightNumber, dayOfMonth, fromAirport, toAirport)
     }
 
     /// Columnar time extractor for the A330 thermal printer format.
