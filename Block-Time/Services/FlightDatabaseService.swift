@@ -56,6 +56,10 @@ class FlightDatabaseService: ObservableObject {
     private let remoteStoreChangeMinInterval: TimeInterval = 1.0 // 1 second minimum between processing
     private var remoteChangeSyncSettleTimer: Timer?
 
+    // MARK: - Background state tracking
+    private var isAppInBackground: Bool = false
+    private var pendingDataChanged: Bool = false
+
     private init() {
         setupCloudKitNotifications()
     } // Prevent multiple instances
