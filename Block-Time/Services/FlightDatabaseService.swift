@@ -1061,9 +1061,8 @@ class FlightDatabaseService: ObservableObject {
             for sector in sectors {
                 // Check UUID-based duplicate first
                 if existingIDs.contains(sector.id) {
-                    // Merge: fill in blank aircraftType / aircraftReg on the existing record
-                    // if the incoming sector has a non-blank value. Never overwrite a value
-                    // the user has already set — only fill genuinely empty fields.
+                    // Propose any incoming value that differs from what is stored.
+                    // The user reviews and approves changes before they are written.
                     if let existing = existingByID[sector.id] {
                         let incomingType = sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines)
                         let incomingReg  = sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1071,7 +1070,7 @@ class FlightDatabaseService: ObservableObject {
                         let existingReg  = (existing.aircraftReg  ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         let displayDate = sector.date
                         let displayRoute = "\(sector.fromAirport) → \(sector.toAirport)"
-                        if existingType.isEmpty && !incomingType.isEmpty {
+                        if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
                                 route: displayRoute,
@@ -1081,7 +1080,7 @@ class FlightDatabaseService: ObservableObject {
                                 newValue: incomingType
                             ))
                         }
-                        if existingReg.isEmpty && !incomingReg.isEmpty {
+                        if !incomingReg.isEmpty && incomingReg != existingReg {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
                                 route: displayRoute,
@@ -1122,7 +1121,7 @@ class FlightDatabaseService: ObservableObject {
                         let existingRegValue = (existing.aircraftReg ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         let displayDate = sector.date
                         let displayRoute = "\(sector.fromAirport) → \(sector.toAirport)"
-                        if existingRegValue.isEmpty && !incomingReg.isEmpty {
+                        if !incomingReg.isEmpty && incomingReg != existingRegValue {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
                                 route: displayRoute,
@@ -1132,7 +1131,7 @@ class FlightDatabaseService: ObservableObject {
                                 newValue: incomingReg
                             ))
                         }
-                        if existingType.isEmpty && !incomingType.isEmpty {
+                        if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
                                 route: displayRoute,
