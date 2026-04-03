@@ -1561,11 +1561,16 @@ class FlightDatabaseService: ObservableObject {
         // Create new timer that will fire after the debounce interval
         notificationDebounceTimer = Timer.scheduledTimer(withTimeInterval: notificationDebounceInterval, repeats: false) { _ in
             DispatchQueue.main.async {
-                LogManager.shared.info("FlightDatabaseService: Posting .flightDataChanged (debounced)")
-                NotificationCenter.default.post(name: .flightDataChanged, object: nil)
-                // Refresh widget snapshot whenever flight data changes
-                Task { @MainActor in
-                    WidgetDataWriter.shared.updateWidgetSnapshot()
+                if self.isAppInBackground {
+                    self.pendingDataChanged = true
+                    LogManager.shared.debug("FlightDatabaseService: Deferred .flightDataChanged (app in background, debounced)")
+                } else {
+                    LogManager.shared.info("FlightDatabaseService: Posting .flightDataChanged (debounced)")
+                    NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                    // Refresh widget snapshot whenever flight data changes
+                    Task { @MainActor in
+                        WidgetDataWriter.shared.updateWidgetSnapshot()
+                    }
                 }
             }
         }
