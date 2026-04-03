@@ -38,6 +38,16 @@ struct WidgetFlightEntry: Codable {
     var snapshotDate: Date
 }
 
+// MARK: - Stable identity for ForEach
+extension WidgetFlightEntry {
+    /// Composite ID combining route + departure time so duplicate flight numbers (or blank ones)
+    /// don't cause SwiftUI to treat multiple rows as the same view and trigger layout loops.
+    var stableID: String {
+        let dep = departureDatetime?.timeIntervalSinceReferenceDate ?? flightDate.timeIntervalSinceReferenceDate
+        return "\(fromAirport)-\(toAirport)-\(flightNumber)-\(dep)"
+    }
+}
+
 // MARK: - UserDefaults key
 extension WidgetFlightEntry {
     static let appGroupID    = "group.com.thezoolab.blocktime"

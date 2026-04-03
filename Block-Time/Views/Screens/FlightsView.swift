@@ -56,9 +56,6 @@ struct FlightsView: View {
     @State private var showingDeleteSessionAlert = false
     @State private var reloadTask: Task<Void, Never>?
     @State private var cachedTotalHours: Double = 0.0
-    @State private var hasPerformedInitialScroll: Bool = false
-    @State private var shouldScrollToLastFlight: Bool = false
-    @State private var shouldScrollToTop: Bool = false
     @State private var showSearchBar: Bool = false
     @State private var isAddingNewFlight: Bool = false
     @FocusState private var isSearchFieldFocused: Bool
@@ -120,43 +117,22 @@ struct FlightsView: View {
 
     @ViewBuilder
     private var flightListContent: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(filteredFlightSectors, id: \.id) { sector in
-                        if isSelectMode {
-                            selectModeRow(for: sector)
-                        } else {
-                            normalModeRow(for: sector)
-                        }
-                    }
-                }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 8)
-            }
-            .scrollIndicators(.visible)
-            .refreshable {
-                await refreshFlights()
-            }
-            .onAppear {
-                scrollToFirstNonDimmedFlight(proxy: proxy)
-            }
-            .onChange(of: shouldScrollToLastFlight) { _, newValue in
-                if newValue {
-                    scrollToFirstNonDimmedFlight(proxy: proxy)
-                    shouldScrollToLastFlight = false
-                }
-            }
-            .onChange(of: shouldScrollToTop) { _, newValue in
-                if newValue, let firstFlight = filteredFlightSectors.first {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            proxy.scrollTo(firstFlight.id, anchor: .top)
-                        }
-                        shouldScrollToTop = false
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                ForEach(filteredFlightSectors, id: \.id) { sector in
+                    if isSelectMode {
+                        selectModeRow(for: sector)
+                    } else {
+                        normalModeRow(for: sector)
                     }
                 }
             }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+        }
+        .scrollIndicators(.visible)
+        .refreshable {
+            await refreshFlights()
         }
     }
 
@@ -390,13 +366,10 @@ struct FlightsView: View {
                                     }
                                     isSearchFieldFocused = false
 
-                                    // Clear search and scroll back to last completed flight
+                                    // Clear search
                                     if !filterViewModel.filterKeywordSearch.isEmpty {
                                         filterViewModel.filterKeywordSearch = ""
                                         applyFilters()
-                                        // Reset scroll flag and trigger scroll to last flight
-                                        hasPerformedInitialScroll = false
-                                        shouldScrollToLastFlight = true
                                     }
                                 } else {
                                     // Showing the search bar
@@ -426,7 +399,6 @@ struct FlightsView: View {
                                 HapticManager.shared.impact(.light)
                                 filterViewModel.sortOrderReversed.toggle()
                                 applyFilters()
-                                shouldScrollToTop = true
                             }) {
                                 Image(systemName: "arrow.up.arrow.down.circle")
                                 .font(.title3)
@@ -985,10 +957,6 @@ struct FlightsView: View {
                         filterViewModel.filterTypeSummary ||
                         filterViewModel.filterImportSessionID != nil
 
-        // Scroll to top when filters are active
-        if isFilterActive {
-            shouldScrollToTop = true
-        }
     }
 
     private func compareOutTimes(_ time1: String, _ time2: String) -> Bool {
@@ -1025,9 +993,6 @@ struct FlightsView: View {
         filterViewModel.clearFilters()
         sessionFilterIDs = []
         applyFilters()
-        // Reset scroll flag and trigger scroll to last flight after clearing filters
-        hasPerformedInitialScroll = false
-        shouldScrollToLastFlight = true
     }
 
     private func loadSessionFilterIDs(_ sessionID: UUID) {
@@ -1227,41 +1192,6 @@ struct FlightsView: View {
                filterViewModel.filterImportSessionID == nil
     }
 
-    private func scrollToFirstNonDimmedFlight(proxy: ScrollViewProxy) {
-        // Only scroll once per view lifecycle to avoid disrupting user scrolling
-        guard !hasPerformedInitialScroll else { return }
-
-        // Don't scroll if we're in select mode
-        guard !isSelectMode else { return }
-
-        // Find the FIRST completed flight (first one WITH block/sim time)
-        // This is the transition point between future and completed flights
-        // Note: PAX flights without logged time are still future flights
-        var firstCompletedIndex: Int?
-        for (index, sector) in filteredFlightSectors.enumerated() {
-            // A flight is considered completed if it has actual logged time
-            if sector.blockTimeValue > 0 || sector.simTimeValue > 0 {
-                firstCompletedIndex = index
-                break
-            }
-        }
-
-        // If we found a completed flight, scroll to it
-        if let completedIndex = firstCompletedIndex {
-            let targetFlight = filteredFlightSectors[completedIndex]
-
-            // Scroll to the target flight
-            // Use delay to ensure LazyVStack has rendered items
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    proxy.scrollTo(targetFlight.id, anchor: .center)
-                }
-                self.hasPerformedInitialScroll = true
-            }
-        } else {
-            hasPerformedInitialScroll = true
-        }
-    }
 }
 
 // MARK: - Empty State View

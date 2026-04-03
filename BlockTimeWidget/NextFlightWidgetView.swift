@@ -541,7 +541,7 @@ private struct LargeView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
                         VStack(spacing: 8) {
-                            ForEach(otherFlights, id: \.flightNumber) { f in
+                            ForEach(otherFlights, id: \.stableID) { f in
                                 FlightRowView(flight: f, primary: primary, timeZone: entry.configuration.timeZone)
                             }
                         }
