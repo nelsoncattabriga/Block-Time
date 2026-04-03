@@ -199,8 +199,9 @@ class LHRosterParserService {
                 }
             }
 
-            // Extract category and base (e.g., "Category: F/O-B787  Status: F/O  Line: PLH  Seniority: 0880  Base: BNE")
-            if line.contains("Category:") {
+            // Extract category and base (e.g., "Category: S/O-A380  Status: S/O  Line: PLH  Seniority: 1571  Base: SYD")
+            // Only capture the first match — pattern headers also contain "Category:" and must not overwrite pilot info
+            if line.contains("Category:") && category.isEmpty {
                 let categoryPattern = #"Category:\s+([\w/-]+)"#
                 if let match = line.range(of: categoryPattern, options: .regularExpression) {
                     let matched = String(line[match])
