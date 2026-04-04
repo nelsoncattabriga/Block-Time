@@ -644,12 +644,13 @@ class FRMSViewModel {
         }
 
         // For multiple flights, consolidate them
-        let firstDuty = flightDuties.first!.duty
-        let lastDuty = flightDuties.last!.duty
-
-        // Sign-on is from first flight, sign-off is from last flight
-        let signOn = firstDuty.signOn
-        let signOff = lastDuty.signOff
+        // Use min/max over all duties rather than first/last because flights with the same STD
+        // (e.g. a rejected takeoff followed by the actual departure) produce identical sign-on times
+        // and their order after sorting is undefined, which can put an earlier sign-off last.
+        let signOn = flightDuties.min(by: { $0.duty.signOn < $1.duty.signOn })!.duty.signOn
+        let signOff = flightDuties.max(by: { $0.duty.signOff < $1.duty.signOff })!.duty.signOff
+        let firstDuty = flightDuties.min(by: { $0.duty.signOn < $1.duty.signOn })!.duty
+        let lastDuty = flightDuties.max(by: { $0.duty.signOff < $1.duty.signOff })!.duty
 
         // Sum up flight times and night times
         let totalFlightTime = flightDuties.reduce(0.0) { $0 + $1.duty.flightTime }
