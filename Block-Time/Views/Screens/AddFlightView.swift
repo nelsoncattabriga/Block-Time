@@ -11,6 +11,7 @@ struct AddFlightView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showSuccessNotification = false
     @State private var successMessage = ""
+    @State private var keyboardToolbar = KeyboardToolbarState()
 
     private var isInSplitView: Bool {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
@@ -25,10 +26,10 @@ struct AddFlightView: View {
                 ScrollViewReader { scrollProxy in
                     ScrollView {
                         if useWideLayout {
-                            WideLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
                                 .id("top")
                         } else {
-                            CompactLayoutView(viewModel: viewModel, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
                                 .id("top")
                         }
                     }
@@ -42,6 +43,25 @@ struct AddFlightView: View {
                     .onReceive(NotificationCenter.default.publisher(for: .scrollToTop)) { _ in
                         withAnimation {
                             scrollProxy.scrollTo("top", anchor: .top)
+                        }
+                    }
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            if keyboardToolbar.isAnyFieldFocused {
+                                Button("Clear") {
+                                    keyboardToolbar.onClear?()
+                                }
+                                .foregroundColor(.red)
+                                Spacer()
+                                Button("Done") {
+                                    UIApplication.shared.sendAction(
+                                        #selector(UIResponder.resignFirstResponder),
+                                        to: nil, from: nil, for: nil
+                                    )
+                                    keyboardToolbar.isAnyFieldFocused = false
+                                }
+                                .font(.subheadline.bold())
+                            }
                         }
                     }
                 }
@@ -113,6 +133,7 @@ struct AddFlightView: View {
 // MARK: - Modern Compact Layout
 private struct CompactLayoutView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
+    var keyboardToolbar: KeyboardToolbarState
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     @Environment(\.dismiss) private var dismiss
@@ -134,10 +155,10 @@ private struct CompactLayoutView: View {
                 }
 
                 // Captured Data Card
-                ModernCapturedDataCard(viewModel: viewModel)
+                ModernCapturedDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                 // Manual Entry Card
-                ModernManualEntryDataCard(viewModel: viewModel)
+                ModernManualEntryDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                 // Action Buttons Card
                 ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
@@ -201,6 +222,7 @@ private struct CompactLayoutView: View {
 // MARK: Wide Layout View
 private struct WideLayoutView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
+    var keyboardToolbar: KeyboardToolbarState
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     @Environment(\.dismiss) private var dismiss
@@ -226,14 +248,14 @@ private struct WideLayoutView: View {
                         }
 
                         // Captured Data Card
-                        ModernCapturedDataCard(viewModel: viewModel)
+                        ModernCapturedDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
                     }
                     .frame(maxWidth: .infinity)
 
                     VStack(spacing: 16) {
 
                         // Manual Entry Card
-                        ModernManualEntryDataCard(viewModel: viewModel)
+                        ModernManualEntryDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                         // Action Buttons Card
                         ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)

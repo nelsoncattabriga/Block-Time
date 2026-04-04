@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Modern Toggles Section
 struct ModernTogglesSection: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
+    var keyboardToolbar: KeyboardToolbarState? = nil
     private var isDisabled: Bool {
         // Time credit is disabled for positioning, sim, and sim-instruction.
         // Aircraft instruction counts as P1 so credit controls remain enabled.
@@ -114,6 +115,7 @@ struct ModernTogglesSection: View {
                             label: "Day T/O",
                             value: $viewModel.dayTakeoffs,
                             icon: "airplane.departure",
+                            keyboardToolbar: keyboardToolbar,
                             onValueChanged: {
                                 viewModel.markTakeoffsLandingsAsManuallyEdited()
                             }
@@ -123,6 +125,7 @@ struct ModernTogglesSection: View {
                             label: "Day LDG",
                             value: $viewModel.dayLandings,
                             icon: "airplane.arrival",
+                            keyboardToolbar: keyboardToolbar,
                             onValueChanged: {
                                 viewModel.markTakeoffsLandingsAsManuallyEdited()
                             }
@@ -134,6 +137,7 @@ struct ModernTogglesSection: View {
                             label: "Night T/O",
                             value: $viewModel.nightTakeoffs,
                             icon: "moon.fill",
+                            keyboardToolbar: keyboardToolbar,
                             onValueChanged: {
                                 viewModel.markTakeoffsLandingsAsManuallyEdited()
                             }
@@ -143,6 +147,7 @@ struct ModernTogglesSection: View {
                             label: "Night LDG",
                             value: $viewModel.nightLandings,
                             icon: "moon.stars.fill",
+                            keyboardToolbar: keyboardToolbar,
                             onValueChanged: {
                                 viewModel.markTakeoffsLandingsAsManuallyEdited()
                             }

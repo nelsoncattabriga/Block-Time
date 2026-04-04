@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Modern Manual Entry Data Card
 struct ModernManualEntryDataCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
+    var keyboardToolbar: KeyboardToolbarState? = nil
 
     var body: some View {
         VStack(spacing: 16) {
@@ -86,7 +87,7 @@ struct ModernManualEntryDataCard: View {
                     }
                 }
                 // Toggles section
-                ModernTogglesSection(viewModel: viewModel)
+                ModernTogglesSection(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                 // Remarks section
                 ModernRemarksField(
@@ -95,7 +96,8 @@ struct ModernManualEntryDataCard: View {
                         get: { viewModel.remarks },
                         set: { viewModel.remarks = $0 }
                     ),
-                    icon: "note.text"
+                    icon: "note.text",
+                    keyboardToolbar: keyboardToolbar
                 )
             }
         }

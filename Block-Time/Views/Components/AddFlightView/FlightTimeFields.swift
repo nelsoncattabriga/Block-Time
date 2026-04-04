@@ -14,6 +14,9 @@ struct ModernTimeField: View {
     /// Optional override hint shown below the field. When set, takes priority over the
     /// auto-computed local time hint. Use for "= HH:MM UTC" in local-entry mode.
     var hintText: String? = nil
+    /// Optional shared keyboard toolbar state. When set, this field reports its
+    /// focus to the shared toolbar instead of owning its own toolbar items.
+    var keyboardToolbar: KeyboardToolbarState? = nil
     @FocusState private var timeFieldFocused: Bool
     var onSave: (() -> Void)? = nil
 
@@ -105,7 +108,9 @@ struct ModernTimeField: View {
                             value = applyFormatting(newValue)
                         }
                         .onChange(of: timeFieldFocused) { _, isFocused in
-                            if !isFocused {
+                            if isFocused {
+                                keyboardToolbar?.fieldDidFocus(clear: { value = "" })
+                            } else {
                                 // Format with leading zeros when user finishes editing
                                 value = formatWithLeadingZeros(value)
                                 onSave?()
@@ -135,22 +140,7 @@ struct ModernTimeField: View {
                 timeFieldFocused = true
             }
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                if timeFieldFocused {
-                    Button("Clear") {
-                        value = ""
-                        timeFieldFocused = false
-                    }
-                    .foregroundColor(.red)
-                    Spacer()
-                    Button("Done") {
-                        timeFieldFocused = false
-                    }
-                    .font(.subheadline.bold())
-                }
-            }
-        }
+        // No .toolbar here — toolbar is owned by the parent scroll container.
     }
 }
 
@@ -162,6 +152,8 @@ struct ModernDecimalTimeField: View {
     var isReadOnly: Bool = false
     var showAsHHMM: Bool = false  // Whether to display/accept HH:MM format
     var isRequired: Bool = false
+    /// Optional shared keyboard toolbar state.
+    var keyboardToolbar: KeyboardToolbarState? = nil
     @FocusState private var decimalFieldFocused: Bool
     var onSave: (() -> Void)? = nil
 
@@ -274,7 +266,9 @@ struct ModernDecimalTimeField: View {
                         .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
                         .focused($decimalFieldFocused)
                         .onChange(of: decimalFieldFocused) { _, isFocused in
-                            if !isFocused {
+                            if isFocused {
+                                keyboardToolbar?.fieldDidFocus(clear: { value = "" })
+                            } else {
                                 // Convert to decimal for storage, then format for display
                                 let decimalValue = convertToDecimalForStorage(value)
                                 value = decimalValue
@@ -294,22 +288,7 @@ struct ModernDecimalTimeField: View {
                 decimalFieldFocused = true
             }
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                if decimalFieldFocused {
-                    Button("Clear") {
-                        value = ""
-                        decimalFieldFocused = false
-                    }
-                    .foregroundColor(.red)
-                    Spacer()
-                    Button("Done") {
-                        decimalFieldFocused = false
-                    }
-                    .font(.subheadline.bold())
-                }
-            }
-        }
+        // No .toolbar here — toolbar is owned by the parent scroll container.
     }
 
     private var displayValue: String {
@@ -332,6 +311,7 @@ struct ModernIntegerField: View {
     let label: String
     @Binding var value: Int
     let icon: String
+    var keyboardToolbar: KeyboardToolbarState? = nil
     var onValueChanged: (() -> Void)? = nil
     @State private var editingText: String = ""
     @FocusState private var integerFieldFocused: Bool
@@ -359,6 +339,10 @@ struct ModernIntegerField: View {
                     .onChange(of: integerFieldFocused) { _, isFocused in
                         if isFocused {
                             editingText = value == 0 ? "" : "\(value)"
+                            keyboardToolbar?.fieldDidFocus(clear: {
+                                editingText = ""
+                                value = 0
+                            })
                         } else {
                             let oldValue = value
                             if let intValue = Int(editingText) {
@@ -385,17 +369,7 @@ struct ModernIntegerField: View {
         .onTapGesture {
             integerFieldFocused = true
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                if integerFieldFocused {
-                    Spacer()
-                    Button("Done"){
-                        integerFieldFocused = false
-                    }
-                    .font(.subheadline.bold())
-                }
-            }
-        }
+        // No .toolbar here — toolbar is owned by the parent scroll container.
     }
 }
 
@@ -404,6 +378,7 @@ struct ModernRemarksField: View {
     let label: String
     @Binding var value: String
     let icon: String
+    var keyboardToolbar: KeyboardToolbarState? = nil
     @FocusState private var editorFocused: Bool
 
     var body: some View {
@@ -442,16 +417,12 @@ struct ModernRemarksField: View {
         .onTapGesture {
             editorFocused = true
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                if editorFocused {
-                    Spacer()
-                    Button("Done"){
-                        editorFocused = false
-                    }
-                    .font(.subheadline.bold())
-                }
+        .onChange(of: editorFocused) { _, isFocused in
+            if isFocused {
+                // Remarks has no Clear button — pass a no-op clear action
+                keyboardToolbar?.fieldDidFocus(clear: {})
             }
         }
+        // No .toolbar here — toolbar is owned by the parent scroll container.
     }
 }

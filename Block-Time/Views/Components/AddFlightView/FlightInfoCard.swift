@@ -79,6 +79,7 @@ extension String {
 struct ModernCapturedDataCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
     @Environment(CloudKitSettingsSyncService.self) private var cloudKitService
+    var keyboardToolbar: KeyboardToolbarState? = nil
 
     // Debounce handle for night-time recalculation triggered by time field changes.
     // Collapses rapid keystrokes into a single calculation to keep the main thread free.
@@ -452,6 +453,7 @@ struct ModernCapturedDataCard: View {
                             showLocalTime: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                             useIATACodes: viewModel.useIATACodes,
                             hintText: utcHintText(utcTime: viewModel.scheduledDeparture, tzLabel: viewModel.outTimezoneLabel),
+                            keyboardToolbar: keyboardToolbar,
                             onSave: {}
                         )
 
@@ -468,6 +470,7 @@ struct ModernCapturedDataCard: View {
                             showLocalTime: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                             useIATACodes: viewModel.useIATACodes,
                             hintText: utcHintText(utcTime: viewModel.scheduledArrival, tzLabel: viewModel.inTimezoneLabel),
+                            keyboardToolbar: keyboardToolbar,
                             onSave: {}
                         )
                     }
@@ -487,6 +490,7 @@ struct ModernCapturedDataCard: View {
                             useIATACodes: viewModel.useIATACodes,
                             isRequired: viewModel.saveRequirements.needsAirports && !viewModel.saveRequirements.times,
                             hintText: utcHintText(utcTime: viewModel.outTime, tzLabel: viewModel.outTimezoneLabel),
+                            keyboardToolbar: keyboardToolbar,
                             onSave: { viewModel.recalculateTimesAfterManualEdit() }
                         )
 
@@ -504,6 +508,7 @@ struct ModernCapturedDataCard: View {
                             useIATACodes: viewModel.useIATACodes,
                             isRequired: viewModel.saveRequirements.needsAirports && !viewModel.saveRequirements.times,
                             hintText: utcHintText(utcTime: viewModel.inTime, tzLabel: viewModel.inTimezoneLabel),
+                            keyboardToolbar: keyboardToolbar,
                             onSave: { viewModel.recalculateTimesAfterManualEdit() }
                         )
                     }
@@ -516,7 +521,8 @@ struct ModernCapturedDataCard: View {
                             icon: "person.fill.badge.plus",
                             isReadOnly: false,
                             showAsHHMM: viewModel.showTimesInHoursMinutes,
-                            isRequired: viewModel.saveRequirements.needsBlockOrInsTime
+                            isRequired: viewModel.saveRequirements.needsBlockOrInsTime,
+                            keyboardToolbar: keyboardToolbar
                         )
                     } else {
                         HStack {
@@ -526,7 +532,8 @@ struct ModernCapturedDataCard: View {
                                 icon: viewModel.isSimulator ? "desktopcomputer" : "timer",
                                 isReadOnly: viewModel.isPositioning,
                                 showAsHHMM: viewModel.showTimesInHoursMinutes,
-                                isRequired: viewModel.saveRequirements.needsBlockOrInsTime
+                                isRequired: viewModel.saveRequirements.needsBlockOrInsTime,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             ModernDecimalTimeField(
@@ -534,7 +541,8 @@ struct ModernCapturedDataCard: View {
                                 value: $viewModel.nightTime,
                                 icon: "moon.stars",
                                 isReadOnly: viewModel.isPositioning,
-                                showAsHHMM: viewModel.showTimesInHoursMinutes
+                                showAsHHMM: viewModel.showTimesInHoursMinutes,
+                                keyboardToolbar: keyboardToolbar
                             )
                         }
                     }
