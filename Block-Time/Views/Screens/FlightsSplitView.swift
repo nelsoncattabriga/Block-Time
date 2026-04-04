@@ -168,6 +168,7 @@ private struct FlightsListContent: View {
     @State private var showingDeleteSessionAlert = false
     @State private var cachedTotalHours: Double = 0.0
     @State private var showSearchBar: Bool = false
+    @State private var hasScrolledOnLaunch = false
     @FocusState private var isSearchFieldFocused: Bool
 
     // Cached date formatter for performance
@@ -244,22 +245,48 @@ private struct FlightsListContent: View {
 
     @ViewBuilder
     private var flightListContent: some View {
-        ScrollView {
-            LazyVStack(spacing: 4) {
-                ForEach(filteredFlightSectors, id: \.id) { sector in
-                    if isSelectMode {
-                        selectModeRow(for: sector)
-                    } else {
-                        normalModeRow(for: sector)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 4) {
+                    ForEach(filteredFlightSectors, id: \.id) { sector in
+                        if isSelectMode {
+                            selectModeRow(for: sector)
+                        } else {
+                            normalModeRow(for: sector)
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 8)
+            }
+            .scrollIndicators(.visible)
+            .refreshable {
+                await refreshFlights()
+            }
+            .onAppear {
+                guard !hasScrolledOnLaunch, !filteredFlightSectors.isEmpty else { return }
+                hasScrolledOnLaunch = true
+                let anchorID = filteredFlightSectors.first(where: {
+                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                })?.id ?? filteredFlightSectors.last?.id
+                if let id = anchorID {
+                    Task { @MainActor in
+                        proxy.scrollTo(id, anchor: .top)
                     }
                 }
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 8)
-        }
-        .scrollIndicators(.visible)
-        .refreshable {
-            await refreshFlights()
+            .onChange(of: filteredFlightSectors) { _, sectors in
+                guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
+                hasScrolledOnLaunch = true
+                let anchorID = sectors.first(where: {
+                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                })?.id ?? sectors.last?.id
+                if let id = anchorID {
+                    Task { @MainActor in
+                        proxy.scrollTo(id, anchor: .top)
+                    }
+                }
+            }
         }
     }
 
