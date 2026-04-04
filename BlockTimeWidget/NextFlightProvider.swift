@@ -89,6 +89,16 @@ struct NextFlightProvider: AppIntentTimelineProvider {
                 entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel, sameDayFlights: sameDay, configuration: configuration), at: 0)
             }
 
+            // Midnight rollover — ensures "Tomorrow" flips to "Today" at 00:00
+            let cal = Calendar.current
+            if let midnight = cal.nextDate(after: now,
+                                           matching: DateComponents(hour: 0, minute: 0, second: 0),
+                                           matchingPolicy: .nextTime),
+               midnight < departure {
+                let midnightLabel = Self.label(for: departure, at: midnight)
+                entries.append(NextFlightTimelineEntry(date: midnight, flight: flight, countdownLabel: midnightLabel, sameDayFlights: sameDay, configuration: configuration))
+            }
+
             // 30 mins after departure: switch to next flight (or show departed if last)
             let switchDate = departure.addingTimeInterval(30 * 60)
             let switchLabel = nextFlight != nil ? Self.label(for: nextFlight!.departureDatetime ?? nextFlight!.flightDate, at: switchDate) : "Departed"
