@@ -425,14 +425,16 @@ private struct LargeView: View {
     private var isDark: Bool   { scheme == .dark }
     private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
 
-    /// Same-day flights excluding the current next flight
+    /// Same-day flights excluding the current next flight, sorted by departure time
     private var otherFlights: [WidgetFlightEntry] {
         guard let next = entry.flight else { return [] }
         let nextDep = next.departureDatetime ?? next.flightDate
-        return entry.sameDayFlights.filter { f in
-            let fDep = f.departureDatetime ?? f.flightDate
-            return fDep != nextDep
-        }
+        return entry.sameDayFlights
+            .filter { f in
+                let fDep = f.departureDatetime ?? f.flightDate
+                return fDep != nextDep
+            }
+            .sorted { ($0.departureDatetime ?? $0.flightDate) < ($1.departureDatetime ?? $1.flightDate) }
     }
 
     var body: some View {
