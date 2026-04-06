@@ -9,52 +9,130 @@ struct AircraftTypeTimeCard: View {
     @State private var aircraftStats: (totalHours: Double, totalSectors: Int, p1Time: Double, p1usTime: Double, p2Time: Double, simTime: Double) = (0.0, 0, 0.0, 0.0, 0.0, 0.0)
     private let settings = LogbookSettings.shared
     @State private var showTimesInHoursMinutes: Bool = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
+    @AppStorage("aircraftTypeCard_groupByFamily") private var groupByFamily: Bool = true
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isLandscape: Bool = UIDevice.current.orientation.isLandscape
 
-    private var isIPad: Bool {
-        horizontalSizeClass == .regular
+    private var isIPad: Bool { horizontalSizeClass == .regular }
+
+    // Distinct family names for types the user has actually flown
+    private var availableFamilies: [String] {
+        let families = availableAircraftTypes.compactMap { AircraftFleetService.familyName(for: $0) }
+        return Array(Set(families)).sorted()
+    }
+
+    // Types belonging to the currently selected family
+    private var typesForSelectedFamily: [String] {
+        guard let fleet = AircraftFleetService.availableFleets.first(where: { $0.name == selectedAircraftType }) else { return [] }
+        return availableAircraftTypes.filter { fleet.types.contains($0) }
     }
 
     var body: some View {
-        Group {
-            if isEditMode {
-                cardContent
-            } else {
-                Menu {
-                    ForEach(availableAircraftTypes, id: \.self) { aircraftType in
-                        Button {
-                            selectedAircraftType = aircraftType
-                            settings.selectedAircraftType = aircraftType
-                            settings.saveSettings()
-                            loadAircraftStats()
-                        } label: {
-                            HStack {
-                                Text(aircraftType)
-                                if aircraftType == selectedAircraftType {
-                                    Image(systemName: "checkmark")
+        VStack(alignment: .leading, spacing: 14) {
+            // Header — only this row is the Menu label so the Family button below is not blocked
+            HStack(spacing: 8) {
+                if isEditMode {
+                    headerLabel
+                } else {
+                    Menu {
+                        let menuItems = groupByFamily ? availableFamilies : availableAircraftTypes
+                        ForEach(menuItems, id: \.self) { item in
+                            Button {
+                                selectedAircraftType = item
+                                settings.selectedAircraftType = item
+                                settings.saveSettings()
+                                loadAircraftStats()
+                            } label: {
+                                HStack {
+                                    Text(item)
+                                    if item == selectedAircraftType {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
+                    } label: {
+                        headerLabel
                     }
-                } label: {
-                    cardContent
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+            }
+
+            // Stats body — outside the Menu, receives taps normally
+            VStack(alignment: .leading, spacing: 4) {
+                if !timeEntries.isEmpty {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 16) {
+                            ForEach(timeEntries, id: \.label) { entry in
+                                HStack(spacing: 0) {
+                                    Text("\(entry.label): ")
+                                        .iPadScaledFont(.caption, phoneFont: .footnote)
+                                        .foregroundStyle(.secondary)
+                                    Text(formatTime(entry.value))
+                                        .iPadScaledFont(.caption, phoneFont: .footnote)
+                                        .bold()
+                                        .foregroundStyle(.primary)
+                                }
+                            }
+                            Spacer()
+                        }
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                            ForEach(timeEntries, id: \.label) { entry in
+                                HStack(spacing: 0) {
+                                    Text("\(entry.label): ")
+                                        .iPadScaledFont(.caption, phoneFont: .subheadline)
+                                        .foregroundStyle(.secondary)
+                                    Text(formatTime(entry.value))
+                                        .iPadScaledFont(.caption, phoneFont: .subheadline)
+                                        .bold()
+                                        .foregroundStyle(.primary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+                }
+
+                Spacer().frame(height: 6)
+
+                HStack {
+                    Text("\(aircraftStats.totalSectors) sector\(aircraftStats.totalSectors == 1 ? "" : "s")")
+                        .iPadScaledFont(.caption, phoneFont: .subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        let current = selectedAircraftType
+                        groupByFamily.toggle()
+                        if groupByFamily {
+                            selectedAircraftType = AircraftFleetService.familyName(for: current) ?? availableFamilies.first ?? ""
+                        } else {
+                            let fleet = AircraftFleetService.availableFleets.first { $0.name == current }
+                            selectedAircraftType = availableAircraftTypes.first { fleet?.types.contains($0) ?? false } ?? availableAircraftTypes.first ?? ""
+                        }
+                        settings.selectedAircraftType = selectedAircraftType
+                        settings.saveSettings()
+                        loadAircraftStats()
+                    } label: {
+                        Label(groupByFamily ? "Family" : "Type",
+                              systemImage: "chevron.up.chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                            .animation(.easeInOut(duration: 0.15), value: groupByFamily)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
+        .padding(16)
+        .appCardStyle()
         .onAppear {
-            // Load saved selection first, before loading available types
             selectedAircraftType = settings.selectedAircraftType
             loadAvailableAircraftTypes()
             loadAircraftStats()
-
-            // Start monitoring device orientation
             UIDevice.current.beginGeneratingDeviceOrientationNotifications()
             updateOrientation()
         }
         .onDisappear {
-            // Stop monitoring device orientation
             UIDevice.current.endGeneratingDeviceOrientationNotifications()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
@@ -69,19 +147,34 @@ struct AircraftTypeTimeCard: View {
         }
     }
 
+    // The header row used as the Menu label
+    private var headerLabel: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "airplane")
+                .font(.headline)
+                .foregroundStyle(.mint)
+            Text(selectedAircraftType.isEmpty ? "Select Type" : selectedAircraftType)
+                .font(.headline)
+                .bold()
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.down")
+                .imageScale(.small)
+                .foregroundStyle(.secondary)
+        }
+    }
+
     private func loadAvailableAircraftTypes() {
         availableAircraftTypes = FlightDatabaseService.shared.getAllAircraftTypes()
-
-        // If no aircraft type is selected and types are available, select the first one
-        if selectedAircraftType.isEmpty && !availableAircraftTypes.isEmpty {
-            selectedAircraftType = availableAircraftTypes[0]
+        let validItems = groupByFamily ? availableFamilies : availableAircraftTypes
+        if selectedAircraftType.isEmpty && !validItems.isEmpty {
+            selectedAircraftType = validItems[0]
             settings.selectedAircraftType = selectedAircraftType
             settings.saveSettings()
             loadAircraftStats()
-        } else if !selectedAircraftType.isEmpty && !availableAircraftTypes.contains(selectedAircraftType) {
-            // If the saved type no longer exists (e.g., after deleting all flights), select first available
-            if !availableAircraftTypes.isEmpty {
-                selectedAircraftType = availableAircraftTypes[0]
+        } else if !selectedAircraftType.isEmpty && !validItems.contains(selectedAircraftType) {
+            if !validItems.isEmpty {
+                selectedAircraftType = validItems[0]
                 settings.selectedAircraftType = selectedAircraftType
                 settings.saveSettings()
                 loadAircraftStats()
@@ -94,22 +187,28 @@ struct AircraftTypeTimeCard: View {
             aircraftStats = (0.0, 0, 0.0, 0.0, 0.0, 0.0)
             return
         }
-
-        aircraftStats = FlightDatabaseService.shared.getDetailedFlightStatistics(for: selectedAircraftType)
+        if groupByFamily {
+            let types = typesForSelectedFamily
+            guard !types.isEmpty else {
+                aircraftStats = (0.0, 0, 0.0, 0.0, 0.0, 0.0)
+                return
+            }
+            let results = types.map { FlightDatabaseService.shared.getDetailedFlightStatistics(for: $0) }
+            aircraftStats = results.reduce((0.0, 0, 0.0, 0.0, 0.0, 0.0)) { acc, r in
+                (acc.0 + r.totalHours, acc.1 + r.totalSectors, acc.2 + r.p1Time,
+                 acc.3 + r.p1usTime, acc.4 + r.p2Time, acc.5 + r.simTime)
+            }
+        } else {
+            aircraftStats = FlightDatabaseService.shared.getDetailedFlightStatistics(for: selectedAircraftType)
+        }
     }
 
     private func updateOrientation() {
         let orientation = UIDevice.current.orientation
-        // Handle landscape orientations (left and right) and fall back to checking window scene for valid orientation
-        if orientation.isLandscape {
-            isLandscape = true
-        } else if orientation.isPortrait {
-            isLandscape = false
-        }
-        // If orientation is unknown/flat/faceup/facedown, keep current state
+        if orientation.isLandscape { isLandscape = true }
+        else if orientation.isPortrait { isLandscape = false }
     }
 
-    // All time entries that have values — always show full breakdown
     private var timeEntries: [(label: String, value: Double)] {
         var entries: [(String, Double)] = []
         if aircraftStats.totalHours > 0  { entries.append(("Total", aircraftStats.totalHours)) }
@@ -120,70 +219,7 @@ struct AircraftTypeTimeCard: View {
         return entries
     }
 
-    // Format time value
     private func formatTime(_ value: Double) -> String {
-        if showTimesInHoursMinutes {
-            return FlightSector.decimalToHHMM(value)
-        } else {
-            return String(format: "%.1f hrs", value)
-        }
-    }
-
-    private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: selectedAircraftType.isEmpty ? "Select Type" : selectedAircraftType,
-                       icon: "airplane", iconColor: .mint) {
-                Image(systemName: "chevron.down")
-                    .imageScale(.small)
-                    .foregroundStyle(.secondary)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                if !timeEntries.isEmpty {
-                    ViewThatFits(in: .horizontal) {
-                        // Wide layout: single row (used when it fits)
-                        HStack(spacing: 16) {
-                            ForEach(timeEntries, id: \.label) { entry in
-                                HStack(spacing: 0) {
-                                    Text("\(entry.label): ")
-                                        .iPadScaledFont(.caption, phoneFont: .footnote)
-                                        .foregroundStyle(.secondary)
-                                    Text(formatTime(entry.value))
-                                        .iPadScaledFont(.caption, phoneFont: .footnote)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.primary)
-                                }
-                            }
-                            Spacer()
-                        }
-                        // Narrow fallback: 2-column grid
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                            ForEach(timeEntries, id: \.label) { entry in
-                                HStack(spacing: 0) {
-                                    Text("\(entry.label): ")
-                                        .iPadScaledFont(.caption, phoneFont: .subheadline)
-                                        .foregroundStyle(.secondary)
-                                    Text(formatTime(entry.value))
-                                        .iPadScaledFont(.caption, phoneFont: .subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.primary)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        }
-                    }
-                }
-
-                // Spacer to match progress bar height in other cards
-                Spacer()
-                    .frame(height: 6)
-
-                Text("\(aircraftStats.totalSectors) sector\(aircraftStats.totalSectors == 1 ? "" : "s")")
-                    .iPadScaledFont(.caption, phoneFont: .subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(16)
-        .appCardStyle()
+        showTimesInHoursMinutes ? FlightSector.decimalToHHMM(value) : String(format: "%.1f hrs", value)
     }
 }
