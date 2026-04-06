@@ -919,7 +919,7 @@ struct ManageBackupsView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
-                    .frame(height: CGFloat(backupService.availableBackups.count * 70))
+                    .frame(height: CGFloat(min(backupService.availableBackups.count, 5) * 70))
                 }
             }
         }
