@@ -1537,6 +1537,36 @@ class FlightDatabaseService: ObservableObject {
         return (migratedCount, summary)
     }
 
+    /// One-time migration: update aircraftType from "A321" to "A21N" for the Qantas XLR fleet.
+    /// Only affects OGA–OGG registrations (with or without VH- prefix).
+    func migrateAircraftTypeA321ToA21N() -> (migratedCount: Int, summary: String) {
+        let xlrRegistrations = [
+            "OGA", "OGB", "OGC", "OGD", "OGE", "OGF", "OGG",
+            "VH-OGA", "VH-OGB", "VH-OGC", "VH-OGD", "VH-OGE", "VH-OGF", "VH-OGG"
+        ]
+        let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+        request.predicate = NSPredicate(
+            format: "aircraftType == %@ AND aircraftReg IN %@",
+            "A321", xlrRegistrations
+        )
+
+        do {
+            let flights = try viewContext.fetch(request)
+            guard !flights.isEmpty else { return (0, "No A321 XLR records found.") }
+
+            for flight in flights {
+                flight.aircraftType = "A21N"
+                flight.modifiedAt = Date()
+            }
+
+            try viewContext.save()
+            return (flights.count, "Updated \(flights.count) flight(s) from A321 → A21N.")
+        } catch {
+            LogManager.shared.error("A321→A21N migration failed: \(error.localizedDescription)")
+            return (0, "Migration failed: \(error.localizedDescription)")
+        }
+    }
+
     /// Remove duplicate flights from the database
     /// Duplicates are identified by matching: date, flightNumber, fromAirport, toAirport, aircraftReg, and aircraftType
     /// When duplicates are found, keeps the one with the earliest createdAt timestamp

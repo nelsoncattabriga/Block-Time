@@ -89,15 +89,31 @@ struct SplashScreenView: View {
             // Moved here from Block_TimeApp.init() to avoid accessing viewContext
             // before the persistent container is ready (caused blank screen on first launch).
             let migrationKey = "simulatorFlightMigrationV2Completed"
-            guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
-            DispatchQueue.global(qos: .utility).async {
-                let result = FlightDatabaseService.shared.migrateSimulatorFlights()
-                DispatchQueue.main.async {
-                    UserDefaults.standard.set(true, forKey: migrationKey)
-                    UserDefaults.standard.set(result.migratedCount, forKey: "simulatorFlightMigrationCount")
-                    UserDefaults.standard.set(result.summary, forKey: "simulatorFlightMigrationSummary")
-                    if result.migratedCount > 0 {
-                        NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+            if !UserDefaults.standard.bool(forKey: migrationKey) {
+                DispatchQueue.global(qos: .utility).async {
+                    let result = FlightDatabaseService.shared.migrateSimulatorFlights()
+                    DispatchQueue.main.async {
+                        UserDefaults.standard.set(true, forKey: migrationKey)
+                        UserDefaults.standard.set(result.migratedCount, forKey: "simulatorFlightMigrationCount")
+                        UserDefaults.standard.set(result.summary, forKey: "simulatorFlightMigrationSummary")
+                        if result.migratedCount > 0 {
+                            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                        }
+                    }
+                }
+            }
+
+            // One-time migration: A321 → A21N for Qantas XLR fleet (OGA–OGG).
+            let a21nMigrationKey = "aircraftTypeA321ToA21NMigrationCompleted"
+            if !UserDefaults.standard.bool(forKey: a21nMigrationKey) {
+                DispatchQueue.global(qos: .utility).async {
+                    let result = FlightDatabaseService.shared.migrateAircraftTypeA321ToA21N()
+                    DispatchQueue.main.async {
+                        UserDefaults.standard.set(true, forKey: a21nMigrationKey)
+                        if result.migratedCount > 0 {
+                            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                        }
+                        LogManager.shared.info("A321→A21N migration: \(result.summary)")
                     }
                 }
             }

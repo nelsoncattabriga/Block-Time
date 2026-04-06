@@ -160,14 +160,14 @@ class AircraftFleetService: ObservableObject {
         Aircraft(registration: "XZS", type: "B738"),
         Aircraft(registration: "XZT", type: "B738"),
         
-        // A321
-        Aircraft(registration: "OGA", type: "A321"),
-        Aircraft(registration: "OGB", type: "A321"),
-        Aircraft(registration: "OGC", type: "A321"),
-        Aircraft(registration: "OGD", type: "A321"),
-        Aircraft(registration: "OGE", type: "A321"),
-        Aircraft(registration: "OGF", type: "A321"),
-        Aircraft(registration: "OGG", type: "A321"),
+        // A321 XLR
+        Aircraft(registration: "OGA", type: "A21N"),
+        Aircraft(registration: "OGB", type: "A21N"),
+        Aircraft(registration: "OGC", type: "A21N"),
+        Aircraft(registration: "OGD", type: "A21N"),
+        Aircraft(registration: "OGE", type: "A21N"),
+        Aircraft(registration: "OGF", type: "A21N"),
+        Aircraft(registration: "OGG", type: "A21N"),
         
         // B787
         Aircraft(registration: "ZNA", type: "B789"),
@@ -247,7 +247,8 @@ class AircraftFleetService: ObservableObject {
 
         return [
             Fleet(name: "B737", aircraft: qantasFleet.filter { $0.type == "B738" }),
-            Fleet(name: "A321", aircraft: qantasFleet.filter { $0.type == "A321" }),
+            Fleet(name: "A321", aircraft: qantasFleet.filter { ["A321", "A21N"].contains($0.type) }), //updated to include A321XLR ICAO type
+//            Fleet(name: "A321", aircraft: qantasFleet.filter { $0.type == "A321" }),
             Fleet(name: "A330", aircraft: qantasFleet.filter { ["A332", "A333"].contains($0.type) }),
             Fleet(name: "B787", aircraft: qantasFleet.filter { $0.type == "B789" }),
             Fleet(name: "A380", aircraft: qantasFleet.filter { $0.type == "A388" }),
