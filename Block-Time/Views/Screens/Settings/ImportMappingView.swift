@@ -121,7 +121,11 @@ struct ImportMappingView: View {
             for i in mappings.indices {
                 if let entry = saved.first(where: { $0.logbookField == mappings[i].logbookField }) {
                     let validColumns = entry.sourceColumns.filter { validHeaders.contains($0) }
-                    mappings[i].sourceColumns = validColumns
+                    // Only apply saved mapping if at least one saved column is still valid;
+                    // otherwise keep the auto-detected columns from createInitialMappings.
+                    if !validColumns.isEmpty {
+                        mappings[i].sourceColumns = validColumns
+                    }
                 }
             }
             _fieldMappings = State(initialValue: mappings)
