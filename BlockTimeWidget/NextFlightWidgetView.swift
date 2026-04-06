@@ -3,8 +3,9 @@
 //  BlockTimeWidget
 //
 //  Branded Block-Time widget — Sunrise theme, orange accent, light + dark mode.
-//  Small:  Route · flight number · countdown
-//  Medium: Route · STD/STA times (local + UTC) · countdown
+//  Small:  Route · flight number · departure date + time
+//  Medium: Route · STD/STA times · departure date + time
+//  Large:  Medium + same-day companion flights
 //
 
 import WidgetKit
@@ -15,61 +16,33 @@ import SwiftUI
 private enum WT {
     // Orange accent matching AppColors.accentOrange
     static let orange      = Color(red: 1.0, green: 0.62, blue: 0.04).opacity(0.85)
-    static let orangeDim   = Color(red: 1.0, green: 0.62, blue: 0.04).opacity(0.18)
     // Fixed blue — non-adaptive, same value light and dark
     static let blue        = Color(red: 0.20, green: 0.45, blue: 0.90)
 
     // Backgrounds
     static let darkBG      = Color(red: 0.11, green: 0.11, blue: 0.12)  // #1C1C1E
-    // 1. Warm off-white
-//     static let lightBG = Color(red: 0.96, green: 0.95, blue: 0.93)
-    // 2. Cool light grey
-    // static let lightBG = Color(red: 0.93, green: 0.93, blue: 0.95)
-    // 3. Soft warm sand
-//    static let lightBG     = Color(red: 0.95, green: 0.92, blue: 0.87)
-    // 4. System adaptive
-//     static let lightBG = Color(.systemBackground)
-    // 5. Orange tint
-//     static let lightBG = Color(red: 0.98, green: 0.96, blue: 0.93)
-    // 6. Light slate
-    // static let lightBG = Color(red: 0.90, green: 0.91, blue: 0.93)
-    // 7. Blue tint
-//     static let lightBG = Color(red: 0.91, green: 0.94, blue: 0.98)
+    static let lightBGSolid = Color(red: 0.98, green: 0.96, blue: 0.93)
 
     // Text
-    static let primaryDark = Color(white: 0.75)
+    static let primaryDark  = Color(white: 0.75)
     static let primaryLight = Color(red: 0.1, green: 0.1, blue: 0.12)
-    static let secondary   = Color(white: 0.55)
-
-    // Solid backgrounds (original style)
-    static let lightBGSolid = Color(red: 0.98, green: 0.96, blue: 0.93)  // 5. Orange tint (was active)
+    static let secondary    = Color(white: 0.55)
 
     // Gradient — mirrors defaultTheme in ThemeService (blue→orange, topLeading→bottomTrailing)
     static func gradient(dark: Bool) -> LinearGradient {
         if dark {
             return LinearGradient(
-                colors: [
-                    darkBG,
-                    WT.blue.opacity(0.25),
-                    Color.orange.opacity(0.18)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: [darkBG, blue.opacity(0.25), Color.orange.opacity(0.18)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
             )
         } else {
             return LinearGradient(
-                colors: [
-                    WT.blue.opacity(0.18),
-                    Color(red: 0.98, green: 0.96, blue: 0.93),
-                    Color.orange.opacity(0.15)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: [blue.opacity(0.18), Color(red: 0.98, green: 0.96, blue: 0.93), Color.orange.opacity(0.15)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
             )
         }
     }
 
-    /// Returns the correct background view for the given style and appearance.
     @ViewBuilder
     static func background(style: WidgetStyleOption, dark: Bool) -> some View {
         if style == .gradient {
@@ -84,20 +57,6 @@ private enum WT {
 
 private struct TimeFormatHelper {
 
-    static let utcCal: Calendar = {
-        var c = Calendar(identifier: .gregorian)
-        c.timeZone = TimeZone(secondsFromGMT: 0)!
-        return c
-    }()
-
-
-    private static let localFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        f.timeZone = .current
-        return f
-    }()
-
     private static let utcFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
@@ -105,31 +64,25 @@ private struct TimeFormatHelper {
         return f
     }()
 
-    /// Format a UTC Date as "HH:mm" in device local time
-    static func localTime(_ date: Date) -> String {
-        localFormatter.string(from: date)
-    }
-
     /// Format a UTC Date as "HH:mm" in UTC
     static func utcTime(_ date: Date) -> String {
         utcFormatter.string(from: date)
     }
 
-    /// Returns "Today", "Tomorrow", or "Mon 27th" for a UTC departure date,
+    /// Returns "Today", "Tomorrow", or "Mon 27th" for a departure date,
     /// evaluated against the device's local calendar.
     static func departureDateLabel(_ date: Date) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(date)    { return "Today" }
         if cal.isDateInTomorrow(date) { return "Tomorrow" }
-        let day      = cal.component(.day, from: date)
-        let ordinal  = ordinalSuffix(for: day)
-        let weekday  = weekdayFormatter.string(from: date)   // "Mon", "Tue" …
-        return "\(weekday) \(day)\(ordinal)"
+        let day     = cal.component(.day, from: date)
+        let weekday = weekdayFormatter.string(from: date)
+        return "\(weekday) \(day)\(ordinalSuffix(for: day))"
     }
 
     private static let weekdayFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "EEE"          // locale-independent 3-letter abbreviation
+        f.dateFormat = "EEE"
         f.locale = Locale(identifier: "en_US_POSIX")
         return f
     }()
@@ -147,8 +100,7 @@ private struct TimeFormatHelper {
         }
     }
 
-    /// Format a UTC Date as "HH:mmZ" (UTC) or "HH:mm" in the airport's local timezone,
-    /// accounting for DST on the flight date.
+    /// Format a date as "HH:mmZ" (UTC) or "HH:mm" in the airport's local timezone.
     static func displayTime(_ date: Date, timeZone: WidgetTimeZoneOption, airportICAO: String) -> String {
         switch timeZone {
         case .utc:
@@ -163,12 +115,8 @@ private struct TimeFormatHelper {
     }
 
     /// Display airport code — ICAO stored; convert to IATA if useIATACodes.
-    /// Falls back to stored code if conversion not available.
     static func displayCode(_ icao: String, useIATA: Bool) -> String {
         guard useIATA else { return icao }
-        // Basic ICAO→IATA map for common airports.
-        // The widget runs out-of-process so it can't call AirportService.
-        // The full map is embedded in AirportData.swift (generated file added to widget target).
         return WidgetAirportCodes.iataFor(icao: icao) ?? icao
     }
 }
@@ -218,7 +166,7 @@ private struct SmallView: View {
             if let flight = entry.flight {
                 VStack(alignment: .center, spacing: 0) {
 
-                    // Header label
+                    // Header
                     HStack(spacing: 4) {
                         Image(systemName: "airplane.departure")
                             .font(.system(size: 9, weight: .semibold))
@@ -227,7 +175,6 @@ private struct SmallView: View {
                             .font(.system(size: 10, weight: .semibold))
                             .kerning(0.6)
                             .foregroundStyle(WT.secondary)
-//                        Spacer()
                     }
 
                     Spacer(minLength: 4)
@@ -252,32 +199,6 @@ private struct SmallView: View {
                             .foregroundStyle(primary)
                     }
 
-//                    // STD / STA
-//                    HStack(alignment: .top, spacing: 0) {
-//                        VStack(alignment: .leading, spacing: 1) {
-//                            Text("DEP")
-//                                .font(.system(size: 10, weight: .semibold))
-//                                .foregroundStyle(WT.secondary)
-//                            Text(flight.departureDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
-//                                .font(.system(size: 14, weight: .bold, design: .monospaced))
-//                                .foregroundStyle(WT.secondary)
-//                        }
-//                        .frame(maxWidth: .infinity, alignment: .leading)
-//
-//                        VStack(alignment: .trailing, spacing: 1) {
-//                            Text("ARR")
-//                                .font(.system(size: 10, weight: .semibold))
-//                                .foregroundStyle(WT.secondary)
-//                            Text(flight.arrivalDatetime.map { TimeFormatHelper.utcTime($0) + "Z" } ?? "–:––")
-//                                .font(.system(size: 14, weight: .bold, design: .monospaced))
-//                                .foregroundStyle(WT.secondary)
-//                        }
-//                        .frame(maxWidth: .infinity, alignment: .trailing)
-//                    }
-//                    .padding(.top, 2)
-//
-//                    Spacer(minLength: 8)
-
                     // Divider
                     Rectangle()
                         .fill(WT.orange.opacity(0.25))
@@ -287,7 +208,6 @@ private struct SmallView: View {
 
                     // Departure date + departure-airport local time
                     if let dep = flight.departureDatetime {
-
                         VStack(alignment: .center, spacing: 2) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
@@ -342,7 +262,7 @@ private struct MediumView: View {
 
                     Spacer(minLength: 4)
 
-                    // ── Top section: route + spine ──────────────────────
+                    // ── Route + spine ────────────────────────────────────
                     HStack(alignment: .center, spacing: 0) {
 
                         // Origin
@@ -356,7 +276,7 @@ private struct MediumView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                        // Centre spine: dashes + arrow + flight number
+                        // Centre spine
                         VStack(spacing: 2) {
                             HStack(spacing: 2) {
                                 ForEach(0..<4, id: \.self) { _ in
@@ -394,7 +314,7 @@ private struct MediumView: View {
 
                     Spacer(minLength: 8)
 
-                    // ── Divider ─────────────────────────────────────────
+                    // ── Divider ──────────────────────────────────────────
                     Rectangle()
                         .fill(WT.orange.opacity(0.25))
                         .frame(height: 1)
@@ -402,7 +322,7 @@ private struct MediumView: View {
 
                     Spacer(minLength: 6)
 
-                    // ── Bottom strip: centred departure date + departure-airport local time ──────
+                    // ── Departure date + departure-airport local time ─────
                     if let dep = flight.departureDatetime {
                         VStack(alignment: .center, spacing: 1) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
@@ -414,6 +334,7 @@ private struct MediumView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
+
                     Spacer(minLength: 8)
                 }
 
@@ -433,19 +354,15 @@ private struct LargeView: View {
     private var isDark: Bool   { scheme == .dark }
     private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
 
-    /// Same-day flights excluding the current next flight, sorted by departure time.
+    /// Same-day flights that depart after the main card flight, sorted ascending.
     private var otherFlights: [WidgetFlightEntry] {
         guard let next = entry.flight else { return [] }
         let nextDep = next.departureDatetime ?? next.flightDate
         return entry.sameDayFlights
-            .filter { f in
-                let fDep = f.departureDatetime ?? f.flightDate
-                return fDep != nextDep
-            }
+            .filter { ($0.departureDatetime ?? $0.flightDate) > nextDep }
             .sorted { ($0.departureDatetime ?? $0.flightDate) < ($1.departureDatetime ?? $1.flightDate) }
     }
 
-    /// Label shown in the bottom section when there are no other same-day flights.
     private var emptyBottomLabel: String {
         entry.noMoreFlightsToday ? "No More Flights Today" : "No Other Flights Today"
     }
@@ -525,7 +442,7 @@ private struct LargeView: View {
 
                     Spacer(minLength: 8)
 
-                    // ── Departure date + departure-airport local time ─────────────────────────────
+                    // ── Departure date + departure-airport local time ─────
                     if let dep = flight.departureDatetime {
                         VStack(alignment: .center, spacing: 2) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
@@ -627,37 +544,10 @@ private struct FlightRowView: View {
     }
 }
 
-// MARK: - Countdown subview
-
-//private struct CountdownView: View {
-//    let label: String
-//    let large: Bool
-//
-//    private var isDeparted: Bool { label == "Departed" }
-//
-//    var body: some View {
-//        VStack(alignment: large ? .center : .trailing, spacing: 1) {
-//            if !isDeparted {
-//                Text("Departure within")
-//                    .font(.system(size: large ? 10 : 9, weight: .medium))
-//                    .foregroundStyle(WT.secondary)
-//            }
-//
-//            Text(label)
-//                .font(.system(size: large ? 26 : 15, weight: .bold, design: .monospaced))
-//                .foregroundStyle(isDeparted ? WT.secondary : Color.orange)
-//                .monospacedDigit()
-//                .minimumScaleFactor(0.7)
-//                .lineLimit(1)
-//        }
-//    }
-//}
-
 // MARK: - No flight empty state
 
 private struct NoFlightView: View {
     let isDark: Bool
-    private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
 
     var body: some View {
         VStack(spacing: 6) {
@@ -674,41 +564,82 @@ private struct NoFlightView: View {
 }
 
 // MARK: - Previews
+//
+// Scenario: 3 flights today, 2 flights tomorrow, then nothing.
+//
+//  Today
+//    F1  BNE → SYD  QF500  dep +0hrs   arr +1.5hrs
+//    F2  SYD → MEL  QF400  dep +4hrs   arr +5.25hrs
+//    F3  MEL → BNE  QF600  dep +9.5hrs arr +11hrs
+//  Tomorrow
+//    F4  BNE → PER  QF700  dep +25hrs  arr +27.5hrs
+//    F5  PER → BNE  QF701  dep +30hrs  arr +35.5hrs
 
-private let previewEntry = NextFlightTimelineEntry(
-    date: .now,
-    flight: WidgetFlightEntry(
-        flightNumber: "QF063",
-        fromAirport: "FAOR",
-        toAirport: "YSSY",
-        flightDate: Date().addingTimeInterval(3600 * 6),
-        departureDatetime: Date().addingTimeInterval(3600 * 35),
-        arrivalDatetime: Date().addingTimeInterval(3600 * 47),
-        useIATACodes: true,
-        snapshotDate: .now
-    ),
-    countdownLabel: "6 Hrs"
+private let now = Date()
+
+private let f1 = WidgetFlightEntry(
+    flightNumber: "QF500", fromAirport: "YBBN", toAirport: "YSSY",
+    flightDate: now, departureDatetime: now,
+    arrivalDatetime: now.addingTimeInterval(1.5 * 3600),
+    useIATACodes: true, snapshotDate: now
+)
+private let f2 = WidgetFlightEntry(
+    flightNumber: "QF400", fromAirport: "YSSY", toAirport: "YMML",
+    flightDate: now, departureDatetime: now.addingTimeInterval(4 * 3600),
+    arrivalDatetime: now.addingTimeInterval(5.25 * 3600),
+    useIATACodes: true, snapshotDate: now
+)
+private let f3 = WidgetFlightEntry(
+    flightNumber: "QF600", fromAirport: "YMML", toAirport: "YBBN",
+    flightDate: now, departureDatetime: now.addingTimeInterval(9.5 * 3600),
+    arrivalDatetime: now.addingTimeInterval(11 * 3600),
+    useIATACodes: true, snapshotDate: now
+)
+private let f4 = WidgetFlightEntry(
+    flightNumber: "QF700", fromAirport: "YBBN", toAirport: "YPPH",
+    flightDate: now.addingTimeInterval(24 * 3600),
+    departureDatetime: now.addingTimeInterval(25 * 3600),
+    arrivalDatetime: now.addingTimeInterval(27.5 * 3600),
+    useIATACodes: true, snapshotDate: now
+)
+private let f5 = WidgetFlightEntry(
+    flightNumber: "QF701", fromAirport: "YPPH", toAirport: "YBBN",
+    flightDate: now.addingTimeInterval(24 * 3600),
+    departureDatetime: now.addingTimeInterval(30 * 3600),
+    arrivalDatetime: now.addingTimeInterval(35.5 * 3600),
+    useIATACodes: true, snapshotDate: now
 )
 
-private let emptyEntry = NextFlightTimelineEntry(date: .now, flight: nil, countdownLabel: "")
+private let todayFlights    = [f1, f2, f3]
+private let tomorrowFlights = [f4, f5]
 
-#Preview("Small — Flight", as: .systemSmall) {
+// State 1 — F1 is next; F2 and F3 in bottom row
+private let e1 = NextFlightTimelineEntry(date: now, flight: f1, sameDayFlights: todayFlights)
+// State 2 — F1 departed; F2 is next; F3 in bottom row
+private let e2 = NextFlightTimelineEntry(date: now.addingTimeInterval(0.5 * 3600), flight: f2, sameDayFlights: todayFlights)
+// State 3 — F2 departed; F3 is next; bottom row empty
+private let e3 = NextFlightTimelineEntry(date: now.addingTimeInterval(4.5 * 3600), flight: f3, sameDayFlights: todayFlights)
+// State 4 — F3 departed; F4 (tomorrow) is main card; "No More Flights Today" in bottom
+private let e4 = NextFlightTimelineEntry(date: now.addingTimeInterval(10 * 3600), flight: f4, sameDayFlights: tomorrowFlights, noMoreFlightsToday: true)
+// State 5 — F4 departed; F5 is main card; bottom row empty
+private let e5 = NextFlightTimelineEntry(date: now.addingTimeInterval(25.5 * 3600), flight: f5, sameDayFlights: tomorrowFlights)
+// State 6 — All done
+private let e6 = NextFlightTimelineEntry(date: now.addingTimeInterval(36 * 3600), flight: nil)
+
+#Preview("Small — Full scenario", as: .systemSmall) {
     BlockTimeWidget()
 } timeline: {
-    previewEntry
-    emptyEntry
+    e1; e2; e3; e4; e5; e6
 }
 
-#Preview("Medium — Flight", as: .systemMedium) {
+#Preview("Medium — Full scenario", as: .systemMedium) {
     BlockTimeWidget()
 } timeline: {
-    previewEntry
-    emptyEntry
+    e1; e2; e3; e4; e5; e6
 }
 
-#Preview("Large — Flight", as: .systemLarge) {
+#Preview("Large — Full scenario", as: .systemLarge) {
     BlockTimeWidget()
 } timeline: {
-    previewEntry
-    emptyEntry
+    e1; e2; e3; e4; e5; e6
 }
