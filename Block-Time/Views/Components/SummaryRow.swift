@@ -23,6 +23,7 @@ struct SummaryRow: View, Equatable {
                lhs.sector.p1usTime == rhs.sector.p1usTime &&
                lhs.sector.p2Time == rhs.sector.p2Time &&
                lhs.sector.simTime == rhs.sector.simTime &&
+               lhs.sector.spInsTime == rhs.sector.spInsTime &&
                lhs.sector.remarks == rhs.sector.remarks &&
                lhs.showTimesInHoursMinutes == rhs.showTimesInHoursMinutes
     }
@@ -69,6 +70,9 @@ struct SummaryRow: View, Equatable {
         }
         if sector.simTimeValue > 0 && !sector.isSpInsOnly {
             entries.append(("SIM", sector.simTimeValue))
+        }
+        if sector.spInsTimeValue > 0 {
+            entries.append(("INST", sector.spInsTimeValue))
         }
         if sector.p1TimeValue > 0 {
             entries.append(("P1", sector.p1TimeValue))

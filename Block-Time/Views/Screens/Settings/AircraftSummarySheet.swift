@@ -29,6 +29,7 @@ struct AircraftSummarySheet: View {
     @State private var p2Time: String = ""
     @State private var instrumentTime: String = ""
     @State private var simTime: String = ""
+    @State private var spInsTime: String = ""
     @State private var remarks: String = ""
 
     @State private var showingDiscardAlert = false
@@ -60,6 +61,7 @@ struct AircraftSummarySheet: View {
                    !p2Time.isEmpty ||
                    !instrumentTime.isEmpty ||
                    !simTime.isEmpty ||
+                   !spInsTime.isEmpty ||
                    !remarks.isEmpty
         }
 
@@ -72,10 +74,11 @@ struct AircraftSummarySheet: View {
         let p2Changed = formatTimeForComparison(p2Time) != formatTimeForComparison(editing.p2Time)
         let instrumentChanged = formatTimeForComparison(instrumentTime) != formatTimeForComparison(editing.instrumentTime)
         let simChanged = formatTimeForComparison(simTime) != formatTimeForComparison(editing.simTime)
+        let spInsChanged = formatTimeForComparison(spInsTime) != formatTimeForComparison(editing.spInsTime)
 
         return !Calendar.current.isDate(date, inSameDayAs: originalDate) ||
                aircraftType.uppercased() != editing.aircraftType.uppercased() ||
-               blockChanged || nightChanged || p1Changed || p1usChanged || p2Changed || instrumentChanged || simChanged ||
+               blockChanged || nightChanged || p1Changed || p1usChanged || p2Changed || instrumentChanged || simChanged || spInsChanged ||
                remarks.trimmingCharacters(in: .whitespacesAndNewlines) != editing.remarks.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -158,6 +161,7 @@ struct AircraftSummarySheet: View {
                                 SummaryTimeField(label: "P2 Time", value: $p2Time)
                                 SummaryTimeField(label: "Instrument Time", value: $instrumentTime)
                                 SummaryTimeField(label: "SIM Time", value: $simTime)
+                                SummaryTimeField(label: "Instructor Time", value: $spInsTime)
                             }
                         }
 
@@ -273,6 +277,7 @@ struct AircraftSummarySheet: View {
         p2Time = editing.p2TimeValue > 0 ? String(format: "%.1f", editing.p2TimeValue) : ""
         instrumentTime = editing.instrumentTimeValue > 0 ? String(format: "%.1f", editing.instrumentTimeValue) : ""
         simTime = editing.simTimeValue > 0 ? String(format: "%.1f", editing.simTimeValue) : ""
+        spInsTime = editing.spInsTimeValue > 0 ? String(format: "%.1f", editing.spInsTimeValue) : ""
         remarks = editing.remarks
 
         hasLoadedEditingData = true
@@ -300,6 +305,7 @@ struct AircraftSummarySheet: View {
             p2Time: p2Time.isEmpty ? "0.0" : p2Time,
             instrumentTime: instrumentTime.isEmpty ? "0.0" : instrumentTime,
             simTime: simTime.isEmpty ? "0.0" : simTime,
+            spInsTime: spInsTime.isEmpty ? "0.0" : spInsTime,
             isPilotFlying: false,
             isPositioning: false,
             remarks: remarks.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -334,7 +340,7 @@ private struct SummaryTimeField: View {
                 .foregroundColor(.secondary)
 
             TextField("0.0", text: $value)
-                .keyboardType(.decimalPad)
+                .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
                 .focused($isFocused)
                 .font(.body)
                 .padding(10)
