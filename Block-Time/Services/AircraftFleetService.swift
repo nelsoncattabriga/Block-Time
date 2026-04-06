@@ -393,21 +393,9 @@ class AircraftFleetService: ObservableObject {
         for type in allTypes.sorted() {
             guard !processedTypes.contains(type) else { continue }
 
-            // Map aircraft types to fleet names and group variants
-            let (fleetName, typesToInclude): (String, [String]) = {
-                switch type {
-                case "B738":
-                    return ("B737", ["B738"])
-                case "A332", "A333":
-                    return ("A330", ["A332", "A333"])
-                case "B789":
-                    return ("B787", ["B789"])
-                case "A388":
-                    return ("A380", ["A388"])
-                default:
-                    return (type, [type])
-                }
-            }()
+            let matchedFleet = AircraftFleetService.availableFleets.first { $0.types.contains(type) }
+            let fleetName = matchedFleet?.name ?? type
+            let typesToInclude = matchedFleet?.types ?? [type]
 
             let aircraftOfType = allAircraft.filter { typesToInclude.contains($0.type) }
             if !aircraftOfType.isEmpty {
