@@ -13,9 +13,11 @@ import SwiftUI
 
 struct NextFlightTimelineEntry: TimelineEntry {
     let date: Date                               // When WidgetKit should render this entry
-    let flight: WidgetFlightEntry?               // nil = no upcoming flights
+    let flight: WidgetFlightEntry?               // nil = no upcoming flights at all
     let countdownLabel: String                   // Pre-computed label e.g. "3 Days", "1 Hr"
     var sameDayFlights: [WidgetFlightEntry] = [] // All flights on the same day as `flight` (large widget)
+    /// True when today had flights but all have now departed — large widget bottom shows "No More Flights Today"
+    var noMoreFlightsToday: Bool = false
     var configuration: NextFlightIntent = NextFlightIntent()
 }
 
@@ -44,13 +46,13 @@ struct NextFlightProvider: AppIntentTimelineProvider {
         let flights = readSnapshots()
 
         guard !flights.isEmpty else {
-            // No flights — check again in 1 hour
+            // No flights at all — show empty state and let WidgetKit refresh naturally
             let entry = NextFlightTimelineEntry(date: now, flight: nil, countdownLabel: "", configuration: configuration)
-            let refresh = Calendar.current.date(byAdding: .hour, value: 1, to: now) ?? now
-            return Timeline(entries: [entry], policy: .after(refresh))
+            return Timeline(entries: [entry], policy: .atEnd)
         }
 
-        // Checkpoints before departure at which the countdown label changes
+        // Checkpoints before departure at which the countdown label changes.
+        // Each offset is unique — no duplicates.
         let checkpointOffsets: [(offset: TimeInterval, label: String)] = [
             (-3600 * 24 * 7, "7 Days"),
             (-3600 * 24 * 6, "6 Days"),
@@ -58,7 +60,6 @@ struct NextFlightProvider: AppIntentTimelineProvider {
             (-3600 * 24 * 4, "4 Days"),
             (-3600 * 24 * 3, "3 Days"),
             (-3600 * 24 * 2, "2 Days"),
-            (-3600 * 24 * 1, "1 Day"),
             (-3600 * 24,     "24 Hrs"),
             (-3600 * 18,     "18 Hrs"),
             (-3600 * 12,     "12 Hrs"),
@@ -68,6 +69,7 @@ struct NextFlightProvider: AppIntentTimelineProvider {
             (-3600 * 1,      "1 Hr"),
         ]
 
+        let cal = Calendar.current
         var entries: [NextFlightTimelineEntry] = []
 
         for (index, flight) in flights.enumerated() {
@@ -79,49 +81,96 @@ struct NextFlightProvider: AppIntentTimelineProvider {
             for (offset, label) in checkpointOffsets {
                 let entryDate = departure.addingTimeInterval(offset)
                 if entryDate >= now {
-                    entries.append(NextFlightTimelineEntry(date: entryDate, flight: flight, countdownLabel: label, sameDayFlights: sameDay, configuration: configuration))
+                    entries.append(NextFlightTimelineEntry(
+                        date: entryDate, flight: flight,
+                        countdownLabel: label, sameDayFlights: sameDay,
+                        configuration: configuration
+                    ))
                 }
             }
 
-            // Current entry (if this is the first flight and no checkpoint covers now)
-            if index == 0 && (entries.isEmpty || entries.first!.date > now) {
+            // Seed a "now" entry if nothing yet covers the present moment
+            let hasPresentCoverage = entries.contains { $0.date <= now }
+            if !hasPresentCoverage {
                 let currentLabel = Self.label(for: departure, at: now)
-                entries.insert(NextFlightTimelineEntry(date: now, flight: flight, countdownLabel: currentLabel, sameDayFlights: sameDay, configuration: configuration), at: 0)
+                entries.insert(NextFlightTimelineEntry(
+                    date: now, flight: flight,
+                    countdownLabel: currentLabel, sameDayFlights: sameDay,
+                    configuration: configuration
+                ), at: 0)
             }
 
-            // Midnight rollover — ensures "Tomorrow" flips to "Today" at 00:00
-            let cal = Calendar.current
-            if let midnight = cal.nextDate(after: now,
-                                           matching: DateComponents(hour: 0, minute: 0, second: 0),
-                                           matchingPolicy: .nextTime),
-               midnight < departure {
+            // Midnight rollovers — add an entry for every midnight between now and departure
+            // so "Tomorrow" → "Today" (and "Mon 7th" → "Today") flips correctly for any flight.
+            var scanFrom = now
+            while let midnight = cal.nextDate(
+                after: scanFrom,
+                matching: DateComponents(hour: 0, minute: 0, second: 0),
+                matchingPolicy: .nextTime
+            ), midnight < departure {
                 let midnightLabel = Self.label(for: departure, at: midnight)
-                entries.append(NextFlightTimelineEntry(date: midnight, flight: flight, countdownLabel: midnightLabel, sameDayFlights: sameDay, configuration: configuration))
+                entries.append(NextFlightTimelineEntry(
+                    date: midnight, flight: flight,
+                    countdownLabel: midnightLabel, sameDayFlights: sameDay,
+                    configuration: configuration
+                ))
+                scanFrom = midnight
             }
 
-            // 30 mins after departure: switch to next flight (or show departed if last)
+            // 30 mins after departure: advance to next flight.
+            // - If there is a next flight, show it (main card) with its own same-day companions.
+            // - If today had more same-day flights that are now all gone, set noMoreFlightsToday=true
+            //   so the large widget bottom can say "No More Flights Today" while the main card
+            //   shows the next future flight (which may be on a different day).
+            // - If there is no next flight at all, flight=nil → full empty state.
             let switchDate = departure.addingTimeInterval(30 * 60)
-            let switchLabel = nextFlight != nil ? Self.label(for: nextFlight!.departureDatetime ?? nextFlight!.flightDate, at: switchDate) : "Departed"
-            let switchSameDay = nextFlight != nil ? Self.sameDayFlights(as: nextFlight!, from: flights) : sameDay
-            entries.append(NextFlightTimelineEntry(date: switchDate, flight: nextFlight ?? flight, countdownLabel: switchLabel, sameDayFlights: switchSameDay, configuration: configuration))
+
+            if let next = nextFlight {
+                // Are next flight's same-day companions on a DIFFERENT day to the flight just departed?
+                let nextIsNewDay = !cal.isDate(
+                    next.departureDatetime ?? next.flightDate,
+                    inSameDayAs: departure
+                )
+                // If the next flight is on a new day, today's flights are all gone.
+                let noMoreToday = nextIsNewDay && !sameDay.isEmpty
+
+                let nextSameDay = Self.sameDayFlights(as: next, from: flights)
+                let switchLabel = Self.label(for: next.departureDatetime ?? next.flightDate, at: switchDate)
+                entries.append(NextFlightTimelineEntry(
+                    date: switchDate, flight: next,
+                    countdownLabel: switchLabel, sameDayFlights: nextSameDay,
+                    noMoreFlightsToday: noMoreToday,
+                    configuration: configuration
+                ))
+            } else {
+                // Last flight has departed — no future flights remain
+                entries.append(NextFlightTimelineEntry(
+                    date: switchDate, flight: nil,
+                    countdownLabel: "", sameDayFlights: [],
+                    configuration: configuration
+                ))
+            }
         }
 
-        // After the last flight departs, refresh in 1 hour to pick up any new data
-        let lastDeparture = (flights.last?.departureDatetime ?? flights.last?.flightDate) ?? now
-        let refreshDate = lastDeparture.addingTimeInterval(3600)
-        return Timeline(entries: entries, policy: .after(refreshDate))
+        // Use .atEnd so WidgetKit refreshes as soon as entries are exhausted.
+        // The main app calls reloadTimelines whenever flight data changes, so this
+        // is the correct policy rather than a hard-coded time in the future.
+        return Timeline(entries: entries, policy: .atEnd)
     }
 
     // MARK: - Same-day flights helper
 
-    /// Returns all flights from `allFlights` that share the same local calendar day as `anchor`.
+    /// Returns all flights from `allFlights` that share the same local calendar day as `anchor`,
+    /// sorted ascending by departure time.
     static func sameDayFlights(as anchor: WidgetFlightEntry, from allFlights: [WidgetFlightEntry]) -> [WidgetFlightEntry] {
         let cal = Calendar.current
         let anchorDate = anchor.departureDatetime ?? anchor.flightDate
-        return allFlights.filter { f in
-            let fDate = f.departureDatetime ?? f.flightDate
-            return cal.isDate(fDate, inSameDayAs: anchorDate)
-        }
+        return allFlights
+            .filter { f in
+                let fDate = f.departureDatetime ?? f.flightDate
+                return cal.isDate(fDate, inSameDayAs: anchorDate)
+            }
+            .sorted { ($0.departureDatetime ?? $0.flightDate) < ($1.departureDatetime ?? $1.flightDate) }
     }
 
     // MARK: - Derive label for arbitrary point in time

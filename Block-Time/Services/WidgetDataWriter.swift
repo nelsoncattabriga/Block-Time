@@ -40,7 +40,11 @@ final class WidgetDataWriter {
     /// Returns up to 5 upcoming flights (departure >= now), sorted ascending.
     private func buildSnapshots(context: NSManagedObjectContext) -> [WidgetFlightEntry] {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        let startOfToday = Calendar.current.startOfDay(for: Date())
+        // FlightEntity.date is stored as UTC midnight, so use a UTC calendar here to
+        // avoid including yesterday's flights for users in positive UTC offsets.
+        var utcCal = Calendar(identifier: .gregorian)
+        utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
+        let startOfToday = utcCal.startOfDay(for: Date())
         request.predicate = NSPredicate(format: "date >= %@", startOfToday as NSDate)
         request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)]
         request.fetchLimit = 20   // fetch extra so we can filter by effective departure time

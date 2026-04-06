@@ -91,20 +91,28 @@ private struct TimeFormatHelper {
     }()
 
 
-    /// Format a UTC Date as "HH:MM" in device local time
-    static func localTime(_ date: Date) -> String {
+    private static let localFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
-        f.timeZone = TimeZone.current
-        return f.string(from: date)
+        f.timeZone = .current
+        return f
+    }()
+
+    private static let utcFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        return f
+    }()
+
+    /// Format a UTC Date as "HH:mm" in device local time
+    static func localTime(_ date: Date) -> String {
+        localFormatter.string(from: date)
     }
 
     /// Format a UTC Date as "HH:mm" in UTC
     static func utcTime(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        return f.string(from: date)
+        utcFormatter.string(from: date)
     }
 
     /// Returns "Today", "Tomorrow", or "Mon 27th" for a UTC departure date,
@@ -277,16 +285,16 @@ private struct SmallView: View {
 
                     Spacer(minLength: 6)
 
-                    // Departure date + local time
+                    // Departure date + departure-airport local time
                     if let dep = flight.departureDatetime {
-                        
+
                         VStack(alignment: .center, spacing: 2) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
                                 .foregroundStyle(WT.orange)
                                 .minimumScaleFactor(0.7)
                                 .lineLimit(1)
-                            Text(TimeFormatHelper.localTime(dep))
+                            Text(TimeFormatHelper.displayTime(dep, timeZone: .local, airportICAO: flight.fromAirport))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
                                 .foregroundStyle(WT.orange)
                                 .minimumScaleFactor(0.7)
@@ -394,13 +402,13 @@ private struct MediumView: View {
 
                     Spacer(minLength: 6)
 
-                    // ── Bottom strip: centred departure date + time ──────
+                    // ── Bottom strip: centred departure date + departure-airport local time ──────
                     if let dep = flight.departureDatetime {
                         VStack(alignment: .center, spacing: 1) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
                                 .foregroundStyle(WT.orange)
-                            Text(TimeFormatHelper.localTime(dep))
+                            Text(TimeFormatHelper.displayTime(dep, timeZone: .local, airportICAO: flight.fromAirport))
                                 .font(.system(size: 20, weight: .bold, design: .monospaced))
                                 .foregroundStyle(WT.orange)
                         }
@@ -425,7 +433,8 @@ private struct LargeView: View {
     private var isDark: Bool   { scheme == .dark }
     private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
 
-    /// Same-day flights excluding the current next flight, sorted by departure time
+    /// Same-day flights excluding the current next flight, sorted by departure time.
+    /// Only includes flights that are still in the future relative to the entry date.
     private var otherFlights: [WidgetFlightEntry] {
         guard let next = entry.flight else { return [] }
         let nextDep = next.departureDatetime ?? next.flightDate
@@ -435,6 +444,11 @@ private struct LargeView: View {
                 return fDep != nextDep
             }
             .sorted { ($0.departureDatetime ?? $0.flightDate) < ($1.departureDatetime ?? $1.flightDate) }
+    }
+
+    /// Label shown in the bottom section when there are no other same-day flights.
+    private var emptyBottomLabel: String {
+        entry.noMoreFlightsToday ? "No More Flights Today" : "No Other Flights Today"
     }
 
     var body: some View {
@@ -512,13 +526,13 @@ private struct LargeView: View {
 
                     Spacer(minLength: 8)
 
-                    // ── Departure date + time ─────────────────────────────
+                    // ── Departure date + departure-airport local time ─────────────────────────────
                     if let dep = flight.departureDatetime {
                         VStack(alignment: .center, spacing: 2) {
                             Text(TimeFormatHelper.departureDateLabel(dep))
                                 .font(.system(size: 22, weight: .bold, design: .monospaced))
                                 .foregroundStyle(WT.orange)
-                            Text(TimeFormatHelper.localTime(dep))
+                            Text(TimeFormatHelper.displayTime(dep, timeZone: .local, airportICAO: flight.fromAirport))
                                 .font(.system(size: 22, weight: .bold, design: .monospaced))
                                 .foregroundStyle(WT.orange)
                         }
@@ -537,7 +551,7 @@ private struct LargeView: View {
 
                     // ── Other flights today ───────────────────────────────
                     if otherFlights.isEmpty {
-                        Text("No other flights")
+                        Text(emptyBottomLabel)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(WT.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
