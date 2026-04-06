@@ -414,6 +414,7 @@ struct ImportMappingView: View {
             ("P2 Time", "P2/SIC time - can combine multiple sources", false, true),  // Supports multiple!
             ("Instrument Time", "Instrument time - can combine multiple sources", false, true),  // Supports multiple!
             ("SIM Time", "Simulator time (decimal hours)", false, false),
+            ("Sp/Ins Time", "Sp/Ins instructor time (decimal hours)", false, false),
             ("Pilot Flying", "PF (yes/no, true/false, 1/0)", false, false),
             ("PAX", "PAX Flight (yes/no, true/false, 1/0)", false, false),
             ("Day Takeoffs", "Day takeoffs (integer)", false, false),
@@ -593,6 +594,7 @@ struct ImportMappingView: View {
         "p2time":         ["sictime", "p2time", "siccopilot", "copilottime", "sic", "p2"],
         "instrumenttime": ["actualinstrument", "actualimc", "instrumenttime", "instrument", "actualifr", "ifrtime", "ifr", "inst"],
         "simtime":        ["simulatortime", "simtime", "simulator", "synthetic", "simimc", "sim"],
+        "spinstime":      ["spinstructortime", "spinstime", "spinstructor", "spins", "spinstr", "inspilot"],
         "pilotflying":    ["pilotflyingcapacity", "pilotflying", "flying", "pf"],
         "pax":            ["positioning", "deadhead", "passengerflight", "dh", "pax"],
         "daytakeoffs":    ["daytakeoffs", "takeoffsday", "today", "tday", "dayt/o", "dto"],
