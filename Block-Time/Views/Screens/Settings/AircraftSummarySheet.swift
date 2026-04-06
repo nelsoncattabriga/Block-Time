@@ -157,7 +157,7 @@ struct AircraftSummarySheet: View {
                             VStack(spacing: 12) {
                                 SummaryTimeField(label: "Night Time", value: $nightTime)
                                 SummaryTimeField(label: "P1 Time", value: $p1Time)
-                                SummaryTimeField(label: "P1US Time", value: $p1usTime)
+                                SummaryTimeField(label: "ICUS Time", value: $p1usTime)
                                 SummaryTimeField(label: "P2 Time", value: $p2Time)
                                 SummaryTimeField(label: "Instrument Time", value: $instrumentTime)
                                 SummaryTimeField(label: "SIM Time", value: $simTime)

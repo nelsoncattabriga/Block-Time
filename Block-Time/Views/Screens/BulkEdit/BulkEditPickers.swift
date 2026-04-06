@@ -281,7 +281,7 @@ struct BulkEditTimeCreditRadioButton: View {
                     Divider()
                         .frame(height: 20)
 
-                    // P1US Button
+                    // ICUS Button
                     Button(action: {
                         if !isActuallyDisabled {
                             selectedCredit = .p1us
@@ -289,7 +289,7 @@ struct BulkEditTimeCreditRadioButton: View {
                             HapticManager.shared.impact(.light)
                         }
                     }) {
-                        Text("P1US")
+                        Text("ICUS")
                             .font(.subheadline.bold())
                             .foregroundColor(selectedCredit == .p1us ? .white : .secondary)
                             .frame(maxWidth: .infinity)

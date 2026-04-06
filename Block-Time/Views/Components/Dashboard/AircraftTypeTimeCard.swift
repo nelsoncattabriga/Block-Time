@@ -114,7 +114,7 @@ struct AircraftTypeTimeCard: View {
         var entries: [(String, Double)] = []
         if aircraftStats.totalHours > 0  { entries.append(("Total", aircraftStats.totalHours)) }
         if aircraftStats.p1Time > 0      { entries.append(("P1",    aircraftStats.p1Time)) }
-        if aircraftStats.p1usTime > 0    { entries.append(("P1US",  aircraftStats.p1usTime)) }
+        if aircraftStats.p1usTime > 0    { entries.append(("ICUS",  aircraftStats.p1usTime)) }
         if aircraftStats.p2Time > 0      { entries.append(("P2",    aircraftStats.p2Time)) }
         if aircraftStats.simTime > 0     { entries.append(("SIM",   aircraftStats.simTime)) }
         return entries

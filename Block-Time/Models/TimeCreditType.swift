@@ -17,7 +17,7 @@ enum TimeCreditType: String, CaseIterable, Codable {
         case .p1:
             return "P1 (CMD)"
         case .p1us:
-            return "P1US (ICUS)"
+            return "ICUS"
         case .p2:
             return "P2 (CO-PLT)"
         }

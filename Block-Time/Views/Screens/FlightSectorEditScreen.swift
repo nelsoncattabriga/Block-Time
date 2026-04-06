@@ -211,9 +211,9 @@ struct FlightSectorEditScreen: View {
                         .cornerRadius(6)
                 }
 
-                // P1US Time
-                EditableCard(title: "P1US Time (hrs)") {
-                    TextField("P1US Time", text: $p1usTime)
+                // ICUS Time
+                EditableCard(title: "ICUS Time (hrs)") {
+                    TextField("ICUS Time", text: $p1usTime)
                         .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
                         .font(.body)
                         .padding(8)

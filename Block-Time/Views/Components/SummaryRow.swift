@@ -78,7 +78,7 @@ struct SummaryRow: View, Equatable {
             entries.append(("P1", sector.p1TimeValue))
         }
         if sector.p1usTimeValue > 0 {
-            entries.append(("P1US", sector.p1usTimeValue))
+            entries.append(("ICUS", sector.p1usTimeValue))
         }
         if sector.p2TimeValue > 0 {
             entries.append(("P2", sector.p2TimeValue))

@@ -156,7 +156,7 @@ struct BulkEditSheet: View {
                             )
 
                             BulkEditTextField(
-                                label: "P1US Time",
+                                label: "ICUS Time",
                                 fieldState: $bulkEditViewModel.p1usTime,
                                 keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
