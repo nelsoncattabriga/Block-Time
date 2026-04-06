@@ -130,14 +130,18 @@ struct SummaryRow: View, Equatable {
                         .cornerRadius(4)
                 }
 
-                // Time entries grid — fixed 2×4 layout
+                // Time entries grid — single row if ≤4 populated, fixed 2×4 otherwise
+                let populated = timeGrid.filter { $0.value != nil }
+                let useFixedGrid = populated.count > 4
+                let displayEntries = useFixedGrid ? timeGrid : populated.map { ($0.label, Optional($0.value!)) }
+
                 LazyVGrid(columns: [
                     GridItem(.flexible()),
                     GridItem(.flexible()),
                     GridItem(.flexible()),
                     GridItem(.flexible())
                 ], spacing: 8) {
-                    ForEach(timeGrid, id: \.label) { entry in
+                    ForEach(displayEntries, id: \.label) { entry in
                         if let value = entry.value {
                             VStack(spacing: 4) {
                                 Text(entry.label)
@@ -149,8 +153,15 @@ struct SummaryRow: View, Equatable {
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
                         } else {
-                            Color.clear
-                                .frame(maxWidth: .infinity)
+                            VStack(spacing: 4) {
+                                Text(entry.label)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary.opacity(0.25))
+                                Text("—")
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(.secondary.opacity(0.25))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
                 }
