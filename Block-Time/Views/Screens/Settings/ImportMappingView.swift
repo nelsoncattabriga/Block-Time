@@ -407,14 +407,14 @@ struct ImportMappingView: View {
             ("STA", "Scheduled Arrival Time", false, false),
             ("OUT Time", "Block OUT time (1130 or 11:30)", false, false),
             ("IN Time", "Block IN time (1130 or 11:30)", false, false),
-            ("Block Time", "Block time (decimal hours)", false, false),
-            ("Night Time", "Night time - can combine PIC Night, SIC Night, etc.", false, true),  // Supports multiple!
-            ("P1 Time", "P1/PIC time - can combine multiple sources", false, true),  // Supports multiple!
-            ("P1US Time", "P1US/ICUS time - can combine multiple sources", false, true),  // Supports multiple!
-            ("P2 Time", "P2/SIC time - can combine multiple sources", false, true),  // Supports multiple!
-            ("Instrument Time", "Instrument time - can combine multiple sources", false, true),  // Supports multiple!
-            ("SIM Time", "Simulator time (decimal hours)", false, false),
-            ("Sp/Ins Time", "Sp/Ins instructor time (decimal hours)", false, false),
+            ("Block Time", "Block time (HH:MM or decimal)", false, false),
+            ("Night Time", "Night time (HH:MM or decimal) - can combine multiple sources", false, true),  // Supports multiple!
+            ("P1 Time", "P1/PIC time (HH:MM or decimal) - can combine multiple sources", false, true),  // Supports multiple!
+            ("P1US Time", "P1US/ICUS time (HH:MM or decimal) - can combine multiple sources", false, true),  // Supports multiple!
+            ("P2 Time", "P2/SIC time (HH:MM or decimal) - can combine multiple sources", false, true),  // Supports multiple!
+            ("Instrument Time", "Instrument time (HH:MM or decimal) - can combine multiple sources", false, true),  // Supports multiple!
+            ("SIM Time", "Simulator time (HH:MM or decimal)", false, false),
+            ("Sp/Ins Time", "Sp/Ins instructor time (HH:MM or decimal)", false, false),
             ("Pilot Flying", "PF (yes/no, true/false, 1/0)", false, false),
             ("PAX", "PAX Flight (yes/no, true/false, 1/0)", false, false),
             ("Day Takeoffs", "Day takeoffs (integer)", false, false),
