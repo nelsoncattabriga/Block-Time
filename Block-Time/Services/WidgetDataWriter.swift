@@ -46,7 +46,10 @@ final class WidgetDataWriter {
         utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
         let startOfToday = utcCal.startOfDay(for: Date())
         request.predicate = NSPredicate(format: "date >= %@", startOfToday as NSDate)
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)]
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true),
+            NSSortDescriptor(keyPath: \FlightEntity.scheduledDeparture, ascending: true)
+        ]
         request.fetchLimit = 20   // fetch extra so we can filter by effective departure time
 
         guard let flights = try? context.fetch(request), !flights.isEmpty else { return [] }

@@ -434,7 +434,6 @@ private struct LargeView: View {
     private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
 
     /// Same-day flights excluding the current next flight, sorted by departure time.
-    /// Only includes flights that are still in the future relative to the entry date.
     private var otherFlights: [WidgetFlightEntry] {
         guard let next = entry.flight else { return [] }
         let nextDep = next.departureDatetime ?? next.flightDate
