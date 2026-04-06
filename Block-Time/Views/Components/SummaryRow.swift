@@ -22,6 +22,7 @@ struct SummaryRow: View, Equatable {
                lhs.sector.p1Time == rhs.sector.p1Time &&
                lhs.sector.p1usTime == rhs.sector.p1usTime &&
                lhs.sector.p2Time == rhs.sector.p2Time &&
+               lhs.sector.instrumentTime == rhs.sector.instrumentTime &&
                lhs.sector.simTime == rhs.sector.simTime &&
                lhs.sector.spInsTime == rhs.sector.spInsTime &&
                lhs.sector.remarks == rhs.sector.remarks &&
@@ -58,36 +59,19 @@ struct SummaryRow: View, Equatable {
         return sector.date
     }
 
-    // Get time fields that have values
-    private var timeEntries: [(label: String, value: Double)] {
-        var entries: [(String, Double)] = []
-
-        if sector.blockTimeValue > 0 {
-            entries.append(("Total", sector.blockTimeValue))
-        }
-        if sector.nightTimeValue > 0 {
-            entries.append(("Night", sector.nightTimeValue))
-        }
-        if sector.simTimeValue > 0 && !sector.isSpInsOnly {
-            entries.append(("SIM", sector.simTimeValue))
-        }
-        if sector.spInsTimeValue > 0 {
-            entries.append(("Sp/INS", sector.spInsTimeValue))
-        }
-        if sector.p1TimeValue > 0 {
-            entries.append(("P1", sector.p1TimeValue))
-        }
-        if sector.p1usTimeValue > 0 {
-            entries.append(("ICUS", sector.p1usTimeValue))
-        }
-        if sector.p2TimeValue > 0 {
-            entries.append(("P2", sector.p2TimeValue))
-        }
-//        if sector.simTimeValue > 0 {
-//            entries.append(("SIM", sector.simTimeValue))
-//        }
-
-        return entries
+    // Fixed 8-slot grid: row 1 = Total | P1 | ICUS | P2, row 2 = Night | SIM | INST | Sp/INS
+    private var timeGrid: [(label: String, value: Double?)] {
+        let simValue = sector.simTimeValue > 0 && !sector.isSpInsOnly ? sector.simTimeValue : nil
+        return [
+            ("Total",  sector.blockTimeValue > 0      ? sector.blockTimeValue      : nil),
+            ("P1",     sector.p1TimeValue > 0          ? sector.p1TimeValue          : nil),
+            ("ICUS",   sector.p1usTimeValue > 0        ? sector.p1usTimeValue        : nil),
+            ("P2",     sector.p2TimeValue > 0          ? sector.p2TimeValue          : nil),
+            ("Night",  sector.nightTimeValue > 0       ? sector.nightTimeValue       : nil),
+            ("SIM",    simValue),
+            ("INST",   sector.instrumentTimeValue > 0  ? sector.instrumentTimeValue  : nil),
+            ("Sp/INS", sector.spInsTimeValue > 0       ? sector.spInsTimeValue       : nil),
+        ]
     }
 
     // Format time value
@@ -146,26 +130,30 @@ struct SummaryRow: View, Equatable {
                         .cornerRadius(4)
                 }
 
-                // Time entries grid
-                if !timeEntries.isEmpty {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 8) {
-                        ForEach(timeEntries, id: \.label) { entry in
-                            VStack(spacing: 4) {
-                                Text(entry.label)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                // Time entries grid — fixed 2×4 layout
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: 8) {
+                    ForEach(timeGrid, id: \.label) { entry in
+                        VStack(spacing: 4) {
+                            Text(entry.label)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
 
-                                Text(formatTime(entry.value))
+                            if let value = entry.value {
+                                Text(formatTime(value))
                                     .font(.subheadline.bold())
                                     .foregroundColor(.teal.opacity(0.9))
+                            } else {
+                                Text("—")
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(.secondary.opacity(0.4))
                             }
-                            .frame(maxWidth: .infinity, alignment: .center)
                         }
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
 
