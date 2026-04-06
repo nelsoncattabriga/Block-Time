@@ -466,6 +466,39 @@ struct ImportMappingView: View {
             "remarks":        "flight_remarks",
         ],
 
+       
+
+        // PilotLog (Nolan Systems) — CSV export headers
+        "PilotLog": [
+            "date":           "pilotlog_date",
+            "flightnumber":   "flightnumber",
+            "aircraftreg":    "ac_reg",
+            "aircrafttype":   "ac_model",
+            "fromairport":    "af_dep",
+            "toairport":      "af_arr",
+            "captainname":    "pilot1_name",
+            "f/oname":        "pilot2_name",
+            "s/o1name":       "pilot3_name",
+            "s/o2name":       "pilot4_name",
+            "std":            "time_depsch",
+            "sta":            "time_arrsch",
+            "outtime":        "time_dep",
+            "intime":         "time_arr",
+            "blocktime":      "time_total",
+            "nighttime":      "time_night",
+            "p1time":         "time_pic",
+            "p1ustime":       "time_picus",
+            "p2time":         "time_sic",
+            "instrumenttime": "time_actual",
+            "simtime":        "sim_time",     // populated by pre-processing; absent in raw export
+            "pilotflying":    "pf",
+            "daytakeoffs":    "to_day",
+            "daylandings":    "ldg_day",
+            "nighttakeoffs":  "to_night",
+            "nightlandings":  "ldg_night",
+            "remarks":        "remarks",
+        ],
+        
         // Safelog — typical CSV export headers
         "Safelog": [
             "date":           "DATE",
@@ -488,47 +521,7 @@ struct ImportMappingView: View {
             "nightlandings":  "NIGHT_LDG",
             "remarks":        "REMARKS",
         ],
-
-        // mccPilotLog — typical CSV export headers
-        "mccPilotLog": [
-            "date":           "Date",
-            "fromairport":    "Departure Place",
-            "toairport":      "Arrival Place",
-            "aircrafttype":   "Aircraft Model",
-            "aircraftreg":    "Registration",
-            "blocktime":      "Total Time",
-            "p1time":         "PIC",
-            "p2time":         "SIC/Co-Pilot",
-            "nighttime":      "Night",
-            "instrumenttime": "IFR",
-            "pilotflying":    "PF",
-            "daytakeoffs":    "TO Day",
-            "nighttakeoffs":  "TO Night",
-            "daylandings":    "LDG Day",
-            "nightlandings":  "LDG Night",
-            "remarks":        "Remarks",
-        ],
-
-        // Logbook Pro (NC Software) — typical CSV export headers
-        "Logbook Pro": [
-            "date":           "Date",
-            "flightnumber":   "Flight No",
-            "fromairport":    "From",
-            "toairport":      "To",
-            "aircraftreg":    "Tail Number",
-            "aircrafttype":   "Aircraft Type",
-            "blocktime":      "Total Duration",
-            "p1time":         "PIC",
-            "p2time":         "SIC",
-            "nighttime":      "Night",
-            "instrumenttime": "Actual IMC",
-            "simtime":        "Simulated IMC",
-            "daytakeoffs":    "Day Takeoffs",
-            "nighttakeoffs":  "Night Takeoffs",
-            "daylandings":    "Day Landings",
-            "nightlandings":  "Night Landings",
-            "remarks":        "Remarks",
-        ],
+        
     ]
 
     /// Returns the best-matching app profile for a given set of headers, or nil if none scores well enough.
