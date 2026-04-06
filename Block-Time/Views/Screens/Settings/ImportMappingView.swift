@@ -91,6 +91,7 @@ struct ImportMappingView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var fieldMappings: [FieldMapping]
+    @State private var detectedProfileName: String?
     @State private var importMode: ImportMode = .merge
     @State private var showingPreview = false
     @State private var previewSelection: PreviewSelection = .first100
@@ -114,10 +115,13 @@ struct ImportMappingView: View {
 
         // Try saved mapping first, fall back to auto-detection
         let key = "LastImportMapping_\(importData.delimiter)"
+        let initial = Self.createInitialMappings(headers: importData.headers)
+        _detectedProfileName = State(initialValue: initial.profileName)
+
         if let data = UserDefaults.standard.data(forKey: key),
            let saved = try? JSONDecoder().decode([SavedMappingEntry].self, from: data) {
             let validHeaders = Set(importData.headers)
-            var mappings = Self.createInitialMappings(headers: importData.headers)
+            var mappings = initial.mappings
             for i in mappings.indices {
                 if let entry = saved.first(where: { $0.logbookField == mappings[i].logbookField }) {
                     let validColumns = entry.sourceColumns.filter { validHeaders.contains($0) }
@@ -130,7 +134,7 @@ struct ImportMappingView: View {
             }
             _fieldMappings = State(initialValue: mappings)
         } else {
-            _fieldMappings = State(initialValue: Self.createInitialMappings(headers: importData.headers))
+            _fieldMappings = State(initialValue: initial.mappings)
         }
     }
 
@@ -165,6 +169,17 @@ struct ImportMappingView: View {
                 }
 
                 Section(header: Text("Field Mapping")) {
+                    if let profileName = detectedProfileName {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundStyle(.green)
+                                .font(.caption)
+                            Text("\(profileName) mapping detected")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .listRowBackground(Color.green.opacity(0.08))
+                    }
                     ForEach($fieldMappings) { $mapping in
                         FieldMappingRow(
                             mapping: $mapping,
@@ -375,7 +390,7 @@ struct ImportMappingView: View {
     }
 
     // MARK: - Smart Field Detection
-    private static func createInitialMappings(headers: [String]) -> [FieldMapping] {
+    private static func createInitialMappings(headers: [String]) -> (mappings: [FieldMapping], profileName: String?) {
         print("🔍 createInitialMappings started with \(headers.count) headers")
         let logbookFields: [(String, String, Bool, Bool)] = [  // Added supportsMultiple
             ("Date", "Flight date", true, false),
@@ -414,7 +429,8 @@ struct ImportMappingView: View {
         ]
 
         // Detect app profile once for all fields
-        let profileMap = detectAppProfile(headers: headers)
+        let detected = detectAppProfile(headers: headers)
+        let profileMap = detected.map { $0.map }
 
         let mappings = logbookFields.map { (field, description, required, supportsMultiple) in
             let detectedColumns = detectColumns(for: field, in: headers, allowMultiple: supportsMultiple, profileMap: profileMap)
@@ -426,7 +442,7 @@ struct ImportMappingView: View {
                 supportsMultipleColumns: supportsMultiple
             )
         }
-        return mappings
+        return (mappings: mappings, profileName: detected?.name)
     }
 
     // MARK: - Column Detection
@@ -528,24 +544,26 @@ struct ImportMappingView: View {
         
     ]
 
-    /// Returns the best-matching app profile for a given set of headers, or nil if none scores well enough.
-    /// Keys in the returned map are normalized (letters/numbers only, lowercase).
-    private static func detectAppProfile(headers: [String]) -> [String: String]? {
+    /// Returns the best-matching app profile name and its normalized key→header map, or nil if none scores well enough.
+    private static func detectAppProfile(headers: [String]) -> (name: String, map: [String: String])? {
         let normalizedHeaders = Set(headers.map { normalize($0) })
-        var bestProfile: [String: String]? = nil
+        var bestName: String? = nil
+        var bestMap: [String: String]? = nil
         var bestScore = 0
 
-        for (_, mapping) in appProfiles {
+        for (name, mapping) in appProfiles {
             // Score = number of profile header values whose normalized form is in the file headers
             let score = mapping.values.filter { normalizedHeaders.contains(normalize($0)) }.count
             // Require at least 4 distinctive matches to use a profile
-            if score > bestScore && score >= 4 {
+            if score > bestScore && score >= 8 {
                 bestScore = score
+                bestName = name
                 // Return with normalized keys so lookup works correctly
-                bestProfile = Dictionary(uniqueKeysWithValues: mapping.map { (normalize($0.key), $0.value) })
+                bestMap = Dictionary(uniqueKeysWithValues: mapping.map { (normalize($0.key), $0.value) })
             }
         }
-        return bestProfile
+        guard let name = bestName, let map = bestMap else { return nil }
+        return (name: name, map: map)
     }
 
     // MARK: - Synonym Fallback Table

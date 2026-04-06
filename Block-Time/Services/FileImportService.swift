@@ -50,9 +50,12 @@ class FileImportService {
         // Remaining rows are data
         let dataRows = Array(allRows.dropFirst())
 
+        // Apply profile-specific pre-processing so the data is Block-Time-friendly before mapping
+        let (processedHeaders, processedRows) = FileImportService.preprocess(headers: headers, rows: dataRows)
+
         return ImportData(
-            headers: headers,
-            rows: dataRows,
+            headers: processedHeaders,
+            rows: processedRows,
             fileURL: url,
             delimiter: delimiter
         )
@@ -1615,6 +1618,59 @@ class FileImportService {
         let regex = try? NSRegularExpression(pattern: pattern)
         let range = NSRange(location: 0, length: dateString.utf16.count)
         return regex?.firstMatch(in: dateString, range: range) != nil
+    }
+
+    // MARK: - Profile-Aware Pre-Processing
+
+    /// Applies profile-specific column transformations before the data reaches ImportMappingView.
+    /// Returns transformed (headers, rows) — headers may gain new synthetic columns.
+    private static func preprocess(headers: [String], rows: [[String]]) -> ([String], [[String]]) {
+        // PilotLog: ac_issim column — rows where value contains "sim" are simulator sessions.
+        // time_total holds the sim duration; move it to sim_time and zero out time_total.
+        if let isSimIdx = headers.firstIndex(of: "ac_issim"),
+           let totalIdx = headers.firstIndex(of: "time_total") {
+
+            // Add sim_time column if not already present
+            var outHeaders = headers
+            let simTimeCol = "sim_time"
+            let simTimeIdx: Int
+            if let existing = headers.firstIndex(of: simTimeCol) {
+                simTimeIdx = existing
+            } else {
+                outHeaders.append(simTimeCol)
+                simTimeIdx = outHeaders.count - 1
+            }
+
+            var simCount = 0
+            let outRows: [[String]] = rows.map { row in
+                guard isSimIdx < row.count else { return row }
+                let isSim = row[isSimIdx].lowercased().contains("sim")
+                guard isSim else {
+                    // Non-sim row: pad sim_time column with empty string if we added it
+                    if simTimeIdx == outHeaders.count - 1 && simTimeIdx >= row.count {
+                        return row + [""]
+                    }
+                    return row
+                }
+
+                simCount += 1
+                var mutable = row
+                // Pad row to accommodate the new column if needed
+                while mutable.count <= simTimeIdx { mutable.append("") }
+
+                let totalValue = totalIdx < row.count ? row[totalIdx] : ""
+                mutable[simTimeIdx] = totalValue   // move to sim_time
+                mutable[totalIdx] = "00:00"        // zero out time_total
+                return mutable
+            }
+
+            if simCount > 0 {
+                LogManager.shared.info("🔧 PilotLog pre-process: moved time_total → sim_time for \(simCount) simulator row(s)")
+            }
+            return (outHeaders, outRows)
+        }
+
+        return (headers, rows)
     }
 }
 
