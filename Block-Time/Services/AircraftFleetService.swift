@@ -51,11 +51,23 @@ struct Aircraft: Codable, Identifiable, Hashable {
 struct Fleet: Identifiable, Hashable {
     let id: String
     let name: String
+    let types: [String]
     let aircraft: [Aircraft]
-    
-    init(name: String, aircraft: [Aircraft]) {
-        self.id = name // Use name as ID for consistency
+
+    /// Init for static fleets — declares the canonical type codes for this family.
+    /// Aircraft are filtered from qantasFleet automatically.
+    init(name: String, types: [String]) {
+        self.id = name
         self.name = name
+        self.types = types
+        self.aircraft = AircraftFleetService.qantasFleet.filter { types.contains($0.type) }
+    }
+
+    /// Init for dynamically-built fleets (e.g. custom aircraft). Types are inferred from aircraft.
+    init(name: String, aircraft: [Aircraft]) {
+        self.id = name
+        self.name = name
+        self.types = aircraft.map(\.type)
         self.aircraft = aircraft
     }
 }
@@ -242,20 +254,16 @@ class AircraftFleetService: ObservableObject {
     ]
     
     // MARK: - Fleet Collections
-    static let availableFleets: [Fleet] = {
-        return [
-            Fleet(name: "B737", aircraft: qantasFleet.filter { ["B738", "B737", "B736","B735", "B734", "B733","B732", "B731", "B37M", "B38M", "B39M", "B3XM"].contains($0.type) }),
-            Fleet(name: "A321", aircraft: qantasFleet.filter { ["A321", "A21N"].contains($0.type) }), //updated to include A321XLR ICAO type
-//            Fleet(name: "A321", aircraft: qantasFleet.filter { $0.type == "A321" }),
-            Fleet(name: "A330", aircraft: qantasFleet.filter { ["A332", "A333", "A330"].contains($0.type) }),
-            Fleet(name: "B787", aircraft: qantasFleet.filter { ["B789", "B788", "B787", "B78X"].contains($0.type) }),
-            Fleet(name: "A380", aircraft: qantasFleet.filter { $0.type == "A388" }),
-            Fleet(name: "B747", aircraft: qantasFleet.filter { ["B744", "B743", "B742", "B74S", "B741", "B747"].contains($0.type) }),
-            Fleet(name: "B767", aircraft: qantasFleet.filter { ["B763", "B762", "B767"].contains($0.type) }),
-            //Fleet(name: "A350", aircraft: qantasFleet.filter { $0.type == "A35K" }),
-
-        ]
-    }()
+    static let availableFleets: [Fleet] = [
+        Fleet(name: "B737", types: ["B731", "B732", "B733", "B734", "B735", "B736", "B737", "B738", "B739", "B37M", "B38M", "B39M", "B3XM"]),
+        Fleet(name: "A321", types: ["A321", "A21N"]),
+        Fleet(name: "A330", types: ["A330", "A332", "A333", "A338", "A339"]),
+        Fleet(name: "B787", types: ["B787", "B788", "B789", "B78X"]),
+        Fleet(name: "A380", types: ["A388"]),
+        Fleet(name: "B747", types: ["B741", "B742", "B743", "B744", "B74S", "B747", "B748"]),
+        Fleet(name: "B767", types: ["B762", "B763", "B764", "B767"]),
+        //Fleet(name: "A350", types: ["A35K"]),
+    ]
     
     // MARK: - Convenience Methods
     
@@ -357,29 +365,10 @@ class AircraftFleetService: ObservableObject {
         return customAircraft.contains(where: { $0.id == aircraft.id })
     }
 
-    /// Explicit type-to-family mapping — covers all known variants regardless of whether
-    /// they appear in qantasFleet (which only has Qantas-registered aircraft).
-    static let typeFamilyMap: [String: String] = {
-        var map: [String: String] = [:]
-        let families: [(String, [String])] = [
-            ("B737", ["B731", "B732", "B733", "B734", "B735", "B736", "B737", "B738", "B739", "B37M", "B38M", "B39M", "B3XM"]),
-            ("A321", ["A318", "A319", "A320", "A321", "A21N"]),
-            ("A330", ["A330", "A332", "A333", "A338", "A339"]),
-            ("B787", ["B787", "B788", "B789", "B78X"]),
-            ("A380", ["A388"]),
-            ("B747", ["B741", "B742", "B743", "B744", "B74S", "B747", "B748"]),
-            ("B767", ["B762", "B763", "B764", "B767"]),
-        ]
-        for (family, types) in families {
-            for t in types { map[t] = family }
-        }
-        return map
-    }()
-
     /// Returns the fleet/family name for a given aircraft type code, or nil if unknown.
     /// e.g. "A332" → "A330", "B744" → "B747", "B772" → nil
     static func familyName(for type: String) -> String? {
-        typeFamilyMap[type]
+        availableFleets.first { $0.types.contains(type) }?.name
     }
 
     /// Get all aircraft (static + custom)
