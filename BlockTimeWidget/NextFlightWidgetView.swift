@@ -468,7 +468,7 @@ private struct LargeView: View {
                     // ── Other flights today ───────────────────────────────
                     if otherFlights.isEmpty {
                         Text(emptyBottomLabel)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(WT.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
@@ -500,15 +500,15 @@ private struct FlightRowView: View {
     var body: some View {
         HStack(spacing: 0) {
             // Route
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Text(TimeFormatHelper.displayCode(flight.fromAirport, useIATA: flight.useIATACodes))
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(primary)
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(WT.orange)
                 Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(primary)
             }
 
@@ -516,7 +516,7 @@ private struct FlightRowView: View {
 
             // Flight number
             Text(flight.flightNumber.isEmpty ? "—" : flight.flightNumber)
-                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .font(.system(size: 16, weight: .semibold, design: .monospaced))
                 .foregroundStyle(WT.secondary)
 
             Spacer()
@@ -525,18 +525,18 @@ private struct FlightRowView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text("DEP")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(WT.secondary.opacity(0.7))
                     Text(flight.departureDatetime.map { TimeFormatHelper.displayTime($0, timeZone: timeZone, airportICAO: flight.fromAirport) } ?? "–:––")
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(WT.secondary)
                 }
                 VStack(alignment: .trailing, spacing: 1) {
                     Text("ARR")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(WT.secondary.opacity(0.7))
                     Text(flight.arrivalDatetime.map { TimeFormatHelper.displayTime($0, timeZone: timeZone, airportICAO: flight.toAirport) } ?? "–:––")
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(WT.secondary)
                 }
             }
