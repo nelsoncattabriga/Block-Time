@@ -72,7 +72,7 @@ struct SummaryRow: View, Equatable {
             entries.append(("SIM", sector.simTimeValue))
         }
         if sector.spInsTimeValue > 0 {
-            entries.append(("INST", sector.spInsTimeValue))
+            entries.append(("Sp/INS", sector.spInsTimeValue))
         }
         if sector.p1TimeValue > 0 {
             entries.append(("P1", sector.p1TimeValue))
