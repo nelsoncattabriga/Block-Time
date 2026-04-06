@@ -115,8 +115,8 @@ struct AircraftTypeTimeCard: View {
                     } label: {
                         Label(groupByFamily ? "Family" : "Type",
                               systemImage: "chevron.up.chevron.down")
-                            .font(.caption)
-                            .foregroundStyle(.primary)
+                            .iPadScaledFont(.caption, phoneFont: .subheadline)
+                            .foregroundStyle(.secondary)
                             .animation(.easeInOut(duration: 0.15), value: groupByFamily)
                     }
                     .buttonStyle(.plain)

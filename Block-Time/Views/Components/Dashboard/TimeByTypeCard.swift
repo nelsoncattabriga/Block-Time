@@ -13,6 +13,11 @@ private enum FleetDisplayMode: String, CaseIterable {
     case sectors = "Sectors"
 }
 
+private enum FleetGroupMode: String, CaseIterable {
+    case type = "Type"
+    case family = "Family"
+}
+
 // Position-based palette — guarantees no two slices share a colour
 private let fleetPalette: [Color] = [
     .blue, .orange, .green, .purple, .red, .teal, .yellow, .pink, .indigo, .mint
@@ -27,6 +32,7 @@ struct TimeByTypeCard: View {
 
     @AppStorage("timeByTypeCard_displayMode") private var displayMode: FleetDisplayMode = .hours
     @AppStorage("timeByTypeCard_groupByFamily") private var groupByFamily: Bool = false
+
 
     // Collapse individual types into family names when groupByFamily is active
     private var resolvedData: [NDFleetHours] {
@@ -61,16 +67,16 @@ struct TimeByTypeCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Time by Type", icon: "airplane.circle.fill") {
-                Button {
-                    groupByFamily.toggle()
-                } label: {
-                    Label(groupByFamily ? "Family" : "Type",
-                          systemImage: "chevron.up.chevron.down")
-                        .font(.caption)
-                        .foregroundStyle(.primary)
+                Picker("Group", selection: Binding(
+                    get: { groupByFamily ? FleetGroupMode.family : .type },
+                    set: { groupByFamily = $0 == .family }
+                )) {
+                    ForEach(FleetGroupMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
                 }
-                .buttonStyle(.plain)
-                .animation(.easeInOut(duration: 0.15), value: groupByFamily)
+                .pickerStyle(.segmented)
+                .fixedSize()
             }
 
             Picker("Display", selection: $displayMode) {
