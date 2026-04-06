@@ -138,22 +138,20 @@ struct SummaryRow: View, Equatable {
                     GridItem(.flexible())
                 ], spacing: 8) {
                     ForEach(timeGrid, id: \.label) { entry in
-                        VStack(spacing: 4) {
-                            Text(entry.label)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-
-                            if let value = entry.value {
+                        if let value = entry.value {
+                            VStack(spacing: 4) {
+                                Text(entry.label)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
                                 Text(formatTime(value))
                                     .font(.subheadline.bold())
                                     .foregroundColor(.teal.opacity(0.9))
-                            } else {
-                                Text("—")
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(.secondary.opacity(0.4))
                             }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        } else {
+                            Color.clear
+                                .frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
 
