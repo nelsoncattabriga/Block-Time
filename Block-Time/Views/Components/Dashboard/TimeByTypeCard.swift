@@ -26,12 +26,27 @@ struct TimeByTypeCard: View {
     let data: [NDFleetHours]
 
     @AppStorage("timeByTypeCard_displayMode") private var displayMode: FleetDisplayMode = .hours
+    @AppStorage("timeByTypeCard_groupByFamily") private var groupByFamily: Bool = false
+
+    // Collapse individual types into family names when groupByFamily is active
+    private var resolvedData: [NDFleetHours] {
+        guard groupByFamily else { return data }
+        var hoursByLabel: [String: Double] = [:]
+        var sectorsByLabel: [String: Int] = [:]
+        for item in data {
+            let label = AircraftFleetService.familyName(for: item.aircraftType) ?? item.aircraftType
+            hoursByLabel[label, default: 0] += item.hours
+            sectorsByLabel[label, default: 0] += item.sectors
+        }
+        return hoursByLabel.map { NDFleetHours(aircraftType: $0.key, hours: $0.value, sectors: sectorsByLabel[$0.key] ?? 0) }
+    }
 
     // Sort by active mode, then collapse tail beyond top-5 into "Other"
     private var chartData: [NDFleetHours] {
+        let source = resolvedData
         let sorted = displayMode == .hours
-            ? data.sorted { $0.hours > $1.hours }
-            : data.sorted { $0.sectors > $1.sectors }
+            ? source.sorted { $0.hours > $1.hours }
+            : source.sorted { $0.sectors > $1.sectors }
         let top = Array(sorted.prefix(5))
         if sorted.count <= 5 { return top }
         let otherHours = sorted.dropFirst(5).reduce(0) { $0 + $1.hours }
@@ -45,7 +60,18 @@ struct TimeByTypeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Time by Type", icon: "airplane.circle.fill")
+            CardHeader(title: "Time by Type", icon: "airplane.circle.fill") {
+                Button {
+                    groupByFamily.toggle()
+                } label: {
+                    Text("Family")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(groupByFamily ? .primary : .tertiary)
+                }
+                .buttonStyle(.plain)
+                .animation(.easeInOut(duration: 0.15), value: groupByFamily)
+            }
 
             Picker("Display", selection: $displayMode) {
                 ForEach(FleetDisplayMode.allCases, id: \.self) { mode in
