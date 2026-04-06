@@ -9,7 +9,7 @@ struct AircraftTypeTimeCard: View {
     @State private var aircraftStats: (totalHours: Double, totalSectors: Int, p1Time: Double, p1usTime: Double, p2Time: Double, simTime: Double) = (0.0, 0, 0.0, 0.0, 0.0, 0.0)
     private let settings = LogbookSettings.shared
     @State private var showTimesInHoursMinutes: Bool = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
-    @AppStorage("aircraftTypeCard_groupByFamily") private var groupByFamily: Bool = true
+    @AppStorage("aircraftTypeCard_groupByFamily") private var groupByFamily: Bool = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isLandscape: Bool = UIDevice.current.orientation.isLandscape
 

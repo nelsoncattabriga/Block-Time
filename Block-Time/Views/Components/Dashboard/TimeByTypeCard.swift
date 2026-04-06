@@ -26,7 +26,7 @@ struct TimeByTypeCard: View {
     let data: [NDFleetHours]
 
     @AppStorage("timeByTypeCard_displayMode") private var displayMode: FleetDisplayMode = .hours
-    @AppStorage("timeByTypeCard_groupByFamily") private var groupByFamily: Bool = true
+    @AppStorage("timeByTypeCard_groupByFamily") private var groupByFamily: Bool = false
 
     // Collapse individual types into family names when groupByFamily is active
     private var resolvedData: [NDFleetHours] {
