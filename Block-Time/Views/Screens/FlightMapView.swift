@@ -8,7 +8,7 @@ import MapKit
 
 struct FlightMapView: View {
     @State private var viewModel = FlightMapViewModel()
-    @State private var mapStyleIsHybrid = false
+    @AppStorage("flightMap_isHybrid") private var mapStyleIsHybrid = true
     @State private var selectedICAO: String? = nil
 
     var body: some View {
@@ -60,8 +60,15 @@ struct FlightMapView: View {
         }
     }
 
+    private static let australiaPosition = MapCameraPosition.region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: -25.0, longitude: 133.0),
+            span: MKCoordinateSpan(latitudeDelta: 60.0, longitudeDelta: 60.0)
+        )
+    )
+
     private var map: some View {
-        Map(selection: $selectedICAO) {
+        Map(initialPosition: Self.australiaPosition, selection: $selectedICAO) {
             ForEach(viewModel.routes) { route in
                 MapPolyline(coordinates: route.coordinates)
                     .stroke(.gray.opacity(0.65), lineWidth: 1.5)
