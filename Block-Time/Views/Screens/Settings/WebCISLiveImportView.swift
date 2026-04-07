@@ -356,7 +356,9 @@ private struct WebCISWebView: UIViewRepresentable {
 
         context.coordinator.startObserving(webView)
         navigator.attach(webView)
-        webView.load(URLRequest(url: url))
+        DispatchQueue.main.async {
+            webView.load(URLRequest(url: url))
+        }
         return webView
     }
 
@@ -392,6 +394,33 @@ private struct WebCISWebView: UIViewRepresentable {
         }
 
         // MARK: WKNavigationDelegate
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+
+            let scheme = url.scheme?.lowercased() ?? ""
+
+            // SSO flows (Microsoft Authenticator, MSAL, generic app-redirect schemes)
+            // cannot be followed by WKWebView — hand them to the system so the
+            // correct app (Authenticator) opens. WKWebView's session stays intact;
+            // when the user returns the page resumes or reloads from cookies.
+            if scheme != "https" && scheme != "http" && scheme != "about" && scheme != "blob" {
+                decisionHandler(.cancel)
+                Task { @MainActor in
+                    await UIApplication.shared.open(url)
+                }
+                return
+            }
+
+            decisionHandler(.allow)
+        }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             Task { @MainActor [weak self] in
