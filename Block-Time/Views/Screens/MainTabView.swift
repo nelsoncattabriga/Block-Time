@@ -66,6 +66,13 @@ struct MainTabView: View {
                 }
                 .tag(2)
 
+            FlightMapView()
+                .tabItem {
+                    Image(systemName: "map")
+                    Text("Map")
+                }
+                .tag(3)
+
             SettingsSplitView(viewModel: viewModel, frmsViewModel: frmsViewModel)
                 .environmentObject(viewModel)
                 .tabItem {
@@ -73,7 +80,7 @@ struct MainTabView: View {
                     Text("Settings")
                 }
                 .badge(settingsTabBadge)
-                .tag(3)
+                .tag(4)
 
         }
         .sheet(isPresented: $showingOnboarding) {

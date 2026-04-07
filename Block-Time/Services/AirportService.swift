@@ -39,8 +39,11 @@ class AirportService {
     struct AirportInfo {
         let icaoCode: String
         let iataCode: String?
+        let city: String?
         let timezoneOffset: Double
         let dstCode: String
+        let latitude: Double
+        let longitude: Double
     }
 
     enum DSTCode: String {
@@ -71,6 +74,9 @@ class AirportService {
                 let components = parseCSVLine(line)
                 guard components.count >= 11 else { continue }
 
+                // Parse city name (field 3, index 2)
+                let city = components[2].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+
                 // Remove quotes from IATA code (field 5, index 4)
                 let iataCode = components[4].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
 
@@ -84,6 +90,10 @@ class AirportService {
                 // Parse DST code (field 11, index 10)
                 let dstCode = components[10].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
 
+                // Parse latitude (field 7, index 6) and longitude (field 8, index 7)
+                guard let latitude = Double(components[6]),
+                      let longitude = Double(components[7]) else { continue }
+
                 // Store IATA code if valid
                 let validIataCode = (iataCode.isEmpty || iataCode == "\\N") ? nil : iataCode
 
@@ -93,7 +103,7 @@ class AirportService {
                     icaoToIataMap[icaoCode] = validIata
                 }
 
-                airportData[icaoCode] = AirportInfo(icaoCode: icaoCode, iataCode: validIataCode, timezoneOffset: timezoneOffset, dstCode: dstCode)
+                airportData[icaoCode] = AirportInfo(icaoCode: icaoCode, iataCode: validIataCode, city: city.isEmpty ? nil : city, timezoneOffset: timezoneOffset, dstCode: dstCode, latitude: latitude, longitude: longitude)
             }
 
             isLoaded = true
@@ -344,6 +354,21 @@ class AirportService {
         }
 
         return nthSunday
+    }
+
+    // MARK: - Coordinate & City Lookup
+
+    /// Get coordinates for any airport code (IATA or ICAO)
+    func getCoordinates(for code: String) -> (latitude: Double, longitude: Double)? {
+        let icao = convertToICAO(code)
+        guard let info = airportData[icao.uppercased()] else { return nil }
+        return (info.latitude, info.longitude)
+    }
+
+    /// Get city name for any airport code (IATA or ICAO)
+    func getCity(for code: String) -> String? {
+        let icao = convertToICAO(code)
+        return airportData[icao.uppercased()]?.city
     }
 
     // MARK: - IATA/ICAO Conversion Methods
