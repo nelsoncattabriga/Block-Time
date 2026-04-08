@@ -262,10 +262,14 @@ private struct AirportStatsPickerSheet: View {
 
     @State private var search: String = ""
     @State private var sortOrder: AirportSortOrder = .alpha
+    @AppStorage("useIATACodes") private var useIATACodes: Bool = true
 
     private var sorted: [String] {
         switch sortOrder {
-        case .alpha:  return airports.sorted()
+        case .alpha:  return airports.sorted {
+            AirportService.shared.getDisplayCode($0, useIATA: useIATACodes) <
+            AirportService.shared.getDisplayCode($1, useIATA: useIATACodes)
+        }
         case .visits: return airports.sorted { (visitCounts[$0] ?? 0) > (visitCounts[$1] ?? 0) }
         }
     }
@@ -288,7 +292,7 @@ private struct AirportStatsPickerSheet: View {
                     dismiss()
                 } label: {
                     HStack {
-                        Text(AirportService.shared.getDisplayCode(icao, useIATA: true))
+                        Text(AirportService.shared.getDisplayCode(icao, useIATA: useIATACodes))
                             .font(.system(.body, design: .monospaced, weight: .semibold))
                             .foregroundStyle(.primary)
                         Spacer()
