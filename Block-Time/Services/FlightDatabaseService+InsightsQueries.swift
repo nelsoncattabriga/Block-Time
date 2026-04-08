@@ -5,14 +5,129 @@
 //  Consolidated analytics computations for the Insights dashboard.
 //  Single source of truth — all ND* analytics flow through here.
 //
+//  Architecture: main-thread fetch phase → background compute phase.
+//  fetchInsightsRawData() runs on the main thread (Core Data requirement) and
+//  returns Sendable value-type snapshots.  computeInsightsData(from:) is
+//  nonisolated and can safely run on any thread (Task.detached in the VM).
+//
 
 import Foundation
 import CoreData
 import SwiftUI
 
+// MARK: - Flight snapshot (Sendable bridge between main-thread CD and background compute)
+
+struct FlightSnapshot: Sendable {
+    let date: Date?
+    let blockTime: String?
+    let simTime: String?
+    let nightTime: String?
+    let p1Time: String?
+    let p1usTime: String?
+    let p2Time: String?
+    let instrumentTime: String?
+    let spInsTime: String?
+    let aircraftType: String?
+    let aircraftReg: String?
+    let fromAirport: String?
+    let toAirport: String?
+    let dayTakeoffs: Int16
+    let nightTakeoffs: Int16
+    let dayLandings: Int16
+    let nightLandings: Int16
+    let isAIII: Bool
+    let isILS: Bool
+    let isRNP: Bool
+    let isGLS: Bool
+    let isNPA: Bool
+    let isPilotFlying: Bool
+    // FRMS fields
+    let scheduledDeparture: String?
+    let scheduledArrival: String?
+    let outTime: String?
+    let inTime: String?
+
+    init(_ e: FlightEntity) {
+        date               = e.date
+        blockTime          = e.blockTime
+        simTime            = e.simTime
+        nightTime          = e.nightTime
+        p1Time             = e.p1Time
+        p1usTime           = e.p1usTime
+        p2Time             = e.p2Time
+        instrumentTime     = e.instrumentTime
+        spInsTime          = e.spInsTime
+        aircraftType       = e.aircraftType
+        aircraftReg        = e.aircraftReg
+        fromAirport        = e.fromAirport
+        toAirport          = e.toAirport
+        dayTakeoffs        = e.dayTakeoffs
+        nightTakeoffs      = e.nightTakeoffs
+        dayLandings        = e.dayLandings
+        nightLandings      = e.nightLandings
+        isAIII             = e.isAIII
+        isILS              = e.isILS
+        isRNP              = e.isRNP
+        isGLS              = e.isGLS
+        isNPA              = e.isNPA
+        isPilotFlying      = e.isPilotFlying
+        scheduledDeparture = e.scheduledDeparture
+        scheduledArrival   = e.scheduledArrival
+        outTime            = e.outTime
+        inTime             = e.inTime
+    }
+}
+
+// MARK: - FRMS limit scalars (extracted on main thread to avoid @MainActor inference issues)
+
+/// Plain-scalar snapshot of the FRMS limits and config values needed by the compute phase.
+/// All values are extracted on the main thread where FRMSConfiguration/FRMSFleet properties
+/// are accessible, then passed as Sendable scalars into nonisolated compute functions.
+struct FRMSLimitsSnapshot: Sendable {
+    let signOnMins: Int
+    let signOffMins: Int
+    let warnFrac: Double
+    let fleetLabel: FRMSFleet          // Sendable enum — ok to pass
+    let periodDays: Int
+    let maxFlight7d: Double?
+    let maxFlight28d: Double
+    let maxFlight365d: Double
+    let maxDuty7d: Double
+    let maxDuty14dInitial: Double?
+    let maxDuty14d: Double
+
+    init(_ config: FRMSConfiguration) {
+        let fleet         = config.fleet
+        signOnMins        = config.signOnMinutesBeforeSTD
+        signOffMins       = config.signOffMinutesAfterIN
+        warnFrac          = config.showWarningsAtPercentage
+        fleetLabel        = fleet
+        periodDays        = fleet.flightTimePeriodDays
+        maxFlight7d       = fleet.maxFlightTime7Days
+        maxFlight28d      = fleet.maxFlightTime28Days
+        maxFlight365d     = fleet.maxFlightTime365Days
+        maxDuty7d         = fleet.maxDutyTime7Days
+        maxDuty14dInitial = fleet.maxDutyTime14DaysInitial
+        maxDuty14d        = fleet.maxDutyTime14Days
+    }
+}
+
+// MARK: - Raw fetch payload (Sendable)
+
+struct InsightsRawData: Sendable {
+    /// Flights with non-zero block or sim time — drives all analytics + FlightStatistics
+    let mainFlights: [FlightSnapshot]
+    /// Historical actual flights going back 730 days — feeds FRMS rolling and projected
+    let frmsHistFlights: [FlightSnapshot]
+    /// Future rostered flights (date > today, STD set, no OUT time) — feeds FRMS rolling and projected
+    let frmsFutureFlights: [FlightSnapshot]
+    /// FRMS limits and config as plain scalars (safe to use from nonisolated context)
+    let frmsLimits: FRMSLimitsSnapshot
+}
+
 // MARK: - Aggregate insights payload
 
-struct NDInsightsData {
+struct NDInsightsData: Sendable {
     let flightStatistics: FlightStatistics
     let monthlyActivity: [NDMonthlyActivity]
     let dailyActivity: [NDDailyActivity]
@@ -33,78 +148,102 @@ struct NDInsightsData {
 
 extension FlightDatabaseService {
 
-    /// Returns all analytics for the Insights dashboard.
-    /// Calls the proven `getFlightStatistics()` for aggregate totals, then
-    /// performs one additional Core Data fetch for analytics computations.
-    func getInsightsData() -> NDInsightsData {
-        let stats = getFlightStatistics()
+    // MARK: - Phase 1: Fetch (main thread only)
 
-        let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        request.predicate = NSPredicate(
+    /// Performs all Core Data fetches needed for the Insights dashboard and
+    /// packages the results as Sendable value-type snapshots.
+    /// Must be called on the main thread.
+    @MainActor
+    func fetchInsightsRawData() -> InsightsRawData {
+        let today = Calendar.current.startOfDay(for: Date())
+
+        // 1. Main flights (non-zero block or sim time)
+        let mainRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+        mainRequest.predicate = NSPredicate(
             format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)",
             "0", "0.0", "0.00", "0", "0.0", "0.00"
         )
-        request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+        mainRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+        let mainEntities = (try? viewContext.fetch(mainRequest)) ?? []
 
-        let flights: [FlightEntity]
-        do {
-            flights = try viewContext.fetch(request)
-        } catch {
-            return NDInsightsData(
-                flightStatistics: stats,
-                monthlyActivity: [],
-                dailyActivity: [],
-                fleetHours: [],
-                pfRatioByMonth: [],
-                monthlyNight: [],
-                topRoutes: [],
-                topRegistrations: [],
-                approachTypes: [],
-                tlStats: .empty,
-                careerStats: .empty,
-                frmsStrip: .empty,
-                projectedFRMS: .empty,
-                frmsRolling: .empty
-            )
+        // 2. FRMS historical flights — 730 days back (feeds both rolling and projected)
+        let histStart = Calendar.current.date(byAdding: .day, value: -730, to: today) ?? today
+        let histRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+        histRequest.predicate = NSPredicate(
+            format: "date >= %@ AND date <= %@",
+            histStart as NSDate, today as NSDate
+        )
+        histRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+        let histEntities = (try? viewContext.fetch(histRequest)) ?? []
+
+        // 3. FRMS future rostered flights
+        let futureRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+        futureRequest.predicate = NSPredicate(
+            format: "date > %@ AND scheduledDeparture != %@ AND scheduledDeparture != nil AND (outTime == %@ OR outTime == nil)",
+            today as NSDate, "", ""
+        )
+        futureRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+        let futureEntities = (try? viewContext.fetch(futureRequest)) ?? []
+
+        // FRMS config
+        let config: FRMSConfiguration
+        if let data = UserDefaults.standard.data(forKey: "FRMSConfiguration"),
+           let decoded = try? JSONDecoder().decode(FRMSConfiguration.self, from: data) {
+            config = decoded
+        } else {
+            config = FRMSConfiguration(fleet: .a320B737, homeBase: "YSSY")
         }
 
-        return NDInsightsData(
-            flightStatistics: stats,
-            monthlyActivity: computeMonthlyActivity(flights),
-            dailyActivity: computeDailyActivity(flights),
-            fleetHours: computeFleetHours(flights),
-            pfRatioByMonth: computePFRatioByMonth(flights),
-            monthlyNight: computeMonthlyNight(flights),
-            topRoutes: computeTopRoutes(flights),
-            topRegistrations: computeTopRegistrations(flights),
-            approachTypes: computeApproachTypes(flights),
-            tlStats: computeTLStats(flights),
-            careerStats: computeCareerStats(flights),
-            frmsStrip: computeFRMSStrip(flights),
-            projectedFRMS: computeProjectedFRMS(),
-            frmsRolling: computeFRMSRolling()
+        return InsightsRawData(
+            mainFlights:       mainEntities.map(FlightSnapshot.init),
+            frmsHistFlights:   histEntities.map(FlightSnapshot.init),
+            frmsFutureFlights: futureEntities.map(FlightSnapshot.init),
+            frmsLimits:        FRMSLimitsSnapshot(config)
         )
     }
 
-    // MARK: - Private helpers
+    // MARK: - Phase 2: Compute (nonisolated — runs off main thread)
 
-    private func hrs(_ s: String?) -> Double { Double(s ?? "0") ?? 0 }
+    /// Pure computation from pre-fetched snapshots. Safe to call from Task.detached.
+    static nonisolated func computeInsightsData(from raw: InsightsRawData) -> NDInsightsData {
+        let flights = raw.mainFlights
+        return NDInsightsData(
+            flightStatistics: computeFlightStatistics(flights),
+            monthlyActivity:  computeMonthlyActivity(flights),
+            dailyActivity:    computeDailyActivity(flights),
+            fleetHours:       computeFleetHours(flights),
+            pfRatioByMonth:   computePFRatioByMonth(flights),
+            monthlyNight:     computeMonthlyNight(flights),
+            topRoutes:        computeTopRoutes(flights),
+            topRegistrations: computeTopRegistrations(flights),
+            approachTypes:    computeApproachTypes(flights),
+            tlStats:          computeTLStats(flights),
+            careerStats:      computeCareerStats(flights),
+            frmsStrip:        computeFRMSStrip(flights, limits: raw.frmsLimits),
+            projectedFRMS:    computeProjectedFRMS(hist: raw.frmsHistFlights, future: raw.frmsFutureFlights, limits: raw.frmsLimits),
+            frmsRolling:      computeFRMSRolling(hist: raw.frmsHistFlights, future: raw.frmsFutureFlights, limits: raw.frmsLimits)
+        )
+    }
 
-    /// True when the entity is a Sp/Ins-only flight (simTime == spInsTime > 0)
-    private func isSpInsOnly(_ f: FlightEntity) -> Bool {
+    // MARK: - Private helpers (nonisolated static)
+
+    private static nonisolated func hrs(_ s: String?) -> Double { Double(s ?? "0") ?? 0 }
+
+    /// True when the snapshot is a Sp/Ins-only flight (simTime == spInsTime > 0)
+    private static nonisolated func isSpInsOnly(_ f: FlightSnapshot) -> Bool {
         let spVal = hrs(f.spInsTime)
         guard spVal > 0 else { return false }
         return abs(hrs(f.simTime) - spVal) < 0.01
     }
 
-    private func monthStart(for date: Date) -> Date {
+    private static nonisolated func monthStart(for date: Date) -> Date {
         let cal = Calendar.current
         return cal.date(from: cal.dateComponents([.year, .month], from: date)) ?? date
     }
 
-    // MARK: - Compute methods
+    // MARK: - Compute methods (static nonisolated)
 
-    private func computeMonthlyActivity(_ flights: [FlightEntity]) -> [NDMonthlyActivity] {
+    private static nonisolated func computeMonthlyActivity(_ flights: [FlightSnapshot]) -> [NDMonthlyActivity] {
         var block: [Date: Double] = [:]
         var sim: [Date: Double] = [:]
         var night: [Date: Double] = [:]
@@ -128,7 +267,7 @@ extension FlightDatabaseService {
         }
     }
 
-    private func computeDailyActivity(_ flights: [FlightEntity]) -> [NDDailyActivity] {
+    private static nonisolated func computeDailyActivity(_ flights: [FlightSnapshot]) -> [NDDailyActivity] {
         let cal = Calendar.current
         let now = Date()
         guard let cutoff = cal.date(byAdding: .day, value: -35, to: now) else { return [] }
@@ -149,7 +288,7 @@ extension FlightDatabaseService {
         }
     }
 
-    private func computeFleetHours(_ flights: [FlightEntity]) -> [NDFleetHours] {
+    private static nonisolated func computeFleetHours(_ flights: [FlightSnapshot]) -> [NDFleetHours] {
         var hours: [String: Double] = [:]
         var sectors: [String: Int] = [:]
 
@@ -164,7 +303,7 @@ extension FlightDatabaseService {
             .sorted { $0.hours > $1.hours }
     }
 
-    private func computePFRatioByMonth(_ flights: [FlightEntity]) -> [NDMonthlyPFRatio] {
+    private static nonisolated func computePFRatioByMonth(_ flights: [FlightSnapshot]) -> [NDMonthlyPFRatio] {
         var pf: [Date: Int] = [:]
         var total: [Date: Int] = [:]
 
@@ -184,7 +323,7 @@ extension FlightDatabaseService {
         }
     }
 
-    private func computeMonthlyNight(_ flights: [FlightEntity]) -> [NDMonthlyNight] {
+    private static nonisolated func computeMonthlyNight(_ flights: [FlightSnapshot]) -> [NDMonthlyNight] {
         var night: [Date: Double] = [:]
         for f in flights {
             guard let date = f.date else { continue }
@@ -193,7 +332,7 @@ extension FlightDatabaseService {
         return night.keys.sorted().map { NDMonthlyNight(month: $0, nightHours: night[$0] ?? 0) }
     }
 
-    private func computeTopRoutes(_ flights: [FlightEntity]) -> [NDRouteFrequency] {
+    private static nonisolated func computeTopRoutes(_ flights: [FlightSnapshot]) -> [NDRouteFrequency] {
         var counts: [String: (from: String, to: String, n: Int)] = [:]
         for f in flights {
             let from = f.fromAirport ?? ""; let to = f.toAirport ?? ""
@@ -205,7 +344,7 @@ extension FlightDatabaseService {
             .map { NDRouteFrequency(from: $0.from, to: $0.to, sectors: $0.n) }
     }
 
-    private func computeTopRegistrations(_ flights: [FlightEntity]) -> [NDRegistrationHours] {
+    private static nonisolated func computeTopRegistrations(_ flights: [FlightSnapshot]) -> [NDRegistrationHours] {
         var data: [String: (reg: String, type: String, hours: Double, sectors: Int)] = [:]
         for f in flights {
             let reg = f.aircraftReg ?? ""; guard !reg.isEmpty else { continue }
@@ -216,7 +355,7 @@ extension FlightDatabaseService {
             .map { NDRegistrationHours(registration: $0.reg, aircraftType: $0.type, hours: $0.hours, sectors: $0.sectors) }
     }
 
-    private func computeApproachTypes(_ flights: [FlightEntity]) -> [NDApproachTypeStat] {
+    private static nonisolated func computeApproachTypes(_ flights: [FlightSnapshot]) -> [NDApproachTypeStat] {
         var aiii = 0, ils = 0, rnp = 0, gls = 0, npa = 0, total = 0
         for f in flights {
             guard (f.dayLandings + f.nightLandings) > 0 else { continue }
@@ -242,7 +381,7 @@ extension FlightDatabaseService {
             .sorted { $0.count > $1.count }
     }
 
-    private func computeTLStats(_ flights: [FlightEntity]) -> NDTakeoffLandingStats {
+    private static nonisolated func computeTLStats(_ flights: [FlightSnapshot]) -> NDTakeoffLandingStats {
         var dTO = 0, nTO = 0, dLDG = 0, nLDG = 0
         for f in flights {
             dTO  += Int(f.dayTakeoffs);  nTO  += Int(f.nightTakeoffs)
@@ -251,7 +390,7 @@ extension FlightDatabaseService {
         return NDTakeoffLandingStats(dayTakeoffs: dTO, nightTakeoffs: nTO, dayLandings: dLDG, nightLandings: nLDG)
     }
 
-    private func computeCareerStats(_ flights: [FlightEntity]) -> NDCareerStats {
+    private static nonisolated func computeCareerStats(_ flights: [FlightSnapshot]) -> NDCareerStats {
         let block = flights.reduce(0.0) { $0 + hrs($1.blockTime) }
         let sim   = flights.reduce(0.0) { $0 + (isSpInsOnly($1) ? 0 : hrs($1.simTime)) }
         let aircraftTypes = Set(flights.compactMap { $0.aircraftType }.filter { !$0.isEmpty })
@@ -263,6 +402,54 @@ extension FlightDatabaseService {
         )
     }
 
+    // MARK: - Flight Statistics (static, from snapshots)
+
+    private static nonisolated func computeFlightStatistics(_ flights: [FlightSnapshot]) -> FlightStatistics {
+        var totalBlock = 0.0, totalP1 = 0.0, totalP1US = 0.0, totalP2 = 0.0
+        var totalNight = 0.0, totalInstrument = 0.0, totalSIM = 0.0
+        var totalSpIns = 0.0, totalSpInsSim = 0.0, totalSpInsFlt = 0.0
+        var spInsFltCount = 0, spInsSimCount = 0, aiiiSectors = 0, pfSectors = 0
+
+        for f in flights {
+            totalBlock      += hrs(f.blockTime)
+            totalP1         += hrs(f.p1Time)
+            totalP1US       += hrs(f.p1usTime)
+            totalP2         += hrs(f.p2Time)
+            totalNight      += hrs(f.nightTime)
+            totalInstrument += hrs(f.instrumentTime)
+            totalSIM        += isSpInsOnly(f) ? 0 : hrs(f.simTime)
+            let spVal = hrs(f.spInsTime)
+            totalSpIns += spVal
+            if isSpInsOnly(f) {
+                totalSpInsSim += spVal
+                if spVal > 0 { spInsSimCount += 1 }
+            } else if spVal > 0 {
+                totalSpInsFlt += spVal
+                spInsFltCount += 1
+            }
+            if f.isAIII        { aiiiSectors += 1 }
+            if f.isPilotFlying { pfSectors   += 1 }
+        }
+
+        return FlightStatistics(
+            totalSectors:       flights.count,
+            totalBlockTime:     totalBlock,
+            totalP1Time:        totalP1,
+            totalP1USTime:      totalP1US,
+            totalP2Time:        totalP2,
+            totalNightTime:     totalNight,
+            totalInstrumentTime: totalInstrument,
+            totalSIMTime:       totalSIM,
+            totalSpInsTime:     totalSpIns,
+            totalSpInsSimTime:  totalSpInsSim,
+            totalSpInsFltTime:  totalSpInsFlt,
+            spInsFltCount:      spInsFltCount,
+            spInsSimCount:      spInsSimCount,
+            aiiiSectors:        aiiiSectors,
+            pfSectors:          pfSectors
+        )
+    }
+
     // MARK: - FRMS Rolling Time Series
 
     /// Builds per-day rolling totals for each FRMS limit over the past 90 days
@@ -270,45 +457,25 @@ extension FlightDatabaseService {
     ///
     /// Past points use actual completed flights; future points use STD/STA scheduled times.
     /// Each point's `total` is the rolling sum for its window (e.g. 28 days) ending on that day.
-    func computeFRMSRolling() -> NDFRMSRollingData {
+    private static nonisolated func computeFRMSRolling(
+        hist: [FlightSnapshot],
+        future: [FlightSnapshot],
+        limits: FRMSLimitsSnapshot
+    ) -> NDFRMSRollingData {
 
-        // MARK: Config
-        let config: FRMSConfiguration
-        if let data = UserDefaults.standard.data(forKey: "FRMSConfiguration"),
-           let decoded = try? JSONDecoder().decode(FRMSConfiguration.self, from: data) {
-            config = decoded
-        } else {
-            config = FRMSConfiguration(fleet: .a320B737, homeBase: "YSSY")
-        }
-
-        let fleet       = config.fleet
-        let signOnMins  = config.signOnMinutesBeforeSTD
-        let signOffMins = config.signOffMinutesAfterIN
-        let periodDays  = fleet.flightTimePeriodDays
+        let fleet       = limits.fleetLabel
+        let signOnMins  = limits.signOnMins
+        let signOffMins = limits.signOffMins
+        let periodDays  = limits.periodDays
 
         let cal   = Calendar.current
         let today = cal.startOfDay(for: Date())
-
-        // MARK: Fetch actual flights — go back far enough to feed all rolling windows
-        // For the 365d chart we show seriesStart = today-365, and each point on that series
-        // needs the full preceding 365-day window, so we must fetch back 365+365 = 730 days.
-        guard let historyStart = cal.date(byAdding: .day, value: -730, to: today) else { return .empty }
-
-        let histRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        histRequest.predicate = NSPredicate(
-            format: "date >= %@ AND date <= %@",
-            historyStart as NSDate, today as NSDate
-        )
-        histRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
-
-        let histEntities: [FlightEntity]
-        do { histEntities = try viewContext.fetch(histRequest) } catch { return .empty }
 
         // Build [Date: (flightHours, dutyHours)] per calendar day from actual flights
         var actualFlight: [Date: Double] = [:]
         var actualDuty:   [Date: Double] = [:]
 
-        for entity in histEntities {
+        for entity in hist {
             guard let entityDate = entity.date else { continue }
             let day = cal.startOfDay(for: entityDate)
             let bt  = hrs(entity.blockTime)
@@ -320,17 +487,6 @@ extension FlightDatabaseService {
                 actualDuty[day, default: 0] += fh + Double(signOnMins + signOffMins) / 60.0
             }
         }
-
-        // MARK: Fetch future rostered flights
-        let futureRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        futureRequest.predicate = NSPredicate(
-            format: "date > %@ AND scheduledDeparture != %@ AND scheduledDeparture != nil AND (outTime == %@ OR outTime == nil)",
-            today as NSDate, "", ""
-        )
-        futureRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
-
-        let futureEntities: [FlightEntity]
-        do { futureEntities = try viewContext.fetch(futureRequest) } catch { return .empty }
 
         // Parse "HH:MM" or "HHMM" → minutes from midnight
         func hhmm(_ s: String?) -> Int? {
@@ -352,7 +508,7 @@ extension FlightDatabaseService {
         var futureFirstSTD: [Date: Int]  = [:]
         var futureLastSTA:  [Date: Int]  = [:]
 
-        for entity in futureEntities {
+        for entity in future {
             guard let entityDate = entity.date,
                   let std = entity.scheduledDeparture, !std.isEmpty,
                   let sta = entity.scheduledArrival, !sta.isEmpty,
@@ -457,12 +613,16 @@ extension FlightDatabaseService {
             )
         }
 
-        let warnFrac = config.showWarningsAtPercentage
+        let warnFrac  = limits.warnFrac
+        let max28d    = limits.maxFlight28d
+        let max365d   = limits.maxFlight365d
+        let maxDuty7  = limits.maxDuty7d
+        let limit14   = limits.maxDuty14dInitial ?? limits.maxDuty14d
 
         let flight28 = buildSeries(
             label: "\(periodDays)-Day Flight",
-            limit: fleet.maxFlightTime28Days,
-            warnAt: fleet.maxFlightTime28Days * warnFrac,
+            limit: max28d,
+            warnAt: max28d * warnFrac,
             windowDays: periodDays,
             actualDict: actualFlight,
             futureDict: futureFlight
@@ -470,8 +630,8 @@ extension FlightDatabaseService {
 
         let flight365 = buildSeries(
             label: "365-Day Flight",
-            limit: fleet.maxFlightTime365Days,
-            warnAt: fleet.maxFlightTime365Days * warnFrac,
+            limit: max365d,
+            warnAt: max365d * warnFrac,
             windowDays: 365,
             actualDict: actualFlight,
             futureDict: futureFlight
@@ -479,14 +639,13 @@ extension FlightDatabaseService {
 
         let duty7 = buildSeries(
             label: "7-Day Duty",
-            limit: fleet.maxDutyTime7Days,
-            warnAt: fleet.maxDutyTime7Days * warnFrac,
+            limit: maxDuty7,
+            warnAt: maxDuty7 * warnFrac,
             windowDays: 7,
             actualDict: actualDuty,
             futureDict: futureDuty
         )
 
-        let limit14 = fleet.maxDutyTime14DaysInitial ?? fleet.maxDutyTime14Days
         let duty14 = buildSeries(
             label: "14-Day Duty",
             limit: limit14,
@@ -497,7 +656,7 @@ extension FlightDatabaseService {
         )
 
         var flight7: NDFRMSRollingSeries? = nil
-        if let max7d = fleet.maxFlightTime7Days {
+        if let max7d = limits.maxFlight7d {
             flight7 = buildSeries(
                 label: "7-Day Flight",
                 limit: max7d,
@@ -526,26 +685,18 @@ extension FlightDatabaseService {
     ///
     /// We report max(rolling total) across all D — the highest your total will reach
     /// if all rostered duties are flown. This is what gets overlaid on the gauge bar.
-    func computeProjectedFRMS() -> NDProjectedFRMSData {
+    private static nonisolated func computeProjectedFRMS(
+        hist: [FlightSnapshot],
+        future: [FlightSnapshot],
+        limits: FRMSLimitsSnapshot
+    ) -> NDProjectedFRMSData {
 
-        // MARK: Config
-        let config: FRMSConfiguration
-        if let data = UserDefaults.standard.data(forKey: "FRMSConfiguration"),
-           let decoded = try? JSONDecoder().decode(FRMSConfiguration.self, from: data) {
-            config = decoded
-        } else {
-            config = FRMSConfiguration(fleet: .a320B737, homeBase: "YSSY")
-        }
-
-        let signOnMins  = config.signOnMinutesBeforeSTD
-        let signOffMins = config.signOffMinutesAfterIN
-        let fleet       = config.fleet
-        let periodDays  = fleet.flightTimePeriodDays   // 28 (SH) or 30 (LH)
+        let signOnMins  = limits.signOnMins
+        let signOffMins = limits.signOffMins
+        let periodDays  = limits.periodDays
 
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-
-        // MARK: Helpers
 
         // Parse "HH:MM" or "HHMM" → minutes from midnight
         func hhmm(_ s: String?) -> Int? {
@@ -561,36 +712,15 @@ extension FlightDatabaseService {
             return Double(diff) / 60.0
         }
 
-        // MARK: Fetch historical actual flights (up to 365 days back)
-        // Build [Date: (flightHours, dutyHours)] keyed by start-of-day
-        // We need actual data going back (periodDays - 1) days before the last future duty.
-        // Using 365 days covers all windows.
-
-        let historicalRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+        // Aggregate actual flight hours per calendar day (use hist snapshots, filter to ≤365d back)
         guard let lookbackStart = cal.date(byAdding: .day, value: -365, to: today) else { return .empty }
-        historicalRequest.predicate = NSPredicate(
-            format: "date >= %@ AND date <= %@ AND (blockTime != %@ OR outTime != %@)",
-            lookbackStart as NSDate, today as NSDate, "", ""
-        )
-        historicalRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
-
-        let historicalEntities: [FlightEntity]
-        do {
-            historicalEntities = try viewContext.fetch(historicalRequest)
-        } catch {
-            return .empty
-        }
-
-        // Aggregate actual flight hours per calendar day.
-        // For duty, track the span per day using first STD (duty start anchor) and last actual IN
-        // (duty end anchor), matching the FRMS calculation: duty = (firstSTD - signOn) → (lastIN + signOff).
-        // Multi-sector days receive only one set of sign-on/off margins.
         var actualFlightByDay: [Date: Double] = [:]
         var actualDutySpanByDay: [Date: (firstSTD: Int, lastIN: Int)] = [:]
 
-        for entity in historicalEntities {
-            guard let entityDate = entity.date else { continue }
+        for entity in hist {
+            guard let entityDate = entity.date, entityDate >= lookbackStart else { continue }
             let day = cal.startOfDay(for: entityDate)
+            guard let bt = entity.blockTime, !bt.isEmpty else { continue }
             actualFlightByDay[day, default: 0] += hrs(entity.blockTime)
 
             // Duty start: STD (always used as sign-on anchor per FRMS rules)
@@ -616,22 +746,7 @@ extension FlightDatabaseService {
             actualDutyByDay[day] = Double(rawMins + signOnMins + signOffMins) / 60.0
         }
 
-        // MARK: Fetch future rostered flights (no OUT time, STD set, date > today)
-        let futureRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        futureRequest.predicate = NSPredicate(
-            format: "date > %@ AND scheduledDeparture != %@ AND scheduledDeparture != nil AND (outTime == %@ OR outTime == nil)",
-            today as NSDate, "", ""
-        )
-        futureRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
-
-        let futureEntities: [FlightEntity]
-        do {
-            futureEntities = try viewContext.fetch(futureRequest)
-        } catch {
-            return .empty
-        }
-
-        guard !futureEntities.isEmpty else { return .empty }
+        guard !future.isEmpty else { return .empty }
 
         // Group future sectors by day
         struct FutureDayData {
@@ -649,7 +764,7 @@ extension FlightDatabaseService {
         // Store multiple duty segments per calendar day: [(firstSTD, lastSTA, flightHours)]
         var futureByDay: [Date: [(firstSTD: Int, lastSTA: Int, flight: Double)]] = [:]
 
-        for entity in futureEntities {
+        for entity in future {
             guard let entityDate = entity.date,
                   let std = entity.scheduledDeparture, !std.isEmpty,
                   let sta = entity.scheduledArrival, !sta.isEmpty,
@@ -742,7 +857,7 @@ extension FlightDatabaseService {
         var D = tomorrow
         while D <= lastRosteredDay {
             // Flight 7-day window ending on D (LH fleet only)
-            if fleet.maxFlightTime7Days != nil {
+            if limits.maxFlight7d != nil {
                 let ws = cal.date(byAdding: .day, value: -6, to: D) ?? D
                 let rolling = actualFlightSum(windowStart: ws) + projectedFlightSum(windowStart: ws, throughDay: D)
                 peakFlight7d = max(peakFlight7d, rolling)
@@ -780,7 +895,7 @@ extension FlightDatabaseService {
         )
     }
 
-    private func computeFRMSStrip(_ flights: [FlightEntity]) -> NDFRMSStripData {
+    private static nonisolated func computeFRMSStrip(_ flights: [FlightSnapshot], limits: FRMSLimitsSnapshot) -> NDFRMSStripData {
         let cal = Calendar.current
         let now = Date()
         guard let ago7   = cal.date(byAdding: .day, value: -7,   to: now),
@@ -796,14 +911,6 @@ extension FlightDatabaseService {
             if date >= ago365 { h365 += total }
         }
 
-        let fleet: FRMSFleet
-        if let data   = UserDefaults.standard.data(forKey: "FRMSConfiguration"),
-           let config = try? JSONDecoder().decode(FRMSConfiguration.self, from: data) {
-            fleet = config.fleet
-        } else {
-            fleet = .a320B737
-        }
-
-        return NDFRMSStripData(hours7d: h7, hours28d: h28, hours365d: h365, fleet: fleet)
+        return NDFRMSStripData(hours7d: h7, hours28d: h28, hours365d: h365, fleet: limits.fleetLabel)
     }
 }

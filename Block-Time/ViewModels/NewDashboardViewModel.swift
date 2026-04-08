@@ -11,7 +11,7 @@ import SwiftUI
 
 // MARK: - Data Models
 
-struct NDMonthlyActivity: Identifiable {
+struct NDMonthlyActivity: Identifiable, Sendable {
     let id = UUID()
     let month: Date
     let blockHours: Double
@@ -21,20 +21,20 @@ struct NDMonthlyActivity: Identifiable {
     var totalHours: Double { blockHours + simHours }
 }
 
-struct NDMonthlyPFRatio: Identifiable {
+struct NDMonthlyPFRatio: Identifiable, Sendable {
     let id = UUID()
     let month: Date
     let pfRatio: Double        // 0.0 – 1.0
     let totalSectors: Int
 }
 
-struct NDMonthlyNight: Identifiable {
+struct NDMonthlyNight: Identifiable, Sendable {
     let id = UUID()
     let month: Date
     let nightHours: Double
 }
 
-struct NDDailyActivity: Identifiable {
+struct NDDailyActivity: Identifiable, Sendable {
     let id = UUID()
     let day: Date           // start of day (midnight)
     let blockHours: Double
@@ -42,14 +42,14 @@ struct NDDailyActivity: Identifiable {
     var totalHours: Double { blockHours + simHours }
 }
 
-struct NDFleetHours: Identifiable {
+struct NDFleetHours: Identifiable, Sendable {
     let id = UUID()
     let aircraftType: String
     let hours: Double
     let sectors: Int
 }
 
-struct NDRouteFrequency: Identifiable {
+struct NDRouteFrequency: Identifiable, Sendable {
     let id = UUID()
     let from: String
     let to: String
@@ -57,7 +57,7 @@ struct NDRouteFrequency: Identifiable {
     var routeString: String { "\(from) → \(to)" }
 }
 
-struct NDRegistrationHours: Identifiable {
+struct NDRegistrationHours: Identifiable, Sendable {
     let id = UUID()
     let registration: String
     let aircraftType: String
@@ -65,7 +65,7 @@ struct NDRegistrationHours: Identifiable {
     let sectors: Int
 }
 
-struct NDApproachTypeStat: Identifiable {
+struct NDApproachTypeStat: Identifiable, Sendable {
     let id = UUID()
     let typeName: String
     let count: Int
@@ -73,7 +73,7 @@ struct NDApproachTypeStat: Identifiable {
     let color: Color
 }
 
-struct NDTakeoffLandingStats {
+struct NDTakeoffLandingStats: Sendable {
     let dayTakeoffs: Int
     let nightTakeoffs: Int
     let dayLandings: Int
@@ -84,23 +84,23 @@ struct NDTakeoffLandingStats {
     var nightTakeoffPct: Double { totalTakeoffs > 0 ? Double(nightTakeoffs) / Double(totalTakeoffs) : 0 }
     var nightLandingPct: Double { totalLandings > 0 ? Double(nightLandings) / Double(totalLandings) : 0 }
 
-    static let empty = NDTakeoffLandingStats(dayTakeoffs: 0, nightTakeoffs: 0, dayLandings: 0, nightLandings: 0)
+    nonisolated static let empty = NDTakeoffLandingStats(dayTakeoffs: 0, nightTakeoffs: 0, dayLandings: 0, nightLandings: 0)
 }
 
-struct NDCareerStats {
+struct NDCareerStats: Sendable {
     let totalHours: Double
     let totalSectors: Int
     let totalAircraftTypes: Int
     let firstFlightDate: Date?
 
-    static let empty = NDCareerStats(totalHours: 0, totalSectors: 0, totalAircraftTypes: 0, firstFlightDate: nil)
+    nonisolated static let empty = NDCareerStats(totalHours: 0, totalSectors: 0, totalAircraftTypes: 0, firstFlightDate: nil)
 
     var yearsOfData: Double {
         guard let first = firstFlightDate else { return 0 }
         return Date().timeIntervalSince(first) / (365.25 * 24 * 3600)
     }
 
-    static let milestones: [Double] = [500, 1000, 2500, 5000, 10000, 20000]
+    nonisolated static let milestones: [Double] = [500, 1000, 2500, 5000, 10000, 20000]
 
     var nextMilestone: Double? { NDCareerStats.milestones.first { $0 > totalHours } }
     var previousMilestone: Double { NDCareerStats.milestones.filter { $0 <= totalHours }.last ?? 0 }
@@ -116,7 +116,7 @@ struct NDCareerStats {
 // MARK: - FRMS Rolling Time Series
 
 /// One data point in a rolling FRMS time-series chart.
-struct NDFRMSRollingPoint: Identifiable {
+struct NDFRMSRollingPoint: Identifiable, Sendable {
     let id = UUID()
     let date: Date          // The day this rolling total is computed for
     let total: Double       // Rolling total ending on this day (hours)
@@ -124,7 +124,7 @@ struct NDFRMSRollingPoint: Identifiable {
 }
 
 /// A single FRMS limit expressed as a labelled time series.
-struct NDFRMSRollingSeries {
+struct NDFRMSRollingSeries: Sendable {
     let limitLabel: String           // e.g. "28-Day Flight"
     let limit: Double                // Hard cap (hours)
     let warnAt: Double               // Warning threshold
@@ -135,14 +135,14 @@ struct NDFRMSRollingSeries {
 }
 
 /// All rolling series for the FRMS limits card charts.
-struct NDFRMSRollingData {
+struct NDFRMSRollingData: Sendable {
     let flight28d:  NDFRMSRollingSeries
     let flight365d: NDFRMSRollingSeries
     let duty7d:     NDFRMSRollingSeries
     let duty14d:    NDFRMSRollingSeries
     let flight7d:   NDFRMSRollingSeries? // LH fleet only
 
-    static let empty: NDFRMSRollingData = {
+    nonisolated static let empty: NDFRMSRollingData = {
         let now = Date()
         func emptySeries(_ label: String, limit: Double, warn: Double) -> NDFRMSRollingSeries {
             NDFRMSRollingSeries(limitLabel: label, limit: limit, warnAt: warn, points: [],
@@ -158,7 +158,7 @@ struct NDFRMSRollingData {
     }()
 }
 
-struct NDProjectedFRMSData {
+struct NDProjectedFRMSData: Sendable {
     /// Peak rolling total for each limit across all future duty days.
     /// e.g. flightHours28d = max over all future duty days D of:
     ///      (actual block hours in [D-27, today]) + (projected block hours in [D-27, D])
@@ -169,13 +169,13 @@ struct NDProjectedFRMSData {
     let dutyHours7d: Double
     let dutyHours14d: Double
 
-    static let empty = NDProjectedFRMSData(
+    nonisolated static let empty = NDProjectedFRMSData(
         flightHours7d: 0, flightHours28d: 0, flightHours365d: 0,
         dutyHours7d: 0, dutyHours14d: 0
     )
 }
 
-struct NDFRMSStripData {
+struct NDFRMSStripData: Sendable {
     let hours7d: Double
     let hours28d: Double
     let hours365d: Double
@@ -195,7 +195,7 @@ struct NDFRMSStripData {
         return .green
     }
 
-    static let empty = NDFRMSStripData(hours7d: 0, hours28d: 0, hours365d: 0, fleet: .a320B737)
+    nonisolated static let empty = NDFRMSStripData(hours7d: 0, hours28d: 0, hours365d: 0, fleet: .a320B737)
 }
 
 // MARK: - ViewModel
@@ -222,7 +222,11 @@ final class NewDashboardViewModel {
 
     func load() async {
         isLoading = true
-        let data = FlightDatabaseService.shared.getInsightsData()
+        // Fetch on main thread (Core Data requirement), then compute off main thread.
+        let raw = FlightDatabaseService.shared.fetchInsightsRawData()
+        let data = await Task.detached(priority: .userInitiated) {
+            FlightDatabaseService.computeInsightsData(from: raw)
+        }.value
         monthlyActivity  = data.monthlyActivity
         dailyActivity    = data.dailyActivity
         fleetHours       = data.fleetHours
