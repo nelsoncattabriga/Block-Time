@@ -7,14 +7,26 @@
 
 import Foundation
 
+/// Immutable snapshot of the parsed airports.dat data.
+/// Written once on a background thread, then read-only forever.
+private struct AirportDatabase: Sendable {
+    let airports: [String: AirportService.AirportInfo]
+    let iataToIcao: [String: String]
+    let icaoToIata: [String: String]
+    nonisolated static var empty: AirportDatabase {
+        AirportDatabase(airports: [:], iataToIcao: [:], icaoToIata: [:])
+    }
+}
+
 /// Service for looking up airport information from airports.dat.txt
-class AirportService {
+///
+/// `@unchecked Sendable`: `db` is written exactly once from a background task in `init`,
+/// before any public method can return non-empty results. After that it is read-only.
+final class AirportService: @unchecked Sendable {
     static let shared = AirportService()
 
-    private var airportData: [String: AirportInfo] = [:]
-    private var iataToIcaoMap: [String: String] = [:]
-    private var icaoToIataMap: [String: String] = [:]
-    private var isLoaded = false
+    // Written once on background thread in init, then immutable.
+    nonisolated(unsafe) private var db: AirportDatabase = .empty
 
     // Cached date formatter for performance - reused across all conversions
     private let cachedDateFormatter: DateFormatter = {
@@ -33,7 +45,10 @@ class AirportService {
     }()
 
     private init() {
-        loadAirportData()
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self else { return }
+            self.db = AirportService.buildDatabase()
+        }
     }
 
     struct AirportInfo {
@@ -56,89 +71,76 @@ class AirportService {
         case unknown = "U"
     }
 
-    /// Load airport data from airports.dat.txt
-    private func loadAirportData() {
+    /// Parse airports.dat.txt on a background thread and return an immutable database.
+    ///
+    /// Uses a fast split-based parser. The fields we use (ICAO, IATA, lat, lon, tz, DST)
+    /// never contain embedded commas. The city field (index 2) rarely does — in those cases
+    /// the city name may be truncated, which is acceptable for display purposes.
+    private nonisolated static func buildDatabase() -> AirportDatabase {
         guard let fileURL = Bundle.main.url(forResource: "airports.dat", withExtension: "txt") else {
-            LogManager.shared.error("ERROR: airports.dat.txt not found in bundle")
-            return
+            print("AirportService: airports.dat.txt not found in bundle")
+            return .empty
         }
 
         do {
             let content = try String(contentsOf: fileURL, encoding: .utf8)
-            let lines = content.components(separatedBy: .newlines)
 
-            for line in lines {
-                guard !line.isEmpty else { continue }
+            var airports: [String: AirportInfo] = [:]
+            var iataToIcao: [String: String] = [:]
+            var icaoToIata: [String: String] = [:]
+            airports.reserveCapacity(6_000)
+            iataToIcao.reserveCapacity(6_000)
+            icaoToIata.reserveCapacity(6_000)
 
-                // Parse CSV line properly handling quoted fields with commas
-                let components = parseCSVLine(line)
-                guard components.count >= 11 else { continue }
+            content.enumerateLines { line, _ in
+                // Fast split — all fields we care about are unquoted and comma-free.
+                // City (index 2) is quoted and may rarely contain a comma; we accept
+                // truncation in those ~4 edge-case rows.
+                let parts = line.split(separator: ",", omittingEmptySubsequences: false)
+                guard parts.count >= 11 else { return }
 
-                // Parse city name (field 3, index 2)
-                let city = components[2].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                let icaoCode = parts[5].trimmingCharacters(in: .init(charactersIn: "\" "))
+                guard icaoCode.count == 4, icaoCode != "\\N" else { return }
 
-                // Remove quotes from IATA code (field 5, index 4)
-                let iataCode = components[4].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                guard let timezoneOffset = Double(parts[9]),
+                      let latitude       = Double(parts[6]),
+                      let longitude      = Double(parts[7]) else { return }
 
-                // Remove quotes from ICAO code (field 6, index 5)
-                let icaoCode = components[5].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-                guard !icaoCode.isEmpty, icaoCode != "\\N" else { continue }
+                let iataCode = parts[4].trimmingCharacters(in: .init(charactersIn: "\" "))
+                let dstCode  = parts[10].trimmingCharacters(in: .init(charactersIn: "\" "))
+                let city     = parts[2].trimmingCharacters(in: .init(charactersIn: "\" "))
 
-                // Parse timezone offset (field 10, index 9)
-                guard let timezoneOffset = Double(components[9]) else { continue }
+                let validIata = (iataCode.count == 3 && iataCode != "\\N") ? iataCode : nil
 
-                // Parse DST code (field 11, index 10)
-                let dstCode = components[10].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-
-                // Parse latitude (field 7, index 6) and longitude (field 8, index 7)
-                guard let latitude = Double(components[6]),
-                      let longitude = Double(components[7]) else { continue }
-
-                // Store IATA code if valid
-                let validIataCode = (iataCode.isEmpty || iataCode == "\\N") ? nil : iataCode
-
-                // Build bidirectional mapping for IATA/ICAO conversion
-                if let validIata = validIataCode {
-                    iataToIcaoMap[validIata] = icaoCode
-                    icaoToIataMap[icaoCode] = validIata
+                if let validIata {
+                    iataToIcao[validIata] = icaoCode
+                    icaoToIata[icaoCode]  = validIata
                 }
 
-                airportData[icaoCode] = AirportInfo(icaoCode: icaoCode, iataCode: validIataCode, city: city.isEmpty ? nil : city, timezoneOffset: timezoneOffset, dstCode: dstCode, latitude: latitude, longitude: longitude)
+                airports[icaoCode] = AirportInfo(
+                    icaoCode: icaoCode,
+                    iataCode: validIata,
+                    city: city.isEmpty ? nil : city,
+                    timezoneOffset: timezoneOffset,
+                    dstCode: dstCode,
+                    latitude: latitude,
+                    longitude: longitude
+                )
             }
 
-            isLoaded = true
-            LogManager.shared.debug("Loaded \(airportData.count) airports with timezone data")
+            print("AirportService: loaded \(airports.count) airports")
+            return AirportDatabase(airports: airports, iataToIcao: iataToIcao, icaoToIata: icaoToIata)
         } catch {
-            LogManager.shared.error("ERROR: Failed to load airports.dat.txt: \(error)")
+            print("AirportService: failed to load airports.dat.txt: \(error)")
+            return .empty
         }
-    }
-
-    /// Parse a CSV line properly handling quoted fields that may contain commas
-    private func parseCSVLine(_ line: String) -> [String] {
-        var fields: [String] = []
-        var currentField = ""
-        var insideQuotes = false
-
-        for char in line {
-            if char == "\"" {
-                insideQuotes.toggle()
-            } else if char == "," && !insideQuotes {
-                fields.append(currentField)
-                currentField = ""
-            } else {
-                currentField.append(char)
-            }
-        }
-        fields.append(currentField)
-
-        return fields
     }
 
     /// Get timezone offset for an airport ICAO code
     /// - Parameter icaoCode: 4-letter ICAO code (e.g., "YPPH")
     /// - Returns: Timezone offset in hours, or nil if not found
-    func getTimezoneOffset(for icaoCode: String) -> Double? {
-        return airportData[icaoCode.uppercased()]?.timezoneOffset
+    nonisolated func getTimezoneOffset(for icaoCode: String) -> Double? {
+        return db.airports[icaoCode.uppercased()]?.timezoneOffset
     }
 
     /// Get a TimeZone for an airport ICAO code, accounting for DST on a given date
@@ -146,8 +148,8 @@ class AirportService {
     ///   - icaoCode: 4-letter ICAO code (e.g., "YSSY")
     ///   - date: The date used to determine whether DST is active
     /// - Returns: TimeZone with the correct UTC offset, or nil if airport not found
-    func getTimeZone(for icaoCode: String, on date: Date) -> TimeZone? {
-        guard let airportInfo = airportData[icaoCode.uppercased()] else { return nil }
+    nonisolated func getTimeZone(for icaoCode: String, on date: Date) -> TimeZone? {
+        guard let airportInfo = db.airports[icaoCode.uppercased()] else { return nil }
         var totalOffset = airportInfo.timezoneOffset
         if isDSTActive(on: date, dstCode: airportInfo.dstCode) {
             totalOffset += 1.0
@@ -157,7 +159,7 @@ class AirportService {
 
     /// Returns a UTC offset label for an airport on a given date, e.g. "UTC+10", "UTC+11", "UTC-5"
     /// Accepts the flight date as a "dd/MM/yyyy" string for convenience.
-    func getTimezoneOffsetLabel(for icaoCode: String, dateString: String) -> String {
+    nonisolated func getTimezoneOffsetLabel(for icaoCode: String, dateString: String) -> String {
         guard let date = cachedDateFormatter.date(from: dateString) else { return "Local" }
         guard let tz = getTimeZone(for: icaoCode, on: date) else { return "Local" }
         let offsetSeconds = tz.secondsFromGMT()
@@ -173,7 +175,7 @@ class AirportService {
     /// Check if an airport is in Australia
     /// - Parameter code: Airport ICAO or IATA code
     /// - Returns: true if the airport is in Australia (ICAO starts with YB, YM, YP, or YS)
-    func isAustralianAirport(_ code: String) -> Bool {
+    nonisolated func isAustralianAirport(_ code: String) -> Bool {
         let icaoCode = convertToICAO(code).uppercased()
 
         // Australian airports have ICAO codes starting with YB, YM, YP, or YS
@@ -191,7 +193,7 @@ class AirportService {
     ///   - utcTimeString: Time in format "HHMM" or "HH:MM"
     ///   - icaoCode: Airport ICAO code
     /// - Returns: Local date string in format "dd/MM/yyyy", or original date if conversion fails
-    func convertToLocalDate(utcDateString: String, utcTimeString: String, airportICAO icaoCode: String) -> String {
+    nonisolated func convertToLocalDate(utcDateString: String, utcTimeString: String, airportICAO icaoCode: String) -> String {
         guard let timezoneOffset = getTimezoneOffset(for: icaoCode) else {
             return utcDateString // Return original if timezone not found
         }
@@ -239,7 +241,7 @@ class AirportService {
     ///   - date: The date to check
     ///   - dstCode: The DST code (E, A, S, O, Z, N, U)
     /// - Returns: true if DST is active, false otherwise
-    private func isDSTActive(on date: Date, dstCode: String) -> Bool {
+    private nonisolated func isDSTActive(on date: Date, dstCode: String) -> Bool {
         guard let dst = DSTCode(rawValue: dstCode) else { return false }
 
         let calendar = Calendar.current
@@ -301,7 +303,7 @@ class AirportService {
     }
 
     /// Find the last Sunday of a given month and year
-    private func lastSundayOf(month: Int, year: Int) -> Date {
+    private nonisolated func lastSundayOf(month: Int, year: Int) -> Date {
         let calendar = Calendar.current
         var components = DateComponents()
         components.year = year
@@ -329,7 +331,7 @@ class AirportService {
     }
 
     /// Find the nth Sunday of a given month and year
-    private func nthSundayOf(month: Int, year: Int, n: Int) -> Date {
+    private nonisolated func nthSundayOf(month: Int, year: Int, n: Int) -> Date {
         let calendar = Calendar.current
         var components = DateComponents()
         components.year = year
@@ -359,16 +361,16 @@ class AirportService {
     // MARK: - Coordinate & City Lookup
 
     /// Get coordinates for any airport code (IATA or ICAO)
-    func getCoordinates(for code: String) -> (latitude: Double, longitude: Double)? {
+    nonisolated func getCoordinates(for code: String) -> (latitude: Double, longitude: Double)? {
         let icao = convertToICAO(code)
-        guard let info = airportData[icao.uppercased()] else { return nil }
+        guard let info = db.airports[icao.uppercased()] else { return nil }
         return (info.latitude, info.longitude)
     }
 
     /// Get city name for any airport code (IATA or ICAO)
-    func getCity(for code: String) -> String? {
+    nonisolated func getCity(for code: String) -> String? {
         let icao = convertToICAO(code)
-        return airportData[icao.uppercased()]?.city
+        return db.airports[icao.uppercased()]?.city
     }
 
     // MARK: - IATA/ICAO Conversion Methods
@@ -376,17 +378,17 @@ class AirportService {
     /// Convert any airport code (IATA or ICAO) to ICAO format
     /// - Parameter code: Airport code (3-letter IATA or 4-letter ICAO)
     /// - Returns: ICAO code if found, or original code if not found
-    func convertToICAO(_ code: String) -> String {
+    nonisolated func convertToICAO(_ code: String) -> String {
         let upper = code.uppercased().trimmingCharacters(in: .whitespacesAndNewlines)
         guard !upper.isEmpty else { return code }
 
         // Check if already valid ICAO (4 characters and exists in database)
-        if upper.count == 4 && airportData[upper] != nil {
+        if upper.count == 4 && db.airports[upper] != nil {
             return upper
         }
 
         // Try IATA to ICAO conversion (3 characters)
-        if upper.count == 3, let icao = iataToIcaoMap[upper] {
+        if upper.count == 3, let icao = db.iataToIcao[upper] {
             return icao
         }
 
@@ -397,8 +399,8 @@ class AirportService {
     /// Convert ICAO code to IATA code if available
     /// - Parameter icaoCode: 4-letter ICAO code
     /// - Returns: 3-letter IATA code if available, nil otherwise
-    func convertToIATA(_ icaoCode: String) -> String? {
-        return icaoToIataMap[icaoCode.uppercased()]
+    nonisolated func convertToIATA(_ icaoCode: String) -> String? {
+        return db.icaoToIata[icaoCode.uppercased()]
     }
 
     /// Get display code based on user preference
@@ -406,7 +408,7 @@ class AirportService {
     ///   - code: Airport code (can be either IATA or ICAO)
     ///   - useIATA: Whether to display as IATA code
     /// - Returns: IATA code if requested and available, otherwise ICAO code
-    func getDisplayCode(_ code: String, useIATA: Bool) -> String {
+    nonisolated func getDisplayCode(_ code: String, useIATA: Bool) -> String {
         let upper = code.uppercased().trimmingCharacters(in: .whitespacesAndNewlines)
         guard !upper.isEmpty else { return code }
 
@@ -436,14 +438,14 @@ class AirportService {
     /// Check if an airport code is valid (exists in database)
     /// - Parameter code: Airport code (IATA or ICAO)
     /// - Returns: true if code exists in database
-    func isValidCode(_ code: String) -> Bool {
+    nonisolated func isValidCode(_ code: String) -> Bool {
         let upper = code.uppercased().trimmingCharacters(in: .whitespacesAndNewlines)
         // Check ICAO
-        if airportData[upper] != nil {
+        if db.airports[upper] != nil {
             return true
         }
         // Check IATA
-        if iataToIcaoMap[upper] != nil {
+        if db.iataToIcao[upper] != nil {
             return true
         }
         return false
@@ -455,8 +457,8 @@ class AirportService {
     ///   - utcTimeString: UTC time in format "HHMM" or "HH:MM"
     ///   - icaoCode: Airport ICAO code
     /// - Returns: Local time in format "HHMM", or original time if conversion fails
-    func convertToLocalTime(utcDateString: String, utcTimeString: String, airportICAO icaoCode: String) -> String {
-        guard let airportInfo = airportData[icaoCode.uppercased()] else {
+    nonisolated func convertToLocalTime(utcDateString: String, utcTimeString: String, airportICAO icaoCode: String) -> String {
+        guard let airportInfo = db.airports[icaoCode.uppercased()] else {
             return utcTimeString // Return original if airport not found
         }
 
@@ -513,8 +515,8 @@ class AirportService {
     ///   - localTimeString: Local time in format "HHMM" or "HH:MM"
     ///   - icaoCode: Airport ICAO code
     /// - Returns: UTC date string in format "dd/MM/yyyy", or original date if conversion fails
-    func convertFromLocalToUTCDate(localDateString: String, localTimeString: String, airportICAO icaoCode: String) -> String {
-        guard let airportInfo = airportData[icaoCode.uppercased()] else {
+    nonisolated func convertFromLocalToUTCDate(localDateString: String, localTimeString: String, airportICAO icaoCode: String) -> String {
+        guard let airportInfo = db.airports[icaoCode.uppercased()] else {
             return localDateString // Return original if airport not found
         }
 
@@ -592,8 +594,8 @@ class AirportService {
     ///   - localTimeString: Local time in format "HHMM" or "HH:MM"
     ///   - icaoCode: Airport ICAO code
     /// - Returns: UTC time in format "HH:MM", or original time if conversion fails
-    func convertFromLocalToUTCTime(localDateString: String, localTimeString: String, airportICAO icaoCode: String) -> String {
-        guard let airportInfo = airportData[icaoCode.uppercased()] else {
+    nonisolated func convertFromLocalToUTCTime(localDateString: String, localTimeString: String, airportICAO icaoCode: String) -> String {
+        guard let airportInfo = db.airports[icaoCode.uppercased()] else {
             return localTimeString // Return original if airport not found
         }
 

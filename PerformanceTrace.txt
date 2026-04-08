@@ -1,0 +1,97 @@
+ Instruments Trace Analysis — Block-Time (90.9s recording)
+
+  Device: Nelson's iPad, iPadOS 26.3.1 | Template: System Trace + Hangs
+
+  ---
+  Overall Health: Significant main thread congestion
+
+  The main thread was blocked for ~9.9s total (10.9% of the recording) across 41 hang events:
+
+  ┌────────────────────────────────────────┬───────┬────────────┐
+  │                  Type                  │ Count │ Total time │
+  ├────────────────────────────────────────┼───────┼────────────┤
+  │ Full Hang (>500ms)                     │ 7     │ ~5.2s      │
+  ├────────────────────────────────────────┼───────┼────────────┤
+  │ Microhang (250–500ms)                  │ 7     │ ~2.7s      │
+  ├────────────────────────────────────────┼───────┼────────────┤
+  │ Brief Unresponsiveness (100–250ms)     │ 7     │ ~1.1s      │
+  ├────────────────────────────────────────┼───────┼────────────┤
+  │ Potential Interaction Delay (33–100ms) │ 20    │ ~1.0s      │
+  └────────────────────────────────────────┴───────┴────────────┘
+
+  ---
+  Issue 1: Heavy startup hang cluster (0:00–0:10) — ~2.6s of hangs in first 10 seconds
+
+  The worst early hang is at 00:03.363 for 803ms. The call stack implicates:
+
+  - AirportService.loadAirportData() + AirportService.parseCSVLine() (12–14 samples) — CSV parsing is happening on the main thread
+  - AirportCodeCache.load() + AirportCodeCache.parseCSV() — second airport data load (separate from AirportService, seemingly redundant)
+  - FlightsListContent.applyFilters() running during this same window
+
+  The second startup hang at 00:13.751 for 777ms shows the same: AirportCodeCache.parseCSV + FlightDatabaseService.convertToFlightSector().
+
+  Fix: Move AirportService.loadAirportData() and AirportCodeCache.load() off the main thread. These should be loaded once on a background queue, then cached.
+   The fact that you have two separate airport lookup types (AirportService + AirportCodeCache) loading CSV separately may also be redundant work.
+
+  ---
+  Issue 2: DateFormatter being recreated repeatedly — 668 samples throughout the trace
+
+  -[NSDateFormatter _regenerateFormatter], __ResetUDateFormat, and icu::DateFormatSymbols::dispose() appear continuously from startup all the way to 01:23.
+  This is the classic iOS performance antipattern — DateFormatter is expensive to allocate (~3ms each). It should be static or cached, not created per-call.
+
+  The memory note in MEMORY.md already captures this for the DatePicker fix but it appears the formatter creation problem is broader, throughout
+  FlightDatabaseService.convertToFlightSector() and FlightsListContent.
+
+  Fix: Audit all DateFormatter instantiation sites in FlightDatabaseService and make them static let.
+
+  ---
+  Issue 3: Mid-session hangs (00:58–01:12) — ~4.2s of hangs
+
+  At 00:58, 01:01, 01:02, 01:10, 01:11 there are 5 major hangs (540ms–1140ms). The call stacks are different from startup — no AirportService. They're
+  dominated by:
+
+  - specialized find1<A>(_:key:filter:) — 51–62 samples per hang — this is SwiftUI's PropertyList lookup, meaning the view hierarchy is doing expensive
+  attribute resolution
+  - specialized PropertyList.Tracker.value<A> — environment value lookups
+  - DisplayList.InterpolatorLayer.updateInterpolators — animation/transition rendering
+  - Text layout: NSCoreTypesetter, __NSStringDrawingEngine, ResolvedTextHelper
+
+  This cluster (~1:00–1:12) suggests navigating to a view with many Text elements that each do expensive layout, likely the flight list or a detail view with
+   many formatted fields. The find1 dominance points to deep environment value chains — every Text is walking the environment tree repeatedly.
+
+  Fix candidates:
+  - Reduce the number of unique environment modifiers in the view tree (each .environment() adds to the lookup chain)
+  - Cache or pre-compute text strings that are formatted each render (formatted times, dates)
+  - Profile whether FlightSectorRow renders many Text views with repeated DateFormatter work
+
+  ---
+  Issue 4: AutomaticBackupService.performBackup on main thread — 32 samples in a closure
+
+  closure #1 in closure #2 in AutomaticBackupService.performBackup(isManual:completion:) has 32 samples — it appears to be doing file I/O in a closure that
+  runs on the main thread, concentrated around app launch (00:02).
+
+  Fix: Verify that performBackup dispatch chain doesn't accidentally hop back to @MainActor. The outer closure should stay on a background queue.
+
+  ---
+  Issue 5: FlightSector value type copying — 40 samples for initializeWithCopy
+
+  The initializeWithCopy for FlightSector function appears continuously throughout the trace. FlightSector is a large struct (20+ fields including strings)
+  being copied on every pass through the flight list. This is expected for value types but at scale it adds up.
+
+  Fix: Consider if FlightSector could be passed by reference (class) or if the copy sites (particularly in applyFilters) can be replaced with inout or
+  index-based access.
+
+  ---
+  GCD Issues (minor)
+
+  1 "Source Missing QoS" event — a dispatch source was created without inheriting a QoS class. Low severity but worth noting.
+
+  ---
+  Summary — Priority Order
+
+  1. Move airport CSV loading off main thread — biggest startup impact, easy fix
+  2. Cache DateFormatter as static throughout FlightDatabaseService — 668 samples throughout session
+  3. Investigate the 1:00–1:12 hang cluster — what navigation/interaction triggers it? Likely opening a heavy list view; reduce Text layout work or use
+  LazyVStack if not already
+  4. Verify AutomaticBackupService doesn't execute file work on @MainActor
+  5. Evaluate FlightSector copy cost in filter/sort paths

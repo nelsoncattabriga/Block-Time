@@ -45,73 +45,6 @@ private struct AirportVisitStats {
     }
 }
 
-// MARK: - ICAO ↔ IATA cache (loaded once, process-wide)
-
-private final class AirportCodeCache {
-    static let shared = AirportCodeCache()
-    private init() {}
-
-    private var icaoToIata: [String: String] = [:]
-    private var iataToIcao: [String: String] = [:]
-    private var icaoToCity: [String: String] = [:]
-    private var loaded = false
-
-    func iata(for icao: String) -> String? {
-        if !loaded { load() }
-        return icaoToIata[icao]
-    }
-
-    func city(for icao: String) -> String? {
-        if !loaded { load() }
-        return icaoToCity[icao]
-    }
-
-    /// Normalise a stored code to ICAO (converts 3-letter IATA → ICAO).
-    func toICAO(_ code: String) -> String {
-        if !loaded { load() }
-        if code.count == 3, let icao = iataToIcao[code] { return icao }
-        return code
-    }
-
-    /// "YPPH / PER" or just the ICAO if no IATA known.
-    func displayString(for icao: String) -> String {
-        if !loaded { load() }
-        if let iata = icaoToIata[icao] { return "\(icao) / \(iata)" }
-        return icao
-    }
-
-    private func load() {
-        loaded = true
-        guard let url = Bundle.main.url(forResource: "airports.dat", withExtension: "txt"),
-              let content = try? String(contentsOf: url, encoding: .utf8) else { return }
-        for line in content.components(separatedBy: .newlines) where !line.isEmpty {
-            let fields = parseCSV(line)
-            guard fields.count >= 14 else { continue }
-            let iata = fields[4].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-            let icao = fields[5].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-            let city = fields[2].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
-            guard !icao.isEmpty, icao != "\\N" else { continue }
-            if !iata.isEmpty, iata != "\\N" {
-                icaoToIata[icao] = iata
-                iataToIcao[iata] = icao
-            }
-            if !city.isEmpty { icaoToCity[icao] = city }
-        }
-    }
-
-    private func parseCSV(_ line: String) -> [String] {
-        var fields: [String] = []
-        var current = ""
-        var inQuotes = false
-        for ch in line {
-            if ch == "\"" { inQuotes.toggle() }
-            else if ch == "," && !inQuotes { fields.append(current); current = "" }
-            else { current.append(ch) }
-        }
-        fields.append(current)
-        return fields
-    }
-}
 
 // MARK: - Card
 
@@ -222,88 +155,95 @@ struct AirportStatsCard: View {
     // MARK: - Data loading
 
     private func buildAirportList() {
-        let cache = AirportCodeCache.shared
+        // fetchAllFlights uses viewContext — must be called on main thread.
         let flights = FlightDatabaseService.shared.fetchAllFlights()
+        let airports = AirportService.shared
 
-        // Count deps and arrs per normalised ICAO
-        var depCounts: [String: Int] = [:]
-        var arrCounts: [String: Int] = [:]
+        Task.detached(priority: .userInitiated) {
+            var depCounts: [String: Int] = [:]
+            var arrCounts: [String: Int] = [:]
 
-        for f in flights {
-            if !f.fromAirport.isEmpty {
-                let icao = cache.toICAO(f.fromAirport)
-                depCounts[icao, default: 0] += 1
+            for f in flights {
+                if !f.fromAirport.isEmpty {
+                    let icao = airports.convertToICAO(f.fromAirport)
+                    depCounts[icao, default: 0] += 1
+                }
+                if !f.toAirport.isEmpty {
+                    let icao = airports.convertToICAO(f.toAirport)
+                    arrCounts[icao, default: 0] += 1
+                }
             }
-            if !f.toAirport.isEmpty {
-                let icao = cache.toICAO(f.toAirport)
-                arrCounts[icao, default: 0] += 1
+
+            let allICAOs = Set(depCounts.keys).union(arrCounts.keys)
+            let counts: [String: Int] = Dictionary(uniqueKeysWithValues: allICAOs.map {
+                ($0, max(depCounts[$0, default: 0], arrCounts[$0, default: 0]))
+            })
+            let sorted = allICAOs.sorted()
+
+            await MainActor.run {
+                self.visitCounts = counts
+                self.allAirports = sorted
+
+                if !self.selectedICAO.isEmpty {
+                    let normalised = airports.convertToICAO(self.selectedICAO)
+                    if normalised != self.selectedICAO { self.selectedICAO = normalised }
+                }
+                if self.selectedICAO.isEmpty, let first = sorted.first {
+                    self.selectedICAO = first
+                }
             }
-        }
-
-        // visits = max(dep, arr) per airport
-        let allICAOs = Set(depCounts.keys).union(arrCounts.keys)
-        var counts: [String: Int] = [:]
-        for icao in allICAOs {
-            counts[icao] = max(depCounts[icao, default: 0], arrCounts[icao, default: 0])
-        }
-
-        visitCounts = counts
-        allAirports = allICAOs.sorted()
-
-        // Normalise any persisted IATA code
-        if !selectedICAO.isEmpty {
-            let normalised = cache.toICAO(selectedICAO)
-            if normalised != selectedICAO { selectedICAO = normalised }
-        }
-        if selectedICAO.isEmpty, let first = allAirports.first {
-            selectedICAO = first
         }
     }
 
     private func loadStats() {
         guard !selectedICAO.isEmpty else { return }
         let apt = selectedICAO
-        let aptIATA = AirportCodeCache.shared.iata(for: apt)
+        // fetchAllFlights uses viewContext — must be called on main thread.
         let flights = FlightDatabaseService.shared.fetchAllFlights()
+        let airports = AirportService.shared
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
+        Task.detached(priority: .userInitiated) {
+            let aptIATA = airports.convertToIATA(apt)
+            let fmt: DateFormatter = {
+                let f = DateFormatter()
+                f.dateFormat = "dd/MM/yyyy"
+                return f
+            }()
 
-        var deps = 0, arrs = 0
-        var firstDate: Date? = nil
-        var lastDate: Date?  = nil
+            var deps = 0, arrs = 0
+            var firstDate: Date?
+            var lastDate: Date?
 
-        for f in flights {
-            let from = f.fromAirport
-            let to   = f.toAirport
-            let isDep = from == apt || (aptIATA != nil && from == aptIATA)
-            let isArr = to   == apt || (aptIATA != nil && to   == aptIATA)
-            guard isDep || isArr else { continue }
-            if isDep { deps += 1 }
-            if isArr { arrs += 1 }
-            if let d = dateFormatter.date(from: f.date) {
-                if firstDate == nil || d < firstDate! { firstDate = d }
-                if lastDate  == nil || d > lastDate!  { lastDate  = d }
+            for f in flights {
+                let isDep = f.fromAirport == apt || (aptIATA != nil && f.fromAirport == aptIATA)
+                let isArr = f.toAirport   == apt || (aptIATA != nil && f.toAirport   == aptIATA)
+                guard isDep || isArr else { continue }
+                if isDep { deps += 1 }
+                if isArr { arrs += 1 }
+                if let d = fmt.date(from: f.date) {
+                    if firstDate == nil || d < firstDate! { firstDate = d }
+                    if lastDate  == nil || d > lastDate!  { lastDate  = d }
+                }
+            }
+
+            let newStats = AirportVisitStats(
+                icao: apt,
+                iata: aptIATA,
+                city: airports.getCity(for: apt),
+                departures: deps,
+                arrivals: arrs,
+                firstDate: firstDate,
+                lastDate: lastDate
+            )
+
+            await MainActor.run {
+                self.stampScale = 0.8
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) { self.stampScale = 1.0 }
+                self.contentOpacity = 0
+                withAnimation(.easeIn(duration: 0.15)) { self.contentOpacity = 1 }
+                self.stats = newStats
             }
         }
-
-        let cache = AirportCodeCache.shared
-        let newStats = AirportVisitStats(
-            icao: apt,
-            iata: cache.iata(for: apt),
-            city: cache.city(for: apt),
-            departures: deps,
-            arrivals: arrs,
-            firstDate: firstDate,
-            lastDate: lastDate
-        )
-
-        stampScale = 0.8
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) { stampScale = 1.0 }
-        contentOpacity = 0
-        withAnimation(.easeIn(duration: 0.15)) { contentOpacity = 1 }
-
-        stats = newStats
     }
 }
 
@@ -335,7 +275,7 @@ private struct AirportStatsPickerSheet: View {
         let q = search.uppercased()
         return sorted.filter { icao in
             if icao.contains(q) { return true }
-            if let iata = AirportCodeCache.shared.iata(for: icao) { return iata.contains(q) }
+            if let iata = AirportService.shared.convertToIATA(icao) { return iata.contains(q) }
             return false
         }
     }
@@ -348,7 +288,7 @@ private struct AirportStatsPickerSheet: View {
                     dismiss()
                 } label: {
                     HStack {
-                        Text(AirportCodeCache.shared.displayString(for: icao))
+                        Text(AirportService.shared.getDisplayCode(icao, useIATA: true))
                             .font(.system(.body, design: .monospaced, weight: .semibold))
                             .foregroundStyle(.primary)
                         Spacer()
