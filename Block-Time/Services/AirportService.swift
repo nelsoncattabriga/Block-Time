@@ -45,10 +45,11 @@ final class AirportService: @unchecked Sendable {
     }()
 
     private init() {
-        Task.detached(priority: .utility) { [weak self] in
-            guard let self else { return }
-            self.db = AirportService.buildDatabase()
-        }
+        // Load synchronously so db is populated before any caller uses the shared instance.
+        // static let shared is lazily initialised on first access, so this blocks that
+        // call site — not the main thread — unless something accesses shared at app start.
+        // The parse takes ~20ms and is cheaper than a race condition with empty results.
+        db = AirportService.buildDatabase()
     }
 
     struct AirportInfo {

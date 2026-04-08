@@ -42,7 +42,6 @@ final class FlightMapViewModel {
 
     // MARK: - Private
 
-    private let context = FlightDatabaseService.shared.viewContext
     private var useIATACodes: Bool {
         UserDefaults.standard.bool(forKey: "useIATACodes")
     }
@@ -53,44 +52,81 @@ final class FlightMapViewModel {
         isLoading = true
         defer { isLoading = false }
 
-        let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        request.predicate = buildPredicate()
+        let cutoffDate = buildCutoffDate()   // Date? is Sendable
+        let useIATA = useIATACodes
+        let container = FlightDatabaseService.shared.persistentContainer
+        let airportService = AirportService.shared   // capture instance; class is @unchecked Sendable
 
-        guard let results = try? context.fetch(request) else { return }
-        let flights = results.compactMap { FlightSector.from(entity: $0) }.filter { $0.blockTimeValue > 0 }
+        let (newAirports, newRoutes) = await buildMapData(
+            container: container,
+            cutoffDate: cutoffDate,
+            useIATA: useIATA,
+            airportService: airportService
+        )
 
-        var seenAirports: [String: AirportPin] = [:]   // keyed by ICAO
+        airports = newAirports
+        routes = newRoutes
+    }
+
+    // Nonisolated — runs off the main actor.
+    // NSPredicate is rebuilt inside bgContext.perform to avoid Sendable issues.
+    // AirportService instance is passed in (captured on main actor before this call).
+    private nonisolated func buildMapData(
+        container: NSPersistentCloudKitContainer,
+        cutoffDate: Date?,
+        useIATA: Bool,
+        airportService: AirportService
+    ) async -> ([AirportPin], [RouteSegment]) {
+        let pairs: [(from: String, to: String, blockTime: String)] = await withCheckedContinuation { continuation in
+            let bgContext = container.newBackgroundContext()
+            bgContext.perform {
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                if let cutoff = cutoffDate {
+                    request.predicate = NSPredicate(format: "date >= %@", cutoff as NSDate)
+                }
+                request.propertiesToFetch = ["fromAirport", "toAirport", "blockTime"]
+                let results = (try? bgContext.fetch(request)) ?? []
+                let extracted = results.map { entity in
+                    (
+                        from:      entity.fromAirport ?? "",
+                        to:        entity.toAirport   ?? "",
+                        blockTime: entity.blockTime   ?? ""
+                    )
+                }
+                continuation.resume(returning: extracted)
+            }
+        }
+
+        var seenAirports: [String: AirportPin] = [:]
         var seenRoutes: Set<String> = []
         var newRoutes: [RouteSegment] = []
 
-        for flight in flights {
-            let fromCode = flight.fromAirport
-            let toCode   = flight.toAirport
-            guard !fromCode.isEmpty, !toCode.isEmpty else { continue }
+        for pair in pairs {
+            guard !pair.from.isEmpty, !pair.to.isEmpty else { continue }
 
-            let fromICAO = AirportService.shared.convertToICAO(fromCode)
-            let toICAO   = AirportService.shared.convertToICAO(toCode)
+            guard let btValue = Double(pair.blockTime), btValue > 0 else { continue }
 
-            guard let fromCoords = AirportService.shared.getCoordinates(for: fromICAO),
-                  let toCoords   = AirportService.shared.getCoordinates(for: toICAO) else { continue }
+            let fromICAO = airportService.convertToICAO(pair.from)
+            let toICAO   = airportService.convertToICAO(pair.to)
 
-            // Airport pins
+            guard let fromCoords = airportService.getCoordinates(for: fromICAO),
+                  let toCoords   = airportService.getCoordinates(for: toICAO) else { continue }
+
             if seenAirports[fromICAO] == nil {
                 seenAirports[fromICAO] = AirportPin(
-                    id: AirportService.shared.getDisplayCode(fromICAO, useIATA: useIATACodes),
+                    id: airportService.getDisplayCode(fromICAO, useIATA: useIATA),
                     icao: fromICAO,
                     coordinate: CLLocationCoordinate2D(latitude: fromCoords.latitude, longitude: fromCoords.longitude)
                 )
             }
             if seenAirports[toICAO] == nil {
                 seenAirports[toICAO] = AirportPin(
-                    id: AirportService.shared.getDisplayCode(toICAO, useIATA: useIATACodes),
+                    id: airportService.getDisplayCode(toICAO, useIATA: useIATA),
                     icao: toICAO,
                     coordinate: CLLocationCoordinate2D(latitude: toCoords.latitude, longitude: toCoords.longitude)
                 )
             }
 
-            // Deduplicated route — treat A→B and B→A as different routes
             let routeKey = "\(fromICAO)-\(toICAO)"
             guard !seenRoutes.contains(routeKey) else { continue }
             seenRoutes.insert(routeKey)
@@ -104,22 +140,16 @@ final class FlightMapViewModel {
             ))
         }
 
-        airports = Array(seenAirports.values)
-        routes = newRoutes
+        return (Array(seenAirports.values), newRoutes)
     }
 
     // MARK: - Helpers
 
-    private func buildPredicate() -> NSPredicate? {
+    private func buildCutoffDate() -> Date? {
         switch dateFilter {
-        case .all:
-            return nil
-        case .last90:
-            let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
-            return NSPredicate(format: "date >= %@", cutoff as NSDate)
-        case .last12:
-            let cutoff = Calendar.current.date(byAdding: .month, value: -12, to: Date()) ?? Date()
-            return NSPredicate(format: "date >= %@", cutoff as NSDate)
+        case .all:    return nil
+        case .last90: return Calendar.current.date(byAdding: .day,   value: -90, to: Date())
+        case .last12: return Calendar.current.date(byAdding: .month, value: -12, to: Date())
         }
     }
 

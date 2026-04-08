@@ -12,20 +12,11 @@ struct MapSectorSheet: View {
     @AppStorage("useIATACodes") private var useIATACodes: Bool = false
     @State private var sectors: [FlightSector] = []
     @State private var showingFlights = false
+    @State private var cachedDepartures: Int = 0
+    @State private var cachedArrivals: Int = 0
+    @State private var cachedDateRange: String? = nil
 
-    // MARK: - Derived stats
-
-    private var departures: Int {
-        sectors.filter {
-            AirportService.shared.convertToICAO($0.fromAirport) == airport.icao
-        }.count
-    }
-    private var arrivals: Int {
-        sectors.filter {
-            AirportService.shared.convertToICAO($0.toAirport) == airport.icao
-        }.count
-    }
-    private var totalVisits: Int { max(departures, arrivals) }
+    private var totalVisits: Int { max(cachedDepartures, cachedArrivals) }
 
     private static let storedDateFormatter: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "dd/MM/yyyy"; return f
@@ -33,14 +24,6 @@ struct MapSectorSheet: View {
     private static let monthYearFormatter: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "MMM yyyy"; return f
     }()
-
-    private var dateRange: String? {
-        let dates = sectors.compactMap { Self.storedDateFormatter.date(from: $0.date) }
-        guard let first = dates.min(), let last = dates.max() else { return nil }
-        let from = Self.monthYearFormatter.string(from: first)
-        let to   = Self.monthYearFormatter.string(from: last)
-        return from == to ? from : "\(from) – \(to)"
-    }
 
     // MARK: - Body
 
@@ -110,7 +93,7 @@ struct MapSectorSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    if let range = dateRange {
+                    if let range = cachedDateRange {
                         Text(range)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -121,8 +104,8 @@ struct MapSectorSheet: View {
 
                 // Right — dep/arr pills
                 VStack(alignment: .trailing, spacing: 6) {
-                    statPill(icon: "airplane.departure", value: departures, label: "dep")
-                    statPill(icon: "airplane.arrival",   value: arrivals,   label: "arr")
+                    statPill(icon: "airplane.departure", value: cachedDepartures, label: "dep")
+                    statPill(icon: "airplane.arrival",   value: cachedArrivals,   label: "arr")
                 }
             }
         }
@@ -170,7 +153,7 @@ struct MapSectorSheet: View {
     // MARK: - Flights list
 
     private var flightsList: some View {
-        VStack(spacing: 1) {
+        LazyVStack(spacing: 1) {
             ForEach(Array(sectors.enumerated()), id: \.element.id) { index, sector in
                 MapFlightRow(
                     sector: sector,
@@ -193,18 +176,32 @@ struct MapSectorSheet: View {
     }
 
     private func loadSectors() {
-        let iata = AirportService.shared.convertToIATA(airport.icao) ?? airport.icao
+        let icao = airport.icao
+        let iata = AirportService.shared.convertToIATA(icao) ?? icao
         let context = FlightDatabaseService.shared.viewContext
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         request.predicate = NSPredicate(
             format: "fromAirport ==[c] %@ OR fromAirport ==[c] %@ OR toAirport ==[c] %@ OR toAirport ==[c] %@",
-            airport.icao, iata, airport.icao, iata
+            icao, iata, icao, iata
         )
         request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
         guard let results = try? context.fetch(request) else { return }
-        sectors = results
+        let loaded = results
             .compactMap { FlightSector.from(entity: $0) }
             .filter { $0.blockTimeValue > 0 }
+
+        // Cache derived stats so they aren't recomputed on every render
+        cachedDepartures = loaded.filter { AirportService.shared.convertToICAO($0.fromAirport) == icao }.count
+        cachedArrivals   = loaded.filter { AirportService.shared.convertToICAO($0.toAirport)   == icao }.count
+
+        let dates = loaded.compactMap { Self.storedDateFormatter.date(from: $0.date) }
+        if let first = dates.min(), let last = dates.max() {
+            let from = Self.monthYearFormatter.string(from: first)
+            let to   = Self.monthYearFormatter.string(from: last)
+            cachedDateRange = from == to ? from : "\(from) – \(to)"
+        }
+
+        sectors = loaded
     }
 }
 
