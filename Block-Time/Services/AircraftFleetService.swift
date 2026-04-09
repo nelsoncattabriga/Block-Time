@@ -259,9 +259,10 @@ class AircraftFleetService: ObservableObject {
         Fleet(name: "A320", types: ["A321", "A21N","A320", "A20N", "A318", "A319", "A19N"]),
         Fleet(name: "A330", types: ["A330", "A332", "A333", "A338", "A339"]),
         Fleet(name: "B787", types: ["B787", "B788", "B789", "B78X"]),
-        Fleet(name: "A380", types: ["A388"]),
+        Fleet(name: "A380", types: ["A388", "A380"]),
         Fleet(name: "B747", types: ["B741", "B742", "B743", "B744", "B74S", "B747", "B748"]),
         Fleet(name: "B767", types: ["B762", "B763", "B764", "B767"]),
+        Fleet(name: "DHC-8", types: ["DHC-8", "DHC8", "DH8A", "DH8B", "DH8C", "DH8D"]),
         //Fleet(name: "A350", types: ["A35K"]),
     ]
     
