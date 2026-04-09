@@ -1753,7 +1753,75 @@ class FlightDatabaseService: ObservableObject {
             return FlightStatistics.empty
         }
     }
-    
+
+    /// Background-context variant used by getInsightsData(). Caller is responsible for
+    /// calling this on the correct thread for the supplied context.
+    func getFlightStatistics(context: NSManagedObjectContext) -> FlightStatistics {
+        let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+
+        do {
+            let flights = try context.fetch(request)
+
+            var totalBlock: Double = 0
+            var totalP1: Double = 0
+            var totalP1US: Double = 0
+            var totalP2: Double = 0
+            var totalNight: Double = 0
+            var totalInstrument: Double = 0
+            var totalSIM: Double = 0
+            var totalSpIns: Double = 0
+            var totalSpInsSim: Double = 0
+            var totalSpInsFlt: Double = 0
+            var spInsFltCount = 0
+            var spInsSimCount = 0
+            let totalSectors = flights.count
+            var aiiiSectors = 0
+            var pfSectors = 0
+
+            for flight in flights {
+                totalBlock      += safeDoubleFromString(flight.blockTime)
+                totalP1         += safeDoubleFromString(flight.p1Time)
+                totalP1US       += safeDoubleFromString(flight.p1usTime)
+                totalP2         += safeDoubleFromString(flight.p2Time)
+                totalNight      += safeDoubleFromString(flight.nightTime)
+                totalInstrument += safeDoubleFromString(flight.instrumentTime)
+                totalSIM        += entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let spVal = safeDoubleFromString(flight.spInsTime)
+                totalSpIns += spVal
+                if entityIsSpInsOnly(flight) {
+                    totalSpInsSim += spVal
+                    if spVal > 0 { spInsSimCount += 1 }
+                } else if spVal > 0 {
+                    totalSpInsFlt += spVal
+                    spInsFltCount += 1
+                }
+                if flight.isAIII { aiiiSectors += 1 }
+                if flight.isPilotFlying { pfSectors += 1 }
+            }
+
+            return FlightStatistics(
+                totalSectors: totalSectors,
+                totalBlockTime: totalBlock,
+                totalP1Time: totalP1,
+                totalP1USTime: totalP1US,
+                totalP2Time: totalP2,
+                totalNightTime: totalNight,
+                totalInstrumentTime: totalInstrument,
+                totalSIMTime: totalSIM,
+                totalSpInsTime: totalSpIns,
+                totalSpInsSimTime: totalSpInsSim,
+                totalSpInsFltTime: totalSpInsFlt,
+                spInsFltCount: spInsFltCount,
+                spInsSimCount: spInsSimCount,
+                aiiiSectors: aiiiSectors,
+                pfSectors: pfSectors
+            )
+        } catch {
+            return FlightStatistics.empty
+        }
+    }
+
     /// Get statistics for a specific date range
     func getFlightStatistics(from startDateString: String, to endDateString: String) -> FlightStatistics {
         let flights = fetchFlights(from: startDateString, to: endDateString)

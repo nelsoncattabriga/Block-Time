@@ -33,57 +33,64 @@ struct NDInsightsData {
 
 extension FlightDatabaseService {
 
-    /// Returns all analytics for the Insights dashboard.
-    /// Calls the proven `getFlightStatistics()` for aggregate totals, then
-    /// performs one additional Core Data fetch for analytics computations.
-    func getInsightsData() -> NDInsightsData {
-        let stats = getFlightStatistics()
+    /// Returns all analytics for the Insights dashboard on a background context.
+    /// All Core Data fetching and computation runs off the main thread; only value types are returned.
+    func getInsightsData() async -> NDInsightsData {
+        await withCheckedContinuation { continuation in
+            persistentContainer.performBackgroundTask { context in
+                context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
 
-        let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        request.predicate = NSPredicate(
-            format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)",
-            "0", "0.0", "0.00", "0", "0.0", "0.00"
-        )
-        request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+                let stats = self.getFlightStatistics(context: context)
 
-        let flights: [FlightEntity]
-        do {
-            flights = try viewContext.fetch(request)
-        } catch {
-            return NDInsightsData(
-                flightStatistics: stats,
-                monthlyActivity: [],
-                dailyActivity: [],
-                fleetHours: [],
-                pfRatioByMonth: [],
-                monthlyNight: [],
-                topRoutes: [],
-                topRegistrations: [],
-                approachTypes: [],
-                tlStats: .empty,
-                careerStats: .empty,
-                frmsStrip: .empty,
-                projectedFRMS: .empty,
-                frmsRolling: .empty
-            )
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                request.predicate = NSPredicate(
+                    format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)",
+                    "0", "0.0", "0.00", "0", "0.0", "0.00"
+                )
+                request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
+
+                let flights: [FlightEntity]
+                do {
+                    flights = try context.fetch(request)
+                } catch {
+                    continuation.resume(returning: NDInsightsData(
+                        flightStatistics: stats,
+                        monthlyActivity: [],
+                        dailyActivity: [],
+                        fleetHours: [],
+                        pfRatioByMonth: [],
+                        monthlyNight: [],
+                        topRoutes: [],
+                        topRegistrations: [],
+                        approachTypes: [],
+                        tlStats: .empty,
+                        careerStats: .empty,
+                        frmsStrip: .empty,
+                        projectedFRMS: .empty,
+                        frmsRolling: .empty
+                    ))
+                    return
+                }
+
+                let result = NDInsightsData(
+                    flightStatistics: stats,
+                    monthlyActivity: self.computeMonthlyActivity(flights),
+                    dailyActivity: self.computeDailyActivity(flights),
+                    fleetHours: self.computeFleetHours(flights),
+                    pfRatioByMonth: self.computePFRatioByMonth(flights),
+                    monthlyNight: self.computeMonthlyNight(flights),
+                    topRoutes: self.computeTopRoutes(flights),
+                    topRegistrations: self.computeTopRegistrations(flights),
+                    approachTypes: self.computeApproachTypes(flights),
+                    tlStats: self.computeTLStats(flights),
+                    careerStats: self.computeCareerStats(flights),
+                    frmsStrip: self.computeFRMSStrip(flights),
+                    projectedFRMS: self.computeProjectedFRMS(context: context),
+                    frmsRolling: self.computeFRMSRolling(context: context)
+                )
+                continuation.resume(returning: result)
+            }
         }
-
-        return NDInsightsData(
-            flightStatistics: stats,
-            monthlyActivity: computeMonthlyActivity(flights),
-            dailyActivity: computeDailyActivity(flights),
-            fleetHours: computeFleetHours(flights),
-            pfRatioByMonth: computePFRatioByMonth(flights),
-            monthlyNight: computeMonthlyNight(flights),
-            topRoutes: computeTopRoutes(flights),
-            topRegistrations: computeTopRegistrations(flights),
-            approachTypes: computeApproachTypes(flights),
-            tlStats: computeTLStats(flights),
-            careerStats: computeCareerStats(flights),
-            frmsStrip: computeFRMSStrip(flights),
-            projectedFRMS: computeProjectedFRMS(),
-            frmsRolling: computeFRMSRolling()
-        )
     }
 
     // MARK: - Private helpers
@@ -270,7 +277,8 @@ extension FlightDatabaseService {
     ///
     /// Past points use actual completed flights; future points use STD/STA scheduled times.
     /// Each point's `total` is the rolling sum for its window (e.g. 28 days) ending on that day.
-    func computeFRMSRolling() -> NDFRMSRollingData {
+    func computeFRMSRolling(context: NSManagedObjectContext? = nil) -> NDFRMSRollingData {
+        let ctx = context ?? viewContext
 
         // MARK: Config
         let config: FRMSConfiguration
@@ -302,7 +310,7 @@ extension FlightDatabaseService {
         histRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
         let histEntities: [FlightEntity]
-        do { histEntities = try viewContext.fetch(histRequest) } catch { return .empty }
+        do { histEntities = try ctx.fetch(histRequest) } catch { return .empty }
 
         // Build [Date: (flightHours, dutyHours)] per calendar day from actual flights
         var actualFlight: [Date: Double] = [:]
@@ -330,7 +338,7 @@ extension FlightDatabaseService {
         futureRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
         let futureEntities: [FlightEntity]
-        do { futureEntities = try viewContext.fetch(futureRequest) } catch { return .empty }
+        do { futureEntities = try ctx.fetch(futureRequest) } catch { return .empty }
 
         // Parse "HH:MM" or "HHMM" → minutes from midnight
         func hhmm(_ s: String?) -> Int? {
@@ -526,7 +534,8 @@ extension FlightDatabaseService {
     ///
     /// We report max(rolling total) across all D — the highest your total will reach
     /// if all rostered duties are flown. This is what gets overlaid on the gauge bar.
-    func computeProjectedFRMS() -> NDProjectedFRMSData {
+    func computeProjectedFRMS(context: NSManagedObjectContext? = nil) -> NDProjectedFRMSData {
+        let ctx = context ?? viewContext
 
         // MARK: Config
         let config: FRMSConfiguration
@@ -576,7 +585,7 @@ extension FlightDatabaseService {
 
         let historicalEntities: [FlightEntity]
         do {
-            historicalEntities = try viewContext.fetch(historicalRequest)
+            historicalEntities = try ctx.fetch(historicalRequest)
         } catch {
             return .empty
         }
@@ -626,7 +635,7 @@ extension FlightDatabaseService {
 
         let futureEntities: [FlightEntity]
         do {
-            futureEntities = try viewContext.fetch(futureRequest)
+            futureEntities = try ctx.fetch(futureRequest)
         } catch {
             return .empty
         }

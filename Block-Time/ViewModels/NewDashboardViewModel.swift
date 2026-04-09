@@ -222,7 +222,7 @@ final class NewDashboardViewModel {
 
     func load() async {
         isLoading = true
-        let data = FlightDatabaseService.shared.getInsightsData()
+        let data = await FlightDatabaseService.shared.getInsightsData()
         monthlyActivity  = data.monthlyActivity
         dailyActivity    = data.dailyActivity
         fleetHours       = data.fleetHours
