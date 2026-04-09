@@ -12,11 +12,8 @@ struct MapSectorSheet: View {
     @AppStorage("useIATACodes") private var useIATACodes: Bool = false
     @State private var sectors: [FlightSector] = []
     @State private var showingFlights = false
-    @State private var cachedDepartures: Int = 0
-    @State private var cachedArrivals: Int = 0
     @State private var cachedDateRange: String? = nil
-
-    private var totalVisits: Int { max(cachedDepartures, cachedArrivals) }
+    @State private var selectedDetent: PresentationDetent = .fraction(0.42)
 
     private static let storedDateFormatter: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "dd/MM/yyyy"; return f
@@ -28,45 +25,56 @@ struct MapSectorSheet: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    statsCard
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-
-                    if !sectors.isEmpty {
-                        flightsToggle
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
-
-                        if showingFlights {
-                            flightsList
-                                .padding(.top, 8)
-                        }
-                    }
-                }
-                .padding(.bottom, 24)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle(AirportService.shared.getCity(for: airport.icao) ?? airport.id)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+        VStack(spacing: 0) {
+            // Fixed header area
+            VStack(spacing: 0) {
+                // Done button row
+                HStack {
+                    Spacer()
                     Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                        .padding(.trailing, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
                 }
+
+                statsCard
+                    .padding(.horizontal, 16)
+
+                if !sectors.isEmpty {
+                    flightsToggle
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, showingFlights ? 0 : 16)
+                }
+            }
+
+            // Scrollable flights list (only visible when expanded)
+            if showingFlights {
+                ScrollView {
+                    flightsList
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .presentationDetents([.medium, .large])
+        .background(Color(.systemGroupedBackground))
+        .presentationDetents([.fraction(0.42), .large], selection: $selectedDetent)
         .presentationDragIndicator(.visible)
+        .onChange(of: showingFlights) { _, showing in
+            withAnimation(.easeInOut(duration: 0.3)) {
+                selectedDetent = showing ? .large : .fraction(0.42)
+            }
+        }
         .onAppear { loadSectors() }
     }
 
     // MARK: - Stats card
 
     private var statsCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Airport + city
+        HStack(alignment: .center) {
+            // Left — airport code + city
             VStack(alignment: .leading, spacing: 3) {
                 Text(airportDisplayTitle)
                     .font(.system(.title2, design: .monospaced, weight: .black))
@@ -77,35 +85,22 @@ struct MapSectorSheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.bottom, 14)
 
-            Divider()
-                .padding(.bottom, 14)
+            Spacer()
 
-            // Visits + dep/arr
-            HStack(alignment: .center) {
-                // Left — visit count
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("\(totalVisits)")
-                            .font(.system(.title, design: .rounded, weight: .bold))
-                        Text(totalVisits == 1 ? "visit" : "visits")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    if let range = cachedDateRange {
-                        Text(range)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+            // Right — visit count + date range
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("\(sectors.count)")
+                        .font(.system(.title, design: .rounded, weight: .bold))
+                    Text(sectors.count == 1 ? "flight" : "flights")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-
-                Spacer()
-
-                // Right — dep/arr pills
-                VStack(alignment: .trailing, spacing: 6) {
-                    statPill(icon: "airplane.departure", value: cachedDepartures, label: "dep")
-                    statPill(icon: "airplane.arrival",   value: cachedArrivals,   label: "arr")
+                if let range = cachedDateRange {
+                    Text(range)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -113,22 +108,11 @@ struct MapSectorSheet: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private func statPill(icon: String, value: Int, label: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Text("\(value) \(label)")
-                .font(.subheadline)
-                .monospacedDigit()
-        }
-    }
-
     // MARK: - Flights toggle
 
     private var flightsToggle: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) { showingFlights.toggle() }
+            withAnimation(.easeInOut(duration: 0.25)) { showingFlights.toggle() }
         } label: {
             HStack {
                 Text(showingFlights ? "Hide Flights" : "Show Flights")
@@ -141,10 +125,11 @@ struct MapSectorSheet: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .rotationEffect(.degrees(showingFlights ? 90 : 0))
-                    .animation(.easeInOut(duration: 0.2), value: showingFlights)
+                    .animation(.easeInOut(duration: 0.25), value: showingFlights)
             }
             .foregroundStyle(.primary)
-            .padding(14)
+            .padding(showingFlights ? EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14)
+                                    : EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14))
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
@@ -190,10 +175,6 @@ struct MapSectorSheet: View {
             .compactMap { FlightSector.from(entity: $0) }
             .filter { $0.blockTimeValue > 0 }
 
-        // Cache derived stats so they aren't recomputed on every render
-        cachedDepartures = loaded.filter { AirportService.shared.convertToICAO($0.fromAirport) == icao }.count
-        cachedArrivals   = loaded.filter { AirportService.shared.convertToICAO($0.toAirport)   == icao }.count
-
         let dates = loaded.compactMap { Self.storedDateFormatter.date(from: $0.date) }
         if let first = dates.min(), let last = dates.max() {
             let from = Self.monthYearFormatter.string(from: first)
@@ -217,7 +198,7 @@ private struct MapFlightRow: View {
         let f = DateFormatter(); f.dateFormat = "dd/MM/yyyy"; return f
     }()
     private static let displayFormatter: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "d MMM yyyy"; return f
+        let f = DateFormatter(); f.dateFormat = "dd MMM yyyy"; return f
     }()
 
     private var displayDate: String {
