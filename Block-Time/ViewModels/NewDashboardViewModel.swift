@@ -219,9 +219,10 @@ final class NewDashboardViewModel {
     var frmsRolling: NDFRMSRollingData = .empty
     var flightStatistics: FlightStatistics = .empty
     var isLoading = true
+    private(set) var hasLoadedOnce = false
 
     func load() async {
-        isLoading = true
+        if !hasLoadedOnce { isLoading = true }
         let data = await FlightDatabaseService.shared.getInsightsData()
         monthlyActivity  = data.monthlyActivity
         dailyActivity    = data.dailyActivity
@@ -238,5 +239,6 @@ final class NewDashboardViewModel {
         frmsRolling      = data.frmsRolling
         flightStatistics = data.flightStatistics
         isLoading = false
+        hasLoadedOnce = true
     }
 }

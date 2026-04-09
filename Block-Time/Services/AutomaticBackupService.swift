@@ -117,11 +117,8 @@ class AutomaticBackupService: ObservableObject {
             self.settings = .default
         }
 
-        // Set up notification observers
         setupNotifications()
-
-        // Load available backups (will check if backup is needed after loading)
-        refreshAvailableBackups()
+        refreshAvailableBackups(checkAfterLoad: true)
     }
 
     // MARK: - Setup
@@ -151,8 +148,7 @@ class AutomaticBackupService: ObservableObject {
     }
 
     @objc private func appDidBecomeActive() {
-        checkAndPerformBackupIfNeeded()
-        refreshAvailableBackups()
+        refreshAvailableBackups(checkAfterLoad: true)
     }
 
     @objc private func appWillResignActive() {
@@ -264,27 +260,20 @@ class AutomaticBackupService: ObservableObject {
             return
         }
 
-        // Start background task to complete backup even if app is backgrounded
         beginBackgroundTask()
-
-        DispatchQueue.main.async {
-            self.isBackupInProgress = true
-            self.lastBackupError = nil
-        }
+        isBackupInProgress = true
+        lastBackupError = nil
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
-            defer { self.endBackgroundTask() }
 
             do {
-                // Get all flights
                 let flights = FlightDatabaseService.shared.fetchAllFlights()
 
                 if flights.isEmpty {
                     throw BackupError.noDataToBackup
                 }
 
-                // Sort by date (oldest first)
                 let sortedFlights = flights.sorted { flight1, flight2 in
                     let formatter = DateFormatter()
                     formatter.dateFormat = "dd/MM/yyyy"
@@ -295,20 +284,15 @@ class AutomaticBackupService: ObservableObject {
                     return flight1.date < flight2.date
                 }
 
-                // Generate CSV
                 let csvString = FileImportService.shared.exportToCSV(flights: sortedFlights)
-
-                // Create backup file
                 let backupURL = try self.createBackupFile(csvString: csvString, flightCount: flights.count)
-
-                // Clean up old backups
                 try self.cleanupOldBackups()
 
-                // Update state
                 DispatchQueue.main.async {
                     self.isBackupInProgress = false
-                    self.refreshAvailableBackups()
+                    self.refreshAvailableBackups(checkAfterLoad: false)
                     LogManager.shared.info("Automatic backup completed: \(backupURL.lastPathComponent)")
+                    self.endBackgroundTask()
                     completion?(.success(backupURL))
                 }
 
@@ -317,6 +301,7 @@ class AutomaticBackupService: ObservableObject {
                     self.lastBackupError = error
                     self.isBackupInProgress = false
                     LogManager.shared.info("Automatic backup failed: \(error.localizedDescription)")
+                    self.endBackgroundTask()
                     completion?(.failure(error))
                 }
             }
@@ -389,7 +374,7 @@ class AutomaticBackupService: ObservableObject {
         return fileURL
     }
 
-    func refreshAvailableBackups() {
+    func refreshAvailableBackups(checkAfterLoad: Bool = false) {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
 
@@ -410,11 +395,10 @@ class AutomaticBackupService: ObservableObject {
                             return nil
                         }
 
-                        // Extract flight count from filename if available
                         let filename = url.lastPathComponent
                         var flightCount: Int?
                         if let range = filename.range(of: "_\\d+flights", options: .regularExpression) {
-                            let countString = filename[range].dropFirst().dropLast(7) // Remove "_" and "flights"
+                            let countString = filename[range].dropFirst().dropLast(7)
                             flightCount = Int(countString)
                         }
 
@@ -426,20 +410,18 @@ class AutomaticBackupService: ObservableObject {
                             flightCount: flightCount
                         )
                     }
-                    .sorted { $0.date > $1.date } // Most recent first
+                    .sorted { $0.date > $1.date }
 
                 DispatchQueue.main.async {
                     self.availableBackups = backups
-                    // Now that backups are loaded, check if a new backup is needed
-                    self.checkAndPerformBackupIfNeeded()
+                    if checkAfterLoad { self.checkAndPerformBackupIfNeeded() }
                 }
 
             } catch {
                 LogManager.shared.error("Error loading backups: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self.availableBackups = []
-                    // Even if loading failed, check if backup is needed
-                    self.checkAndPerformBackupIfNeeded()
+                    if checkAfterLoad { self.checkAndPerformBackupIfNeeded() }
                 }
             }
         }
