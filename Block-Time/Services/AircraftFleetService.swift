@@ -256,7 +256,7 @@ class AircraftFleetService: ObservableObject {
     // MARK: - Fleet Collections
     static let availableFleets: [Fleet] = [
         Fleet(name: "B737", types: ["B731", "B732", "B733", "B734", "B735", "B736", "B737", "B738", "B739", "B37M", "B38M", "B39M", "B3XM"]),
-        Fleet(name: "A321", types: ["A321", "A21N"]),
+        Fleet(name: "A320", types: ["A321", "A21N","A320", "A20N", "A318", "A319", "A19N"]),
         Fleet(name: "A330", types: ["A330", "A332", "A333", "A338", "A339"]),
         Fleet(name: "B787", types: ["B787", "B788", "B789", "B78X"]),
         Fleet(name: "A380", types: ["A388"]),
