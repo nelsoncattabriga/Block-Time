@@ -93,7 +93,7 @@ struct MapSectorSheet: View {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("\(sectors.count)")
                         .font(.system(.title, design: .rounded, weight: .bold))
-                    Text(sectors.count == 1 ? "flight" : "flights")
+                    Text(sectors.count == 1 ? "visit" : "visits")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -166,8 +166,8 @@ struct MapSectorSheet: View {
         let context = FlightDatabaseService.shared.viewContext
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         request.predicate = NSPredicate(
-            format: "fromAirport ==[c] %@ OR fromAirport ==[c] %@ OR toAirport ==[c] %@ OR toAirport ==[c] %@",
-            icao, iata, icao, iata
+            format: "toAirport ==[c] %@ OR toAirport ==[c] %@",
+            icao, iata
         )
         request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
         guard let results = try? context.fetch(request) else { return }
@@ -223,43 +223,67 @@ private struct MapFlightRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            // Date
-            Text(displayDate)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize()
-
-            // Flight number
-            Text(sector.flightNumberFormatted)
-                .font(.system(.subheadline, design: .monospaced, weight: .semibold))
-                .fixedSize()
-
-            // Sector
-            HStack(spacing: 3) {
-                Text(fromCode)
-                    .font(.system(.subheadline, design: .monospaced, weight: .semibold))
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 11))
+        ViewThatFits(in: .horizontal) {
+            // Compact single-line layout (normal Dynamic Type sizes)
+            HStack(spacing: 8) {
+                Text(displayDate)
+                    .font(.system(.subheadline, design: .monospaced))
                     .foregroundStyle(.secondary)
-                Text(toCode)
+                    .fixedSize()
+                
+                Spacer()
+                
+                Text(sector.flightNumberFormatted)
                     .font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                    .fixedSize()
+                HStack(spacing: 3) {
+                    Text(fromCode)
+                        .font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Text(toCode)
+                        .font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                }
+                .fixedSize()
+                Spacer()
+//                Text(sector.aircraftReg)
+//                    .font(.system(.footnote, design: .monospaced))
+//                    .foregroundStyle(.secondary)
+//                    .fixedSize()
+                Text(sector.aircraftType)
+                    .font(.system(.footnote, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
             }
-            .fixedSize()
 
-            Spacer()
-
-            // Rego
-            Text(sector.aircraftReg)
-                .font(.system(.subheadline, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .fixedSize()
-
-            // Type
-            Text(sector.aircraftType)
-                .font(.system(.subheadline, design: .monospaced))
-                .foregroundStyle(.tertiary)
-                .fixedSize()
+            // Stacked two-line fallback (large Accessibility sizes)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(displayDate)
+                        .font(.system(.subheadline, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    Text(sector.flightNumberFormatted)
+                        .font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                    HStack(spacing: 3) {
+                        Text(fromCode)
+                            .font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Text(toCode)
+                            .font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                    }
+                }
+                HStack(spacing: 6) {
+//                    Text(sector.aircraftReg)
+//                        .font(.system(.footnote, design: .monospaced))
+//                        .foregroundStyle(.secondary)
+                    Text(sector.aircraftType)
+                        .font(.system(.footnote, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
