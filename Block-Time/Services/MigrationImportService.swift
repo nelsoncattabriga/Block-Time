@@ -60,6 +60,7 @@ struct MigrationFlight: Codable {
     let isGLS: Bool
     let isNPA: Bool
     let remarks: String
+    let customCount: Int?
     let dayTakeoffs: Int
     let dayLandings: Int
     let nightTakeoffs: Int
@@ -96,6 +97,8 @@ struct MigrationSettings: Codable {
     let savedCoPilotNames: [String]?
     let savePhotosToLibrary: Bool?
     let showSONameFields: Bool?
+    let logCustomCount: Bool?
+    let customCountLabel: String?
     let pfAutoInstrumentMinutes: Int?
     let logbookDestination: String?
     let displayFlightsInLocalTime: Bool?
@@ -472,7 +475,8 @@ class MigrationImportService {
                 outTime: migrationFlight.outTime,
                 inTime: migrationFlight.inTime,
                 scheduledDeparture: migrationFlight.scheduledDeparture,
-                scheduledArrival: migrationFlight.scheduledArrival
+                scheduledArrival: migrationFlight.scheduledArrival,
+                customCount: migrationFlight.customCount ?? 0
             )
         }
 
@@ -569,6 +573,12 @@ class MigrationImportService {
         }
         if let showSONameFields = settings.showSONameFields {
             ubiquitousStore.set(showSONameFields, forKey: "cloud_showSONameFields")
+        }
+        if let logCustomCount = settings.logCustomCount {
+            ubiquitousStore.set(logCustomCount, forKey: "cloud_logCustomCount")
+        }
+        if let customCountLabel = settings.customCountLabel {
+            ubiquitousStore.set(customCountLabel, forKey: "cloud_customCountLabel")
         }
         if let pfAutoInstrumentMinutes = settings.pfAutoInstrumentMinutes {
             ubiquitousStore.set(pfAutoInstrumentMinutes, forKey: "cloud_pfAutoInstrumentMinutes")

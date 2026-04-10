@@ -117,6 +117,8 @@ struct AppSettings {
     var decimalRoundingMode: RoundingMode  // Rounding mode for decimal times (block and night)
     var enterTimesInLocalTime: Bool  // Enter OUT/IN/STD/STA in local airport time instead of UTC
     var showOutInTimes: Bool  // Show OUT/IN (and STD/STA) times in the flights list
+    var logCustomCount: Bool  // Show custom counter field in logbook entry
+    var customCountLabel: String  // User-defined label for the counter (default "PAX")
 
 
     static let `default` = AppSettings(
@@ -157,7 +159,9 @@ struct AppSettings {
         selectedFleetID: "B737",
         decimalRoundingMode: .standard,  // Default to standard rounding
         enterTimesInLocalTime: false,
-        showOutInTimes: true
+        showOutInTimes: true,
+        logCustomCount: false,
+        customCountLabel: "PAX"
     )
 }
 
@@ -202,6 +206,8 @@ class UserDefaultsService: ObservableObject {
         static let decimalRoundingMode = "decimalRoundingMode"
         static let enterTimesInLocalTime = "enterTimesInLocalTime"
         static let showOutInTimes = "showOutInTimes"
+        static let logCustomCount = "logCustomCount"
+        static let customCountLabel = "customCountLabel"
         static let onboardingCompleted = "onboardingCompleted"
     }
     
@@ -267,7 +273,9 @@ class UserDefaultsService: ObservableObject {
             selectedFleetID: userDefaults.string(forKey: Keys.selectedFleetID) ?? "B737",
             decimalRoundingMode: roundingMode,
             enterTimesInLocalTime: userDefaults.bool(forKey: Keys.enterTimesInLocalTime),
-            showOutInTimes: userDefaults.object(forKey: Keys.showOutInTimes) as? Bool ?? true
+            showOutInTimes: userDefaults.object(forKey: Keys.showOutInTimes) as? Bool ?? true,
+            logCustomCount: userDefaults.bool(forKey: Keys.logCustomCount),
+            customCountLabel: userDefaults.string(forKey: Keys.customCountLabel) ?? "PAX"
         )
     }
 
@@ -304,6 +312,8 @@ class UserDefaultsService: ObservableObject {
         userDefaults.set(settings.decimalRoundingMode.rawValue, forKey: Keys.decimalRoundingMode)
         userDefaults.set(settings.enterTimesInLocalTime, forKey: Keys.enterTimesInLocalTime)
         userDefaults.set(settings.showOutInTimes, forKey: Keys.showOutInTimes)
+        userDefaults.set(settings.logCustomCount, forKey: Keys.logCustomCount)
+        userDefaults.set(settings.customCountLabel, forKey: Keys.customCountLabel)
 
         // Sync to iCloud if enabled
         if syncToCloud {
@@ -421,6 +431,18 @@ class UserDefaultsService: ObservableObject {
     func setShowSONameFields(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.showSONameFields)
+        syncToCloudAfterChange()
+    }
+
+    func setLogCustomCount(_ value: Bool) {
+        markModificationAndSyncToCloud()
+        userDefaults.set(value, forKey: Keys.logCustomCount)
+        syncToCloudAfterChange()
+    }
+
+    func setCustomCountLabel(_ value: String) {
+        markModificationAndSyncToCloud()
+        userDefaults.set(value, forKey: Keys.customCountLabel)
         syncToCloudAfterChange()
     }
 

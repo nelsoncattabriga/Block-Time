@@ -44,7 +44,7 @@ struct DashboardCardView: View {
         case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .frmsLimitsGauge,
              .frmsRollingLine, .activityChart, .timeByType,
              .pfRatioChart, .takeoffLanding, .approachTypes, .topRoutes,
-             .topRegistrations, .airportStats, .workRateHeatmap, .careerMilestones:
+             .topRegistrations, .airportStats, .workRateHeatmap, .careerMilestones, .customCount:
             return true
         default:
             return false
@@ -94,6 +94,8 @@ struct DashboardCardView: View {
             WorkRateHeatmapCard(monthlyActivity: viewModel.monthlyActivity, dailyActivity: viewModel.dailyActivity)
         case .careerMilestones:
             CareerMilestonesCard(stats: viewModel.careerStats)
+        case .customCount:
+            CustomCountCard()
         default:
             EmptyView()
         }

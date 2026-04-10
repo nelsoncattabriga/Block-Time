@@ -295,6 +295,7 @@ class FlightDatabaseService: ObservableObject {
             flight.inTime = sector.inTime
             flight.scheduledDeparture = sector.scheduledDeparture
             flight.scheduledArrival = sector.scheduledArrival
+            flight.customCount = Int16(sector.customCount)
             flight.createdAt = Date()
             flight.modifiedAt = Date()
 
@@ -361,6 +362,7 @@ class FlightDatabaseService: ObservableObject {
                 flight.inTime = sector.inTime
                 flight.scheduledDeparture = sector.scheduledDeparture
                 flight.scheduledArrival = sector.scheduledArrival
+                flight.customCount = Int16(sector.customCount)
                 flight.modifiedAt = Date()
 
                 try viewContext.save()
@@ -434,6 +436,7 @@ class FlightDatabaseService: ObservableObject {
                     flight.inTime = updatedSector.inTime
                     flight.scheduledDeparture = updatedSector.scheduledDeparture
                     flight.scheduledArrival = updatedSector.scheduledArrival
+                    flight.customCount = Int16(updatedSector.customCount)
                     flight.modifiedAt = Date()
                 }
 
@@ -919,7 +922,8 @@ class FlightDatabaseService: ObservableObject {
                 outTime: sector.outTime,
                 inTime: sector.inTime,
                 scheduledDeparture: sector.scheduledDeparture,
-                scheduledArrival: sector.scheduledArrival
+                scheduledArrival: sector.scheduledArrival,
+                customCount: sector.customCount
             )
             if saveFlight(copy) { savedCount += 1 }
         }
@@ -1957,10 +1961,11 @@ class FlightDatabaseService: ObservableObject {
             outTime: entity.outTime ?? "",
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
-            scheduledArrival: entity.scheduledArrival ?? ""
+            scheduledArrival: entity.scheduledArrival ?? "",
+            customCount: Int(entity.customCount)
         )
     }
-    
+
     /// Safely convert string to double with validation
     private func entityIsSpInsOnly(_ flight: FlightEntity) -> Bool {
         let spVal = safeDoubleFromString(flight.spInsTime)

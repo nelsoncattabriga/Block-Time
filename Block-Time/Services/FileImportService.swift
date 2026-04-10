@@ -540,6 +540,8 @@ class FileImportService {
         let isGLS = parseBool(getValue("GLS"))
         let isNPA = parseBool(getValue("NPA"))
         let isPositioning = parseBool(getValue("PAX"))
+        let customCountRaw = getValue("Custom Count")
+        let customCount = Int(customCountRaw.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
 
         // If Pilot Flying is not set or false, check if we should infer it from Instrument Time
         if !isPilotFlying {
@@ -684,7 +686,8 @@ class FileImportService {
             outTime: outTime,
             inTime: inTime,
             scheduledDeparture: scheduledDeparture,
-            scheduledArrival: scheduledArrival
+            scheduledArrival: scheduledArrival,
+            customCount: isPositioning ? 0 : max(0, customCount)
         )
 
         return .success(flight)
@@ -1032,6 +1035,8 @@ class FileImportService {
                 mappings.append(FieldMapping(logbookField: "Night Landings", logbookFieldDescription: "Night Landings", sourceColumn: header, isRequired: false))
             } else if headerLower == "pax" {
                 mappings.append(FieldMapping(logbookField: "PAX", logbookFieldDescription: "PAX", sourceColumn: header, isRequired: false))
+            } else if headerLower == "custom count" {
+                mappings.append(FieldMapping(logbookField: "Custom Count", logbookFieldDescription: "Custom Count", sourceColumn: header, isRequired: false))
             } else if headerLower == "remarks" {
                 mappings.append(FieldMapping(logbookField: "Remarks", logbookFieldDescription: "Remarks", sourceColumn: header, isRequired: false))
             }
@@ -1043,7 +1048,7 @@ class FileImportService {
     // MARK: - Export to CSV
     func exportToCSV(flights: [FlightSector]) -> String {
         // CSV Header
-        var csv = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks\n"
+        var csv = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks,Custom Count\n"
 
         // Add each flight as a row
         for flight in flights {
@@ -1081,7 +1086,8 @@ class FileImportService {
                 String(flight.dayLandings),
                 String(flight.nightTakeoffs),
                 String(flight.nightLandings),
-                escapeCSVField(flight.remarks)
+                escapeCSVField(flight.remarks),
+                flight.customCount > 0 ? String(flight.customCount) : ""
             ]
 
             csv += row.joined(separator: ",") + "\n"

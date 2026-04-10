@@ -375,7 +375,8 @@ struct FlightSectorEditScreen: View {
             spInsTime: spInsTime,
             isPilotFlying: isPilotFlying,
             isAIII: isAIII,
-            remarks: remarks
+            remarks: remarks,
+            customCount: sector.customCount
         )
         
         if databaseService.updateFlight(updatedSector) {

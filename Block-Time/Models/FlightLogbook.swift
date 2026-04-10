@@ -91,6 +91,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var inTime: String
     var scheduledDeparture: String  // STD - Scheduled Time of Departure (HHMM format)
     var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
+    var customCount: Int            // User-defined counter (e.g. PAX carried)
 
     // MARK: - Validate and clean time string values
     private static func validateTimeString(_ timeString: String) -> String {
@@ -110,7 +111,8 @@ struct FlightSector: Identifiable, Codable, Hashable {
          simTime: String, spInsTime: String = "", isPilotFlying: Bool, isPositioning: Bool = false, isAIII: Bool = false, isRNP: Bool = false,
          isILS: Bool = false, isGLS: Bool = false, isNPA: Bool = false, remarks: String = "",
          dayTakeoffs: Int = 0, dayLandings: Int = 0, nightTakeoffs: Int = 0, nightLandings: Int = 0,
-         outTime: String = "", inTime: String = "", scheduledDeparture: String = "", scheduledArrival: String = "") {
+         outTime: String = "", inTime: String = "", scheduledDeparture: String = "", scheduledArrival: String = "",
+         customCount: Int = 0) {
         self.id = id ?? UUID()
         self.date = date
         self.flightNumber = flightNumber
@@ -146,6 +148,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         self.inTime = inTime
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
+        self.customCount = max(0, customCount)
 
         // MARK: - Development validation
         #if DEBUG
@@ -282,7 +285,8 @@ struct FlightSector: Identifiable, Codable, Hashable {
             outTime: entity.outTime ?? "",
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
-            scheduledArrival: entity.scheduledArrival ?? ""
+            scheduledArrival: entity.scheduledArrival ?? "",
+            customCount: Int(entity.customCount)
         )
     }
     

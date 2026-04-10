@@ -494,6 +494,33 @@ private struct ModernDefaultCrewNamesCard: View {
                     color: .blue,
                     icon: "person.2.badge.key"
                 )
+
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+
+                ModernToggleRow(
+                    title: "Log Custom",
+                    subtitle: "Show custom counter field in logbook entry",
+                    isOn: Binding(
+                        get: { viewModel.logCustomCount },
+                        set: { viewModel.updateLogCustomCount($0) }
+                    ),
+                    color: .blue,
+                    icon: "person.2.fill"
+                )
+
+                if viewModel.logCustomCount {
+                    ModernTextFieldRow(
+                        label: "Custom Label",
+                        text: Binding(
+                            get: { viewModel.customCountLabel },
+                            set: { viewModel.updateCustomCountLabel($0) }
+                        ),
+                        placeholder: "e.g. PAX, Students",
+                        icon: "tag"
+                    )
+                }
             }
         }
         .padding(16)

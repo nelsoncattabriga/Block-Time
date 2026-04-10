@@ -46,6 +46,7 @@
         <attribute name="so1Name" optional="YES" attributeType="String"/>
         <attribute name="so2Name" optional="YES" attributeType="String"/>
         <attribute name="spInsTime" optional="YES" attributeType="String"/>
+        <attribute name="customCount" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="toAirport" optional="YES" attributeType="String"/>
     </entity>
 </model>

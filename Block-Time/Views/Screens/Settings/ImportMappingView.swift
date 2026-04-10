@@ -426,7 +426,8 @@ struct ImportMappingView: View {
             ("GLS", "GLS (yes/no, true/false, 1/0)", false, false),
             ("NPA", "NPA (yes/no, true/false, 1/0)", false, false),
             ("AIII", "AIII (yes/no, true/false, 1/0)", false, false),
-            ("Remarks", "Remarks/notes", false, false)
+            ("Remarks", "Remarks/notes", false, false),
+            ("Custom Count", "Custom numeric counter (e.g. PAX carried)", false, false)
         ]
 
         // Detect app profile once for all fields
@@ -607,6 +608,7 @@ struct ImportMappingView: View {
         "npa":            ["npaapproach", "npa"],
         "aiii":           ["aiiiapproach", "catiii", "cat3", "aiii"],
         "remarks":        ["remarks", "endorsements", "comments", "notes"],
+        "customcount":    ["customcount", "paxcount", "passengercount", "soulsonboard", "sob", "passengers"],
     ]
 
     /// Returns true if `synonym` matches `header` as a whole token or exact equality.

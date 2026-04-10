@@ -1,5 +1,60 @@
 import SwiftUI
 
+// MARK: - Custom Counter Input Field
+
+struct CustomCountField: View {
+    let label: String
+    @Binding var count: Int
+    var keyboardToolbar: KeyboardToolbarState? = nil
+
+    @State private var text: String = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "person.2.fill")
+                    .foregroundColor(.teal)
+                    .frame(width: 20)
+                Text(label.uppercased())
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+            }
+
+            TextField("0", text: $text)
+                .keyboardType(.numberPad)
+                .font(.subheadline)
+                .focused($isFocused)
+                .onChange(of: text) { _, newValue in
+                    let filtered = newValue.filter { $0.isNumber }
+                    if filtered != newValue {
+                        text = filtered
+                    }
+                    if let parsed = Int(filtered), parsed >= 0 {
+                        count = min(parsed, 9999)
+                        if parsed > 9999 { text = "9999" }
+                    } else if filtered.isEmpty {
+                        count = 0
+                    }
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if focused {
+                        keyboardToolbar?.fieldDidFocus(clear: {
+                            text = ""
+                            count = 0
+                        })
+                    }
+                }
+                .onAppear {
+                    text = count > 0 ? "\(count)" : ""
+                }
+        }
+        .padding(12)
+        .background(Color(.systemGray6).opacity(0.75))
+        .cornerRadius(8)
+    }
+}
+
 // MARK: - Modern Manual Entry Data Card
 struct ModernManualEntryDataCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
@@ -99,6 +154,18 @@ struct ModernManualEntryDataCard: View {
                     icon: "note.text",
                     keyboardToolbar: keyboardToolbar
                 )
+
+                // Custom counter field (e.g. PAX)
+                if viewModel.logCustomCount && !viewModel.isPositioning {
+                    CustomCountField(
+                        label: viewModel.customCountLabel,
+                        count: Binding(
+                            get: { viewModel.customCount },
+                            set: { viewModel.customCount = $0 }
+                        ),
+                        keyboardToolbar: keyboardToolbar
+                    )
+                }
             }
         }
         .padding(16)

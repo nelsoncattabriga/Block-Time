@@ -26,6 +26,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case airportStats      // Airport visit breakdown (visits, dep/arr, top reg)
     case workRateHeatmap      // Work Rate calendar heatmap
     case careerMilestones  // Career overview & milestone progress
+    case customCount       // User-defined counter totals (e.g. PAX carried)
 
     // ── Original Dashboard stat cards ────────────────────────────────────────────────
     case totalTime
@@ -65,6 +66,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .airportStats:      return "Airport Stats"
         case .workRateHeatmap:   return "Work Rate"
         case .careerMilestones:  return "Career Overview"
+        case .customCount:       return UserDefaults.standard.string(forKey: "customCountLabel") ?? "PAX"
         case .totalTime:         return "Total Time"
         case .picTime:           return "PIC Time"
         case .icusTime:          return "ICUS Time"
@@ -102,6 +104,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .airportStats:      return "building.columns.fill"
         case .workRateHeatmap:      return "chart.bar.xaxis"
         case .careerMilestones:  return "trophy.fill"
+        case .customCount:       return "person.2.fill"
         case .totalTime:         return "clock.fill"
         case .picTime:           return "person.badge.shield.checkmark.fill"
         case .icusTime:          return "person.2.fill"
@@ -139,6 +142,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .airportStats:      return .teal
         case .workRateHeatmap:      return .indigo
         case .careerMilestones:  return .yellow
+        case .customCount:       return .teal
         case .totalTime:         return .blue
         case .picTime:           return .green
         case .icusTime:          return .orange
@@ -162,7 +166,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     /// Advisory hint: this card was designed to look good at sidebar (narrow) widths.
     var sidebarHint: Bool {
         switch self {
-        case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .totalTime, .picTime, .icusTime, .nightTime, .simTime, .insTime, .recentActivity7, .recentActivity28, .recentActivity30, .recentActivity365, .pfRecency, .aiiiRecency, .takeoffRecency, .landingRecency, .aircraftTypeTime, .averageMetric, .careerMilestones:
+        case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .totalTime, .picTime, .icusTime, .nightTime, .simTime, .insTime, .recentActivity7, .recentActivity28, .recentActivity30, .recentActivity365, .pfRecency, .aiiiRecency, .takeoffRecency, .landingRecency, .aircraftTypeTime, .averageMetric, .careerMilestones, .customCount:
             return true
         default:
             return false

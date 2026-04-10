@@ -54,6 +54,8 @@ class CloudKitSettingsSyncService {
         static let savePhotosToLibrary = "cloud_savePhotosToLibrary"
         static let showSONameFields = "cloud_showSONameFields"
         static let showSpInsSelector = "cloud_showSpInsSelector"
+        static let logCustomCount = "cloud_logCustomCount"
+        static let customCountLabel = "cloud_customCountLabel"
         static let pfAutoInstrumentMinutes = "cloud_pfAutoInstrumentMinutes"
         static let logbookDestination = "cloud_logbookDestination"
         static let displayFlightsInLocalTime = "cloud_displayFlightsInLocalTime"
@@ -289,6 +291,8 @@ class CloudKitSettingsSyncService {
         ubiquitousStore.set(settings.savePhotosToLibrary, forKey: CloudKeys.savePhotosToLibrary)
         ubiquitousStore.set(settings.showSONameFields, forKey: CloudKeys.showSONameFields)
         ubiquitousStore.set(settings.showSpInsSelector, forKey: CloudKeys.showSpInsSelector)
+        ubiquitousStore.set(settings.logCustomCount, forKey: CloudKeys.logCustomCount)
+        ubiquitousStore.set(settings.customCountLabel, forKey: CloudKeys.customCountLabel)
         ubiquitousStore.set(settings.pfAutoInstrumentMinutes, forKey: CloudKeys.pfAutoInstrumentMinutes)
         ubiquitousStore.set(settings.logbookDestination.rawValue, forKey: CloudKeys.logbookDestination)
         ubiquitousStore.set(settings.displayFlightsInLocalTime, forKey: CloudKeys.displayFlightsInLocalTime)
@@ -463,6 +467,16 @@ class CloudKitSettingsSyncService {
            showSOFields != localSettings.showSONameFields {
             settings.showSONameFields = showSOFields
             changedKeys.insert("showSONameFields")
+        }
+        if let logCustomCount = ubiquitousStore.object(forKey: CloudKeys.logCustomCount) as? Bool,
+           logCustomCount != localSettings.logCustomCount {
+            settings.logCustomCount = logCustomCount
+            changedKeys.insert("logCustomCount")
+        }
+        if let customCountLabel = ubiquitousStore.string(forKey: CloudKeys.customCountLabel),
+           customCountLabel != localSettings.customCountLabel {
+            settings.customCountLabel = customCountLabel
+            changedKeys.insert("customCountLabel")
         }
         if let showSpIns = ubiquitousStore.object(forKey: CloudKeys.showSpInsSelector) as? Bool,
            showSpIns != localSettings.showSpInsSelector {
