@@ -484,7 +484,9 @@ struct ImportMappingView: View {
             "simtime":        "flight_simulator",
             "pilotflying":    "flight_pilotFlyingCapacity",
             "daytakeoffs":    "flight_dayTakeoffs",
-            "daylandings":    "flight_dayLanding",
+            "daylandings":    "flight_dayLandings",
+            "nighttakeoffs":  "flight_nightTakeoffs",
+            "nightlandings":  "flight_nightLandings",
             "remarks":        "flight_remarks",
         ],
 

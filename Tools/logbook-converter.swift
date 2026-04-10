@@ -19,7 +19,7 @@
 import Foundation
 
 // MARK: - Output CSV header (must match FileImportService.exportToCSV exactly)
-let outputHeader = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks"
+let outputHeader = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks,Custom Count"
 
 // MARK: - Flight row
 struct FlightRow {
@@ -57,6 +57,7 @@ struct FlightRow {
     var nightTakeoffs = 0
     var nightLandings = 0
     var remarks = ""
+    var customCount = 0
 
     func toCSVRow() -> String {
         let fields: [String] = [
@@ -74,7 +75,8 @@ struct FlightRow {
             isNPA ? "1" : "",
             String(dayTakeoffs), String(dayLandings),
             String(nightTakeoffs), String(nightLandings),
-            escapeCSV(remarks)
+            escapeCSV(remarks),
+            customCount > 0 ? String(customCount) : ""
         ]
         return fields.joined(separator: ",")
     }
@@ -167,7 +169,9 @@ let appProfiles: [String: [String: String]] = [
         "simtime":        "flight_simulator",
         "pilotflying":    "flight_pilotFlyingCapacity",
         "daytakeoffs":    "flight_dayTakeoffs",
-        "daylandings":    "flight_dayLanding",
+        "daylandings":    "flight_dayLandings",
+        "nighttakeoffs":  "flight_nightTakeoffs",
+        "nightlandings":  "flight_nightLandings",
         "remarks":        "flight_remarks",
     ],
     "PilotLog": [
@@ -267,6 +271,7 @@ let synonyms: [String: [String]] = [
     "spinstime":      ["spinstructortime", "spinstime", "spinstructor", "spins", "spinstr", "inspilot"],
     "pilotflying":    ["pilotflyingcapacity", "pilotflying", "flying", "pf"],
     "pax":            ["positioning", "deadhead", "passengerflight", "dh", "pax"],
+    "customcount":    ["customcount", "paxcount", "passengercount", "soulsonboard", "sob", "passengers"],
     "daytakeoffs":    ["daytakeoffs", "takeoffsday", "today", "tday", "dayt/o", "dto"],
     "daylandings":    ["daylanding", "daylandings", "landingsday", "ldgday", "dayldg"],
     "nighttakeoffs":  ["nighttakeoffs", "takeoffsnight", "tonight", "nightt/o", "nto"],
@@ -515,6 +520,7 @@ func convert(inputPath: String, outputPath: String?) {
         ("Day Takeoffs", "Day Takeoffs"), ("Day Landings", "Day Landings"),
         ("Night Takeoffs", "Night Takeoffs"), ("Night Landings", "Night Landings"),
         ("Remarks", "Remarks"),
+        ("Custom Count", "Custom Count"),
     ]
 
     var columnMap: [String: String] = [:]
@@ -588,6 +594,7 @@ func convert(inputPath: String, outputPath: String?) {
         flight.nightTakeoffs = Int(field("Night Takeoffs")) ?? 0
         flight.nightLandings = Int(field("Night Landings")) ?? 0
         flight.remarks = field("Remarks")
+        flight.customCount = flight.isPAX ? 0 : (Int(field("Custom Count").trimmingCharacters(in: .whitespaces)) ?? 0)
 
         // Pilot flying: explicit column, or infer from instrument time > 0
         flight.isPilotFlying = parseBool(field("Pilot Flying"))
