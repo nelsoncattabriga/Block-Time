@@ -489,7 +489,7 @@ private struct ModernDefaultCrewNamesCard: View {
                         set: { viewModel.updateShowSpInsSelector($0) }
                     ),
                     color: .blue,
-                    icon: "person.fill.badge.plus"
+                    icon: "person.wave.2"
                 )
 
                 if viewModel.showSpInsSelector {
@@ -676,8 +676,8 @@ private struct ModernOpsDataCard: View {
                     .padding(.vertical, 4)
 
                 ModernToggleRow(
-                    title: "Use Custom Fields",
-                    subtitle: "Show custom fields in Logbook",
+                    title: "Use Custom Counter",
+                    subtitle: "Show custom counter in Logbook",
                     isOn: Binding(
                         get: { viewModel.logCustomCount },
                         set: { viewModel.updateLogCustomCount($0) }
@@ -688,12 +688,12 @@ private struct ModernOpsDataCard: View {
 
                 if viewModel.logCustomCount {
                     ModernTextFieldRow(
-                        label: "Custom Field Label",
+                        label: "Custom Counter Label",
                         text: Binding(
                             get: { viewModel.customCountLabel },
                             set: { viewModel.updateCustomCountLabel($0) }
                         ),
-                        placeholder: "e.g. Passengers",
+                        placeholder: "e.g. Pax Carried",
                         icon: "tag"
                     )
                 }

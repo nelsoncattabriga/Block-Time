@@ -12,15 +12,15 @@ struct CustomCountField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 12) {
                 Image(systemName: "person.2.badge.plus")
                     .foregroundColor(.blue)
                     .frame(width: 20)
+                
                 Text(label.uppercased())
                     .font(.caption.bold())
                     .foregroundColor(.secondary)
             }
-
             TextField("0", text: $text)
                 .keyboardType(.numberPad)
                 .font(.subheadline)
