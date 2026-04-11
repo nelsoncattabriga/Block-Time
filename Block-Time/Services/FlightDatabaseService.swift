@@ -1206,6 +1206,7 @@ class FlightDatabaseService: ObservableObject {
                 flight.inTime = sector.inTime
                 flight.scheduledDeparture = sector.scheduledDeparture
                 flight.scheduledArrival = sector.scheduledArrival
+                flight.customCount = Int16(sector.customCount)
                 flight.importSessionID = sessionID
                 flight.importedAt = Date()
                 flight.createdAt = Date()
