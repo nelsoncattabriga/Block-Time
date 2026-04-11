@@ -93,33 +93,49 @@ func escapeCSV(_ field: String) -> String {
 }
 
 func parseCSVRows(content: String, delimiter: Character) -> [[String]] {
+    // Normalise line endings: \r\n and \r → \n before processing.
+    // Swift treats \r\n as a single grapheme cluster, so character-by-character
+    // iteration won't see \r or \n separately — normalise first.
     var cleaned = content
+        .replacingOccurrences(of: "\r\n", with: "\n")
+        .replacingOccurrences(of: "\r", with: "\n")
     if cleaned.hasPrefix("\u{FEFF}") { cleaned.removeFirst() }
 
     var rows: [[String]] = []
     var currentField = ""
     var fields: [String] = []
     var inQuotes = false
+    let chars = Array(cleaned)
+    var i = 0
 
     func finishField() {
         fields.append(currentField.trimmingCharacters(in: .whitespaces))
         currentField = ""
     }
 
-    for char in cleaned {
+    while i < chars.count {
+        let char = chars[i]
         if char == "\"" {
-            inQuotes.toggle()
+            if inQuotes && i + 1 < chars.count && chars[i + 1] == "\"" {
+                // Escaped quote "" → literal "
+                currentField.append("\"")
+                i += 2
+                continue
+            } else {
+                inQuotes.toggle()
+            }
         } else if char == delimiter && !inQuotes {
             finishField()
+        } else if char == "\r" && !inQuotes {
+            // skip bare \r; \r\n handled by skipping \r then \n finishes the row
         } else if char == "\n" && !inQuotes {
             finishField()
             if !fields.isEmpty { rows.append(fields) }
             fields = []
-        } else if char == "\r" {
-            // skip CR
-        } else {
+        } else if char != "\r" {
             currentField.append(char)
         }
+        i += 1
     }
     finishField()
     if !fields.isEmpty { rows.append(fields) }

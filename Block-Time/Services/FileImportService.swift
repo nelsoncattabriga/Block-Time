@@ -137,30 +137,61 @@ class FileImportService {
             cleanedContent.removeFirst()
         }
 
-        // Split into lines first - handles all line ending types
-        var lines = cleanedContent.components(separatedBy: .newlines)
+        // Normalise line endings: Swift treats \r\n as a single grapheme cluster,
+        // so character iteration won't see \r or \n separately without this step.
+        cleanedContent = cleanedContent
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
 
-        // Remove empty trailing lines
-        while !lines.isEmpty && lines.last?.isEmpty == true {
-            lines.removeLast()
-        }
-
-        LogManager.shared.info("🔍 Found \(lines.count) lines")
-
+        let delimChar: Character = delimiter.isEmpty ? "," : delimiter.first!
         var rows: [[String]] = []
+        var currentField = ""
+        var fields: [String] = []
+        var inQuotes = false
+        let chars = Array(cleanedContent)
+        var i = 0
 
-        for (lineIndex, line) in lines.enumerated() {
-            guard !line.isEmpty else { continue }
-
-            let fields = parseCVSLine(line, delimiter: delimiter)
-            rows.append(fields)
-
-            if lineIndex < 3 {
-                LogManager.shared.info("🔍 Row \(lineIndex + 1): \(fields.count) fields")
+        while i < chars.count {
+            let char = chars[i]
+            if char == "\"" {
+                if inQuotes && i + 1 < chars.count && chars[i + 1] == "\"" {
+                    currentField.append("\"")
+                    i += 2
+                    continue
+                } else {
+                    inQuotes.toggle()
+                }
+            } else if char == delimChar && !inQuotes {
+                fields.append(currentField.trimmingCharacters(in: .whitespaces))
+                currentField = ""
+            } else if char == "\n" && !inQuotes {
+                fields.append(currentField.trimmingCharacters(in: .whitespaces))
+                currentField = ""
+                if !fields.isEmpty && !fields.allSatisfy({ $0.isEmpty }) {
+                    rows.append(fields)
+                }
+                fields = []
+            } else {
+                currentField.append(char)
             }
+            i += 1
+        }
+        // Handle final field/row
+        fields.append(currentField.trimmingCharacters(in: .whitespaces))
+        if !fields.isEmpty && !fields.allSatisfy({ $0.isEmpty }) {
+            rows.append(fields)
         }
 
         LogManager.shared.info("🔍 parseCSVRows completed: \(rows.count) rows total")
+        if rows.count > 0 {
+            LogManager.shared.info("🔍 Row 1: \(rows[0].count) fields")
+        }
+        if rows.count > 1 {
+            LogManager.shared.info("🔍 Row 2: \(rows[1].count) fields")
+        }
+        if rows.count > 2 {
+            LogManager.shared.info("🔍 Row 3: \(rows[2].count) fields")
+        }
         if !rows.isEmpty {
             LogManager.shared.info("🔍 First row has \(rows[0].count) fields")
         }
