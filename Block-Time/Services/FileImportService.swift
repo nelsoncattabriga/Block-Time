@@ -472,8 +472,8 @@ class FileImportService {
         let aircraftReg = getValue("Aircraft Reg")
         let fromAirport = getValue("From Airport")
         let toAirport = getValue("To Airport")
-        let captainName = getValue("Captain Name")
-        let foName = getValue("F/O Name")
+        let captainName = parseCrewName(getValue("Captain Name"))
+        let foName = parseCrewName(getValue("F/O Name"))
         let scheduledDeparture = parseTime(getValue("STD"))
         let scheduledArrival = parseTime(getValue("STA"))
         let outTime = parseTime(getValue("OUT Time"))
@@ -661,8 +661,8 @@ class FileImportService {
             toAirport: toAirport,
             captainName: captainName,
             foName: foName,
-            so1Name: getValue("S/O1 Name").isEmpty ? nil : getValue("S/O1 Name"),
-            so2Name: getValue("S/O2 Name").isEmpty ? nil : getValue("S/O2 Name"),
+            so1Name: getValue("S/O1 Name").isEmpty ? nil : parseCrewName(getValue("S/O1 Name")),
+            so2Name: getValue("S/O2 Name").isEmpty ? nil : parseCrewName(getValue("S/O2 Name")),
             blockTime: finalBlockTime,
             nightTime: nightTime,
             p1Time: p1Time,
@@ -698,6 +698,17 @@ class FileImportService {
     /// - Any non-empty text (except explicit "false", "no", "0") is treated as true
     /// - Empty/blank values are treated as false
     /// This handles variations like "sim", "True", "YES", "1", etc.
+    private func parseCrewName(_ value: String) -> String {
+        let t = value.trimmingCharacters(in: .whitespaces)
+        guard t.contains(",") else { return t }
+        let parts = t.components(separatedBy: ",")
+        guard parts.count == 2 else { return t }
+        let last = parts[0].trimmingCharacters(in: .whitespaces)
+        let first = parts[1].trimmingCharacters(in: .whitespaces)
+        guard !first.isEmpty, !last.isEmpty else { return t }
+        return "\(first) \(last)"
+    }
+
     private func parseBool(_ value: String) -> Bool {
         let normalized = value.lowercased().trimmingCharacters(in: .whitespaces)
 

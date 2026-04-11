@@ -455,6 +455,27 @@ func parseDate(_ s: String) -> String {
     return t
 }
 
+// MARK: - Crew name normalisation
+
+// LogTen Pro exports crew as "Lastname, Firstname" — reformat to "Firstname Lastname".
+// Also trims extra whitespace from split fields.
+func parseCrewName(_ s: String) -> String {
+    let t = s.trimmingCharacters(in: .whitespaces)
+    guard !t.isEmpty else { return "" }
+    // "Lastname, Firstname" → "Firstname Lastname"
+    if t.contains(",") {
+        let parts = t.components(separatedBy: ",")
+        if parts.count == 2 {
+            let last = parts[0].trimmingCharacters(in: .whitespaces)
+            let first = parts[1].trimmingCharacters(in: .whitespaces)
+            if !first.isEmpty && !last.isEmpty {
+                return "\(first) \(last)"
+            }
+        }
+    }
+    return t
+}
+
 // MARK: - Column lookup helper
 
 func makeGetter(row: [String], headers: [String]) -> (String) -> String {
@@ -474,8 +495,7 @@ func convert(inputPath: String, outputPath: String?) {
         exit(1)
     }
 
-    let delimiter = detectDelimiter(content)
-    let delimChar: Character = delimiter == "\t" ? "\t" : ","
+    let delimChar = detectDelimiter(content)
     let allRows = parseCSVRows(content: content, delimiter: delimChar)
 
     guard allRows.count > 1 else {
@@ -567,10 +587,10 @@ func convert(inputPath: String, outputPath: String?) {
         flight.aircraftType = field("Aircraft Type")
         flight.fromAirport = field("From Airport")
         flight.toAirport = field("To Airport")
-        flight.captainName = field("Captain Name")
-        flight.foName = field("F/O Name")
-        flight.so1Name = field("S/O1 Name")
-        flight.so2Name = field("S/O2 Name")
+        flight.captainName = parseCrewName(field("Captain Name"))
+        flight.foName = parseCrewName(field("F/O Name"))
+        flight.so1Name = parseCrewName(field("S/O1 Name"))
+        flight.so2Name = parseCrewName(field("S/O2 Name"))
         flight.std = parseTime(field("STD"))
         flight.sta = parseTime(field("STA"))
         flight.outTime = parseTime(field("OUT Time"))
