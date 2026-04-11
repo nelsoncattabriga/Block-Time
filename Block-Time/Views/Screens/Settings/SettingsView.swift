@@ -399,21 +399,6 @@ private struct ModernDefaultCrewNamesCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
-                ModernToggleRow(
-                    title: "Log Instructor Time",
-                    subtitle: "Log SIM & FLT Instructor Times",
-                    isOn: Binding(
-                        get: { viewModel.showSpInsSelector },
-                        set: { viewModel.updateShowSpInsSelector($0) }
-                    ),
-                    color: .blue,
-                    icon: "person.fill.badge.plus"
-                )
-
-                if viewModel.showSpInsSelector {
-                    instructionEnvironmentPicker
-                }
-
                 // F/O PF Time Credit Picker (only show when F/O is selected)
                 if viewModel.flightTimePosition == .firstOfficer {
                     HStack(spacing: 12) {
@@ -480,10 +465,6 @@ private struct ModernDefaultCrewNamesCard: View {
                     )
                 }
 
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-
                 ModernToggleRow(
                     title: "Log S/O Names",
                     subtitle: "Show S/O Name Fields",
@@ -492,34 +473,27 @@ private struct ModernDefaultCrewNamesCard: View {
                         set: { viewModel.updateShowSONameFields($0) }
                     ),
                     color: .blue,
-                    icon: "person.2.badge.key"
+                    icon: "person.2.badge.plus.fill"
                 )
-
+                
+                
                 Divider()
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
 
                 ModernToggleRow(
-                    title: "Log Custom",
-                    subtitle: "Show custom counter field in logbook entry",
+                    title: "Log Instructor Time",
+                    subtitle: "Log SIM & FLT Instructor Times",
                     isOn: Binding(
-                        get: { viewModel.logCustomCount },
-                        set: { viewModel.updateLogCustomCount($0) }
+                        get: { viewModel.showSpInsSelector },
+                        set: { viewModel.updateShowSpInsSelector($0) }
                     ),
                     color: .blue,
-                    icon: "person.2.fill"
+                    icon: "person.fill.badge.plus"
                 )
 
-                if viewModel.logCustomCount {
-                    ModernTextFieldRow(
-                        label: "Custom Label",
-                        text: Binding(
-                            get: { viewModel.customCountLabel },
-                            set: { viewModel.updateCustomCountLabel($0) }
-                        ),
-                        placeholder: "e.g. PAX, Students",
-                        icon: "tag"
-                    )
+                if viewModel.showSpInsSelector {
+                    instructionEnvironmentPicker
                 }
             }
         }
@@ -608,7 +582,7 @@ private struct ModernOpsDataCard: View {
             }
 
             VStack(spacing: 12) {
-
+                
                 // Instrument Time when PF
                 HStack {
                     Image(systemName: "gauge.with.dots.needle.67percent")
@@ -619,14 +593,14 @@ private struct ModernOpsDataCard: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
-
+                        
                         Text("\(viewModel.pfAutoInstrumentMinutes) minutes")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-
+                    
                     Spacer()
-
+                    
                     Picker("", selection: Binding(
                         get: { viewModel.pfAutoInstrumentMinutes },
                         set: { viewModel.updatePFAutoInstrumentMinutes($0) }
@@ -642,11 +616,11 @@ private struct ModernOpsDataCard: View {
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
-
+                
                 Divider()
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-
+                
                 // Log Approaches Toggle
                 ModernToggleRow(
                     title: "Log Approaches",
@@ -658,7 +632,7 @@ private struct ModernOpsDataCard: View {
                     color: .blue,
                     icon: "airplane.arrival"
                 )
-
+                
                 // Default Approach Type Picker (only show when Log Approaches is enabled)
                 if viewModel.logApproaches {
                     HStack {
@@ -670,14 +644,14 @@ private struct ModernOpsDataCard: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
-
+                            
                             Text(viewModel.defaultApproachType ?? "Nil")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-
+                        
                         Spacer()
-
+                        
                         Picker("", selection: Binding(
                             get: { viewModel.defaultApproachType },
                             set: { viewModel.updateDefaultApproachType($0) }
@@ -695,6 +669,36 @@ private struct ModernOpsDataCard: View {
                     .background(Color(.systemGray6).opacity(0.5))
                     .cornerRadius(8)
                 }
+                
+            
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+
+                ModernToggleRow(
+                    title: "Use Custom Fields",
+                    subtitle: "Show custom fields in Logbook",
+                    isOn: Binding(
+                        get: { viewModel.logCustomCount },
+                        set: { viewModel.updateLogCustomCount($0) }
+                    ),
+                    color: .blue,
+                    icon: "slider.horizontal.below.square.and.square.filled"
+                )
+
+                if viewModel.logCustomCount {
+                    ModernTextFieldRow(
+                        label: "Custom Field Label",
+                        text: Binding(
+                            get: { viewModel.customCountLabel },
+                            set: { viewModel.updateCustomCountLabel($0) }
+                        ),
+                        placeholder: "e.g. Passengers",
+                        icon: "tag"
+                    )
+                }
+
+            
             }
         }
         .padding(16)
