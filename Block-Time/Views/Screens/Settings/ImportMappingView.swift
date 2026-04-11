@@ -37,10 +37,29 @@ struct RegistrationTypeMapping: Identifiable {
     let sampleRegistrations: [String]  // Show examples to user
 }
 
+// MARK: - Remarks Append Entry
+struct RemarksAppendEntry: Identifiable {
+    let id: UUID
+    var sourceColumn: String
+    var label: String  // empty = no label, use "." as separator
+
+    init(sourceColumn: String, label: String = "") {
+        self.id = UUID()
+        self.sourceColumn = sourceColumn
+        self.label = label
+    }
+}
+
 // MARK: - Saved Mapping
+private struct SavedRemarksAppendEntry: Codable {
+    let sourceColumn: String
+    let label: String
+}
+
 private struct SavedMappingEntry: Codable {
     let logbookField: String
     let sourceColumns: [String]
+    let remarksAppendEntries: [SavedRemarksAppendEntry]?
 }
 
 // MARK: - Combination Strategy
@@ -67,6 +86,7 @@ struct FieldMapping: Identifiable {
     let isRequired: Bool
     var combinationStrategy: CombinationStrategy
     let supportsMultipleColumns: Bool  // Some fields like Night Time can combine multiple sources
+    var remarksAppendEntries: [RemarksAppendEntry]  // Only used for Remarks field
 
     // Convenience initializer for single column
     init(logbookField: String, logbookFieldDescription: String, sourceColumn: String?, isRequired: Bool, supportsMultipleColumns: Bool = false) {
@@ -77,6 +97,7 @@ struct FieldMapping: Identifiable {
         self.isRequired = isRequired
         self.combinationStrategy = .sum  // Always use sum strategy
         self.supportsMultipleColumns = supportsMultipleColumns
+        self.remarksAppendEntries = []
     }
 
     var sourceColumn: String? {
@@ -125,10 +146,13 @@ struct ImportMappingView: View {
             for i in mappings.indices {
                 if let entry = saved.first(where: { $0.logbookField == mappings[i].logbookField }) {
                     let validColumns = entry.sourceColumns.filter { validHeaders.contains($0) }
-                    // Only apply saved mapping if at least one saved column is still valid;
-                    // otherwise keep the auto-detected columns from createInitialMappings.
                     if !validColumns.isEmpty {
                         mappings[i].sourceColumns = validColumns
+                    }
+                    if mappings[i].logbookField == "Remarks", let savedAppend = entry.remarksAppendEntries {
+                        mappings[i].remarksAppendEntries = savedAppend
+                            .filter { validHeaders.contains($0.sourceColumn) }
+                            .map { RemarksAppendEntry(sourceColumn: $0.sourceColumn, label: $0.label) }
                     }
                 }
             }
@@ -308,7 +332,14 @@ struct ImportMappingView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Import") {
                         // Save current mapping for next time
-                        let entries = fieldMappings.map { SavedMappingEntry(logbookField: $0.logbookField, sourceColumns: $0.sourceColumns) }
+                        let entries = fieldMappings.map { m in
+                            SavedMappingEntry(
+                                logbookField: m.logbookField,
+                                sourceColumns: m.sourceColumns,
+                                remarksAppendEntries: m.remarksAppendEntries.isEmpty ? nil :
+                                    m.remarksAppendEntries.map { SavedRemarksAppendEntry(sourceColumn: $0.sourceColumn, label: $0.label) }
+                            )
+                        }
                         if let data = try? JSONEncoder().encode(entries) {
                             UserDefaults.standard.set(data, forKey: "LastImportMapping_\(importData.delimiter)")
                         }
@@ -679,6 +710,9 @@ struct FieldMappingRow: View {
     @Binding var mapping: FieldMapping
     let availableHeaders: [String]
     @State private var showingColumnPicker = false
+    @State private var showingAppendColumnPicker = false
+    // Temporary single-selection binding for append picker
+    @State private var appendPickerSelection: [String] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -765,6 +799,71 @@ struct FieldMappingRow: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            // Remarks append section — only for Remarks field
+            if mapping.logbookField == "Remarks" {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Append to Remarks")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button {
+                            appendPickerSelection = []
+                            showingAppendColumnPicker = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle")
+                                    .font(.caption)
+                                Text("Add column")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.blue)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    ForEach($mapping.remarksAppendEntries) { $entry in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(entry.sourceColumn)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .lineLimit(1)
+                                Spacer()
+                                Button {
+                                    mapping.remarksAppendEntries.removeAll { $0.id == entry.id }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            TextField("Label (optional)", text: $entry.label)
+                                .font(.caption)
+                                .padding(6)
+                                .background(Color(.systemGray6).opacity(0.75))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        }
+                        .padding(8)
+                        .background(Color(.systemGray6).opacity(0.4))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+
+                    if !mapping.remarksAppendEntries.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "text.append")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("Appended after remarks, separated by \".\"")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
         }
         .padding(.vertical, 4)
         .sheet(isPresented: $showingColumnPicker) {
@@ -773,6 +872,23 @@ struct FieldMappingRow: View {
                 availableHeaders: availableHeaders,
                 fieldName: mapping.logbookField,
                 allowMultiple: mapping.supportsMultipleColumns
+            )
+        }
+        .sheet(isPresented: $showingAppendColumnPicker, onDismiss: {
+            if let selected = appendPickerSelection.first {
+                let alreadyMapped = mapping.sourceColumns.contains(selected) ||
+                    mapping.remarksAppendEntries.contains { $0.sourceColumn == selected }
+                if !alreadyMapped {
+                    mapping.remarksAppendEntries.append(RemarksAppendEntry(sourceColumn: selected))
+                }
+            }
+            appendPickerSelection = []
+        }) {
+            ColumnPickerView(
+                selectedColumns: $appendPickerSelection,
+                availableHeaders: availableHeaders,
+                fieldName: "Append to Remarks",
+                allowMultiple: false
             )
         }
     }
@@ -1020,12 +1136,23 @@ private struct PreviewRowView: View {
 
                     if mapping.sourceColumns.count == 1 {
                         // Single column - show value
-                        if let columnIndex = columnIndices[mapping.sourceColumns[0]],
-                           columnIndex < row.count {
-                            Text(row[columnIndex])
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 2) {
+                            if let columnIndex = columnIndices[mapping.sourceColumns[0]],
+                               columnIndex < row.count {
+                                let base = row[columnIndex]
+                                let appended = mapping.remarksAppendEntries.compactMap { entry -> String? in
+                                    guard let idx = columnIndices[entry.sourceColumn], idx < row.count else { return nil }
+                                    let val = row[idx].trimmingCharacters(in: .whitespaces)
+                                    guard !val.isEmpty else { return nil }
+                                    return entry.label.trimmingCharacters(in: .whitespaces).isEmpty ? val : "\(entry.label.trimmingCharacters(in: .whitespaces)): \(val)"
+                                }
+                                let preview = ([base] + appended).filter { !$0.isEmpty }.joined(separator: ". ")
+                                Text(preview)
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         // Multiple columns - show combined result
                         VStack(alignment: .leading, spacing: 2) {

@@ -423,8 +423,16 @@ class FileImportService {
                 }
 
                 if !columnIndices.isEmpty {
+                    var appendEntries: [(columnIndex: Int, label: String)] = []
+                    if fieldMapping.logbookField == "Remarks" {
+                        appendEntries = fieldMapping.remarksAppendEntries.compactMap { entry in
+                            guard let idx = headers.firstIndex(of: entry.sourceColumn) else { return nil }
+                            return (columnIndex: idx, label: entry.label)
+                        }
+                    }
                     mapping[fieldMapping.logbookField] = FieldMappingInfo(
-                        columnIndices: columnIndices
+                        columnIndices: columnIndices,
+                        appendEntries: appendEntries
                     )
                 }
             }
@@ -449,6 +457,13 @@ class FileImportService {
     // Helper struct for mapping info
     private struct FieldMappingInfo {
         let columnIndices: [Int]
+        // Only populated for Remarks field
+        let appendEntries: [(columnIndex: Int, label: String)]
+
+        init(columnIndices: [Int], appendEntries: [(columnIndex: Int, label: String)] = []) {
+            self.columnIndices = columnIndices
+            self.appendEntries = appendEntries
+        }
     }
 
     // MARK: - Create Flight from Row
@@ -709,7 +724,7 @@ class FileImportService {
             isILS: isILS,
             isGLS: isGLS,
             isNPA: isNPA,
-            remarks: getValue("Remarks"),
+            remarks: buildRemarks(baseRemarks: getValue("Remarks"), row: row, mappingInfo: mapping["Remarks"]),
             dayTakeoffs: dayTakeoffs,
             dayLandings: dayLandings,
             nightTakeoffs: nightTakeoffs,
@@ -729,6 +744,33 @@ class FileImportService {
     /// - Any non-empty text (except explicit "false", "no", "0") is treated as true
     /// - Empty/blank values are treated as false
     /// This handles variations like "sim", "True", "YES", "1", etc.
+    private func buildRemarks(baseRemarks: String, row: [String], mappingInfo: FieldMappingInfo?) -> String {
+        var result = baseRemarks.trimmingCharacters(in: .whitespaces)
+        guard let appendEntries = mappingInfo?.appendEntries, !appendEntries.isEmpty else { return result }
+
+        for entry in appendEntries {
+            guard entry.columnIndex < row.count else { continue }
+            let value = row[entry.columnIndex].trimmingCharacters(in: .whitespaces)
+            guard !value.isEmpty else { continue }
+
+            let label = entry.label.trimmingCharacters(in: .whitespaces)
+            let fragment = label.isEmpty ? value : "\(label): \(value)"
+
+            if result.isEmpty {
+                result = fragment
+            } else {
+                // Append with "." separator if needed
+                if result.hasSuffix(".") {
+                    result += " \(fragment)"
+                } else {
+                    result += ". \(fragment)"
+                }
+            }
+        }
+
+        return result
+    }
+
     private func parseCrewName(_ value: String) -> String {
         let t = value.trimmingCharacters(in: .whitespaces)
         guard t.contains(",") else { return t }
