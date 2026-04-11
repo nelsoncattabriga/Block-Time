@@ -439,7 +439,7 @@ private struct ModernDefaultCrewNamesCard: View {
                             set: { viewModel.updateDefaultCaptainName($0) }
                         ),
                         placeholder: "Enter default captain name",
-                        icon: "person.badge.shield.checkmark"
+                        icon: "person"
                     )
 
                 case .firstOfficer:
@@ -450,7 +450,7 @@ private struct ModernDefaultCrewNamesCard: View {
                             set: { viewModel.updateDefaultCoPilotName($0) }
                         ),
                         placeholder: "Enter default F/O name",
-                        icon: "person.badge.clock"
+                        icon: "person"
                     )
 
                 case .secondOfficer:
@@ -461,7 +461,7 @@ private struct ModernDefaultCrewNamesCard: View {
                             set: { viewModel.updateDefaultSOName($0) }
                         ),
                         placeholder: "Enter default S/O name",
-                        icon: "person.badge.key"
+                        icon: "person"
                     )
                 }
 
@@ -473,7 +473,7 @@ private struct ModernDefaultCrewNamesCard: View {
                         set: { viewModel.updateShowSONameFields($0) }
                     ),
                     color: .blue,
-                    icon: "person.2.badge.plus.fill"
+                    icon: "person.2"
                 )
                 
                 

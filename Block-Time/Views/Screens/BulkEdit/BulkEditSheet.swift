@@ -102,7 +102,7 @@ struct BulkEditSheet: View {
                                 recentNames: viewModel.recentCaptainNames,
                                 onNameAdded: viewModel.addCaptainName,
                                 onNameRemoved: viewModel.removeCaptainName,
-                                icon: "person.badge.shield.checkmark"
+                                icon: "person"
                             )
 
                             BulkEditCrewField(
@@ -112,7 +112,7 @@ struct BulkEditSheet: View {
                                 recentNames: viewModel.recentCoPilotNames,
                                 onNameAdded: viewModel.addCoPilotName,
                                 onNameRemoved: viewModel.removeCoPilotName,
-                                icon: "person.badge.clock"
+                                icon: "person"
                             )
 
                             BulkEditOptionalCrewField(
@@ -122,7 +122,7 @@ struct BulkEditSheet: View {
                                 recentNames: viewModel.recentSONames,
                                 onNameAdded: viewModel.addSOName,
                                 onNameRemoved: viewModel.removeSOName,
-                                icon: "person.badge.key"
+                                icon: "person"
                             )
 
                             BulkEditOptionalCrewField(
@@ -132,7 +132,7 @@ struct BulkEditSheet: View {
                                 recentNames: viewModel.recentSONames,
                                 onNameAdded: viewModel.addSOName,
                                 onNameRemoved: viewModel.removeSOName,
-                                icon: "person.badge.key.fill"
+                                icon: "person"
                             )
                         }
                     }

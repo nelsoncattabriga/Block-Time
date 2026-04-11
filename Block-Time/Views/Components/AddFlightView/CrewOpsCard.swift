@@ -13,8 +13,8 @@ struct CustomCountField: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: "person.2.fill")
-                    .foregroundColor(.teal)
+                Image(systemName: "person.2.badge.plus")
+                    .foregroundColor(.blue)
                     .frame(width: 20)
                 Text(label.uppercased())
                     .font(.caption.bold())
@@ -92,7 +92,7 @@ struct ModernManualEntryDataCard: View {
                         recentNames: viewModel.recentCaptainNames,
                         onNameAdded: viewModel.addCaptainName,
                         onNameRemoved: viewModel.removeCaptainName,
-                        icon: "person.badge.shield.checkmark",
+                        icon: "person",
                         isDisabled: viewModel.isPositioning
                     )
 
@@ -106,7 +106,7 @@ struct ModernManualEntryDataCard: View {
                         recentNames: viewModel.recentCoPilotNames,
                         onNameAdded: viewModel.addCoPilotName,
                         onNameRemoved: viewModel.removeCoPilotName,
-                        icon: "person.badge.clock",
+                        icon: "person",
                         isDisabled: viewModel.isPositioning
                     )
 
@@ -122,7 +122,7 @@ struct ModernManualEntryDataCard: View {
                             recentNames: viewModel.recentSONames,
                             onNameAdded: viewModel.addSOName,
                             onNameRemoved: viewModel.removeSOName,
-                            icon: "person.badge.key",
+                            icon: "person",
                             isDisabled: viewModel.isPositioning
                         )
 
@@ -136,24 +136,13 @@ struct ModernManualEntryDataCard: View {
                             recentNames: viewModel.recentSONames,
                             onNameAdded: viewModel.addSOName,
                             onNameRemoved: viewModel.removeSOName,
-                            icon: "person.badge.key.fill",
+                            icon: "person",
                             isDisabled: viewModel.isPositioning
                         )
                     }
                 }
                 // Toggles section
                 ModernTogglesSection(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
-
-                // Remarks section
-                ModernRemarksField(
-                    label: "REMARKS",
-                    value: Binding(
-                        get: { viewModel.remarks },
-                        set: { viewModel.remarks = $0 }
-                    ),
-                    icon: "note.text",
-                    keyboardToolbar: keyboardToolbar
-                )
 
                 // Custom counter field (e.g. PAX)
                 if viewModel.logCustomCount && !viewModel.isPositioning {
@@ -166,6 +155,17 @@ struct ModernManualEntryDataCard: View {
                         keyboardToolbar: keyboardToolbar
                     )
                 }
+                
+                // Remarks section
+                ModernRemarksField(
+                    label: "REMARKS",
+                    value: Binding(
+                        get: { viewModel.remarks },
+                        set: { viewModel.remarks = $0 }
+                    ),
+                    icon: "note.text",
+                    keyboardToolbar: keyboardToolbar
+                )
             }
         }
         .padding(16)
