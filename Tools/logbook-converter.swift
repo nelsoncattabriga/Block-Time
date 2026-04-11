@@ -172,6 +172,7 @@ let appProfiles: [String: [String: String]] = [
         "daylandings":    "flight_dayLandings",
         "nighttakeoffs":  "flight_nightTakeoffs",
         "nightlandings":  "flight_nightLandings",
+        "customcount":    "flight_paxCount",
         "remarks":        "flight_remarks",
     ],
     "PilotLog": [
