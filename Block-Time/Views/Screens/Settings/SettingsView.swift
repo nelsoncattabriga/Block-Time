@@ -465,6 +465,10 @@ private struct ModernDefaultCrewNamesCard: View {
                     )
                 }
 
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                
                 ModernToggleRow(
                     title: "Log S/O Names",
                     subtitle: "Show S/O Name Fields",
