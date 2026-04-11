@@ -641,8 +641,8 @@ class FileImportService {
         var aircraftType = ""
         let rawAircraftType = getValue("Aircraft Type")
 
-        // First, try to use the type from the CSV if valid
-        if rawAircraftType.count == 4 || rawAircraftType.count == 5 {
+        // First, try to use the type from the CSV if present
+        if !rawAircraftType.isEmpty {
             aircraftType = rawAircraftType
         }
 
