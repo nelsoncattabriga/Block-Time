@@ -287,6 +287,9 @@ private struct FlightsListContent: View {
                     }
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .flightAdded)) { _ in
+                hasScrolledOnLaunch = false
+            }
         }
     }
 

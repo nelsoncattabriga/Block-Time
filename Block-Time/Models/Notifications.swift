@@ -12,4 +12,5 @@ extension Notification.Name {
     static let scrollToTop              = Notification.Name("scrollToTop")
     static let reviewImportSession      = Notification.Name("reviewImportSession")
     static let navigateToBackupSettings = Notification.Name("navigateToBackupSettings")
+    static let flightAdded              = Notification.Name("flightAdded")
 }

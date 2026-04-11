@@ -110,6 +110,7 @@ struct ModernActionButtonsCard: View {
                         action: {
                             HapticManager.shared.notification(.success)
                             viewModel.addToInternalLogbook()
+                            NotificationCenter.default.post(name: .flightAdded, object: nil)
                             successMessage = "Flight Added"
                             withAnimation {
                                 showSuccessNotification = true
