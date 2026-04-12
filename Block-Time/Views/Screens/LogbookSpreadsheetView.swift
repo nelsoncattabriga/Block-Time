@@ -137,7 +137,10 @@ struct LogbookSpreadsheetView: View {
                         Divider()
                     }
                 } header: {
-                    columnHeaderRow
+                    VStack(spacing: 0) {
+                        columnHeaderRow
+                        columnFooterRow
+                    }
                 }
             }
         }
@@ -166,7 +169,7 @@ struct LogbookSpreadsheetView: View {
             headerCell("P1 Time",         width: Layout.colP1)
             headerCell("P1US Time",       width: Layout.colP1US)
             headerCell("P2 Time",         width: Layout.colP2)
-            headerCell("Instrument Time", width: Layout.colInstr)
+            headerCell("Instrument",      width: Layout.colInstr)
             headerCell("SIM Time",        width: Layout.colSIM)
             headerCell("Sp/Ins Time",     width: Layout.colSpIns)
             headerCell("PAX",             width: Layout.colPAX)
@@ -185,6 +188,54 @@ struct LogbookSpreadsheetView: View {
         }
         .frame(height: Layout.headerHeight)
         .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    // MARK: - Column footer row (pinned)
+
+    private var columnFooterRow: some View {
+        HStack(spacing: 0) {
+            totalLabelCell("Totals -->",           width: Layout.colDate)
+            emptyFooterCell(                   width: Layout.colFlight)
+            emptyFooterCell(                   width: Layout.colReg)
+            emptyFooterCell(                   width: Layout.colType)
+            emptyFooterCell(                   width: Layout.colAirport)
+            emptyFooterCell(                   width: Layout.colAirport)
+            emptyFooterCell(                   width: Layout.colCrew)
+            emptyFooterCell(                   width: Layout.colCrew)
+            emptyFooterCell(                   width: Layout.colCrew)
+            emptyFooterCell(                   width: Layout.colCrew)
+            emptyFooterCell(                   width: Layout.colSTD)
+            emptyFooterCell(                   width: Layout.colSTA)
+            emptyFooterCell(                   width: Layout.colOUT)
+            emptyFooterCell(                   width: Layout.colIN)
+            totalTimeCell(sumTime(\.blockTime),      width: Layout.colBlock)
+            totalTimeCell(sumTime(\.nightTime),      width: Layout.colNight)
+            totalTimeCell(sumTime(\.p1Time),         width: Layout.colP1)
+            totalTimeCell(sumTime(\.p1usTime),       width: Layout.colP1US)
+            totalTimeCell(sumTime(\.p2Time),         width: Layout.colP2)
+            totalTimeCell(sumTime(\.instrumentTime), width: Layout.colInstr)
+            totalTimeCell(sumTime(\.simTime),        width: Layout.colSIM)
+            totalTimeCell(sumTime(\.spInsTime),      width: Layout.colSpIns)
+            emptyFooterCell(                   width: Layout.colPAX)
+            emptyFooterCell(                   width: Layout.colPF)
+            emptyFooterCell(                   width: Layout.colAIII)
+            emptyFooterCell(                   width: Layout.colRNP)
+            emptyFooterCell(                   width: Layout.colILS)
+            emptyFooterCell(                   width: Layout.colGLS)
+            emptyFooterCell(                   width: Layout.colNPA)
+            totalCountCell(sumInt(\.dayTakeoffs),   width: Layout.colDayTO)
+            totalCountCell(sumInt(\.dayLandings),   width: Layout.colDayLdg)
+            totalCountCell(sumInt(\.nightTakeoffs), width: Layout.colNightTO)
+            totalCountCell(sumInt(\.nightLandings), width: Layout.colNightLdg)
+            totalCountCell(sumInt(\.customCount),   width: Layout.colCustom)
+            emptyFooterCell(                   width: Layout.colRemarks)
+        }
+        .frame(height: Layout.headerHeight)
+        .background(.bar)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.primary.opacity(0.15)).frame(height: 0.5)
+        }
         .overlay(alignment: .bottom) { Divider() }
     }
 
@@ -253,10 +304,10 @@ struct LogbookSpreadsheetView: View {
         static let colIN: CGFloat        = 68   // "IN Time"
         static let colBlock: CGFloat     = 84   // "Block Time"
         static let colNight: CGFloat     = 84   // "Night Time"
-        static let colP1: CGFloat        = 68   // "P1 Time"
-        static let colP1US: CGFloat      = 76   // "P1US Time"
-        static let colP2: CGFloat        = 68   // "P2 Time"
-        static let colInstr: CGFloat     = 112  // "Instrument Time"
+        static let colP1: CGFloat        = 84   // "P1 Time"
+        static let colP1US: CGFloat      = 84   // "P1US Time"
+        static let colP2: CGFloat        = 84   // "P2 Time"
+        static let colInstr: CGFloat     = 84  // "Instrument"
         static let colSIM: CGFloat       = 76   // "SIM Time"
         static let colSpIns: CGFloat     = 84   // "Sp/Ins Time"
         static let colPAX: CGFloat       = 48   // "PAX"
@@ -284,7 +335,7 @@ struct LogbookSpreadsheetView: View {
             .padding(.horizontal, 6)
             .frame(width: width, alignment: .leading)
             .overlay(alignment: .trailing) {
-                Rectangle().fill(Color.primary.opacity(0.1)).frame(width: 0.5)
+                Rectangle().fill(Color.primary.opacity(0.25)).frame(width: 0.5)
             }
     }
 
@@ -295,7 +346,7 @@ struct LogbookSpreadsheetView: View {
             .padding(.horizontal, 6)
             .frame(width: width, alignment: .center)
             .overlay(alignment: .trailing) {
-                Rectangle().fill(Color.primary.opacity(0.1)).frame(width: 0.5)
+                Rectangle().fill(Color.primary.opacity(0.25)).frame(width: 0.5)
             }
     }
 
@@ -309,8 +360,66 @@ struct LogbookSpreadsheetView: View {
             .padding(.horizontal, 6)
             .frame(width: width, alignment: .leading)
             .overlay(alignment: .trailing) {
-                Rectangle().fill(Color.primary.opacity(0.1)).frame(width: 0.5)
+                Rectangle().fill(Color.primary.opacity(0.25)).frame(width: 0.5)
             }
+    }
+
+    // MARK: - Footer cell builders
+
+    private func totalLabelCell(_ title: String, width: CGFloat) -> some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .frame(width: width, alignment: .leading)
+            .overlay(alignment: .trailing) {
+                Rectangle().fill(Color.primary.opacity(0.25)).frame(width: 0.5)
+            }
+    }
+
+    private func emptyFooterCell(width: CGFloat) -> some View {
+        Color.clear
+            .frame(width: width)
+            .overlay(alignment: .trailing) {
+                Rectangle().fill(Color.primary.opacity(0.25)).frame(width: 0.5)
+            }
+    }
+
+    private func totalTimeCell(_ value: String, width: CGFloat) -> some View {
+        Text(value.isEmpty ? "" : value)
+            .font(.caption.monospacedDigit().weight(.semibold))
+            .foregroundStyle(value.isEmpty ? .tertiary : .primary)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .frame(width: width, alignment: .leading)
+            .overlay(alignment: .trailing) {
+                Rectangle().fill(Color.primary.opacity(0.25)).frame(width: 0.5)
+            }
+    }
+
+    private func totalCountCell(_ value: Int, width: CGFloat) -> some View {
+        Text(value == 0 ? "" : String(value))
+            .font(.caption.monospacedDigit().weight(.semibold))
+            .foregroundStyle(value == 0 ? .tertiary : .primary)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .frame(width: width, alignment: .leading)
+            .overlay(alignment: .trailing) {
+                Rectangle().fill(Color.primary.opacity(0.25)).frame(width: 0.5)
+            }
+    }
+
+    // MARK: - Totals computation
+
+    private func sumTime(_ keyPath: KeyPath<FlightSector, String>) -> String {
+        let total = flights.reduce(0.0) { $0 + (Double($1[keyPath: keyPath]) ?? 0.0) }
+        guard total > 0 else { return "" }
+        return String(format: "%.2f", total)
+    }
+
+    private func sumInt(_ keyPath: KeyPath<FlightSector, Int>) -> Int {
+        flights.reduce(0) { $0 + $1[keyPath: keyPath] }
     }
 
     // MARK: - Helpers
