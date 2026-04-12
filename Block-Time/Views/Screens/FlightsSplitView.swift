@@ -407,7 +407,12 @@ private struct FlightsListContent: View {
                         }) {
                             let allSelected = selectedFlightsForDeletion == Set(filteredFlightSectors.map { $0.id })
                             Text(allSelected ? "Deselect All" : "Select All")
-                                .foregroundColor(.blue)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(Color.blue, lineWidth: 1.5)
+                                )
                         }
                     }
                 } else {
@@ -422,7 +427,7 @@ private struct FlightsListContent: View {
                         }
                     }) {
                         Image(systemName: "plus.circle")
-                            .font(.title2)
+                            .font(.title)
                     }
 
                     if !filteredFlightSectors.isEmpty {
@@ -453,7 +458,7 @@ private struct FlightsListContent: View {
                         showingMap = true
                     }) {
                         Image(systemName: "globe.asia.australia")
-                            .font(.title3)
+                            .font(.title)
                     }
 
                     Button(action: {
@@ -461,7 +466,7 @@ private struct FlightsListContent: View {
                         showingSpreadsheet = true
                     }) {
                         Image(systemName: "tablecells")
-                            .font(.title3)
+                            .font(.title)
                     }
 
                     Button(action: {
@@ -470,7 +475,7 @@ private struct FlightsListContent: View {
                     }) {
                         ZStack {
                             Image(systemName: "line.3.horizontal.decrease.circle")
-                                .font(.title3)
+                                .font(.title)
                             if isFilterActive {
                                 Circle()
                                     .fill(Color.blue)
@@ -1274,7 +1279,7 @@ private struct EmptyDetailView: View {
                 .foregroundColor(.gray.opacity(0.5))
 
             Text("Select a Flight")
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
 
@@ -1297,7 +1302,7 @@ private struct EmptyDetailView: View {
                 }) {
                     HStack(spacing: 12) {
                         Image(systemName: "plus.circle.fill")
-                            .font(.title2)
+                            .font(.title)
                         Text("Add New Flight")
                             .font(.headline)
                     }
@@ -1326,7 +1331,7 @@ private struct EmptyFlightsView: View {
                 .foregroundColor(.gray)
 
             Text("No Flights Recorded")
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
 
@@ -1351,7 +1356,7 @@ private struct NoResultsView: View {
                 .foregroundColor(.gray)
 
             Text("No Flights Match Filters")
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
 
