@@ -898,7 +898,7 @@ private struct ModernFormatOptionsCard: View {
                         get: { viewModel.countSimInTotal },
                         set: { viewModel.updateCountSimInTotal($0) }
                     ),
-                    color: .cyan,
+                    color: .orange,
                     icon: "desktopcomputer"
                 )
 
