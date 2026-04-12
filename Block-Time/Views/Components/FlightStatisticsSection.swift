@@ -136,7 +136,7 @@ struct FlightStatisticsSection: View {
             StatCard(
                 title: "Total Time",
                 value: statistics.formattedTotalFlightTime(includeSim: countSimInTotal, asHoursMinutes: showTimesInHoursMinutes),
-                subtitle: "\(statistics.totalSectors) sectors",
+                subtitle: "\(statistics.totalSectors) sectors · \(statistics.totalAirports) airports",
                 color: .blue,
                 icon: "clock.fill"
             )

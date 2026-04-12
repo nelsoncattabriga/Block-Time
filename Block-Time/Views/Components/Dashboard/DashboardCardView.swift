@@ -114,7 +114,7 @@ struct DashboardCardView: View {
             StatCard(
                 title: "Total Time",
                 value: stats.formattedTotalFlightTime(includeSim: countSimInTotal, asHoursMinutes: showTimesInHoursMinutes),
-                subtitle: "\(stats.totalSectors) sectors · \(viewModel.careerStats.totalAircraftTypes) aircraft types",
+                subtitle: "\(stats.totalSectors) sectors · \(viewModel.careerStats.totalAircraftTypes) types · \(stats.totalAirports) airports",
                 color: .blue,
                 icon: "clock.fill"
             )

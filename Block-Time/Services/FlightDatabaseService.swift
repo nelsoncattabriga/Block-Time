@@ -1707,6 +1707,7 @@ class FlightDatabaseService: ObservableObject {
             let totalSectors = flights.count
             var aiiiSectors = 0
             var pfSectors = 0
+            var airports = Set<String>()
 
             for flight in flights {
                 // Use safe conversion with validation
@@ -1726,14 +1727,10 @@ class FlightDatabaseService: ObservableObject {
                     totalSpInsFlt += spVal
                     spInsFltCount += 1
                 }
-
-                if flight.isAIII {
-                    aiiiSectors += 1
-                }
-
-                if flight.isPilotFlying {
-                    pfSectors += 1
-                }
+                if flight.isAIII { aiiiSectors += 1 }
+                if flight.isPilotFlying { pfSectors += 1 }
+                if let a = flight.fromAirport, !a.isEmpty { airports.insert(a) }
+                if let a = flight.toAirport,   !a.isEmpty { airports.insert(a) }
             }
 
             return FlightStatistics(
@@ -1751,7 +1748,8 @@ class FlightDatabaseService: ObservableObject {
                 spInsFltCount: spInsFltCount,
                 spInsSimCount: spInsSimCount,
                 aiiiSectors: aiiiSectors,
-                pfSectors: pfSectors
+                pfSectors: pfSectors,
+                totalAirports: airports.count
             )
 
         } catch {
@@ -1783,6 +1781,7 @@ class FlightDatabaseService: ObservableObject {
             let totalSectors = flights.count
             var aiiiSectors = 0
             var pfSectors = 0
+            var airports = Set<String>()
 
             for flight in flights {
                 totalBlock      += safeDoubleFromString(flight.blockTime)
@@ -1803,6 +1802,8 @@ class FlightDatabaseService: ObservableObject {
                 }
                 if flight.isAIII { aiiiSectors += 1 }
                 if flight.isPilotFlying { pfSectors += 1 }
+                if let a = flight.fromAirport, !a.isEmpty { airports.insert(a) }
+                if let a = flight.toAirport,   !a.isEmpty { airports.insert(a) }
             }
 
             return FlightStatistics(
@@ -1820,7 +1821,8 @@ class FlightDatabaseService: ObservableObject {
                 spInsFltCount: spInsFltCount,
                 spInsSimCount: spInsSimCount,
                 aiiiSectors: aiiiSectors,
-                pfSectors: pfSectors
+                pfSectors: pfSectors,
+                totalAirports: airports.count
             )
         } catch {
             return FlightStatistics.empty
@@ -1855,6 +1857,7 @@ class FlightDatabaseService: ObservableObject {
         let totalSectors = flights.count
         var aiiiSectors = 0
         var pfSectors = 0
+        var airports = Set<String>()
 
         for flight in flights {
             totalBlock += flight.blockTimeValue
@@ -1873,14 +1876,10 @@ class FlightDatabaseService: ObservableObject {
                 totalSpInsFlt += spVal
                 spInsFltCount += 1
             }
-
-            if flight.isAIII {
-                aiiiSectors += 1
-            }
-
-            if flight.isPilotFlying {
-                pfSectors += 1
-            }
+            if flight.isAIII { aiiiSectors += 1 }
+            if flight.isPilotFlying { pfSectors += 1 }
+            if !flight.fromAirport.isEmpty { airports.insert(flight.fromAirport) }
+            if !flight.toAirport.isEmpty   { airports.insert(flight.toAirport) }
         }
 
         return FlightStatistics(
@@ -1898,7 +1897,8 @@ class FlightDatabaseService: ObservableObject {
             spInsFltCount: spInsFltCount,
             spInsSimCount: spInsSimCount,
             aiiiSectors: aiiiSectors,
-            pfSectors: pfSectors
+            pfSectors: pfSectors,
+            totalAirports: airports.count
         )
     }
     
@@ -3179,6 +3179,7 @@ struct FlightStatistics {
     let spInsSimCount: Int          // Number of SIM sessions with Sp/INS
     let aiiiSectors: Int
     let pfSectors: Int
+    let totalAirports: Int
 
     static let empty = FlightStatistics(
         totalSectors: 0,
@@ -3195,9 +3196,10 @@ struct FlightStatistics {
         spInsFltCount: 0,
         spInsSimCount: 0,
         aiiiSectors: 0,
-        pfSectors: 0
+        pfSectors: 0,
+        totalAirports: 0
     )
-    
+
     // MARK: - Formatted Properties
     
     var formattedBlockTime: String {
