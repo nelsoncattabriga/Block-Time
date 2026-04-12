@@ -490,6 +490,12 @@ private struct FlightsListContent: View {
                             ZStack {
                                 Image(systemName: "line.3.horizontal.decrease.circle")
                                     .font(.title3)
+                                if isFilterActive {
+                                    Circle()
+                                        .fill(Color.blue)
+                                        .frame(width: 8, height: 8)
+                                        .offset(x: 10, y: -10)
+                                }
                             }
                         }
                     }
@@ -1018,7 +1024,8 @@ private struct FlightsListContent: View {
                         filterViewModel.filterNoAircraftType ||
                         filterViewModel.filterNoAircraftReg ||
                         filterViewModel.filterTypeSummary ||
-                        filterViewModel.filterImportSessionID != nil
+                        filterViewModel.filterImportSessionID != nil ||
+                        !filterViewModel.filterKeywordSearch.isEmpty
 
     }
 
