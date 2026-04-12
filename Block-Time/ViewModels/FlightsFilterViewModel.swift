@@ -61,6 +61,7 @@ class FlightsFilterViewModel: ObservableObject {
         filterTypeSummary = false
         filterKeywordSearch = ""
         selectedDateRange = .allFlights
+        sortOrderReversed = false
         filterImportSessionID = nil
     }
 }

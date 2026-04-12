@@ -427,15 +427,6 @@ struct FlightsView: View {
 
                             Button(action: {
                                 HapticManager.shared.impact(.light)
-                                filterViewModel.sortOrderReversed.toggle()
-                                applyFilters()
-                            }) {
-                                Image(systemName: "arrow.up.arrow.down.circle")
-                                .font(.title3)
-                            }
-
-                            Button(action: {
-                                HapticManager.shared.impact(.light)
                                 showingFilterSheet = true
                             }) {
                                 Image(systemName: "line.3.horizontal.decrease.circle")
@@ -486,6 +477,7 @@ struct FlightsView: View {
                     filterKeywordSearch: $filterViewModel.filterKeywordSearch,
                     selectedDateRange: $filterViewModel.selectedDateRange,
                     filterImportSessionID: $filterViewModel.filterImportSessionID,
+                    sortOrderReversed: $filterViewModel.sortOrderReversed,
                     onApply: {
                         applyFilters()
                         showingFilterSheet = false
@@ -1312,6 +1304,7 @@ struct FilterSheet: View {
     @Binding var filterKeywordSearch: String
     @Binding var selectedDateRange: FlightsView.DateRangeOption
     @Binding var filterImportSessionID: UUID?
+    @Binding var sortOrderReversed: Bool
     let onApply: () -> Void
     let onClear: () -> Void
 
@@ -1415,6 +1408,13 @@ struct FilterSheet: View {
                             }
                         }
                     }
+                }
+                Section(header: Text("Sort")) {
+                    Picker("Sort Order", selection: $sortOrderReversed) {
+                        Text("Newest First").tag(false)
+                        Text("Oldest First").tag(true)
+                    }
+                    .pickerStyle(.segmented)
                 }
                 Section {
                     // Quick-select chips

@@ -39,7 +39,7 @@ struct CustomCountCard: View {
                         .font(.system(.title, design: .rounded, weight: .bold))
                         .foregroundStyle(.teal)
 
-                    Text("total \(label.lowercased())")
+                    Text("Total")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -64,7 +64,7 @@ struct CustomCountCard: View {
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             } else {
-                Text("No \(label.lowercased()) data logged yet")
+                Text("No data logged.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

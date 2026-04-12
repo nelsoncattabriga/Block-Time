@@ -15,11 +15,17 @@ struct DashboardEditSheet: View {
 
     @State private var cardToAdd: DashboardCardID? = nil
     @State private var editMode: EditMode = .active
+    @AppStorage("logCustomCount") private var logCustomCount: Bool = false
+    @AppStorage("showSpInsSelector") private var showSpInsSelector: Bool = false
 
     private var isIPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
     private var availablePool: [DashboardCardID] {
-        isIPad ? config.availableCards : config.availableForPhone
+        let pool = isIPad ? config.availableCards : config.availableForPhone
+        return pool.filter {
+            ($0 != .customCount || logCustomCount) &&
+            ($0 != .insTime || showSpInsSelector)
+        }
     }
 
     var body: some View {

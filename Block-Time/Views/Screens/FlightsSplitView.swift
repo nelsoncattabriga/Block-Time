@@ -543,18 +543,6 @@ private struct FlightsListContent: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         HapticManager.shared.impact(.light)
-                        filterViewModel.sortOrderReversed.toggle()
-                        applyFilters()
-                    }) {
-                        Label("Sort", systemImage: "arrow.up.arrow.down.circle")
-                            .font(.title3)
-                    }
-                    .labelStyle(.iconOnly)
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        HapticManager.shared.impact(.light)
                         showingFilterSheet = true
                     }) {
                         Label {
@@ -611,6 +599,7 @@ private struct FlightsListContent: View {
                 filterKeywordSearch: $filterViewModel.filterKeywordSearch,
                 selectedDateRange: $filterViewModel.selectedDateRange,
                 filterImportSessionID: $filterViewModel.filterImportSessionID,
+                sortOrderReversed: $filterViewModel.sortOrderReversed,
                 onApply: {
                     applyFilters()
                     showingFilterSheet = false

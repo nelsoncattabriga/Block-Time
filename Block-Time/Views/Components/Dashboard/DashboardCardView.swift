@@ -18,6 +18,8 @@ struct DashboardCardView: View {
 
     @State private var showTimesInHoursMinutes: Bool =
         UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
+    @AppStorage("logCustomCount") private var logCustomCount: Bool = false
+    @AppStorage("showSpInsSelector") private var showSpInsSelector: Bool = false
     @Environment(\.horizontalSizeClass) private var naturalSizeClass
 
     var body: some View {
@@ -95,7 +97,7 @@ struct DashboardCardView: View {
         case .careerMilestones:
             CareerMilestonesCard(stats: viewModel.careerStats)
         case .customCount:
-            CustomCountCard()
+            if logCustomCount { CustomCountCard() }
         default:
             EmptyView()
         }
@@ -152,7 +154,7 @@ struct DashboardCardView: View {
                 fraction: stats.totalFlightTime > 0 ? stats.totalSIMTime / stats.totalFlightTime : nil
             )
         case .insTime:
-            SpInsTimeCard(stats: stats, showTimesInHoursMinutes: showTimesInHoursMinutes)
+            if showSpInsSelector { SpInsTimeCard(stats: stats, showTimesInHoursMinutes: showTimesInHoursMinutes) }
 //        case .pfRatioStat:
 //            StatCard(
 //                title: "PF Ratio",
