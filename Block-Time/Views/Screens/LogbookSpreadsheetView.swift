@@ -9,10 +9,18 @@ struct LogbookSpreadsheetView: View {
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
     @Environment(\.dismiss) private var dismiss
 
+    /// Pre-filtered flights passed from the caller. If nil, all flights are fetched.
+    let initialFlights: [FlightSector]?
+
+    init(flights: [FlightSector]? = nil) {
+        self.initialFlights = flights
+    }
+
     private let databaseService = FlightDatabaseService.shared
 
     @State private var flights: [FlightSector] = []
-    @State private var selectedFlight: FlightSector?
+    @State private var highlightedFlight: FlightSector?  // tapped but not yet editing
+    @State private var selectedFlight: FlightSector?     // pushed to AddFlightView
     @State private var isLoading = true
     @State private var showingDiscardAlert = false
 
@@ -32,16 +40,29 @@ struct LogbookSpreadsheetView: View {
                     spreadsheet
                 }
             }
-            .navigationTitle("Raw Data")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Done") { dismiss() }
                 }
+                ToolbarItem(placement: .principal) {
+                    VStack(spacing: 1) {
+                        Text(initialFlights != nil ? "Logbook Data (Filtered)" : "Logbook Data")
+                            .font(.headline)
+                        Text("\(flights.count) \(flights.count == 1 ? "entry" : "entries")")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .allowsHitTesting(false)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Text("\(flights.count) entries")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    if let flight = highlightedFlight {
+                        Button("Edit") {
+                            viewModel.loadFlightForEditing(flight)
+                            selectedFlight = flight
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
             }
             .navigationDestination(item: $selectedFlight) { _ in
@@ -102,10 +123,15 @@ struct LogbookSpreadsheetView: View {
                 Section {
                     ForEach(Array(flights.enumerated()), id: \.element.id) { index, flight in
                         Button {
-                            viewModel.loadFlightForEditing(flight)
-                            selectedFlight = flight
+                            if highlightedFlight?.id == flight.id {
+                                // Second tap on same row — go straight to edit
+                                viewModel.loadFlightForEditing(flight)
+                                selectedFlight = flight
+                            } else {
+                                highlightedFlight = flight
+                            }
                         } label: {
-                            dataRow(flight: flight, index: index)
+                            dataRow(flight: flight, index: index, highlighted: highlightedFlight?.id == flight.id)
                         }
                         .buttonStyle(.plain)
                         Divider()
@@ -164,7 +190,7 @@ struct LogbookSpreadsheetView: View {
 
     // MARK: - Data row
 
-    private func dataRow(flight: FlightSector, index: Int) -> some View {
+    private func dataRow(flight: FlightSector, index: Int, highlighted: Bool = false) -> some View {
         HStack(spacing: 0) {
             dataCell(flight.date,                              width: Layout.colDate,     mono: true)
             dataCell(flight.flightNumber,                      width: Layout.colFlight,   mono: true)
@@ -203,7 +229,7 @@ struct LogbookSpreadsheetView: View {
             dataCell(flight.remarks,                           width: Layout.colRemarks)
         }
         .frame(height: Layout.rowHeight)
-        .background(rowBackground(index: index))
+        .background(highlighted ? Color.accentColor.opacity(0.3) : rowBackground(index: index))
         .contentShape(Rectangle())
     }
 
@@ -245,7 +271,7 @@ struct LogbookSpreadsheetView: View {
         static let colNightTO: CGFloat   = 76   // "Night T/O"
         static let colNightLdg: CGFloat  = 76   // "Night Ldg"
         static let colCustom: CGFloat    = 100  // "Custom Count"
-        static let colRemarks: CGFloat   = 750  // "Remarks"
+        static let colRemarks: CGFloat   = 500  // "Remarks"
     }
 
     // MARK: - Cell builders
@@ -302,7 +328,11 @@ struct LogbookSpreadsheetView: View {
     }
 
     private func reload() {
-        flights = databaseService.fetchAllFlights()
-        isLoading = false
+        Task { @MainActor in
+            // Yield so the ProgressView renders before the fetch blocks the main thread
+            await Task.yield()
+            flights = initialFlights ?? databaseService.fetchAllFlights()
+            isLoading = false
+        }
     }
 }

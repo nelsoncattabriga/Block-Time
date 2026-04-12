@@ -521,7 +521,7 @@ private struct FlightsListContent: View {
             FlightMapView()
         }
         .fullScreenCover(isPresented: $showingSpreadsheet) {
-            LogbookSpreadsheetView()
+            LogbookSpreadsheetView(flights: isFilterActive ? filteredFlightSectors : nil)
                 .environmentObject(viewModel)
         }
         .sheet(isPresented: $showingFilterSheet) {
