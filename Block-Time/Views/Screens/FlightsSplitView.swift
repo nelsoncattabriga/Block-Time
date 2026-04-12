@@ -446,6 +446,7 @@ private struct FlightsListContent: View {
                     Spacer()
 
                     // Map, Data, Filter buttons on the right
+                    HStack(spacing: 20) {
                     Button(action: {
                         HapticManager.shared.impact(.light)
                         showingMap = true
@@ -477,6 +478,7 @@ private struct FlightsListContent: View {
                             }
                         }
                     }
+                    } // end HStack
 
                     if filterViewModel.filterImportSessionID != nil {
                         Button(role: .destructive) {
