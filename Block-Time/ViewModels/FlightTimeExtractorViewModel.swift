@@ -445,11 +445,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         showSpInsSelector = settings.showSpInsSelector
         defaultInstructionEnvironment = settings.defaultInstructionEnvironment
         if settings.showSpInsSelector {
-            isSpIns = true
             isInstructingInAircraft = settings.defaultInstructionEnvironment == .aircraft
-            if isInstructingInAircraft && captainName.isEmpty {
-                captainName = settings.defaultCaptainName
-            }
         }
         pfAutoInstrumentMinutes = settings.pfAutoInstrumentMinutes
         displayFlightsInLocalTime = settings.displayFlightsInLocalTime
@@ -2426,7 +2422,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         isICUS = false
         isSimulator = false
-        isSpIns = showSpInsSelector
+        isSpIns = false
         isInstructingInAircraft = showSpInsSelector ? (defaultInstructionEnvironment == .aircraft) : false
         spInsTime = ""
         isPositioning = false
