@@ -193,6 +193,12 @@ private struct FlightsListContent: View {
         UIDevice.current.userInterfaceIdiom == .pad ? 10 : 14
     }
 
+    private var safeAreaTopInset: CGFloat {
+        (UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.windows.first(where: { $0.isKeyWindow })?.safeAreaInsets.top) ?? 0
+    }
+
     private var flightCountHeader: some View {
         HStack {
             Text("\(filteredFlightSectors.count) \(filteredFlightSectors.count == 1 ? "Entry" : "Entries")")
@@ -364,6 +370,129 @@ private struct FlightsListContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Custom toolbar row replacing the system nav bar
+            HStack(spacing: 12) {
+                if isSelectMode {
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        isSelectMode = false
+                        selectedFlightsForDeletion.removeAll()
+                    }) {
+                        Text("Cancel")
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(Color.blue, lineWidth: 1.5)
+                            )
+                    }
+
+                    Spacer()
+
+                    Text(selectedFlightsForDeletion.isEmpty ? "Select Entries" : "\(selectedFlightsForDeletion.count) Selected")
+                        .font(.headline)
+
+                    Spacer()
+
+                    if !filteredFlightSectors.isEmpty {
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            let allFilteredIds = Set(filteredFlightSectors.map { $0.id })
+                            if selectedFlightsForDeletion == allFilteredIds {
+                                selectedFlightsForDeletion.removeAll()
+                            } else {
+                                selectedFlightsForDeletion = allFilteredIds
+                            }
+                        }) {
+                            let allSelected = selectedFlightsForDeletion == Set(filteredFlightSectors.map { $0.id })
+                            Text(allSelected ? "Deselect All" : "Select All")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                } else {
+                    // Add + Select buttons on the left
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        if purchaseService.canAddFlight {
+                            selectedFlight = nil
+                            isAddingNewFlight = true
+                        } else {
+                            showingPaywall = true
+                        }
+                    }) {
+                        Image(systemName: "plus.circle")
+                            .font(.title2)
+                    }
+
+                    if !filteredFlightSectors.isEmpty {
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            isSelectMode = true
+                            if let selectedId = selectedFlight?.id {
+                                selectedFlightsForDeletion.insert(selectedId)
+                            }
+                            selectedFlight = nil
+                        }) {
+                            Text("Select")
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(Color.blue, lineWidth: 1.5)
+                                )
+                        }
+                    }
+
+                    Spacer()
+
+                    // Map, Data, Filter buttons on the right
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        showingMap = true
+                    }) {
+                        Image(systemName: "globe.asia.australia")
+                            .font(.title3)
+                    }
+
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        // TODO: show raw data view
+                    }) {
+                        Image(systemName: "tablecells")
+                            .font(.title3)
+                    }
+
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        showingFilterSheet = true
+                    }) {
+                        ZStack {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .font(.title3)
+                            if isFilterActive {
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 10, y: -10)
+                            }
+                        }
+                    }
+
+                    if filterViewModel.filterImportSessionID != nil {
+                        Button(role: .destructive) {
+                            showingDeleteSessionAlert = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                                .font(.title3)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .padding(.top, safeAreaTopInset)
+
             if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
                 NoResultsView(onClearFilters: clearFilters)
             } else if filteredFlightSectors.isEmpty && allFlightSectors.isEmpty {
@@ -380,140 +509,8 @@ private struct FlightsListContent: View {
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelectMode)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedFlightsForDeletion.count)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                HStack(spacing: 16) {
-                    // Add new flight button - hide in select mode
-                    if !isSelectMode {
-                        Button(action: {
-                            HapticManager.shared.impact(.light)
-                            if purchaseService.canAddFlight {
-                                selectedFlight = nil
-                                isAddingNewFlight = true
-                            } else {
-                                showingPaywall = true
-                            }
-                        }) {
-                            Image(systemName: "plus.circle")
-                                .font(.title2)
-                        }
-                    }
-
-                    if !filteredFlightSectors.isEmpty {
-                        // Select/Cancel button
-                        Button(action: {
-                            HapticManager.shared.impact(.light)
-                            isSelectMode.toggle()
-                            if !isSelectMode {
-                                selectedFlightsForDeletion.removeAll()
-                            } else {
-                                // When entering select mode, include the currently selected flight
-                                if let selectedId = selectedFlight?.id {
-                                    selectedFlightsForDeletion.insert(selectedId)
-                                }
-                                // Clear the detail pane to show empty state
-                                selectedFlight = nil
-                            }
-                        }) {
-                            Text(isSelectMode ? "Cancel" : "Select")
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .strokeBorder(Color.primary, lineWidth: 1.5)
-                                )
-                        }
-                    }
-                }
-            }
-
-            if isSelectMode {
-                ToolbarItem(placement: .principal) {
-                    Text(selectedFlightsForDeletion.isEmpty ? "Select Entries" : "\(selectedFlightsForDeletion.count) Selected")
-                        .font(.headline)
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    // Show Select All / Deselect All button in select mode
-                    if !filteredFlightSectors.isEmpty {
-                        Button(action: {
-                            HapticManager.shared.impact(.light)
-                            let allFilteredIds = Set(filteredFlightSectors.map { $0.id })
-                            if selectedFlightsForDeletion == allFilteredIds {
-                                // All selected, so deselect all
-                                selectedFlightsForDeletion.removeAll()
-                            } else {
-                                // Select all filtered flights
-                                selectedFlightsForDeletion = allFilteredIds
-                            }
-                        }) {
-                            let allSelected = selectedFlightsForDeletion == Set(filteredFlightSectors.map { $0.id })
-                            Text(allSelected ? "Deselect All" : "Select All")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                }
-            } else {
-                // Show map, data and filter buttons in normal mode
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        HapticManager.shared.impact(.light)
-                        // TODO: show raw data view
-                    }) {
-                        Label("Data", systemImage: "tablecells")
-                            .font(.title3)
-                    }
-                    .labelStyle(.iconOnly)
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        HapticManager.shared.impact(.light)
-                        showingMap = true
-                    }) {
-                        Label("Map", systemImage: "globe.asia.australia")
-                            .font(.title3)
-                    }
-                    .labelStyle(.iconOnly)
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        HapticManager.shared.impact(.light)
-                        showingFilterSheet = true
-                    }) {
-                        Label {
-                            Text("Filter")
-                        } icon: {
-                            ZStack {
-                                Image(systemName: "line.3.horizontal.decrease.circle")
-                                    .font(.title3)
-                                if isFilterActive {
-                                    Circle()
-                                        .fill(Color.blue)
-                                        .frame(width: 8, height: 8)
-                                        .offset(x: 10, y: -10)
-                                }
-                            }
-                        }
-                    }
-                    .labelStyle(.iconOnly)
-                }
-
-                if filterViewModel.filterImportSessionID != nil {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(role: .destructive) {
-                            showingDeleteSessionAlert = true
-                        } label: {
-                            Label("Delete Import", systemImage: "trash")
-                                .foregroundColor(.red)
-                        }
-                    }
-                }
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
+        .ignoresSafeArea(.container, edges: .top)
         .fullScreenCover(isPresented: $showingPaywall) {
             PaywallView(isDismissible: true)
         }
