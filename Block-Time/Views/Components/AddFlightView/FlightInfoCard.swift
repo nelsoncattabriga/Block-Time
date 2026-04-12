@@ -588,9 +588,5 @@ struct ModernCapturedDataCard: View {
             }
         }
         .onChange(of: viewModel.isPilotFlying) { viewModel.updateTakeoffsLandings() }
-        .onChange(of: viewModel.fromAirport) { viewModel.updateTakeoffsLandings() }
-        .onChange(of: viewModel.toAirport) { viewModel.updateTakeoffsLandings() }
-        .onChange(of: viewModel.outTime) { viewModel.updateTakeoffsLandings() }
-        .onChange(of: viewModel.blockTime) { viewModel.updateTakeoffsLandings() }
     }
 }
