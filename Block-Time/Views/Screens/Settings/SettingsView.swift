@@ -893,7 +893,7 @@ private struct ModernFormatOptionsCard: View {
                 
                 ModernToggleRow(
                     title: "Count SIM in Total",
-                    subtitle: "Include SIM time in Total flight time",
+                    subtitle: "Include SIM time in Totals",
                     isOn: Binding(
                         get: { viewModel.countSimInTotal },
                         set: { viewModel.updateCountSimInTotal($0) }
