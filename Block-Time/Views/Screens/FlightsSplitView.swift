@@ -168,9 +168,7 @@ private struct FlightsListContent: View {
     @State private var sessionFilterIDs: Set<UUID> = []
     @State private var showingDeleteSessionAlert = false
     @State private var cachedTotalHours: Double = 0.0
-    @State private var showSearchBar: Bool = false
     @State private var hasScrolledOnLaunch = false
-    @FocusState private var isSearchFieldFocused: Bool
 
     // Cached date formatter for performance
     private let dateFormatter: DateFormatter = {
@@ -207,41 +205,6 @@ private struct FlightsListContent: View {
                 .foregroundColor(.secondary)
         }
         .padding()
-    }
-
-    @ViewBuilder
-    private var searchBar: some View {
-        if showSearchBar {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                    .padding(.leading, 12)
-                TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($isSearchFieldFocused)
-                    .onChange(of: filterViewModel.filterKeywordSearch) { _, _ in
-                        applyFilters()
-                    }
-                if !filterViewModel.filterKeywordSearch.isEmpty {
-                    Button(action: {
-                        filterViewModel.filterKeywordSearch = ""
-                        applyFilters()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.trailing, 12)
-                }
-            }
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-            .transition(.move(edge: .top).combined(with: .opacity))
-        }
     }
 
     @ViewBuilder
@@ -408,7 +371,6 @@ private struct FlightsListContent: View {
             } else {
                 flightCountHeader
                     .background(Color.clear)
-                searchBar
                 filterStatusBanner
                 flightListContent
             }
@@ -494,49 +456,14 @@ private struct FlightsListContent: View {
                     }
                 }
             } else {
-                // Show search, sort and filter buttons in normal mode
+                // Show map, data and filter buttons in normal mode
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         HapticManager.shared.impact(.light)
-
-                        if showSearchBar {
-                            // Hiding the search bar
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                showSearchBar = false
-                            }
-                            isSearchFieldFocused = false
-
-                            // Clear search
-                            if !filterViewModel.filterKeywordSearch.isEmpty {
-                                filterViewModel.filterKeywordSearch = ""
-                                applyFilters()
-                            }
-                        } else {
-                            // Showing the search bar
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                showSearchBar = true
-                            }
-                            // Delay focus slightly to ensure the text field is rendered
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                isSearchFieldFocused = true
-                            }
-                        }
+                        // TODO: show raw data view
                     }) {
-                        Label {
-                            Text("Search")
-                        } icon: {
-                            ZStack {
-                                Image(systemName: "magnifyingglass.circle")
-                                    .font(.title3)
-                                // Show indicator when search is active
-                                if !filterViewModel.filterKeywordSearch.isEmpty {
-                                    Circle()
-                                        .fill(Color.blue)
-                                        .frame(width: 8, height: 8)
-                                        .offset(x: 10, y: -10)
-                                }
-                            }
-                        }
+                        Label("Data", systemImage: "tablecells")
+                            .font(.title3)
                     }
                     .labelStyle(.iconOnly)
                 }

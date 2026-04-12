@@ -56,11 +56,9 @@ struct FlightsView: View {
     @State private var showingDeleteSessionAlert = false
     @State private var reloadTask: Task<Void, Never>?
     @State private var cachedTotalHours: Double = 0.0
-    @State private var showSearchBar: Bool = false
     @State private var isAddingNewFlight: Bool = false
     @State private var hasScrolledOnLaunch = false
     @State private var showingMap = false
-    @FocusState private var isSearchFieldFocused: Bool
 
     // Device-dependent corner radius for action buttons
     private var actionButtonCornerRadius: CGFloat {
@@ -80,41 +78,6 @@ struct FlightsView: View {
     // Made internal so it can be used by FlightsSplitView
     enum DateRangeOption: Int {
         case allFlights = 0, twelveMonths = 1, sixMonths = 2, twentyEightDays = 3, custom = 4
-    }
-
-    @ViewBuilder
-    private var searchBar: some View {
-        if showSearchBar {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                    .padding(.leading, 12)
-                TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($isSearchFieldFocused)
-                    .onChange(of: filterViewModel.filterKeywordSearch) { _, _ in
-                        applyFilters()
-                    }
-                if !filterViewModel.filterKeywordSearch.isEmpty {
-                    Button(action: {
-                        filterViewModel.filterKeywordSearch = ""
-                        applyFilters()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.trailing, 12)
-                }
-            }
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-            .transition(.move(edge: .top).combined(with: .opacity))
-        }
     }
 
     @ViewBuilder
@@ -290,7 +253,6 @@ struct FlightsView: View {
                 }
                 .padding()
                 .background(Color.clear)
-                searchBar
                 filterStatusBanner
                 flightListContent
             }
@@ -385,52 +347,21 @@ struct FlightsView: View {
                                 .foregroundColor(.blue)
                         }
                     } else {
-                        // Show search, sort and filter buttons in normal mode
+                        // Show map, data and filter buttons in normal mode
                         HStack(spacing: 16) {
-                            Button(action: {
-                                HapticManager.shared.impact(.light)
-
-                                if showSearchBar {
-                                    // Hiding the search bar
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        showSearchBar = false
-                                    }
-                                    isSearchFieldFocused = false
-
-                                    // Clear search
-                                    if !filterViewModel.filterKeywordSearch.isEmpty {
-                                        filterViewModel.filterKeywordSearch = ""
-                                        applyFilters()
-                                    }
-                                } else {
-                                    // Showing the search bar
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        showSearchBar = true
-                                    }
-                                    // Delay focus slightly to ensure the text field is rendered
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                        isSearchFieldFocused = true
-                                    }
-                                }
-                            }) {
-                                ZStack {
-                                    Image(systemName: "magnifyingglass.circle")
-                                        .font(.title3)
-                                    // Show indicator when search is active
-                                    if !filterViewModel.filterKeywordSearch.isEmpty {
-                                        Circle()
-                                            .fill(Color.blue)
-                                            .frame(width: 8, height: 8)
-                                            .offset(x: 10, y: -10)
-                                    }
-                                }
-                            }
-
                             Button(action: {
                                 HapticManager.shared.impact(.light)
                                 showingMap = true
                             }) {
                                 Image(systemName: "globe.asia.australia")
+                                    .font(.title3)
+                            }
+
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                // TODO: show raw data view
+                            }) {
+                                Image(systemName: "tablecells")
                                     .font(.title3)
                             }
 
@@ -1418,6 +1349,22 @@ struct FilterSheet: View {
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+                Section {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        TextField("Search logbook...", text: $filterKeywordSearch)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        if !filterKeywordSearch.isEmpty {
+                            Button(action: { filterKeywordSearch = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
