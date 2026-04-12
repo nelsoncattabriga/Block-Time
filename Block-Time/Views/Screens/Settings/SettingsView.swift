@@ -902,8 +902,6 @@ private struct ModernFormatOptionsCard: View {
                     icon: "desktopcomputer"
                 )
 
-                Divider()
-
                 ModernToggleRow(
                     title: "Show OUT/IN Times",
                     subtitle: "Shows times in Logbook view",
@@ -914,6 +912,8 @@ private struct ModernFormatOptionsCard: View {
                     color: .orange,
                     icon: "clock"
                 )
+               
+                Divider()
                 
                 // Flight Times Format Picker
                 HStack(spacing: 12) {
