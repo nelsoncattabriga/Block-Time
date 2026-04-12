@@ -154,6 +154,7 @@ private struct FlightsListContent: View {
     @Environment(PurchaseService.self) private var purchaseService
     @State private var showingPaywall = false
     @State private var showingMap = false
+    @State private var showingSpreadsheet = false
     @State private var allFlightSectors: [FlightSector] = []
     @State private var filteredFlightSectors: [FlightSector] = []
     @State private var showingFilterSheet = false
@@ -457,7 +458,7 @@ private struct FlightsListContent: View {
 
                     Button(action: {
                         HapticManager.shared.impact(.light)
-                        // TODO: show raw data view
+                        showingSpreadsheet = true
                     }) {
                         Image(systemName: "tablecells")
                             .font(.title3)
@@ -518,6 +519,10 @@ private struct FlightsListContent: View {
         }
         .fullScreenCover(isPresented: $showingMap) {
             FlightMapView()
+        }
+        .fullScreenCover(isPresented: $showingSpreadsheet) {
+            LogbookSpreadsheetView()
+                .environmentObject(viewModel)
         }
         .sheet(isPresented: $showingFilterSheet) {
             FilterSheet(

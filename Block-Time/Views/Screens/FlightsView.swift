@@ -59,6 +59,7 @@ struct FlightsView: View {
     @State private var isAddingNewFlight: Bool = false
     @State private var hasScrolledOnLaunch = false
     @State private var showingMap = false
+    @State private var showingSpreadsheet = false
 
     // Device-dependent corner radius for action buttons
     private var actionButtonCornerRadius: CGFloat {
@@ -359,7 +360,7 @@ struct FlightsView: View {
 
                             Button(action: {
                                 HapticManager.shared.impact(.light)
-                                // TODO: show raw data view
+                                showingSpreadsheet = true
                             }) {
                                 Image(systemName: "tablecells")
                                     .font(.title3)
@@ -400,6 +401,10 @@ struct FlightsView: View {
             }
             .fullScreenCover(isPresented: $showingMap) {
                 FlightMapView()
+            }
+            .fullScreenCover(isPresented: $showingSpreadsheet) {
+                LogbookSpreadsheetView()
+                    .environmentObject(viewModel)
             }
             .sheet(isPresented: $showingFilterSheet) {
                 FilterSheet(
