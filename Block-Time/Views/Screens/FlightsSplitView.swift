@@ -1000,8 +1000,7 @@ private struct FlightsListContent: View {
         } else if filterViewModel.filterSpIns {
             sorted.reduce(0.0) { $0 + $1.spInsTimeValue }
         } else {
-            // Match Dashboard logic: sum block + sim, excluding Sp/Ins-only entries
-            sorted.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly ? 0 : $1.simTimeValue) }
+            sorted.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly || !viewModel.countSimInTotal ? 0 : $1.simTimeValue) }
         }
 
         // Update filter active state

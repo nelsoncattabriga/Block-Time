@@ -901,8 +901,7 @@ struct FlightsView: View {
         } else if filterViewModel.filterSpIns {
             sortedFiltered.reduce(0.0) { $0 + $1.spInsTimeValue }
         } else {
-            // Match Dashboard logic: sum block + sim, excluding Sp/Ins-only entries
-            sortedFiltered.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly ? 0 : $1.simTimeValue) }
+            sortedFiltered.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly || !viewModel.countSimInTotal ? 0 : $1.simTimeValue) }
         }
 
         // Update filter active state - includes custom date range and other filters

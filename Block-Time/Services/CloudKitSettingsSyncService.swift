@@ -63,6 +63,7 @@ class CloudKitSettingsSyncService {
         static let useIATACodes = "cloud_useIATACodes"
         static let showTimesInHoursMinutes = "cloud_showTimesInHoursMinutes"
         static let showOutInTimes = "cloud_showOutInTimes"
+        static let countSimInTotal = "cloud_countSimInTotal"
         static let logApproaches = "cloud_logApproaches"
         static let defaultApproachType = "cloud_defaultApproachType"
         static let recentCaptainNames = "cloud_recentCaptainNames"
@@ -300,6 +301,7 @@ class CloudKitSettingsSyncService {
         ubiquitousStore.set(settings.useIATACodes, forKey: CloudKeys.useIATACodes)
         ubiquitousStore.set(settings.showTimesInHoursMinutes, forKey: CloudKeys.showTimesInHoursMinutes)
         ubiquitousStore.set(settings.showOutInTimes, forKey: CloudKeys.showOutInTimes)
+        ubiquitousStore.set(settings.countSimInTotal, forKey: CloudKeys.countSimInTotal)
         ubiquitousStore.set(settings.logApproaches, forKey: CloudKeys.logApproaches)
         ubiquitousStore.set(settings.defaultApproachType, forKey: CloudKeys.defaultApproachType)
         ubiquitousStore.set(settings.recentCaptainNames, forKey: CloudKeys.recentCaptainNames)
@@ -518,6 +520,11 @@ class CloudKitSettingsSyncService {
            showOutIn != localSettings.showOutInTimes {
             settings.showOutInTimes = showOutIn
             changedKeys.insert("showOutInTimes")
+        }
+        if let countSim = ubiquitousStore.object(forKey: CloudKeys.countSimInTotal) as? Bool,
+           countSim != localSettings.countSimInTotal {
+            settings.countSimInTotal = countSim
+            changedKeys.insert("countSimInTotal")
         }
         if let logApproaches = ubiquitousStore.object(forKey: CloudKeys.logApproaches) as? Bool,
            logApproaches != localSettings.logApproaches {

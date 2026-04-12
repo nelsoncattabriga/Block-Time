@@ -117,6 +117,7 @@ struct AppSettings {
     var decimalRoundingMode: RoundingMode  // Rounding mode for decimal times (block and night)
     var enterTimesInLocalTime: Bool  // Enter OUT/IN/STD/STA in local airport time instead of UTC
     var showOutInTimes: Bool  // Show OUT/IN (and STD/STA) times in the flights list
+    var countSimInTotal: Bool  // Include SIM time in Total flight time
     var logCustomCount: Bool  // Show custom counter field in logbook entry
     var customCountLabel: String  // User-defined label for the counter (default "PAX")
 
@@ -160,6 +161,7 @@ struct AppSettings {
         decimalRoundingMode: .standard,  // Default to standard rounding
         enterTimesInLocalTime: false,
         showOutInTimes: true,
+        countSimInTotal: true,
         logCustomCount: false,
         customCountLabel: "PAX"
     )
@@ -206,6 +208,7 @@ class UserDefaultsService: ObservableObject {
         static let decimalRoundingMode = "decimalRoundingMode"
         static let enterTimesInLocalTime = "enterTimesInLocalTime"
         static let showOutInTimes = "showOutInTimes"
+        static let countSimInTotal = "countSimInTotal"
         static let logCustomCount = "logCustomCount"
         static let customCountLabel = "customCountLabel"
         static let onboardingCompleted = "onboardingCompleted"
@@ -274,6 +277,7 @@ class UserDefaultsService: ObservableObject {
             decimalRoundingMode: roundingMode,
             enterTimesInLocalTime: userDefaults.bool(forKey: Keys.enterTimesInLocalTime),
             showOutInTimes: userDefaults.object(forKey: Keys.showOutInTimes) as? Bool ?? true,
+            countSimInTotal: userDefaults.object(forKey: Keys.countSimInTotal) as? Bool ?? true,
             logCustomCount: userDefaults.bool(forKey: Keys.logCustomCount),
             customCountLabel: userDefaults.string(forKey: Keys.customCountLabel) ?? "PAX"
         )
@@ -312,6 +316,7 @@ class UserDefaultsService: ObservableObject {
         userDefaults.set(settings.decimalRoundingMode.rawValue, forKey: Keys.decimalRoundingMode)
         userDefaults.set(settings.enterTimesInLocalTime, forKey: Keys.enterTimesInLocalTime)
         userDefaults.set(settings.showOutInTimes, forKey: Keys.showOutInTimes)
+        userDefaults.set(settings.countSimInTotal, forKey: Keys.countSimInTotal)
         userDefaults.set(settings.logCustomCount, forKey: Keys.logCustomCount)
         userDefaults.set(settings.customCountLabel, forKey: Keys.customCountLabel)
 
@@ -509,6 +514,12 @@ class UserDefaultsService: ObservableObject {
     func setShowOutInTimes(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.showOutInTimes)
+        syncToCloudAfterChange()
+    }
+
+    func setCountSimInTotal(_ value: Bool) {
+        markModificationAndSyncToCloud()
+        userDefaults.set(value, forKey: Keys.countSimInTotal)
         syncToCloudAfterChange()
     }
 

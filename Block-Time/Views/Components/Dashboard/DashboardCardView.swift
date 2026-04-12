@@ -20,6 +20,7 @@ struct DashboardCardView: View {
         UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
     @AppStorage("logCustomCount") private var logCustomCount: Bool = false
     @AppStorage("showSpInsSelector") private var showSpInsSelector: Bool = false
+    @AppStorage("countSimInTotal") private var countSimInTotal: Bool = true
     @Environment(\.horizontalSizeClass) private var naturalSizeClass
 
     var body: some View {
@@ -112,7 +113,7 @@ struct DashboardCardView: View {
         case .totalTime:
             StatCard(
                 title: "Total Time",
-                value: stats.formattedTotalFlightTime(asHoursMinutes: showTimesInHoursMinutes),
+                value: stats.formattedTotalFlightTime(includeSim: countSimInTotal, asHoursMinutes: showTimesInHoursMinutes),
                 subtitle: "\(stats.totalSectors) sectors · \(viewModel.careerStats.totalAircraftTypes) aircraft types",
                 color: .blue,
                 icon: "clock.fill"

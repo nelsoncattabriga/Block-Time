@@ -69,6 +69,7 @@ struct FlightStatisticsSection: View {
     @State private var draggedCard: StatCardType?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showTimesInHoursMinutes: Bool = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
+    @AppStorage("countSimInTotal") private var countSimInTotal: Bool = true
 
     // Dynamic column count based on device and user preference
     private var gridColumns: [GridItem] {
@@ -134,7 +135,7 @@ struct FlightStatisticsSection: View {
         case .totalTime:
             StatCard(
                 title: "Total Time",
-                value: statistics.formattedTotalFlightTime(asHoursMinutes: showTimesInHoursMinutes),
+                value: statistics.formattedTotalFlightTime(includeSim: countSimInTotal, asHoursMinutes: showTimesInHoursMinutes),
                 subtitle: "\(statistics.totalSectors) sectors",
                 color: .blue,
                 icon: "clock.fill"

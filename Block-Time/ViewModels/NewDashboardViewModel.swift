@@ -88,12 +88,21 @@ struct NDTakeoffLandingStats {
 }
 
 struct NDCareerStats {
-    let totalHours: Double
+    let totalBlockHours: Double
+    let totalSIMHours: Double
     let totalSectors: Int
     let totalAircraftTypes: Int
+    let totalAirports: Int
     let firstFlightDate: Date?
 
-    static let empty = NDCareerStats(totalHours: 0, totalSectors: 0, totalAircraftTypes: 0, firstFlightDate: nil)
+    /// Combined block + SIM — used internally and for backwards compatibility
+    var totalHours: Double { totalBlockHours + totalSIMHours }
+
+    func totalHours(includeSim: Bool) -> Double {
+        includeSim ? totalBlockHours + totalSIMHours : totalBlockHours
+    }
+
+    static let empty = NDCareerStats(totalBlockHours: 0, totalSIMHours: 0, totalSectors: 0, totalAircraftTypes: 0, totalAirports: 0, firstFlightDate: nil)
 
     var yearsOfData: Double {
         guard let first = firstFlightDate else { return 0 }
@@ -102,15 +111,21 @@ struct NDCareerStats {
 
     static let milestones: [Double] = [500, 1000, 2500, 5000, 10000, 20000]
 
-    var nextMilestone: Double? { NDCareerStats.milestones.first { $0 > totalHours } }
-    var previousMilestone: Double { NDCareerStats.milestones.filter { $0 <= totalHours }.last ?? 0 }
+    func nextMilestone(includeSim: Bool) -> Double? { NDCareerStats.milestones.first { $0 > totalHours(includeSim: includeSim) } }
+    func previousMilestone(includeSim: Bool) -> Double { NDCareerStats.milestones.filter { $0 <= totalHours(includeSim: includeSim) }.last ?? 0 }
 
-    var milestoneProgress: Double {
-        guard let next = nextMilestone else { return 1.0 }
-        let range = next - previousMilestone
+    func milestoneProgress(includeSim: Bool) -> Double {
+        guard let next = nextMilestone(includeSim: includeSim) else { return 1.0 }
+        let prev = previousMilestone(includeSim: includeSim)
+        let range = next - prev
         guard range > 0 else { return 1.0 }
-        return (totalHours - previousMilestone) / range
+        return (totalHours(includeSim: includeSim) - prev) / range
     }
+
+    // Keep non-parameterised versions for any callsites that don't need the setting
+    var nextMilestone: Double? { nextMilestone(includeSim: true) }
+    var previousMilestone: Double { previousMilestone(includeSim: true) }
+    var milestoneProgress: Double { milestoneProgress(includeSim: true) }
 }
 
 // MARK: - FRMS Rolling Time Series

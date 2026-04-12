@@ -3233,6 +3233,10 @@ struct FlightStatistics {
         return totalBlockTime + totalSIMTime
     }
 
+    func totalFlightTime(includeSim: Bool) -> Double {
+        return includeSim ? totalBlockTime + totalSIMTime : totalBlockTime
+    }
+
     var formattedTotalFlightTime: String {
         return String(format: "%.1f hrs", totalFlightTime)
     }
@@ -3254,6 +3258,10 @@ struct FlightStatistics {
 
     func formattedTotalFlightTime(asHoursMinutes: Bool) -> String {
         return formatTime(totalFlightTime, asHoursMinutes: asHoursMinutes)
+    }
+
+    func formattedTotalFlightTime(includeSim: Bool, asHoursMinutes: Bool) -> String {
+        return formatTime(totalFlightTime(includeSim: includeSim), asHoursMinutes: asHoursMinutes)
     }
 
     func formattedP1Time(asHoursMinutes: Bool) -> String {

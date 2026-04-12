@@ -191,6 +191,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var defaultApproachType: String? = nil  // Default approach type
     @Published var showTimesInHoursMinutes = false  // Show times in HH:MM format
     @Published var showOutInTimes = true  // Show OUT/IN (and STD/STA) times in the flights list
+    @Published var countSimInTotal = true  // Include SIM time in Total flight time
     @Published var selectedFleetID = "B737"  // Selected fleet for filtering
     @Published var decimalRoundingMode: RoundingMode = .standard  // Rounding mode for decimal times
 
@@ -455,6 +456,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         defaultApproachType = settings.defaultApproachType
         showTimesInHoursMinutes = settings.showTimesInHoursMinutes
         showOutInTimes = settings.showOutInTimes
+        countSimInTotal = settings.countSimInTotal
         selectedFleetID = settings.selectedFleetID
         decimalRoundingMode = settings.decimalRoundingMode
         recentCaptainNames = settings.recentCaptainNames
@@ -538,6 +540,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 showTimesInHoursMinutes = settings.showTimesInHoursMinutes
             case "showOutInTimes":
                 showOutInTimes = settings.showOutInTimes
+            case "countSimInTotal":
+                countSimInTotal = settings.countSimInTotal
             case "selectedFleetID":
                 selectedFleetID = settings.selectedFleetID
             case "decimalRoundingMode":
@@ -919,6 +923,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
     func updateShowOutInTimes(_ value: Bool) {
         showOutInTimes = value
         userDefaultsService.setShowOutInTimes(value)
+    }
+
+    func updateCountSimInTotal(_ value: Bool) {
+        countSimInTotal = value
+        userDefaultsService.setCountSimInTotal(value)
     }
 
     func updateDecimalRoundingMode(_ value: RoundingMode) {

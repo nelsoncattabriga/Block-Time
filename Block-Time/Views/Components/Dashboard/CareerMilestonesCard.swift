@@ -9,49 +9,44 @@ import SwiftUI
 
 struct CareerMilestonesCard: View {
     let stats: NDCareerStats
+    @AppStorage("countSimInTotal") private var countSimInTotal: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Career Overview", icon: "trophy.fill")
 
             // Top stats row
-            HStack(spacing: 0) {
+            HStack(spacing: 8) {
                 statBlock(
-                    value: String(format: "%.0f", stats.totalHours),
-                    label: "Total Hours",
-                    icon: "clock.fill",
+                    value: String(format: "%.0f", stats.totalHours(includeSim: countSimInTotal)),
+                    label: "Hours",
                     color: .blue
                 )
-                Divider().frame(height: 44).padding(.horizontal, 8)
                 statBlock(
                     value: "\(stats.totalSectors)",
                     label: "Sectors",
-                    icon: "airplane",
                     color: .green
                 )
-                Divider().frame(height: 44).padding(.horizontal, 8)
+                statBlock(
+                    value: "\(stats.totalAirports)",
+                    label: "Airports",
+                    color: .teal
+                )
                 statBlock(
                     value: "\(stats.totalAircraftTypes)",
-                    label: "A/C Types",
-                    icon: "airplane.circle.fill",
+                    label: "Types",
                     color: .purple
                 )
-                Divider().frame(height: 44).padding(.horizontal, 8)
-                statBlock(
-                    value: String(format: "%.1f yrs", stats.yearsOfData),
-                    label: "Logged",
-                    icon: "calendar",
-                    color: .orange
-                )
             }
-            .frame(maxWidth: .infinity)
 
-            // Start date
+            // Footer: years logged + start date
             if let firstDate = stats.firstFlightDate {
+                let years = Int(stats.yearsOfData)
+                let yearLabel = years == 1 ? "year" : "years"
                 HStack {
                     Image(systemName: "flag.fill")
                         .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
-                    Text("Logbook Records from \(firstDate.formatted(.dateTime.day().month(.wide).year()))")
+                    Text("Logged \(years) \(yearLabel) from \(firstDate.formatted(.dateTime.month(.wide).year()))")
                         .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
                 }
             }
@@ -61,19 +56,23 @@ struct CareerMilestonesCard: View {
     }
 
     @ViewBuilder
-    private func statBlock(value: String, label: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.subheadline).foregroundStyle(color)
+    private func statBlock(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 5) {
             Text(value)
                 .iPadScaledFont(.subheadline)
-                .fontWeight(.bold)
+                .bold()
                 .fontDesign(.rounded)
-                .foregroundStyle(.primary)
+                .foregroundStyle(color)
             Text(label)
-                .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                .iPadScaledFont(.caption, phoneFont: .footnote)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(color.opacity(0.18), lineWidth: 1)
+        )
     }
 }

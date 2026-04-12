@@ -262,10 +262,17 @@ extension FlightDatabaseService {
         let block = flights.reduce(0.0) { $0 + hrs($1.blockTime) }
         let sim   = flights.reduce(0.0) { $0 + (isSpInsOnly($1) ? 0 : hrs($1.simTime)) }
         let aircraftTypes = Set(flights.compactMap { $0.aircraftType }.filter { !$0.isEmpty })
+        var airports = Set<String>()
+        for f in flights {
+            if let a = f.fromAirport, !a.isEmpty { airports.insert(a) }
+            if let a = f.toAirport,   !a.isEmpty { airports.insert(a) }
+        }
         return NDCareerStats(
-            totalHours: block + sim,
+            totalBlockHours: block,
+            totalSIMHours: sim,
             totalSectors: flights.count,
             totalAircraftTypes: aircraftTypes.count,
+            totalAirports: airports.count,
             firstFlightDate: flights.compactMap { $0.date }.min()
         )
     }

@@ -892,6 +892,19 @@ private struct ModernFormatOptionsCard: View {
                 Divider()
                 
                 ModernToggleRow(
+                    title: "Count SIM in Total",
+                    subtitle: "Include SIM time in Total flight time",
+                    isOn: Binding(
+                        get: { viewModel.countSimInTotal },
+                        set: { viewModel.updateCountSimInTotal($0) }
+                    ),
+                    color: .cyan,
+                    icon: "desktopcomputer"
+                )
+
+                Divider()
+
+                ModernToggleRow(
                     title: "Show OUT/IN Times",
                     subtitle: "Shows times in Logbook view",
                     isOn: Binding(
