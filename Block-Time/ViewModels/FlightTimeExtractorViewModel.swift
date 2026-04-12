@@ -137,7 +137,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var isGLS = false
     @Published var isNPA = false
     @Published var selectedApproachType: String? = nil  // "AIII", "RNP", "ILS", "GLS", "NPA", or nil
-    @Published var isSimulator = false
+    @Published var isSimulator = false {
+        didSet { isPilotFlying = isSimulator }
+    }
     @Published var isSpIns = false
     @Published var spInsTime = ""
     @Published var isPositioning = false

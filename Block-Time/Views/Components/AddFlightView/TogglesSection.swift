@@ -7,7 +7,7 @@ struct ModernTogglesSection: View {
     private var isDisabled: Bool {
         // Time credit is disabled for positioning, sim, and sim-instruction.
         // Aircraft instruction counts as P1 so credit controls remain enabled.
-        viewModel.isPositioning || viewModel.isSimulator || (viewModel.isSpIns && !viewModel.isInstructingInAircraft)
+        viewModel.isPositioning || (viewModel.isSpIns && !viewModel.isInstructingInAircraft)
     }
 
     private var timeCreditLabel: String {
