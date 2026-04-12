@@ -59,6 +59,7 @@ struct FlightsView: View {
     @State private var showSearchBar: Bool = false
     @State private var isAddingNewFlight: Bool = false
     @State private var hasScrolledOnLaunch = false
+    @State private var showingMap = false
     @FocusState private var isSearchFieldFocused: Bool
 
     // Device-dependent corner radius for action buttons
@@ -427,6 +428,14 @@ struct FlightsView: View {
 
                             Button(action: {
                                 HapticManager.shared.impact(.light)
+                                showingMap = true
+                            }) {
+                                Image(systemName: "globe.asia.australia")
+                                    .font(.title3)
+                            }
+
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
                                 showingFilterSheet = true
                             }) {
                                 Image(systemName: "line.3.horizontal.decrease.circle")
@@ -449,6 +458,9 @@ struct FlightsView: View {
             }
             .fullScreenCover(isPresented: $showingPaywall) {
                 PaywallView(isDismissible: true)
+            }
+            .fullScreenCover(isPresented: $showingMap) {
+                FlightMapView()
             }
             .sheet(isPresented: $showingFilterSheet) {
                 FilterSheet(

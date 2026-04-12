@@ -153,6 +153,7 @@ private struct FlightsListContent: View {
     private let databaseService = FlightDatabaseService.shared
     @Environment(PurchaseService.self) private var purchaseService
     @State private var showingPaywall = false
+    @State private var showingMap = false
     @State private var allFlightSectors: [FlightSector] = []
     @State private var filteredFlightSectors: [FlightSector] = []
     @State private var showingFilterSheet = false
@@ -543,6 +544,17 @@ private struct FlightsListContent: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         HapticManager.shared.impact(.light)
+                        showingMap = true
+                    }) {
+                        Label("Map", systemImage: "globe.asia.australia")
+                            .font(.title3)
+                    }
+                    .labelStyle(.iconOnly)
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
                         showingFilterSheet = true
                     }) {
                         Label {
@@ -571,6 +583,9 @@ private struct FlightsListContent: View {
         }
         .fullScreenCover(isPresented: $showingPaywall) {
             PaywallView(isDismissible: true)
+        }
+        .fullScreenCover(isPresented: $showingMap) {
+            FlightMapView()
         }
         .sheet(isPresented: $showingFilterSheet) {
             FilterSheet(

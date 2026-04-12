@@ -7,6 +7,7 @@ import SwiftUI
 import MapKit
 
 struct FlightMapView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = FlightMapViewModel()
     @AppStorage("flightMap_isHybrid") private var mapStyleIsHybrid = true
     @State private var selectedICAO: String? = nil
@@ -25,6 +26,10 @@ struct FlightMapView: View {
             .navigationTitle("Flight Map")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Done") { dismiss() }
+                }
+
                 ToolbarItem(placement: .topBarLeading) {
                     Picker("Date", selection: $viewModel.dateFilter) {
                         ForEach(FlightMapViewModel.DateFilter.allCases) { filter in
