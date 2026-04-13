@@ -165,7 +165,7 @@ class LogbookImportService {
         }
 
         LogManager.shared.info("CSV Import: Successfully parsed \(flightSectors.count) flight sectors")
-        return flightSectors
+        return resolveIntraImportCollisions(flightSectors)
     }
 
     private func parseCSVLine(_ line: String) -> [String] {
@@ -320,7 +320,7 @@ class LogbookImportService {
             }
         }
 
-        return flightSectors
+        return resolveIntraImportCollisions(flightSectors)
     }
 
     private func parseTabDelimitedLine(_ line: String) -> [String] {

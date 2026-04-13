@@ -324,7 +324,7 @@ class FileImportService {
             }
 
             // Use optimized batch save - dramatically faster than individual saves
-            let flights = flightsToImport.map { $0.flight }
+            let flights = resolveIntraImportCollisions(flightsToImport.map { $0.flight })
             var duplicateCount = 0
             var importSessionID: UUID? = nil
             var mergeProposals: [MergeProposal] = []
@@ -1799,6 +1799,71 @@ enum ImportError: LocalizedError {
 // MARK: - Flight Creation Error
 struct FlightCreationError: Error {
     let message: String
+}
+
+// MARK: - Intra-Import Collision Resolution
+
+/// Resolves UUID collisions within a single import batch.
+///
+/// When two flights in the same file produce identical deterministic UUIDs (same date,
+/// flight number, aircraft, route, and block time), the second occurrence gets a
+/// `-collision-N` suffix appended to its unique string before rehashing. This ensures:
+/// - Both flights are imported as distinct records
+/// - Re-importing the same file produces the same UUIDs in the same order (idempotent)
+/// - Existing flights whose UUIDs were generated without a collision suffix are unaffected
+func resolveIntraImportCollisions(_ sectors: [FlightSector]) -> [FlightSector] {
+    var seenBaseStrings: [String: Int] = [:]  // base unique string → occurrence count
+    var resolved: [FlightSector] = []
+    resolved.reserveCapacity(sectors.count)
+
+    for sector in sectors {
+        let base: String
+        if sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            base = "\(sector.date)-\(sector.aircraftType)-\(sector.aircraftReg)-\(sector.fromAirport)-\(sector.toAirport)-\(sector.outTime)-\(sector.inTime)-\(sector.blockTime)-\(sector.simTime)"
+        } else {
+            base = "\(sector.date)-\(sector.flightNumber)-\(sector.aircraftType)-\(sector.aircraftReg)-\(sector.fromAirport)-\(sector.toAirport)-\(sector.blockTime)"
+        }
+
+        let count = seenBaseStrings[base, default: 0]
+        seenBaseStrings[base] = count + 1
+
+        if count == 0 {
+            // First occurrence — UUID is already correct
+            resolved.append(sector)
+        } else {
+            // Subsequent occurrence — rehash with collision suffix
+            let collisionString = "\(base)-collision-\(count)"
+            if let newID = UUID(uuidString: collisionString.md5UUID()) {
+                LogManager.shared.info("Intra-import UUID collision resolved: \(sector.date) \(sector.flightNumber) → collision-\(count)")
+                let updated = FlightSector(
+                    id: newID,
+                    date: sector.date, flightNumber: sector.flightNumber,
+                    aircraftReg: sector.aircraftReg, aircraftType: sector.aircraftType,
+                    fromAirport: sector.fromAirport, toAirport: sector.toAirport,
+                    captainName: sector.captainName, foName: sector.foName,
+                    so1Name: sector.so1Name, so2Name: sector.so2Name,
+                    blockTime: sector.blockTime, nightTime: sector.nightTime,
+                    p1Time: sector.p1Time, p1usTime: sector.p1usTime, p2Time: sector.p2Time,
+                    instrumentTime: sector.instrumentTime, simTime: sector.simTime,
+                    spInsTime: sector.spInsTime, isPilotFlying: sector.isPilotFlying,
+                    isPositioning: sector.isPositioning, isAIII: sector.isAIII,
+                    isRNP: sector.isRNP, isILS: sector.isILS, isGLS: sector.isGLS,
+                    isNPA: sector.isNPA, remarks: sector.remarks,
+                    dayTakeoffs: sector.dayTakeoffs, dayLandings: sector.dayLandings,
+                    nightTakeoffs: sector.nightTakeoffs, nightLandings: sector.nightLandings,
+                    outTime: sector.outTime, inTime: sector.inTime,
+                    scheduledDeparture: sector.scheduledDeparture,
+                    scheduledArrival: sector.scheduledArrival,
+                    customCount: sector.customCount
+                )
+                resolved.append(updated)
+            } else {
+                resolved.append(sector)
+            }
+        }
+    }
+
+    return resolved
 }
 
 // MARK: - String Extension for Deterministic UUID
