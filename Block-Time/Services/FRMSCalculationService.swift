@@ -199,31 +199,26 @@ class FRMSCalculationService {
         let flightTime365Days: Double
 
         if let flights = flights {
-            // Filter flights by their actual flight date (dd/MM/yyyy string from database)
-            // Database stores dates as UTC, so we need to parse and compare in home base timezone
+            // Parse each flight date once (home base timezone) then accumulate into all three
+            // period buckets in a single pass — avoids 3 separate filter+reduce passes.
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "dd/MM/yyyy"
             dateFormatter.timeZone = homeTimeZone  // Use home base timezone for consistency
 
-            // Convert date range to string format for comparison
-            let flights7Days = flights.filter {
-                guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
-                return flightDate >= sevenDaysAgo && flightDate <= endOfToday
+            var ft7 = 0.0, ft28 = 0.0, ft365 = 0.0
+            for flight in flights {
+                guard let flightDate = dateFormatter.date(from: flight.date),
+                      flightDate <= endOfToday else { continue }
+                // Sp/Ins only (instructor running sim) contributes to duty but NOT flight time
+                let ft = flight.isSpInsOnly ? 0.0 : (flight.blockTimeValue > 0 ? flight.blockTimeValue : flight.simTimeValue)
+                if ft == 0 { continue }
+                if flightDate >= threeSixtyFiveDaysAgo { ft365 += ft }
+                if flightDate >= flightTimePeriodAgo   { ft28  += ft }
+                if flightDate >= sevenDaysAgo          { ft7   += ft }
             }
-            let flightsFlightTimePeriod = flights.filter {
-                guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
-                return flightDate >= flightTimePeriodAgo && flightDate <= endOfToday
-            }
-            let flights365Days = flights.filter {
-                guard let flightDate = dateFormatter.date(from: $0.date) else { return false }
-                return flightDate >= threeSixtyFiveDaysAgo && flightDate <= endOfToday
-            }
-
-            // Sum flight times from individual flights
-            // Sp/Ins only (instructor running sim) contributes to duty but NOT flight time
-            flightTime7Days = flights7Days.reduce(0.0) { $0 + ($1.isSpInsOnly ? 0 : ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue)) }
-            flightTime28Or30Days = flightsFlightTimePeriod.reduce(0.0) { $0 + ($1.isSpInsOnly ? 0 : ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue)) }
-            flightTime365Days = flights365Days.reduce(0.0) { $0 + ($1.isSpInsOnly ? 0 : ($1.blockTimeValue > 0 ? $1.blockTimeValue : $1.simTimeValue)) }
+            flightTime7Days       = ft7
+            flightTime28Or30Days  = ft28
+            flightTime365Days     = ft365
 
         } else {
             // Fallback to duty-based calculation if flights not provided (for backward compatibility)
