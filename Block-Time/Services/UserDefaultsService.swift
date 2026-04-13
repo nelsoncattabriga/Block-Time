@@ -319,6 +319,10 @@ class UserDefaultsService: ObservableObject {
         userDefaults.set(settings.countSimInTotal, forKey: Keys.countSimInTotal)
         userDefaults.set(settings.logCustomCount, forKey: Keys.logCustomCount)
         userDefaults.set(settings.customCountLabel, forKey: Keys.customCountLabel)
+        userDefaults.set(settings.recentCaptainNames, forKey: Keys.recentCaptainNames)
+        userDefaults.set(settings.recentCoPilotNames, forKey: Keys.recentCoPilotNames)
+        userDefaults.set(settings.recentAircraftRegs, forKey: Keys.recentAircraftRegs)
+        userDefaults.set(settings.recentAirports, forKey: Keys.recentAirports)
 
         // Sync to iCloud if enabled
         if syncToCloud {
