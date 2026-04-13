@@ -66,7 +66,7 @@ struct FRMSView: View {
                     }
                     .refreshable {
                         LogManager.shared.debug("FRMSView: Pull-to-refresh triggered")
-                        await viewModel.refreshFlightData(crewPosition: flightTimePosition)
+                        await viewModel.refreshFlightData(crewPosition: flightTimePosition, ignoresCooldown: true)
                         updateMBTT()
                     }
                     .opacity(viewModel.isLoading ? 0.3 : 1.0)

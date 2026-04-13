@@ -44,6 +44,8 @@ class FRMSViewModel {
     private var dutiesLast365Days: [FRMSDuty] = []  // Store last 365 days of duties for FRMS calculations
     private var flightsLast365Days: [FlightSector] = []  // Store last 365 days of individual flights for flight time calculations
     private var hasLoadedData = false  // Track if we've loaded data to prevent redundant loads
+    private var lastRefreshDate: Date?  // Cooldown — prevents redundant recalculations from rapid CloudKit events
+    private let refreshCooldown: TimeInterval = 10  // seconds
 
     // Cached UTC date formatter — reused across load/refresh calls (fixed timezone, safe to share)
     private static let utcDateFormatter: DateFormatter = {
@@ -156,7 +158,13 @@ class FRMSViewModel {
     }
 
     /// Refresh flight data (for pull-to-refresh or data change notifications).
-    func refreshFlightData(crewPosition: FlightTimePosition) async {
+    /// Skips if a refresh completed within the last `refreshCooldown` seconds — prevents
+    /// redundant recalculations from rapid successive CloudKit sync events on launch.
+    func refreshFlightData(crewPosition: FlightTimePosition, ignoresCooldown: Bool = false) async {
+        if !ignoresCooldown, let last = lastRefreshDate, Date().timeIntervalSince(last) < refreshCooldown {
+            LogManager.shared.debug("FRMSViewModel: refreshFlightData skipped (cooldown)")
+            return
+        }
         LogManager.shared.debug("FRMSViewModel: refreshFlightData started for \(crewPosition)")
         isLoading = true
         let flights = Self.fetchFlights365Days()
@@ -234,6 +242,7 @@ class FRMSViewModel {
         self.a320B737NextDutyLimits = a320Limits
         self.hasLoadedData = true
         self.isLoading = false
+        self.lastRefreshDate = Date()
         LogManager.shared.debug("FRMSViewModel: \(label) completed")
     }
 
