@@ -1026,9 +1026,8 @@ class FlightDatabaseService: ObservableObject {
 
                     let flightNumber = flight.flightNumber ?? ""
                     let aircraftType = flight.aircraftType ?? ""
-                    let blockTime = flight.blockTime ?? ""
                     let dateString = dateFormatter.string(from: date)
-                    let signature = "\(dateString)|\(flightNumber)|\(fromAirport)|\(toAirport)|\(aircraftReg)|\(aircraftType)|\(blockTime)"
+                    let signature = "\(dateString)|\(flightNumber)|\(fromAirport)|\(toAirport)|\(aircraftReg)|\(aircraftType)"
                     contentBasedDuplicates.insert(signature)
 
                     // Index from+to under date-1, date, date+1 for fuzzy matching.
@@ -1102,7 +1101,7 @@ class FlightDatabaseService: ObservableObject {
                 }
 
                 // Check content-based duplicate
-                let signature = "\(sector.date)|\(sector.flightNumber)|\(sector.fromAirport)|\(sector.toAirport)|\(sector.aircraftReg)|\(sector.aircraftType)|\(sector.blockTime)"
+                let signature = "\(sector.date)|\(sector.flightNumber)|\(sector.fromAirport)|\(sector.toAirport)|\(sector.aircraftReg)|\(sector.aircraftType)"
                 if contentBasedDuplicates.contains(signature) {
                     duplicateCount += 1
                     LogManager.shared.info("⊘ Skipping duplicate (content match): \(sector.date) \(sector.flightNumber) \(sector.aircraftType)-\(sector.aircraftReg) (different UUID: \(sector.id))")
