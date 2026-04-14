@@ -12,7 +12,11 @@ import CommonCrypto
 class FileImportService {
     static let shared = FileImportService()
 
-    private init() {}
+    private let airportService: AirportService
+
+    private init() {
+        self.airportService = .shared
+    }
 
     // MARK: - Parse File
     func parseFile(url: URL, forceSecurityScoping: Bool = true) throws -> ImportData {
@@ -516,8 +520,8 @@ class FileImportService {
         let date = parseDate(rawDate)
         let flightNumber = getValue("Flight Number")
         let aircraftReg = getValue("Aircraft Reg")
-        let fromAirport = getValue("From Airport")
-        let toAirport = getValue("To Airport")
+        let fromAirport = airportService.convertToICAO(getValue("From Airport"))
+        let toAirport = airportService.convertToICAO(getValue("To Airport"))
         let captainName = parseCrewName(getValue("Captain Name"))
         let foName = parseCrewName(getValue("F/O Name"))
         let scheduledDeparture = parseTime(getValue("STD"))
