@@ -671,6 +671,10 @@ class FileImportService {
         if flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             // No flight number - use OUT/IN times and sim time for additional uniqueness
             uniqueString = "\(date)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(outTime)-\(inTime)-\(blockTime)-\(simTime)"
+        } else if flightNumber == "SUMMARY" {
+            // SUMMARY flights have no reg/route — use blockTime + simTime so two summaries for the
+            // same aircraft type on the same date (e.g. different eras) get distinct UUIDs.
+            uniqueString = "\(date)-SUMMARY-\(aircraftType)-\(blockTime)-\(simTime)"
         } else {
             // Normal flight with flight number
             uniqueString = "\(date)-\(flightNumber)-\(aircraftType)-\(aircraftReg)-\(fromAirport)-\(toAirport)-\(blockTime)"
@@ -682,8 +686,9 @@ class FileImportService {
         let finalBlockTime: String
         let nightTime: String
 
-        if !simTime.isEmpty, let simValue = Double(simTime), simValue > 0 {
-            // This is a simulator flight
+        if flightNumber != "SUMMARY", !simTime.isEmpty, let simValue = Double(simTime), simValue > 0 {
+            // This is a simulator flight — zero blockTime so sim time isn't double-counted.
+            // SUMMARY flights legitimately carry both blockTime and simTime as career totals.
             finalBlockTime = "0.0"
             nightTime = importedNightTime  // Keep night time as-is for simulator flights
         } else {

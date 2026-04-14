@@ -152,6 +152,50 @@ func detectDelimiter(_ content: String) -> Character {
     return tabs > commas ? "\t" : ","
 }
 
+// MARK: - IATA → ICAO conversion (mirrors AirportService.convertToICAO)
+
+/// Lazily loaded IATA→ICAO table, built from airports.dat.txt.
+/// Searched in: script directory, input file directory, then the known repo path.
+var iataToIcaoTable: [String: String] = {
+    let candidates: [String] = [
+        // Next to the script
+        URL(fileURLWithPath: CommandLine.arguments[0])
+            .deletingLastPathComponent()
+            .appendingPathComponent("../Block-Time/Resources/airports.dat.txt")
+            .standardized.path,
+        // Relative to CWD
+        "Block-Time/Resources/airports.dat.txt",
+        // Absolute repo path (fallback)
+        "\(FileManager.default.homeDirectoryForCurrentUser.path)/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time/Block-Time/Resources/airports.dat.txt",
+    ]
+
+    for path in candidates {
+        guard let content = try? String(contentsOfFile: path, encoding: .utf8) else { continue }
+        var table: [String: String] = [:]
+        table.reserveCapacity(6_000)
+        content.enumerateLines { line, _ in
+            let parts = line.split(separator: ",", omittingEmptySubsequences: false)
+            guard parts.count >= 6 else { return }
+            let icao = parts[5].trimmingCharacters(in: .init(charactersIn: "\" "))
+            guard icao.count == 4, icao != "\\N" else { return }
+            let iata = parts[4].trimmingCharacters(in: .init(charactersIn: "\" "))
+            guard iata.count == 3, iata != "\\N" else { return }
+            table[iata] = icao
+        }
+        print("Airport DB: loaded \(table.count) IATA→ICAO entries from \(path)")
+        return table
+    }
+    fputs("Warning: airports.dat.txt not found — IATA codes will be stored as-is\n", stderr)
+    return [:]
+}()
+
+/// Convert a 3-letter IATA code to 4-letter ICAO. Already-ICAO or unknown codes pass through unchanged.
+func convertToICAO(_ code: String) -> String {
+    let upper = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    guard upper.count == 3 else { return upper }
+    return iataToIcaoTable[upper] ?? upper
+}
+
 // MARK: - Normalisation (mirrors ImportMappingView.normalize)
 
 func normalize(_ s: String) -> String {
@@ -602,8 +646,8 @@ func convert(inputPath: String, outputPath: String?) {
         flight.flightNumber = field("Flight Number")
         flight.aircraftReg = field("Aircraft Reg")
         flight.aircraftType = field("Aircraft Type")
-        flight.fromAirport = field("From Airport")
-        flight.toAirport = field("To Airport")
+        flight.fromAirport = convertToICAO(field("From Airport"))
+        flight.toAirport = convertToICAO(field("To Airport"))
         flight.captainName = parseCrewName(field("Captain Name"))
         flight.foName = parseCrewName(field("F/O Name"))
         flight.so1Name = parseCrewName(field("S/O1 Name"))
