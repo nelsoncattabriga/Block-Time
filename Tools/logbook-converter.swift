@@ -8,7 +8,10 @@
 // restored directly from the Backups screen — no need to overwrite your own logbook.
 //
 // Usage:
-//   swift logbook-converter.swift <input.csv> [output.csv]
+//   swift logbook-converter.swift [--local-times] <input.csv> [output.csv]
+//
+// Options:
+//   --local-times   OUT/IN/STD/STA are in local airport time — convert to UTC during export
 //
 // If output path is omitted, writes Block-Time_Backup_<timestamp>_<n>flights.csv
 // next to the input file.
@@ -152,48 +155,150 @@ func detectDelimiter(_ content: String) -> Character {
     return tabs > commas ? "\t" : ","
 }
 
-// MARK: - IATA → ICAO conversion (mirrors AirportService.convertToICAO)
+// MARK: - Airport database (mirrors AirportService)
 
-/// Lazily loaded IATA→ICAO table, built from airports.dat.txt.
-/// Searched in: script directory, input file directory, then the known repo path.
-var iataToIcaoTable: [String: String] = {
+struct AirportInfo {
+    let icaoCode: String
+    let timezoneOffset: Double
+    let dstCode: String
+}
+
+struct AirportDatabase {
+    var airports: [String: AirportInfo] = [:]
+    var iataToIcao: [String: String] = [:]
+}
+
+/// Lazily loaded airport database, built from airports.dat.txt.
+/// Searched in: script directory, relative to CWD, then the known repo path.
+var airportDB: AirportDatabase = {
     let candidates: [String] = [
-        // Next to the script
         URL(fileURLWithPath: CommandLine.arguments[0])
             .deletingLastPathComponent()
             .appendingPathComponent("../Block-Time/Resources/airports.dat.txt")
             .standardized.path,
-        // Relative to CWD
         "Block-Time/Resources/airports.dat.txt",
-        // Absolute repo path (fallback)
         "\(FileManager.default.homeDirectoryForCurrentUser.path)/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time/Block-Time/Resources/airports.dat.txt",
     ]
 
     for path in candidates {
         guard let content = try? String(contentsOfFile: path, encoding: .utf8) else { continue }
-        var table: [String: String] = [:]
-        table.reserveCapacity(6_000)
+        var db = AirportDatabase()
+        db.airports.reserveCapacity(6_000)
+        db.iataToIcao.reserveCapacity(6_000)
         content.enumerateLines { line, _ in
             let parts = line.split(separator: ",", omittingEmptySubsequences: false)
-            guard parts.count >= 6 else { return }
+            guard parts.count >= 11 else { return }
             let icao = parts[5].trimmingCharacters(in: .init(charactersIn: "\" "))
             guard icao.count == 4, icao != "\\N" else { return }
+            guard let tzOffset = Double(parts[9]) else { return }
+            let dst = parts[10].trimmingCharacters(in: .init(charactersIn: "\" "))
             let iata = parts[4].trimmingCharacters(in: .init(charactersIn: "\" "))
-            guard iata.count == 3, iata != "\\N" else { return }
-            table[iata] = icao
+            if iata.count == 3, iata != "\\N" {
+                db.iataToIcao[iata] = icao
+            }
+            db.airports[icao] = AirportInfo(icaoCode: icao, timezoneOffset: tzOffset, dstCode: dst)
         }
-        print("Airport DB: loaded \(table.count) IATA→ICAO entries from \(path)")
-        return table
+        print("Airport DB: loaded \(db.airports.count) airports from \(path)")
+        return db
     }
-    fputs("Warning: airports.dat.txt not found — IATA codes will be stored as-is\n", stderr)
-    return [:]
+    fputs("Warning: airports.dat.txt not found — IATA codes will be stored as-is and local time conversion unavailable\n", stderr)
+    return AirportDatabase()
 }()
 
 /// Convert a 3-letter IATA code to 4-letter ICAO. Already-ICAO or unknown codes pass through unchanged.
 func convertToICAO(_ code: String) -> String {
     let upper = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     guard upper.count == 3 else { return upper }
-    return iataToIcaoTable[upper] ?? upper
+    return airportDB.iataToIcao[upper] ?? upper
+}
+
+// MARK: - DST and local→UTC conversion (mirrors AirportService)
+
+func isDSTActive(on date: Date, dstCode: String) -> Bool {
+    let calendar = Calendar.current
+    let year = calendar.component(.year, from: date)
+    let month = calendar.component(.month, from: date)
+
+    func lastSundayOf(month m: Int, year y: Int) -> Date {
+        var comps = DateComponents(); comps.year = y; comps.month = m + 1; comps.day = 1
+        guard let first = calendar.date(from: comps),
+              let last = calendar.date(byAdding: .day, value: -1, to: first) else { return date }
+        let wd = calendar.component(.weekday, from: last)
+        return calendar.date(byAdding: .day, value: -((wd + 6) % 7), to: last) ?? date
+    }
+    func nthSundayOf(month m: Int, year y: Int, n: Int) -> Date {
+        var comps = DateComponents(); comps.year = y; comps.month = m; comps.day = 1
+        guard let first = calendar.date(from: comps) else { return date }
+        let wd = calendar.component(.weekday, from: first)
+        guard let firstSun = calendar.date(byAdding: .day, value: (8 - wd) % 7, to: first) else { return date }
+        return calendar.date(byAdding: .weekOfYear, value: n - 1, to: firstSun) ?? date
+    }
+
+    switch dstCode {
+    case "E":
+        return date >= lastSundayOf(month: 3, year: year) && date < lastSundayOf(month: 10, year: year)
+    case "A":
+        return date >= nthSundayOf(month: 3, year: year, n: 2) && date < nthSundayOf(month: 11, year: year, n: 1)
+    case "S":
+        if month >= 10 { return date >= nthSundayOf(month: 10, year: year, n: 3) }
+        if month <= 3  { return date < nthSundayOf(month: 3, year: year, n: 3) }
+        return false
+    case "O":
+        if month >= 10 { return date >= nthSundayOf(month: 10, year: year, n: 1) }
+        if month <= 4  { return date < nthSundayOf(month: 4, year: year, n: 1) }
+        return false
+    case "Z":
+        if month >= 9 { return date >= lastSundayOf(month: 9, year: year) }
+        if month <= 4 { return date < nthSundayOf(month: 4, year: year, n: 1) }
+        return false
+    default:
+        return false
+    }
+}
+
+/// Convert a local "HH:MM" time string to UTC "HH:MM", given a date string ("dd/MM/yyyy") and ICAO code.
+/// Returns the original string if the airport is unknown or input is empty.
+func convertLocalToUTCTime(dateString: String, timeString: String, icao: String) -> String {
+    guard !timeString.isEmpty else { return timeString }
+    guard let info = airportDB.airports[icao.uppercased()] else { return timeString }
+
+    let clean = timeString.replacingOccurrences(of: ":", with: "")
+    let hours: Int
+    let minutes: Int
+    if clean.count == 4 {
+        hours = Int(clean.prefix(2)) ?? 0; minutes = Int(clean.suffix(2)) ?? 0
+    } else if clean.count == 3 {
+        hours = Int(clean.prefix(1)) ?? 0; minutes = Int(clean.suffix(2)) ?? 0
+    } else {
+        return timeString
+    }
+
+    let parts = dateString.split(separator: "/")
+    guard parts.count == 3,
+          let day = Int(parts[0]), let month = Int(parts[1]), let year = Int(parts[2]) else {
+        return timeString
+    }
+
+    var comps = DateComponents()
+    comps.year = year; comps.month = month; comps.day = day
+    comps.hour = hours; comps.minute = minutes; comps.second = 0
+
+    let roughCalendar = Calendar.current
+    guard let roughDate = roughCalendar.date(from: comps) else { return timeString }
+
+    var totalOffset = info.timezoneOffset
+    if isDSTActive(on: roughDate, dstCode: info.dstCode) { totalOffset += 1.0 }
+
+    guard let localTZ = TimeZone(secondsFromGMT: Int(totalOffset * 3600)) else { return timeString }
+    var localCal = Calendar.current
+    localCal.timeZone = localTZ
+    guard let localDateTime = localCal.date(from: comps) else { return timeString }
+
+    var utcCal = Calendar.current
+    utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
+    let utcHour = utcCal.component(.hour, from: localDateTime)
+    let utcMinute = utcCal.component(.minute, from: localDateTime)
+    return String(format: "%02d:%02d", utcHour, utcMinute)
 }
 
 // MARK: - Normalisation (mirrors ImportMappingView.normalize)
@@ -549,7 +654,7 @@ func makeGetter(row: [String], headers: [String]) -> (String) -> String {
 
 // MARK: - Main conversion
 
-func convert(inputPath: String, outputPath: String?) {
+func convert(inputPath: String, outputPath: String?, timesAreLocal: Bool) {
     // Read input
     guard let content = try? String(contentsOfFile: inputPath, encoding: .utf8) else {
         fputs("Error: cannot read file at \(inputPath)\n", stderr)
@@ -580,6 +685,9 @@ func convert(inputPath: String, outputPath: String?) {
         print("Profile: \(p.name) detected ✓")
     } else {
         print("Profile: none detected — using synonym matching")
+    }
+    if timesAreLocal {
+        print("Times:   local airport time → UTC conversion enabled")
     }
 
     // Build column→header map for each Block-Time field
@@ -656,6 +764,13 @@ func convert(inputPath: String, outputPath: String?) {
         flight.sta = parseTime(field("STA"))
         flight.outTime = parseTime(field("OUT Time"))
         flight.inTime = parseTime(field("IN Time"))
+
+        if timesAreLocal {
+            flight.outTime = convertLocalToUTCTime(dateString: date, timeString: flight.outTime, icao: flight.fromAirport)
+            flight.std     = convertLocalToUTCTime(dateString: date, timeString: flight.std,     icao: flight.fromAirport)
+            flight.inTime  = convertLocalToUTCTime(dateString: date, timeString: flight.inTime,  icao: flight.toAirport)
+            flight.sta     = convertLocalToUTCTime(dateString: date, timeString: flight.sta,     icao: flight.toAirport)
+        }
         flight.blockTime = parseDurationTime(field("Block Time"))
         flight.nightTime = parseDurationTime(field("Night Time"))
         flight.p1Time = parseDurationTime(field("P1 Time"))
@@ -720,13 +835,20 @@ func convert(inputPath: String, outputPath: String?) {
 // MARK: - Entry point
 
 let args = CommandLine.arguments
-guard args.count >= 2 else {
-    print("Usage: swift logbook-converter.swift <input.csv> [output.csv]")
+let flags = Set(args.dropFirst().filter { $0.hasPrefix("--") })
+let positional = args.dropFirst().filter { !$0.hasPrefix("--") }
+
+guard positional.count >= 1 else {
+    print("Usage: swift logbook-converter.swift [--local-times] <input.csv> [output.csv]")
     print("")
     print("Converts a PilotLog, LogTen Pro, Safelog, or generic logbook CSV")
     print("into a Block-Time backup file that can be restored directly from")
     print("the app's Backups screen.")
+    print("")
+    print("Options:")
+    print("  --local-times   OUT/IN/STD/STA are in local airport time — convert to UTC")
     exit(0)
 }
 
-convert(inputPath: args[1], outputPath: args.count >= 3 ? args[2] : nil)
+let timesAreLocal = flags.contains("--local-times")
+convert(inputPath: positional[0], outputPath: positional.count >= 2 ? positional[1] : nil, timesAreLocal: timesAreLocal)

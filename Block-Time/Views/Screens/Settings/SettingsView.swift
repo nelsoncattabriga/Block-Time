@@ -1160,8 +1160,8 @@ private struct ModernDataImportCard: View {
                     }
                 }
                 .sheet(item: $importData) { data in
-                    ImportMappingView(importData: data) { mappings, mode, regMappings in
-                        performImport(data: data, mappings: mappings, mode: mode, registrationMappings: regMappings)
+                    ImportMappingView(importData: data) { mappings, mode, regMappings, timesAreLocal in
+                        performImport(data: data, mappings: mappings, mode: mode, registrationMappings: regMappings, timesAreLocal: timesAreLocal)
                     }
                 }
 
@@ -1283,10 +1283,10 @@ private struct ModernDataImportCard: View {
         }
     }
 
-    private func performImport(data: ImportData, mappings: [FieldMapping], mode: ImportMode, registrationMappings: [RegistrationTypeMapping]) {
+    private func performImport(data: ImportData, mappings: [FieldMapping], mode: ImportMode, registrationMappings: [RegistrationTypeMapping], timesAreLocal: Bool = false) {
         isImporting = true
 
-        FileImportService.shared.importFlights(from: data, mapping: mappings, mode: mode, registrationMappings: registrationMappings) { result in
+        FileImportService.shared.importFlights(from: data, mapping: mappings, mode: mode, registrationMappings: registrationMappings, timesAreLocal: timesAreLocal) { result in
             isImporting = false
 
             switch result {

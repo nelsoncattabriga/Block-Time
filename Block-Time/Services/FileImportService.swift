@@ -241,6 +241,7 @@ class FileImportService {
         mapping: [FieldMapping],
         mode: ImportMode,
         registrationMappings: [RegistrationTypeMapping] = [],
+        timesAreLocal: Bool = false,
         completion: @escaping (Result<ImportResult, Error>) -> Void
     ) {
         DispatchQueue.global(qos: .userInitiated).async {
@@ -285,7 +286,7 @@ class FileImportService {
 
             // First, create all flight objects
             for (index, row) in importData.rows.enumerated() {
-                let result = self.createFlightFromRow(row, mapping: columnMapping, registrationTypeMap: regToTypeMap, rowIndex: index + 1)
+                let result = self.createFlightFromRow(row, mapping: columnMapping, registrationTypeMap: regToTypeMap, rowIndex: index + 1, timesAreLocal: timesAreLocal)
 
                 switch result {
                 case .success(let flight):
@@ -475,7 +476,8 @@ class FileImportService {
         _ row: [String],
         mapping: [String: FieldMappingInfo],
         registrationTypeMap: [String: String],
-        rowIndex: Int
+        rowIndex: Int,
+        timesAreLocal: Bool = false
     ) -> Result<FlightSector, FlightCreationError> {
         // Helper to get value safely - now handles multiple columns with strategies
         func getValue(_ field: String) -> String {
@@ -524,10 +526,26 @@ class FileImportService {
         let toAirport = airportService.convertToICAO(getValue("To Airport"))
         let captainName = parseCrewName(getValue("Captain Name"))
         let foName = parseCrewName(getValue("F/O Name"))
-        let scheduledDeparture = parseTime(getValue("STD"))
-        let scheduledArrival = parseTime(getValue("STA"))
-        let outTime = parseTime(getValue("OUT Time"))
-        let inTime = parseTime(getValue("IN Time"))
+        var scheduledDeparture = parseTime(getValue("STD"))
+        var scheduledArrival = parseTime(getValue("STA"))
+        var outTime = parseTime(getValue("OUT Time"))
+        var inTime = parseTime(getValue("IN Time"))
+
+        // Convert local airport times to UTC if requested
+        if timesAreLocal && !date.isEmpty {
+            if !outTime.isEmpty {
+                outTime = airportService.convertFromLocalToUTCTime(localDateString: date, localTimeString: outTime, airportICAO: fromAirport)
+            }
+            if !scheduledDeparture.isEmpty {
+                scheduledDeparture = airportService.convertFromLocalToUTCTime(localDateString: date, localTimeString: scheduledDeparture, airportICAO: fromAirport)
+            }
+            if !inTime.isEmpty {
+                inTime = airportService.convertFromLocalToUTCTime(localDateString: date, localTimeString: inTime, airportICAO: toAirport)
+            }
+            if !scheduledArrival.isEmpty {
+                scheduledArrival = airportService.convertFromLocalToUTCTime(localDateString: date, localTimeString: scheduledArrival, airportICAO: toAirport)
+            }
+        }
 
         // Always use imported block time for consistency in duplicate detection
         // Do NOT recalculate from OUT/IN as this can cause the same flight to get different UUIDs

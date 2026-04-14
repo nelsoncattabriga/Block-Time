@@ -108,7 +108,7 @@ struct FieldMapping: Identifiable {
 // MARK: - Import Mapping View
 struct ImportMappingView: View {
     let importData: ImportData
-    let onImport: ([FieldMapping], ImportMode, [RegistrationTypeMapping]) -> Void
+    let onImport: ([FieldMapping], ImportMode, [RegistrationTypeMapping], Bool) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var fieldMappings: [FieldMapping]
@@ -119,6 +119,7 @@ struct ImportMappingView: View {
     @State private var enableRegistrationMapping = false
     @State private var showingRegistrationMapping = false
     @State private var registrationMappings: [RegistrationTypeMapping] = []
+    @AppStorage("importTimesAreLocal") private var timesAreLocal = false
 
     enum PreviewSelection: String, CaseIterable, Identifiable {
         case first100 = "First Rows"
@@ -127,7 +128,7 @@ struct ImportMappingView: View {
         var id: String { self.rawValue }
     }
 
-    init(importData: ImportData, onImport: @escaping ([FieldMapping], ImportMode, [RegistrationTypeMapping]) -> Void) {
+    init(importData: ImportData, onImport: @escaping ([FieldMapping], ImportMode, [RegistrationTypeMapping], Bool) -> Void) {
         print("🔍 ImportMappingView init started")
         print("🔍 Row count: \(importData.rows.count)")
         print("🔍 Header count: \(importData.headers.count)")
@@ -189,6 +190,19 @@ struct ImportMappingView: View {
                                 .font(.caption)
                                 .foregroundColor(.red)
                         }
+                    }
+                }
+
+                Section(header: Text("Times Are")) {
+                    Picker("Times Are", selection: $timesAreLocal) {
+                        Text("UTC").tag(false)
+                        Text("Local").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    if timesAreLocal {
+                        Text("OUT/IN/STD/STA will be converted from local airport time to UTC during import.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -343,7 +357,7 @@ struct ImportMappingView: View {
                         if let data = try? JSONEncoder().encode(entries) {
                             UserDefaults.standard.set(data, forKey: "LastImportMapping_\(importData.delimiter)")
                         }
-                        onImport(fieldMappings, importMode, enableRegistrationMapping ? registrationMappings : [])
+                        onImport(fieldMappings, importMode, enableRegistrationMapping ? registrationMappings : [], timesAreLocal)
                         dismiss()
                     }
                     .disabled(!isValidMapping)
