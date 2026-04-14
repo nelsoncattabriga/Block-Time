@@ -1963,7 +1963,8 @@ class FlightDatabaseService: ObservableObject {
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
             scheduledArrival: entity.scheduledArrival ?? "",
-            customCount: Int(entity.customCount)
+            customCount: Int(entity.customCount),
+            createdAt: entity.createdAt
         )
     }
 

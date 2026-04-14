@@ -885,6 +885,11 @@ struct FlightsView: View {
                 // Use scheduledDeparture if outTime is empty (rostered flights)
                 let time1 = flight1.outTime.isEmpty ? flight1.scheduledDeparture : flight1.outTime
                 let time2 = flight2.outTime.isEmpty ? flight2.scheduledDeparture : flight2.outTime
+                if time1.isEmpty && time2.isEmpty {
+                    // No time data — fall back to insertion order (ascending createdAt)
+                    let result = (flight1.createdAt ?? .distantPast) < (flight2.createdAt ?? .distantPast)
+                    return filterViewModel.sortOrderReversed ? !result : result
+                }
                 let result = compareOutTimes(time1, time2)
                 return filterViewModel.sortOrderReversed ? !result : result
             } else {

@@ -92,6 +92,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var scheduledDeparture: String  // STD - Scheduled Time of Departure (HHMM format)
     var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
     var customCount: Int            // User-defined counter (e.g. PAX carried)
+    var createdAt: Date?            // Insertion timestamp — used as tiebreaker when no OUT/STD
 
     // MARK: - Validate and clean time string values
     private static func validateTimeString(_ timeString: String) -> String {
@@ -112,7 +113,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
          isILS: Bool = false, isGLS: Bool = false, isNPA: Bool = false, remarks: String = "",
          dayTakeoffs: Int = 0, dayLandings: Int = 0, nightTakeoffs: Int = 0, nightLandings: Int = 0,
          outTime: String = "", inTime: String = "", scheduledDeparture: String = "", scheduledArrival: String = "",
-         customCount: Int = 0) {
+         customCount: Int = 0, createdAt: Date? = nil) {
         self.id = id ?? UUID()
         self.date = date
         self.flightNumber = flightNumber
@@ -149,6 +150,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
         self.customCount = max(0, customCount)
+        self.createdAt = createdAt
 
         // MARK: - Development validation
         #if DEBUG
