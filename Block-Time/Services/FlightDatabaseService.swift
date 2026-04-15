@@ -751,7 +751,7 @@ class FlightDatabaseService: ObservableObject {
                do {
                    let flights = try viewContext.fetch(request)
                    // Secondary sort: within same date (already sorted descending by NSSortDescriptor),
-                   // order by departure time ascending using stable grouping.
+                   // order by departure time descending so newest departure is at the top.
                    // outTime takes priority; fall back to scheduledDeparture; empty sorts last.
                    let raw = flights.compactMap { entity -> (FlightSector, Date)? in
                        guard let sector = convertToFlightSector(entity),
@@ -765,7 +765,7 @@ class FlightDatabaseService: ObservableObject {
                        if aTime.isEmpty && bTime.isEmpty { return false }
                        if aTime.isEmpty { return false }
                        if bTime.isEmpty { return true }
-                       return aTime < bTime
+                       return aTime > bTime
                    }.map(\.0)
                } catch {
                    LogManager.shared.error("Database: Error fetching all flights - \(error.localizedDescription)")
