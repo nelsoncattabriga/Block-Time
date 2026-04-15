@@ -73,11 +73,9 @@ struct ImportSessionReviewSheet: View {
                         .cornerRadius(12)
                     }
                     .padding(.horizontal)
+                    .padding(.bottom, 32)
                 }
 
-                Button("Done") { dismiss() }
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 32)
             }
             .navigationTitle("Import Summary")
             .navigationBarTitleDisplayMode(.inline)
@@ -89,6 +87,7 @@ struct ImportSessionReviewSheet: View {
         }
     }
 }
+
 
 private struct ImportStatRow: View {
     let icon: String
@@ -108,3 +107,13 @@ private struct ImportStatRow: View {
         }
     }
 }
+
+#Preview {
+    ImportSessionReviewSheet(result: ImportSessionResult(
+        sessionID: UUID(),
+        successCount: 7254,
+        duplicateCount: 12,
+        mergedCount: 3
+    ))
+}
+
