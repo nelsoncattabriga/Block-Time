@@ -11,6 +11,7 @@ struct MapSectorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("useIATACodes") private var useIATACodes: Bool = false
     @State private var sectors: [FlightSector] = []
+    @State private var visitCount: Int = 0
     @State private var showingFlights = false
     @State private var cachedDateRange: String? = nil
     @State private var selectedDetent: PresentationDetent = .fraction(0.42)
@@ -91,9 +92,9 @@ struct MapSectorSheet: View {
             // Right — visit count + date range
             VStack(alignment: .trailing, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(sectors.count)")
+                    Text("\(visitCount)")
                         .font(.system(.title, design: .rounded, weight: .bold))
-                    Text(sectors.count == 1 ? "visit" : "visits")
+                    Text(visitCount == 1 ? "visit" : "visits")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -118,9 +119,6 @@ struct MapSectorSheet: View {
                 Text(showingFlights ? "Hide Flights" : "Show Flights")
                     .fontWeight(.medium)
                 Spacer()
-                Text("\(sectors.count)")
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -166,14 +164,24 @@ struct MapSectorSheet: View {
         let context = FlightDatabaseService.shared.viewContext
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         request.predicate = NSPredicate(
-            format: "toAirport ==[c] %@ OR toAirport ==[c] %@",
-            icao, iata
+            format: "fromAirport ==[c] %@ OR fromAirport ==[c] %@ OR toAirport ==[c] %@ OR toAirport ==[c] %@",
+            icao, iata, icao, iata
         )
         request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
         guard let results = try? context.fetch(request) else { return }
         let loaded = results
             .compactMap { FlightSector.from(entity: $0) }
             .filter { $0.blockTimeValue > 0 }
+
+        let deps = loaded.filter {
+            $0.fromAirport.caseInsensitiveCompare(icao) == .orderedSame ||
+            $0.fromAirport.caseInsensitiveCompare(iata) == .orderedSame
+        }.count
+        let arrs = loaded.filter {
+            $0.toAirport.caseInsensitiveCompare(icao) == .orderedSame ||
+            $0.toAirport.caseInsensitiveCompare(iata) == .orderedSame
+        }.count
+        visitCount = max(deps, arrs)
 
         let dates = loaded.compactMap { Self.storedDateFormatter.date(from: $0.date) }
         if let first = dates.min(), let last = dates.max() {

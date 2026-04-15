@@ -164,6 +164,7 @@ struct AirportStatsCard: View {
             var arrCounts: [String: Int] = [:]
 
             for f in flights {
+                guard let bt = Double(f.blockTime), bt > 0 else { continue }
                 if !f.fromAirport.isEmpty {
                     let icao = airports.convertToICAO(f.fromAirport)
                     depCounts[icao, default: 0] += 1
@@ -215,6 +216,7 @@ struct AirportStatsCard: View {
             var lastDate: Date?
 
             for f in flights {
+                guard let bt = Double(f.blockTime), bt > 0 else { continue }
                 let isDep = f.fromAirport == apt || (aptIATA != nil && f.fromAirport == aptIATA)
                 let isArr = f.toAirport   == apt || (aptIATA != nil && f.toAirport   == aptIATA)
                 guard isDep || isArr else { continue }
