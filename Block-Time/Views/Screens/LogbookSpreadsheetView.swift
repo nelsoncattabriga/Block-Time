@@ -242,29 +242,33 @@ struct LogbookSpreadsheetView: View {
     // MARK: - Data row
 
     private func dataRow(flight: FlightSector, index: Int, highlighted: Bool = false) -> some View {
-        HStack(spacing: 0) {
-            dataCell(flight.date,                              width: Layout.colDate,     mono: true)
-            dataCell(flight.flightNumber,                      width: Layout.colFlight,   mono: true)
-            dataCell(flight.aircraftReg,                       width: Layout.colReg,      mono: true)
-            dataCell(flight.aircraftType,                      width: Layout.colType)
-            dataCell(flight.fromAirport,                       width: Layout.colAirport,  mono: true)
-            dataCell(flight.toAirport,                         width: Layout.colAirport,  mono: true)
-            dataCell(flight.scheduledDeparture,                width: Layout.colSTD,      mono: true)
-            dataCell(flight.scheduledArrival,                  width: Layout.colSTA,      mono: true)
-            dataCell(flight.outTime,                           width: Layout.colOUT,      mono: true)
-            dataCell(flight.inTime,                            width: Layout.colIN,       mono: true)
-            dataCell(flight.blockTime,                         width: Layout.colBlock,    mono: true, bold: true)
-            dataCell(flight.nightTime,                         width: Layout.colNight,    mono: true)
-            dataCell(flight.captainName,                       width: Layout.colCrew)
-            dataCell(flight.foName,                            width: Layout.colCrew)
-            dataCell(flight.so1Name ?? "",                     width: Layout.colCrew)
-            dataCell(flight.so2Name ?? "",                     width: Layout.colCrew)
-            dataCell(flight.p1Time,                            width: Layout.colP1,       mono: true)
-            dataCell(flight.p1usTime,                          width: Layout.colP1US,     mono: true)
-            dataCell(flight.p2Time,                            width: Layout.colP2,       mono: true)
-            dataCell(flight.instrumentTime,                    width: Layout.colInstr,    mono: true)
-            dataCell(flight.simTime,                           width: Layout.colSIM,      mono: true)
-            dataCell(flight.spInsTime,                         width: Layout.colSpIns,    mono: true)
+        let useLocal = viewModel.displayFlightsInLocalTime
+        let useIATA  = viewModel.useIATACodes
+        let hhmm     = viewModel.showTimesInHoursMinutes
+        let rounding = viewModel.decimalRoundingMode
+        return HStack(spacing: 0) {
+            dataCell(flight.getDisplayDate(useLocalTime: useLocal),                                           width: Layout.colDate,     mono: true)
+            dataCell(flight.flightNumber,                                                                     width: Layout.colFlight,   mono: true)
+            dataCell(flight.aircraftReg,                                                                      width: Layout.colReg,      mono: true)
+            dataCell(flight.aircraftType,                                                                     width: Layout.colType)
+            dataCell(AirportService.shared.getDisplayCode(flight.fromAirport, useIATA: useIATA),              width: Layout.colAirport,  mono: true)
+            dataCell(AirportService.shared.getDisplayCode(flight.toAirport,   useIATA: useIATA),              width: Layout.colAirport,  mono: true)
+            dataCell(flight.getSTD(useLocalTime: useLocal),                                                   width: Layout.colSTD,      mono: true)
+            dataCell(flight.getSTA(useLocalTime: useLocal),                                                   width: Layout.colSTA,      mono: true)
+            dataCell(flight.getOutTime(useLocalTime: useLocal),                                               width: Layout.colOUT,      mono: true)
+            dataCell(flight.getInTime(useLocalTime: useLocal),                                                width: Layout.colIN,       mono: true)
+            dataCell(timeValue(flight.getFormattedBlockTime(asHoursMinutes: hhmm, roundingMode: rounding)),    width: Layout.colBlock,    mono: true, bold: true)
+            dataCell(timeValue(flight.getFormattedNightTime(asHoursMinutes: hhmm, roundingMode: rounding)),   width: Layout.colNight,    mono: true)
+            dataCell(flight.captainName,                                                                      width: Layout.colCrew)
+            dataCell(flight.foName,                                                                           width: Layout.colCrew)
+            dataCell(flight.so1Name ?? "",                                                                    width: Layout.colCrew)
+            dataCell(flight.so2Name ?? "",                                                                    width: Layout.colCrew)
+            dataCell(timeValue(FlightSector.formatTime(flight.p1TimeValue,         asHoursMinutes: hhmm)),    width: Layout.colP1,       mono: true)
+            dataCell(timeValue(FlightSector.formatTime(flight.p1usTimeValue,       asHoursMinutes: hhmm)),    width: Layout.colP1US,     mono: true)
+            dataCell(timeValue(FlightSector.formatTime(flight.p2TimeValue,         asHoursMinutes: hhmm)),    width: Layout.colP2,       mono: true)
+            dataCell(timeValue(FlightSector.formatTime(flight.instrumentTimeValue, asHoursMinutes: hhmm)),    width: Layout.colInstr,    mono: true)
+            dataCell(timeValue(flight.getFormattedSimTime(asHoursMinutes: hhmm)),                              width: Layout.colSIM,      mono: true)
+            dataCell(timeValue(flight.getFormattedSpInsTime(asHoursMinutes: hhmm)),                            width: Layout.colSpIns,    mono: true)
             flagCell(flight.isPositioning,                     width: Layout.colPAX)
             flagCell(flight.isPilotFlying,                     width: Layout.colPF)
             flagCell(flight.isAIII,                            width: Layout.colAIII)
@@ -416,7 +420,10 @@ struct LogbookSpreadsheetView: View {
     private func sumTime(_ keyPath: KeyPath<FlightSector, String>) -> String {
         let total = flights.reduce(0.0) { $0 + (Double($1[keyPath: keyPath]) ?? 0.0) }
         guard total > 0 else { return "" }
-        return String(format: "%.2f", total)
+        if viewModel.showTimesInHoursMinutes {
+            return FlightSector.decimalToHHMM(total)
+        }
+        return String(format: "%.1f", total)
     }
 
     private func sumInt(_ keyPath: KeyPath<FlightSector, Int>) -> Int {
@@ -429,8 +436,12 @@ struct LogbookSpreadsheetView: View {
         index.isMultiple(of: 2) ? Color(.systemBackground) : Color(.secondarySystemBackground)
     }
 
+    private func timeValue(_ value: String) -> String {
+        value.replacingOccurrences(of: " hrs", with: "")
+    }
+
     private func isBlankValue(_ value: String) -> Bool {
-        value.isEmpty || value == "0.00" || value == "0.0" || value == "0"
+        value.isEmpty || value == "0.00" || value == "0.0" || value == "0" || value == "0:00"
     }
 
     private func countString(_ value: Int) -> String {

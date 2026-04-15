@@ -407,6 +407,28 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return ""
     }
 
+    func getSTD(useLocalTime: Bool) -> String {
+        guard !scheduledDeparture.isEmpty else { return "" }
+        guard useLocalTime else { return scheduledDeparture.replacingOccurrences(of: ":", with: "") }
+        let time = AirportService.shared.convertToLocalTime(
+            utcDateString: date,
+            utcTimeString: scheduledDeparture,
+            airportICAO: fromAirport
+        )
+        return time.replacingOccurrences(of: ":", with: "")
+    }
+
+    func getSTA(useLocalTime: Bool) -> String {
+        guard !scheduledArrival.isEmpty else { return "" }
+        guard useLocalTime else { return scheduledArrival.replacingOccurrences(of: ":", with: "") }
+        let time = AirportService.shared.convertToLocalTime(
+            utcDateString: date,
+            utcTimeString: scheduledArrival,
+            airportICAO: toAirport
+        )
+        return time.replacingOccurrences(of: ":", with: "")
+    }
+
     var blockTimeFormatted: String {
         let value = blockTimeValue
         return value > 0 ? String(format: "%.1f hrs", value) : "0.0 hrs"
