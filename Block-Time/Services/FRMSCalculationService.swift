@@ -1678,7 +1678,7 @@ class FRMSCalculationService {
             let inTimeStr = flightSector.inTime.replacingOccurrences(of: ":", with: "")
 
             // Use cached formatter
-            guard let outDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(outTimeStr)"),
+            guard var outDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(outTimeStr)"),
                   var inDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(inTimeStr)") else {
                 // Only log if in recent years (2023-2025)
                 if flightSector.date.contains("2023") || flightSector.date.contains("2024") || flightSector.date.contains("2025") {
@@ -1687,17 +1687,24 @@ class FRMSCalculationService {
                 return nil
             }
 
-            // If IN time is before OUT time, it crossed midnight - add a day
-            if inDate < outDate {
-                inDate = Calendar.current.date(byAdding: .day, value: 1, to: inDate) ?? inDate
-            }
-
             // Parse scheduled times if available
             var stdDate: Date? = nil
 
             if !flightSector.scheduledDeparture.isEmpty {
                 let stdTimeStr = flightSector.scheduledDeparture.replacingOccurrences(of: ":", with: "")
                 stdDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(stdTimeStr)")
+            }
+
+            // If OUT crossed midnight relative to STD (e.g. STD=23:50, OUT=00:32 on same date string),
+            // OUT/IN are actually on the next calendar day — add 1 day to both.
+            if let std = stdDate, std.timeIntervalSince(outDate) > 12 * 3600 {
+                outDate = Calendar.current.date(byAdding: .day, value: 1, to: outDate) ?? outDate
+                inDate = Calendar.current.date(byAdding: .day, value: 1, to: inDate) ?? inDate
+            }
+
+            // If IN time is before OUT time, it crossed midnight - add a day
+            if inDate < outDate {
+                inDate = Calendar.current.date(byAdding: .day, value: 1, to: inDate) ?? inDate
             }
 
             // Calculate sign-on and sign-off using configured margins
