@@ -151,21 +151,21 @@ struct LogbookSpreadsheetView: View {
     private var columnHeaderRow: some View {
         HStack(spacing: 0) {
             headerCell("Date",            width: Layout.colDate)
-            headerCell("Flight Number",   width: Layout.colFlight)
-            headerCell("Aircraft Reg",    width: Layout.colReg)
-            headerCell("Aircraft Type",   width: Layout.colType)
-            headerCell("From Airport",    width: Layout.colAirport)
-            headerCell("To Airport",      width: Layout.colAirport)
+            headerCell("Flt No",          width: Layout.colFlight)
+            headerCell("Reg",         width: Layout.colReg)
+            headerCell("Type",   width: Layout.colType)
+            headerCell("From",            width: Layout.colAirport)
+            headerCell("To",              width: Layout.colAirport)
+            headerCell("STD",             width: Layout.colSTD)
+            headerCell("STA",             width: Layout.colSTA)
+            headerCell("OUT",             width: Layout.colOUT)
+            headerCell("IN",              width: Layout.colIN)
+            headerCell("Block Time",      width: Layout.colBlock)
+            headerCell("Night Time",      width: Layout.colNight)
             headerCell("Captain Name",    width: Layout.colCrew)
             headerCell("F/O Name",        width: Layout.colCrew)
             headerCell("S/O1 Name",       width: Layout.colCrew)
             headerCell("S/O2 Name",       width: Layout.colCrew)
-            headerCell("STD",             width: Layout.colSTD)
-            headerCell("STA",             width: Layout.colSTA)
-            headerCell("OUT Time",        width: Layout.colOUT)
-            headerCell("IN Time",         width: Layout.colIN)
-            headerCell("Block Time",      width: Layout.colBlock)
-            headerCell("Night Time",      width: Layout.colNight)
             headerCell("P1 Time",         width: Layout.colP1)
             headerCell("P1US Time",       width: Layout.colP1US)
             headerCell("P2 Time",         width: Layout.colP2)
@@ -201,16 +201,16 @@ struct LogbookSpreadsheetView: View {
             emptyFooterCell(                   width: Layout.colType)
             emptyFooterCell(                   width: Layout.colAirport)
             emptyFooterCell(                   width: Layout.colAirport)
-            emptyFooterCell(                   width: Layout.colCrew)
-            emptyFooterCell(                   width: Layout.colCrew)
-            emptyFooterCell(                   width: Layout.colCrew)
-            emptyFooterCell(                   width: Layout.colCrew)
             emptyFooterCell(                   width: Layout.colSTD)
             emptyFooterCell(                   width: Layout.colSTA)
             emptyFooterCell(                   width: Layout.colOUT)
             emptyFooterCell(                   width: Layout.colIN)
             totalTimeCell(sumTime(\.blockTime),      width: Layout.colBlock)
             totalTimeCell(sumTime(\.nightTime),      width: Layout.colNight)
+            emptyFooterCell(                   width: Layout.colCrew)
+            emptyFooterCell(                   width: Layout.colCrew)
+            emptyFooterCell(                   width: Layout.colCrew)
+            emptyFooterCell(                   width: Layout.colCrew)
             totalTimeCell(sumTime(\.p1Time),         width: Layout.colP1)
             totalTimeCell(sumTime(\.p1usTime),       width: Layout.colP1US)
             totalTimeCell(sumTime(\.p2Time),         width: Layout.colP2)
@@ -249,16 +249,16 @@ struct LogbookSpreadsheetView: View {
             dataCell(flight.aircraftType,                      width: Layout.colType)
             dataCell(flight.fromAirport,                       width: Layout.colAirport,  mono: true)
             dataCell(flight.toAirport,                         width: Layout.colAirport,  mono: true)
-            dataCell(flight.captainName,                       width: Layout.colCrew)
-            dataCell(flight.foName,                            width: Layout.colCrew)
-            dataCell(flight.so1Name ?? "",                     width: Layout.colCrew)
-            dataCell(flight.so2Name ?? "",                     width: Layout.colCrew)
             dataCell(flight.scheduledDeparture,                width: Layout.colSTD,      mono: true)
             dataCell(flight.scheduledArrival,                  width: Layout.colSTA,      mono: true)
             dataCell(flight.outTime,                           width: Layout.colOUT,      mono: true)
             dataCell(flight.inTime,                            width: Layout.colIN,       mono: true)
-            dataCell(flight.blockTime,                         width: Layout.colBlock,    mono: true)
+            dataCell(flight.blockTime,                         width: Layout.colBlock,    mono: true, bold: true)
             dataCell(flight.nightTime,                         width: Layout.colNight,    mono: true)
+            dataCell(flight.captainName,                       width: Layout.colCrew)
+            dataCell(flight.foName,                            width: Layout.colCrew)
+            dataCell(flight.so1Name ?? "",                     width: Layout.colCrew)
+            dataCell(flight.so2Name ?? "",                     width: Layout.colCrew)
             dataCell(flight.p1Time,                            width: Layout.colP1,       mono: true)
             dataCell(flight.p1usTime,                          width: Layout.colP1US,     mono: true)
             dataCell(flight.p2Time,                            width: Layout.colP2,       mono: true)
@@ -293,15 +293,15 @@ struct LogbookSpreadsheetView: View {
         static let headerHeight: CGFloat = 36
         static let rowHeight: CGFloat    = 44
         static let colDate: CGFloat      = 92   // "Date" — data is "dd/MM/yyyy" (10 chars)
-        static let colFlight: CGFloat    = 110  // "Flight Number"
-        static let colReg: CGFloat       = 100  // "Aircraft Reg"
-        static let colType: CGFloat      = 100  // "Aircraft Type"
-        static let colAirport: CGFloat   = 96   // "From Airport" / "To Airport"
+        static let colFlight: CGFloat    = 72   // "Flt No"
+        static let colReg: CGFloat       = 72   // "A/C Reg"
+        static let colType: CGFloat      = 72  // "Aircraft Type"
+        static let colAirport: CGFloat   = 52   // "From" / "To"
         static let colCrew: CGFloat      = 120  // "Captain Name" / "F/O Name" — header drives width; data truncates
         static let colSTD: CGFloat       = 52   // "STD"
         static let colSTA: CGFloat       = 52   // "STA"
-        static let colOUT: CGFloat       = 76   // "OUT Time"
-        static let colIN: CGFloat        = 68   // "IN Time"
+        static let colOUT: CGFloat       = 52   // "OUT"
+        static let colIN: CGFloat        = 52   // "IN"
         static let colBlock: CGFloat     = 84   // "Block Time"
         static let colNight: CGFloat     = 84   // "Night Time"
         static let colP1: CGFloat        = 84   // "P1 Time"
@@ -350,10 +350,11 @@ struct LogbookSpreadsheetView: View {
             }
     }
 
-    private func dataCell(_ value: String, width: CGFloat, mono: Bool = false) -> some View {
+    private func dataCell(_ value: String, width: CGFloat, mono: Bool = false, bold: Bool = false) -> some View {
         let display = isBlankValue(value) ? "" : value
+        let baseFont: Font = mono ? .caption.monospacedDigit() : .caption
         return Text(display)
-            .font(mono ? .caption.monospacedDigit() : .caption)
+            .font(bold ? baseFont.weight(.semibold) : baseFont)
             .foregroundStyle(display.isEmpty ? .tertiary : .primary)
             .lineLimit(1)
             .truncationMode(.tail)
