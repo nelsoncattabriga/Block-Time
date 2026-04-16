@@ -73,21 +73,26 @@ struct MacFlightRow: Identifiable {
 
 // MARK: - Mac Logbook ViewModel
 
-@Observable
 @MainActor
-final class MacLogbookViewModel {
+final class MacLogbookViewModel: ObservableObject {
 
     // MARK: State
-    var flights: [MacFlightRow] = []
-    var isLoading = false
-    var searchText = ""
-    var sortOrder: [KeyPathComparator<MacFlightRow>] = [
+    @Published var displayedFlights: [MacFlightRow] = []
+    @Published var isLoading = false
+    @Published var searchText = "" {
+        didSet { applySort() }
+    }
+    @Published var sortOrder: [KeyPathComparator<MacFlightRow>] = [
         KeyPathComparator(\.rawDate, order: .reverse)
     ]
 
-    // MARK: Computed
+    private var flights: [MacFlightRow] = []
 
-    var filteredFlights: [MacFlightRow] {
+    var totalBlockHours: Double {
+        flights.reduce(0) { $0 + $1.blockTime }
+    }
+
+    func applySort() {
         let base = searchText.isEmpty ? flights : flights.filter { row in
             row.flightNumber.localizedCaseInsensitiveContains(searchText) ||
             row.fromAirport.localizedCaseInsensitiveContains(searchText) ||
@@ -97,11 +102,7 @@ final class MacLogbookViewModel {
             row.captainName.localizedCaseInsensitiveContains(searchText) ||
             row.foName.localizedCaseInsensitiveContains(searchText)
         }
-        return base.sorted(using: sortOrder)
-    }
-
-    var totalBlockHours: Double {
-        flights.reduce(0) { $0 + $1.blockTime }
+        displayedFlights = base.sorted(using: sortOrder)
     }
 
     // MARK: Core Data
@@ -148,6 +149,7 @@ final class MacLogbookViewModel {
             Self.fetchRows(from: container)
         }.value
         flights = rows
+        applySort()
         isLoading = false
 
         NotificationCenter.default.addObserver(
@@ -167,6 +169,7 @@ final class MacLogbookViewModel {
             Self.fetchRows(from: container)
         }.value
         flights = rows
+        applySort()
     }
 
     // MARK: Fetch (background)

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MacLogbookView: View {
-    @State private var viewModel = MacLogbookViewModel()
+    @StateObject private var viewModel = MacLogbookViewModel()
     @Binding var selection: Set<UUID>
 
     var body: some View {
@@ -28,7 +28,7 @@ struct MacLogbookView: View {
             if viewModel.isLoading {
                 ProgressView("Loading logbook…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.filteredFlights.isEmpty {
+            } else if viewModel.displayedFlights.isEmpty {
                 ContentUnavailableView(
                     viewModel.searchText.isEmpty ? "No Flights" : "No Results",
                     systemImage: "book.closed",
@@ -37,13 +37,16 @@ struct MacLogbookView: View {
                         : "Try a different search term.")
                 )
             } else {
-                Table(viewModel.filteredFlights, selection: $selection, sortOrder: $viewModel.sortOrder) {
+                Table(viewModel.displayedFlights, selection: $selection, sortOrder: $viewModel.sortOrder) {
                     identityColumns()
                     routeColumns()
                     timeColumns()
                     aircraftColumns()
                 }
                 .tableStyle(.inset(alternatesRowBackgrounds: true))
+                .onChange(of: viewModel.sortOrder) { _, _ in
+                    viewModel.applySort()
+                }
             }
         }
     }
@@ -113,7 +116,7 @@ struct MacLogbookView: View {
 
     private var footerBar: some View {
         HStack(spacing: 16) {
-            Text("\(viewModel.filteredFlights.count) entries")
+            Text("\(viewModel.displayedFlights.count) entries")
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(.secondary)
 
