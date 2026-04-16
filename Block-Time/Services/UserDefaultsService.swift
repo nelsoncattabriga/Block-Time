@@ -222,7 +222,8 @@ class UserDefaultsService: ObservableObject {
         userDefaults.register(defaults: [
             Keys.displayFlightsInLocalTime: true,
             Keys.logApproaches: true,
-            Keys.includeAirlinePrefixInFlightNumber: true
+            Keys.includeAirlinePrefixInFlightNumber: true,
+            Keys.useIATACodes: true
         ])
     }
     

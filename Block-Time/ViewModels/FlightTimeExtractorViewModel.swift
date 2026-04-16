@@ -913,6 +913,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     func updateUseIATACodes(_ value: Bool) {
         useIATACodes = value
         userDefaultsService.setUseIATACodes(value)
+        Task { WidgetDataWriter.shared.updateWidgetSnapshot() }
     }
 
     func updateShowTimesInHoursMinutes(_ value: Bool) {
