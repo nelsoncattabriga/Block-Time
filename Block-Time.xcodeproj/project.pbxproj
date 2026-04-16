@@ -14,6 +14,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		52506BF72F90AE260010B0C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 522DB4E62F26FA7E00739A34 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 52506BE92F90AE260010B0C1;
+			remoteInfo = "Block-Time-Mac";
+		};
+		52506C012F90AE260010B0C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 522DB4E62F26FA7E00739A34 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 52506BE92F90AE260010B0C1;
+			remoteInfo = "Block-Time-Mac";
+		};
 		52EFA2A92F7B69EC0027B37B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 522DB4E62F26FA7E00739A34 /* Project object */;
@@ -39,6 +53,9 @@
 
 /* Begin PBXFileReference section */
 		522DB4EE2F26FA7E00739A34 /* Block-Time.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Block-Time.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		52506BEA2F90AE260010B0C1 /* Block-Time-Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Block-Time-Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		52506BF62F90AE260010B0C1 /* Block-Time-MacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Block-Time-MacTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		52506C002F90AE260010B0C1 /* Block-Time-MacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Block-Time-MacUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		52E6FD222F51217D008DD58E /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlockTimeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		52EFA2992F7B69EB0027B37B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -53,6 +70,13 @@
 				Info.plist,
 			);
 			target = 522DB4ED2F26FA7E00739A34 /* Block-Time */;
+		};
+		52506C1F2F90B42C0010B0C1 /* Exceptions for "Block-Time" folder in "Block-Time-Mac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				FlightDataModel.xcdatamodeld,
+			);
+			target = 52506BE92F90AE260010B0C1 /* Block-Time-Mac */;
 		};
 		52EFA2AF2F7B69EC0027B37B /* Exceptions for "BlockTimeWidget" folder in "BlockTimeWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -77,8 +101,24 @@
 			exceptions = (
 				522DB4FF2F26FA7F00739A35 /* Exceptions for "Block-Time" folder in "Block-Time" target */,
 				52EFA2B92F7B6AE10027B37B /* Exceptions for "Block-Time" folder in "BlockTimeWidgetExtension" target */,
+				52506C1F2F90B42C0010B0C1 /* Exceptions for "Block-Time" folder in "Block-Time-Mac" target */,
 			);
 			path = "Block-Time";
+			sourceTree = "<group>";
+		};
+		52506BEB2F90AE260010B0C1 /* Block-Time-Mac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Block-Time-Mac";
+			sourceTree = "<group>";
+		};
+		52506BF92F90AE260010B0C1 /* Block-Time-MacTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Block-Time-MacTests";
+			sourceTree = "<group>";
+		};
+		52506C032F90AE260010B0C1 /* Block-Time-MacUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Block-Time-MacUITests";
 			sourceTree = "<group>";
 		};
 		52EFA29D2F7B69EB0027B37B /* BlockTimeWidget */ = {
@@ -100,6 +140,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		52506BE72F90AE260010B0C1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52506BF32F90AE260010B0C1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52506BFD2F90AE260010B0C1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		52EFA2952F7B69EB0027B37B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -118,6 +179,9 @@
 				52EFA2B72F7B6A3E0027B37B /* BlockTimeWidgetExtension.entitlements */,
 				522DB4F02F26FA7E00739A34 /* Block-Time */,
 				52EFA29D2F7B69EB0027B37B /* BlockTimeWidget */,
+				52506BEB2F90AE260010B0C1 /* Block-Time-Mac */,
+				52506BF92F90AE260010B0C1 /* Block-Time-MacTests */,
+				52506C032F90AE260010B0C1 /* Block-Time-MacUITests */,
 				52E6FD212F51217D008DD58E /* Frameworks */,
 				522DB4EF2F26FA7E00739A34 /* Products */,
 			);
@@ -128,6 +192,9 @@
 			children = (
 				522DB4EE2F26FA7E00739A34 /* Block-Time.app */,
 				52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */,
+				52506BEA2F90AE260010B0C1 /* Block-Time-Mac.app */,
+				52506BF62F90AE260010B0C1 /* Block-Time-MacTests.xctest */,
+				52506C002F90AE260010B0C1 /* Block-Time-MacUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -169,6 +236,74 @@
 			productReference = 522DB4EE2F26FA7E00739A34 /* Block-Time.app */;
 			productType = "com.apple.product-type.application";
 		};
+		52506BE92F90AE260010B0C1 /* Block-Time-Mac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 52506C0E2F90AE260010B0C1 /* Build configuration list for PBXNativeTarget "Block-Time-Mac" */;
+			buildPhases = (
+				52506BE62F90AE260010B0C1 /* Sources */,
+				52506BE72F90AE260010B0C1 /* Frameworks */,
+				52506BE82F90AE260010B0C1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				52506BEB2F90AE260010B0C1 /* Block-Time-Mac */,
+			);
+			name = "Block-Time-Mac";
+			packageProductDependencies = (
+			);
+			productName = "Block-Time-Mac";
+			productReference = 52506BEA2F90AE260010B0C1 /* Block-Time-Mac.app */;
+			productType = "com.apple.product-type.application";
+		};
+		52506BF52F90AE260010B0C1 /* Block-Time-MacTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 52506C0F2F90AE260010B0C1 /* Build configuration list for PBXNativeTarget "Block-Time-MacTests" */;
+			buildPhases = (
+				52506BF22F90AE260010B0C1 /* Sources */,
+				52506BF32F90AE260010B0C1 /* Frameworks */,
+				52506BF42F90AE260010B0C1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				52506BF82F90AE260010B0C1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				52506BF92F90AE260010B0C1 /* Block-Time-MacTests */,
+			);
+			name = "Block-Time-MacTests";
+			packageProductDependencies = (
+			);
+			productName = "Block-Time-MacTests";
+			productReference = 52506BF62F90AE260010B0C1 /* Block-Time-MacTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		52506BFF2F90AE260010B0C1 /* Block-Time-MacUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 52506C102F90AE260010B0C1 /* Build configuration list for PBXNativeTarget "Block-Time-MacUITests" */;
+			buildPhases = (
+				52506BFC2F90AE260010B0C1 /* Sources */,
+				52506BFD2F90AE260010B0C1 /* Frameworks */,
+				52506BFE2F90AE260010B0C1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				52506C022F90AE260010B0C1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				52506C032F90AE260010B0C1 /* Block-Time-MacUITests */,
+			);
+			name = "Block-Time-MacUITests";
+			packageProductDependencies = (
+			);
+			productName = "Block-Time-MacUITests";
+			productReference = 52506C002F90AE260010B0C1 /* Block-Time-MacUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 52EFA2AC2F7B69EC0027B37B /* Build configuration list for PBXNativeTarget "BlockTimeWidgetExtension" */;
@@ -204,6 +339,17 @@
 					522DB4ED2F26FA7E00739A34 = {
 						CreatedOnToolsVersion = 26.2;
 					};
+					52506BE92F90AE260010B0C1 = {
+						CreatedOnToolsVersion = 26.4;
+					};
+					52506BF52F90AE260010B0C1 = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = 52506BE92F90AE260010B0C1;
+					};
+					52506BFF2F90AE260010B0C1 = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = 52506BE92F90AE260010B0C1;
+					};
 					52EFA2972F7B69EB0027B37B = {
 						CreatedOnToolsVersion = 26.4;
 					};
@@ -225,12 +371,36 @@
 			targets = (
 				522DB4ED2F26FA7E00739A34 /* Block-Time */,
 				52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */,
+				52506BE92F90AE260010B0C1 /* Block-Time-Mac */,
+				52506BF52F90AE260010B0C1 /* Block-Time-MacTests */,
+				52506BFF2F90AE260010B0C1 /* Block-Time-MacUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		522DB4EC2F26FA7E00739A34 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52506BE82F90AE260010B0C1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52506BF42F90AE260010B0C1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52506BFE2F90AE260010B0C1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -254,6 +424,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		52506BE62F90AE260010B0C1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52506BF22F90AE260010B0C1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52506BFC2F90AE260010B0C1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		52EFA2942F7B69EB0027B37B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -264,6 +455,16 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		52506BF82F90AE260010B0C1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 52506BE92F90AE260010B0C1 /* Block-Time-Mac */;
+			targetProxy = 52506BF72F90AE260010B0C1 /* PBXContainerItemProxy */;
+		};
+		52506C022F90AE260010B0C1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 52506BE92F90AE260010B0C1 /* Block-Time-Mac */;
+			targetProxy = 52506C012F90AE260010B0C1 /* PBXContainerItemProxy */;
+		};
 		52EFA2AA2F7B69EC0027B37B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */;
@@ -477,6 +678,166 @@
 			};
 			name = Release;
 		};
+		52506C082F90AE260010B0C1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Block-Time-Mac/Block-Time-Mac.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Block-Time";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thezoolab.blocktime.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		52506C092F90AE260010B0C1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Block-Time-Mac/Block-Time-Mac.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Block-Time";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thezoolab.blocktime.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		52506C0A2F90AE260010B0C1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thezoolab.Block-Time-MacTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Block-Time-Mac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Block-Time-Mac";
+			};
+			name = Debug;
+		};
+		52506C0B2F90AE260010B0C1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thezoolab.Block-Time-MacTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Block-Time-Mac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Block-Time-Mac";
+			};
+			name = Release;
+		};
+		52506C0C2F90AE260010B0C1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thezoolab.Block-Time-MacUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "Block-Time-Mac";
+			};
+			name = Debug;
+		};
+		52506C0D2F90AE260010B0C1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thezoolab.Block-Time-MacUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "Block-Time-Mac";
+			};
+			name = Release;
+		};
 		52EFA2AD2F7B69EC0027B37B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -566,6 +927,33 @@
 			buildConfigurations = (
 				522DB4FA2F26FA7F00739A34 /* Debug */,
 				522DB4FB2F26FA7F00739A34 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		52506C0E2F90AE260010B0C1 /* Build configuration list for PBXNativeTarget "Block-Time-Mac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				52506C082F90AE260010B0C1 /* Debug */,
+				52506C092F90AE260010B0C1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		52506C0F2F90AE260010B0C1 /* Build configuration list for PBXNativeTarget "Block-Time-MacTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				52506C0A2F90AE260010B0C1 /* Debug */,
+				52506C0B2F90AE260010B0C1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		52506C102F90AE260010B0C1 /* Build configuration list for PBXNativeTarget "Block-Time-MacUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				52506C0C2F90AE260010B0C1 /* Debug */,
+				52506C0D2F90AE260010B0C1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
