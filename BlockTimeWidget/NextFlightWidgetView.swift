@@ -191,12 +191,16 @@ private struct SmallView: View {
                         Text(TimeFormatHelper.displayCode(flight.fromAirport, useIATA: flight.useIATACodes))
                             .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundStyle(primary)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
                         Image(systemName: "arrow.right")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(WT.orange)
                         Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundStyle(primary)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
                     }
 
                     // Divider

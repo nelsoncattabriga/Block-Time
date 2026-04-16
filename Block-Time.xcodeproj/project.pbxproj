@@ -65,7 +65,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Models/WidgetFlightEntry.swift,
-				Resources/old_airports.dat.txt,
+				Resources/airports.dat.txt,
 			);
 			target = 52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */;
 		};
