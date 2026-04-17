@@ -1078,7 +1078,8 @@ class FlightDatabaseService: ObservableObject {
             }
 
             // Step 3: Create all flight entities without saving
-            for sector in sectors {
+            let batchBaseTime = Date()
+            for (sectorIndex, sector) in sectors.enumerated() {
                 // Check UUID-based duplicate first
                 if existingIDs.contains(sector.id) {
                     // Propose any incoming value that differs from what is stored.
@@ -1225,7 +1226,7 @@ class FlightDatabaseService: ObservableObject {
                 flight.customCount = Int16(sector.customCount)
                 flight.importSessionID = sessionID
                 flight.importedAt = Date()
-                flight.createdAt = Date()
+                flight.createdAt = batchBaseTime.addingTimeInterval(Double(sectorIndex) * 0.001)
                 flight.modifiedAt = Date()
 
                 successCount += 1
