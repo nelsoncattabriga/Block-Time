@@ -73,7 +73,7 @@ struct AverageMetricCard: View {
 
     private var displayTitle: String {
         let period = timePeriodOptions[selectedTimePeriod] ?? "\(selectedTimePeriod) Days"
-        return "\(period) Avg"
+        return "\(period) Average"
     }
 
     // Determine if we should stack hours and sectors vertically (iPhone 2-column view)
@@ -83,11 +83,11 @@ struct AverageMetricCard: View {
 
     private var formattedValue: String {
         if shouldStackVertically {
-            let sectorsText = String(format: "%.0f flts", averageSectors)
+            let sectorsText = String(format: "%.0f Sectors", averageSectors)
             let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
             return "\(hoursText) | \(sectorsText)"
         } else {
-            let sectorsText = String(format: "%.0f flights", averageSectors)
+            let sectorsText = String(format: "%.0f sectors", averageSectors)
             let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
             return "\(hoursText) | \(sectorsText)"
         }
