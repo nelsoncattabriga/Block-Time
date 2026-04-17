@@ -2486,11 +2486,11 @@ class FlightDatabaseService: ObservableObject {
             var p2Time: Double = 0
             var simTime: Double = 0
 
+            let countSimInTotal = UserDefaults.standard.object(forKey: "countSimInTotal") as? Bool ?? true
             for flight in flights {
                 let blockTime = safeDoubleFromString(flight.blockTime)
                 let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
-                // Use block time if available, otherwise use sim time (SpIns excluded)
-                totalHours += (blockTime > 0 ? blockTime : flightSimTime)
+                totalHours += blockTime > 0 ? blockTime : (countSimInTotal ? flightSimTime : 0)
                 p1Time += safeDoubleFromString(flight.p1Time)
                 p1usTime += safeDoubleFromString(flight.p1usTime)
                 p2Time += safeDoubleFromString(flight.p2Time)

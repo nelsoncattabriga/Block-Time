@@ -1,6 +1,9 @@
 import SwiftUI
 
 // MARK: - Aircraft Type Time Card
+// Pick your type card
+
+
 struct AircraftTypeTimeCard: View {
     let statistics: FlightStatistics
     var isEditMode: Bool = false
@@ -144,6 +147,7 @@ struct AircraftTypeTimeCard: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             showTimesInHoursMinutes = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
+            loadAircraftStats()
         }
     }
 

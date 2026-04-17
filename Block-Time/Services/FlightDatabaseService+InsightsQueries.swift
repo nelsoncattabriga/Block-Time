@@ -157,13 +157,16 @@ extension FlightDatabaseService {
     }
 
     private func computeFleetHours(_ flights: [FlightEntity]) -> [NDFleetHours] {
+        let countSimInTotal = UserDefaults.standard.object(forKey: "countSimInTotal") as? Bool ?? true
         var hours: [String: Double] = [:]
         var sectors: [String: Int] = [:]
 
         for f in flights {
             let t = f.aircraftType ?? ""
             guard !t.isEmpty else { continue }
-            hours[t, default: 0]   += hrs(f.blockTime)
+            let blockTime = hrs(f.blockTime)
+            let simTime = isSpInsOnly(f) ? 0 : hrs(f.simTime)
+            hours[t, default: 0] += blockTime > 0 ? blockTime : (countSimInTotal ? simTime : 0)
             sectors[t, default: 0] += 1
         }
 
