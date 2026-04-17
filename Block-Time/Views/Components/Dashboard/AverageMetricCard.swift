@@ -37,18 +37,7 @@ struct AverageMetricCard: View {
     ]
 
     var body: some View {
-        Group {
-            if isEditMode {
-                cardContent
-            } else {
-                Button {
-                    showingConfig = true
-                } label: {
-                    cardContent
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-        }
+        cardContent
         .sheet(isPresented: $showingConfig) {
             AverageMetricConfigSheet(
                 selectedAircraftType: $selectedAircraftType,
@@ -94,12 +83,10 @@ struct AverageMetricCard: View {
 
     private var formattedValue: String {
         if shouldStackVertically {
-            // Use abbreviations in iPhone 2-column mode
             let sectorsText = String(format: "%.0f flts", averageSectors)
             let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
             return "\(hoursText) | \(sectorsText)"
         } else {
-            // Use full text in wider layouts
             let sectorsText = String(format: "%.0f flights", averageSectors)
             let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
             return "\(hoursText) | \(sectorsText)"
@@ -111,10 +98,8 @@ struct AverageMetricCard: View {
         let timeframe = comparisonPeriodOptions[selectedComparisonPeriod] ?? "All Time"
 
         if selectedComparisonPeriod.isEmpty {
-            // All Time - just show aircraft
             return selectedAircraftType.isEmpty ? "All aircraft" : selectedAircraftType
         } else {
-            // Last X Days/Months - show "Over the last..."
             return "Over the \(timeframe.lowercased()) on \(aircraft)"
         }
     }
@@ -156,10 +141,17 @@ struct AverageMetricCard: View {
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: displayTitle, icon: "chart.line.uptrend.xyaxis", iconColor: .purple) {
-                if !shouldStackVertically {
-                    Image(systemName: "chevron.down")
-                        .imageScale(.small)
-                        .foregroundStyle(.secondary)
+                if !isEditMode {
+                    Button {
+                        showingConfig = true
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .imageScale(.small)
+                            .foregroundStyle(.purple.opacity(0.7))
+                            .padding(6)
+                            .background(.purple.opacity(0.1), in: RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -169,8 +161,6 @@ struct AverageMetricCard: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
-                // Spacer to match progress bar height in other cards
-                // Show spacer if not in compact mode OR if showing "All Time" (shorter subtitle)
                 if !shouldStackVertically || selectedComparisonPeriod.isEmpty {
                     Spacer()
                         .frame(height: 6)
