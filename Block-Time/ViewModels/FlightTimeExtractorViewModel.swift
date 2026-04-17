@@ -467,6 +467,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         // Merge saved crew names with database crew names (includes CSV imported names)
         reloadSavedCrewNames()
+
+        // Derive initial selectedTimeCredit from loaded position (isPilotFlying is false at this point)
+        resetTimeCreditOverride()
     }
 
     /// Selective settings update - only reloads settings that changed from CloudKit sync
