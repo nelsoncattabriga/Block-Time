@@ -831,8 +831,8 @@ class FlightDatabaseService: ObservableObject {
             let endOfPeriod = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
 
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-            // Use inclusive end date (<=) to match FRMS calculation approach
-            request.predicate = NSPredicate(format: "date >= %@ AND date <= %@", startOfPeriod as NSDate, endOfPeriod as NSDate)
+            // Use inclusive end date (<=) to match FRMS calculation approach. Exclude summaries.
+            request.predicate = NSPredicate(format: "date >= %@ AND date <= %@ AND flightNumber != %@", startOfPeriod as NSDate, endOfPeriod as NSDate, "SUMMARY")
             request.sortDescriptors = [
                 NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)
             ]
