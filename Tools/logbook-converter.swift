@@ -437,7 +437,7 @@ let synonyms: [String: [String]] = [
     "spinstime":      ["spinstructortime", "spinstime", "spinstructor", "spins", "spinstr", "inspilot"],
     "pilotflying":    ["pilotflyingcapacity", "pilotflying", "flying", "pf"],
     "pax":            ["positioning", "deadhead", "passengerflight", "dh", "pax"],
-    "customcount":    ["customcount", "paxcount", "passengercount", "soulsonboard", "sob", "passengers"],
+    "customcount":    ["customcount", "paxcount", "totalpax", "passengercount", "soulsonboard", "sob", "passengers"],
     "daytakeoffs":    ["daytakeoffs", "takeoffsday", "today", "tday", "dayt/o", "dto"],
     "daylandings":    ["daylanding", "daylandings", "landingsday", "ldgday", "dayldg"],
     "nighttakeoffs":  ["nighttakeoffs", "takeoffsnight", "tonight", "nightt/o", "nto"],

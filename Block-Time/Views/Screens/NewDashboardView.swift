@@ -91,6 +91,9 @@ struct NewDashboardView: View {
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             Task { await loadAll() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            Task { await viewModel.load() }
+        }
     }
 
     // MARK: - iPhone (single scroll column)
@@ -131,6 +134,9 @@ struct NewDashboardView: View {
         .task { await loadAll() }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             Task { await loadAll() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            Task { await viewModel.load() }
         }
     }
 

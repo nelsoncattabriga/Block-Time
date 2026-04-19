@@ -189,11 +189,18 @@ class FRMSViewModel {
 
         let duties = self.groupFlightsIntoDuties(flights: flights, crewPosition: crewPosition, calculationService: service)
 
-        // Debug: last 5 duties (most recent first)
-        for duty in duties.sorted(by: { $0.signOn > $1.signOn }).prefix(5) {
-            LogManager.shared.debug("  Recent duty: signOn=\(Self.debugTimeFormatter.string(from: duty.signOn)), signOff=\(Self.debugTimeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
-        }
+//        // Debug: last 5 duties (most recent first)
+//        for duty in duties.sorted(by: { $0.signOn > $1.signOn }).prefix(1) {
+//            LogManager.shared.debug("Last Recent duty: signOn=\(Self.debugTimeFormatter.string(from: duty.signOn)), signOff=\(Self.debugTimeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
+//        }
 
+        // Debug: show last recent duty
+        if let duty = duties.max(by: { $0.signOn < $1.signOn }) {
+              LogManager.shared.debug("Last recent duty: signOn=\(Self.debugTimeFormatter.string(from: duty.signOn)), signOff=\(Self.debugTimeFormatter.string(from: duty.signOff)),sectors=\(duty.sectors), flight=\(String(format: "%.1f",duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
+          }
+        
+        
+        
         // Filter to only completed duties (last flight has an actual IN time)
         let completedDuties = duties.filter { $0.hasActualINTime }
 

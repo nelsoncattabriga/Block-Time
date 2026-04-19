@@ -450,9 +450,31 @@ struct LogbookSpreadsheetView: View {
 
     private func reload() {
         Task { @MainActor in
-            // Yield so the ProgressView renders before the fetch blocks the main thread
             await Task.yield()
-            flights = initialFlights ?? databaseService.fetchAllFlights()
+            var loaded = initialFlights ?? databaseService.fetchAllFlights()
+            let cal = Calendar.current
+            let df = DateFormatter()
+            df.dateFormat = "dd/MM/yyyy"
+            loaded.sort { a, b in
+                let dayA = df.date(from: a.date).map { cal.startOfDay(for: $0) }
+                let dayB = df.date(from: b.date).map { cal.startOfDay(for: $0) }
+                guard let da = dayA, let db = dayB else { return false }
+                if da != db { return da > db }
+                let ta = a.outTime.isEmpty ? a.scheduledDeparture : a.outTime
+                let tb = b.outTime.isEmpty ? b.scheduledDeparture : b.outTime
+                if ta.isEmpty && tb.isEmpty {
+                    return (a.createdAt ?? .distantPast) > (b.createdAt ?? .distantPast)
+                }
+                guard !ta.isEmpty, !tb.isEmpty else { return !ta.isEmpty }
+                let parse: (String) -> Int? = { t in
+                    let c = t.replacingOccurrences(of: ":", with: "")
+                    guard let n = Int(c), c.count >= 3 else { return nil }
+                    return (n / 100) * 60 + (n % 100)
+                }
+                if let ma = parse(ta), let mb = parse(tb) { return ma > mb }
+                return false
+            }
+            flights = loaded
             isLoading = false
         }
     }

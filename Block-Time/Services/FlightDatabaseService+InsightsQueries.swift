@@ -43,10 +43,11 @@ extension FlightDatabaseService {
                 let stats = self.getFlightStatistics(context: context)
 
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-                request.predicate = NSPredicate(
-                    format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)",
-                    "0", "0.0", "0.00", "0", "0.0", "0.00"
-                )
+                request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
+                    NSPredicate(format: "flightNumber != %@", "SUMMARY"),
+                    NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+                ])
                 request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
                 let flights: [FlightEntity]
@@ -157,13 +158,16 @@ extension FlightDatabaseService {
     }
 
     private func computeFleetHours(_ flights: [FlightEntity]) -> [NDFleetHours] {
+        let countSimInTotal = UserDefaults.standard.object(forKey: "countSimInTotal") as? Bool ?? true
         var hours: [String: Double] = [:]
         var sectors: [String: Int] = [:]
 
         for f in flights {
             let t = f.aircraftType ?? ""
             guard !t.isEmpty else { continue }
-            hours[t, default: 0]   += hrs(f.blockTime)
+            let blockTime = hrs(f.blockTime)
+            let simTime = isSpInsOnly(f) ? 0 : hrs(f.simTime)
+            hours[t, default: 0] += blockTime > 0 ? blockTime : (countSimInTotal ? simTime : 0)
             sectors[t, default: 0] += 1
         }
 

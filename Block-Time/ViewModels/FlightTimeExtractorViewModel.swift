@@ -467,6 +467,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         // Merge saved crew names with database crew names (includes CSV imported names)
         reloadSavedCrewNames()
+
+        // Derive initial selectedTimeCredit from loaded position (isPilotFlying is false at this point)
+        resetTimeCreditOverride()
     }
 
     /// Selective settings update - only reloads settings that changed from CloudKit sync
@@ -1874,6 +1877,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
         return success
     }
 
+    private func originalTimeCreditType(_ sector: FlightSector) -> TimeCreditType {
+        if (Double(sector.p1usTime) ?? 0) > 0 { return .p1us }
+        if (Double(sector.p2Time) ?? 0) > 0 { return .p2 }
+        return .p1
+    }
+
     var hasUnsavedChanges: Bool {
         guard let original = originalFlightData else { return false }
 
@@ -1906,7 +1915,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                isILS != original.isILS ||
                isGLS != original.isGLS ||
                isNPA != original.isNPA ||
-               isICUS != originalIsICUS ||
+               selectedTimeCredit != originalTimeCreditType(original) ||
                isSimulator != originalWasSimulator ||
                isPositioning != original.isPositioning ||
                remarks != original.remarks ||

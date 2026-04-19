@@ -656,7 +656,7 @@ struct ImportMappingView: View {
         "npa":            ["npaapproach", "npa"],
         "aiii":           ["aiiiapproach", "catiii", "cat3", "aiii"],
         "remarks":        ["remarks", "endorsements", "comments", "notes"],
-        "customcount":    ["customcount", "paxcount", "passengercount", "soulsonboard", "sob", "passengers"],
+        "customcount":    ["customcount", "paxcount", "totalpax", "passengercount", "soulsonboard", "sob", "passengers"],
     ]
 
     /// Returns true if `synonym` matches `header` as a whole token or exact equality.

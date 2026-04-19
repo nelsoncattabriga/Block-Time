@@ -42,7 +42,13 @@ struct RecentActivityCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "\(days) Day\(days == 1 ? "" : "s")", icon: "calendar", iconColor: progressColor)
+            CardHeader(title: "\(days) Day\(days == 1 ? "" : "s")", icon: "calendar", iconColor: progressColor) {
+                Image(systemName: "slider.horizontal.3")
+                    .imageScale(.small)
+                    .foregroundStyle(progressColor.opacity(0.7))
+                    .padding(6)
+                    .background(progressColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 6))
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -61,10 +67,6 @@ struct RecentActivityCard: View {
                     }
 
                     Spacer()
-
-                    Image(systemName: "pencil")
-                        .iPadScaledFont(.caption, phoneFont: .footnote)
-                        .foregroundStyle(.secondary)
                 }
 
                 if maxHours != nil {

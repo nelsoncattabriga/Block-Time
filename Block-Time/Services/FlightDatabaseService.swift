@@ -831,8 +831,8 @@ class FlightDatabaseService: ObservableObject {
             let endOfPeriod = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
 
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-            // Use inclusive end date (<=) to match FRMS calculation approach
-            request.predicate = NSPredicate(format: "date >= %@ AND date <= %@", startOfPeriod as NSDate, endOfPeriod as NSDate)
+            // Use inclusive end date (<=) to match FRMS calculation approach. Exclude summaries.
+            request.predicate = NSPredicate(format: "date >= %@ AND date <= %@ AND flightNumber != %@", startOfPeriod as NSDate, endOfPeriod as NSDate, "SUMMARY")
             request.sortDescriptors = [
                 NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)
             ]
@@ -1078,7 +1078,8 @@ class FlightDatabaseService: ObservableObject {
             }
 
             // Step 3: Create all flight entities without saving
-            for sector in sectors {
+            let batchBaseTime = Date()
+            for (sectorIndex, sector) in sectors.enumerated() {
                 // Check UUID-based duplicate first
                 if existingIDs.contains(sector.id) {
                     // Propose any incoming value that differs from what is stored.
@@ -1225,7 +1226,7 @@ class FlightDatabaseService: ObservableObject {
                 flight.customCount = Int16(sector.customCount)
                 flight.importSessionID = sessionID
                 flight.importedAt = Date()
-                flight.createdAt = Date()
+                flight.createdAt = batchBaseTime.addingTimeInterval(Double(sectorIndex) * 0.001)
                 flight.modifiedAt = Date()
 
                 successCount += 1
@@ -1701,9 +1702,11 @@ class FlightDatabaseService: ObservableObject {
     /// Get comprehensive flight statistics (excludes rostered/future flights with blockTime == 0 and simTime == 0)
     func getFlightStatistics() -> FlightStatistics {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        // Exclude rostered flights (blockTime is "0", "0.0", or "0.00" AND simTime is also "0", "0.0", or "0.00")
-        // This allows simulator sessions (zero block time but non-zero sim time) to be included
-        request.predicate = NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+        // Exclude rostered and positioning flights; include completed block or sim time
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
+            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+        ])
 
         do {
             let flights = try viewContext.fetch(request)
@@ -1726,14 +1729,18 @@ class FlightDatabaseService: ObservableObject {
             var airports = Set<String>()
 
             for flight in flights {
-                // Use safe conversion with validation
-                totalBlock += safeDoubleFromString(flight.blockTime)
-                totalP1 += safeDoubleFromString(flight.p1Time)
-                totalP1US += safeDoubleFromString(flight.p1usTime)
-                totalP2 += safeDoubleFromString(flight.p2Time)
+                let blockTime = safeDoubleFromString(flight.blockTime)
+                let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let isSimFlight = blockTime == 0 && flightSimTime > 0
+                totalBlock += blockTime
+                if !isSimFlight {
+                    totalP1 += safeDoubleFromString(flight.p1Time)
+                    totalP1US += safeDoubleFromString(flight.p1usTime)
+                    totalP2 += safeDoubleFromString(flight.p2Time)
+                }
                 totalNight += safeDoubleFromString(flight.nightTime)
                 totalInstrument += safeDoubleFromString(flight.instrumentTime)
-                totalSIM += entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                totalSIM += flightSimTime
                 let spVal = safeDoubleFromString(flight.spInsTime)
                 totalSpIns += spVal
                 if entityIsSpInsOnly(flight) {
@@ -1777,7 +1784,10 @@ class FlightDatabaseService: ObservableObject {
     /// calling this on the correct thread for the supplied context.
     func getFlightStatistics(context: NSManagedObjectContext) -> FlightStatistics {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        request.predicate = NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
+            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+        ])
 
         do {
             let flights = try context.fetch(request)
@@ -1800,13 +1810,18 @@ class FlightDatabaseService: ObservableObject {
             var airports = Set<String>()
 
             for flight in flights {
-                totalBlock      += safeDoubleFromString(flight.blockTime)
-                totalP1         += safeDoubleFromString(flight.p1Time)
-                totalP1US       += safeDoubleFromString(flight.p1usTime)
-                totalP2         += safeDoubleFromString(flight.p2Time)
+                let blockTime = safeDoubleFromString(flight.blockTime)
+                let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let isSimFlight = blockTime == 0 && flightSimTime > 0
+                totalBlock      += blockTime
+                if !isSimFlight {
+                    totalP1     += safeDoubleFromString(flight.p1Time)
+                    totalP1US   += safeDoubleFromString(flight.p1usTime)
+                    totalP2     += safeDoubleFromString(flight.p2Time)
+                }
                 totalNight      += safeDoubleFromString(flight.nightTime)
                 totalInstrument += safeDoubleFromString(flight.instrumentTime)
-                totalSIM        += entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                totalSIM        += flightSimTime
                 let spVal = safeDoubleFromString(flight.spInsTime)
                 totalSpIns += spVal
                 if entityIsSpInsOnly(flight) {
@@ -1876,10 +1891,14 @@ class FlightDatabaseService: ObservableObject {
         var airports = Set<String>()
 
         for flight in flights {
+            guard !flight.isPositioning else { continue }
+            let isSimFlight = flight.blockTimeValue == 0 && (flight.isSpInsOnly ? 0 : flight.simTimeValue) > 0
             totalBlock += flight.blockTimeValue
-            totalP1 += flight.p1TimeValue
-            totalP1US += flight.p1usTimeValue
-            totalP2 += flight.p2TimeValue
+            if !isSimFlight {
+                totalP1 += flight.p1TimeValue
+                totalP1US += flight.p1usTimeValue
+                totalP2 += flight.p2TimeValue
+            }
             totalNight += flight.nightTimeValue
             totalInstrument += flight.instrumentTimeValue
             totalSIM += flight.isSpInsOnly ? 0 : flight.simTimeValue
@@ -2471,9 +2490,10 @@ class FlightDatabaseService: ObservableObject {
     /// - Returns: Tuple with totalHours, totalSectors, p1Time, p1usTime, p2Time, simTime
     func getDetailedFlightStatistics(for aircraftType: String) -> (totalHours: Double, totalSectors: Int, p1Time: Double, p1usTime: Double, p2Time: Double, simTime: Double) {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        // Exclude rostered flights (blockTime is "0", "0.0", or "0.00" AND simTime is also "0", "0.0", or "0.00")
+        // Exclude rostered flights and positioning flights (PAX — FRMS only, not logbook time)
         request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             NSPredicate(format: "aircraftType == %@", aircraftType),
+            NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
             NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
         ])
 
@@ -2485,14 +2505,17 @@ class FlightDatabaseService: ObservableObject {
             var p2Time: Double = 0
             var simTime: Double = 0
 
+            let countSimInTotal = UserDefaults.standard.object(forKey: "countSimInTotal") as? Bool ?? true
             for flight in flights {
                 let blockTime = safeDoubleFromString(flight.blockTime)
                 let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
-                // Use block time if available, otherwise use sim time (SpIns excluded)
-                totalHours += (blockTime > 0 ? blockTime : flightSimTime)
-                p1Time += safeDoubleFromString(flight.p1Time)
-                p1usTime += safeDoubleFromString(flight.p1usTime)
-                p2Time += safeDoubleFromString(flight.p2Time)
+                let isSimFlight = blockTime == 0 && flightSimTime > 0
+                totalHours += blockTime > 0 ? blockTime : (countSimInTotal ? flightSimTime : 0)
+                if !isSimFlight {
+                    p1Time += safeDoubleFromString(flight.p1Time)
+                    p1usTime += safeDoubleFromString(flight.p1usTime)
+                    p2Time += safeDoubleFromString(flight.p2Time)
+                }
                 simTime += flightSimTime
             }
 
