@@ -44,8 +44,8 @@ extension FlightDatabaseService {
 
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
                 request.predicate = NSPredicate(
-                    format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)",
-                    "0", "0.0", "0.00", "0", "0.0", "0.00"
+                    format: "((blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)) AND flightNumber != %@",
+                    "0", "0.0", "0.00", "0", "0.0", "0.00", "SUMMARY"
                 )
                 request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
