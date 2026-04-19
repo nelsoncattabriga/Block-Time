@@ -114,8 +114,8 @@ final class AirportService: @unchecked Sendable {
                 let validIata = (iataCode.count == 3 && iataCode != "\\N") ? iataCode : nil
 
                 if let validIata {
-                    iataToIcao[validIata] = icaoCode
-                    icaoToIata[icaoCode]  = validIata
+                    if iataToIcao[validIata] == nil { iataToIcao[validIata] = icaoCode }
+                    icaoToIata[icaoCode] = validIata
                 }
 
                 airports[icaoCode] = AirportInfo(
