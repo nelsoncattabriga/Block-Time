@@ -43,10 +43,11 @@ extension FlightDatabaseService {
                 let stats = self.getFlightStatistics(context: context)
 
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-                request.predicate = NSPredicate(
-                    format: "((blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)) AND flightNumber != %@",
-                    "0", "0.0", "0.00", "0", "0.0", "0.00", "SUMMARY"
-                )
+                request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
+                    NSPredicate(format: "flightNumber != %@", "SUMMARY"),
+                    NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+                ])
                 request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
                 let flights: [FlightEntity]
