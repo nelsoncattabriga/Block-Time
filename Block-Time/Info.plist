@@ -66,6 +66,12 @@
 	</dict>
 	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
 	<true/>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.apple.coredata.cloudkit.activity.export</string>
+		<string>com.apple.coredata.cloudkit.activity.import</string>
+		<string>com.apple.coredata.cloudkit.activity.cleanup</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
