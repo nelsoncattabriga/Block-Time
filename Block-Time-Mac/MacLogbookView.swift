@@ -10,6 +10,8 @@ import SwiftUI
 struct MacLogbookView: View {
     @StateObject private var viewModel = MacLogbookViewModel()
     @Binding var selection: Set<UUID>
+    @State private var columnPrefs = ColumnPreferences()
+    @State private var showingColumnManager = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,7 +39,12 @@ struct MacLogbookView: View {
                         : "Try a different search term.")
                 )
             } else {
-                MacLogbookTableView(rows: viewModel.displayedFlights, selection: $selection)
+                MacLogbookTableView(
+                    rows: viewModel.displayedFlights,
+                    selection: $selection,
+                    columns: columnPrefs.visibleColumns,
+                    prefs: columnPrefs
+                )
             }
         }
     }
@@ -91,6 +98,17 @@ struct MacLogbookView: View {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
             .keyboardShortcut("r", modifiers: .command)
+        }
+
+        ToolbarItem(placement: .automatic) {
+            Button {
+                showingColumnManager.toggle()
+            } label: {
+                Label("Columns", systemImage: "table.badge.more")
+            }
+            .popover(isPresented: $showingColumnManager, arrowEdge: .bottom) {
+                ColumnManagerPopover(prefs: columnPrefs)
+            }
         }
     }
 }

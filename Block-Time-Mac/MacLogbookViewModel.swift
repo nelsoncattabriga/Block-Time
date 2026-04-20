@@ -53,6 +53,14 @@ struct MacFlightRow: Identifiable {
     var customCount: Int
     var remarks: String
 
+    enum RowAccent { case none, pax, sim, spIns }
+    var accent: RowAccent {
+        if spInsTime > 0 { return .spIns }
+        if simTime   > 0 { return .sim }
+        if isPositioning  { return .pax }
+        return .none
+    }
+
     // MARK: Formatted display helpers
 
     var dateDisplay: String {

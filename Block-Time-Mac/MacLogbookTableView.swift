@@ -10,14 +10,96 @@
 import AppKit
 import SwiftUI
 
-// MARK: - Square Row View (removes inset-style rounded corners on frozen pane)
+// MARK: - Square Table View (draws empty rows without inset rounded corners)
+
+fileprivate final class SquareTableView: NSTableView {
+    // Always pass focus to the right table so selection colour stays consistent
+    override var acceptsFirstResponder: Bool { false }
+
+    override func drawBackground(inClipRect clipRect: NSRect) {
+        guard numberOfRows > 0 else { return }
+        // Derive stride from actual rendered row rects to match AppKit exactly
+        let lastRow = numberOfRows - 1
+        let lastRect = rect(ofRow: lastRow)
+        let stride = lastRect.height
+        var y = lastRect.maxY
+        var row = numberOfRows
+        while y < clipRect.maxY {
+            NSColor.alternatingContentBackgroundColors[row % 2].setFill()
+            NSRect(x: 0, y: y, width: bounds.width, height: stride).fill()
+            y += stride
+            row += 1
+        }
+    }
+}
+
+// MARK: - Accent colours
+
+private extension NSColor {
+    static let rowPax   = NSColor.systemOrange
+    static let rowSim   = NSColor.systemPurple
+    static let rowSpIns = NSColor.systemRed
+    static let stripeWidth: CGFloat = 3
+
+    static func accent(for accent: MacFlightRow.RowAccent) -> NSColor? {
+        switch accent {
+        case .none:  return nil
+        case .pax:   return .rowPax
+        case .sim:   return .rowSim
+        case .spIns: return .rowSpIns
+        }
+    }
+}
+
+// MARK: - Square Row View (frozen left pane — no rounded corners, with accent)
 
 private final class SquareRowView: NSTableRowView {
+    var accent: MacFlightRow.RowAccent = .none
+
     override func drawBackground(in dirtyRect: NSRect) {
         guard let table = superview as? NSTableView else { return }
         let idx = table.row(for: self)
+        // Base alternating colour
         NSColor.alternatingContentBackgroundColors[idx % 2].setFill()
-        dirtyRect.fill()
+        bounds.fill()
+        // Row tint
+        if let color = NSColor.accent(for: accent) {
+            color.withAlphaComponent(0.13).setFill()
+            bounds.fill()
+            // Left stripe
+            color.withAlphaComponent(0.85).setFill()
+            NSRect(x: 0, y: 0, width: NSColor.stripeWidth, height: bounds.height).fill()
+        }
+    }
+
+    override func drawSelection(in dirtyRect: NSRect) {
+        NSColor.selectedContentBackgroundColor.setFill()
+        bounds.fill()
+    }
+
+    override var isEmphasized: Bool {
+        get { true }
+        set { }
+    }
+}
+
+// MARK: - Accent Row View (right scrolling pane)
+
+private final class AccentRowView: NSTableRowView {
+    var accent: MacFlightRow.RowAccent = .none
+
+    override func drawBackground(in dirtyRect: NSRect) {
+        guard let table = superview as? NSTableView else { return }
+        let idx = table.row(for: self)
+        if let color = NSColor.accent(for: accent) {
+            // Accented rows: solid accent tint, no alternating
+            color.withAlphaComponent(0.13).setFill()
+            bounds.fill()
+        } else {
+            // Normal rows: standard alternating background
+            NSColor.alternatingContentBackgroundColors[idx % 2].setFill()
+            bounds.fill()
+        }
     }
 
     override func drawSelection(in dirtyRect: NSRect) {
@@ -37,8 +119,8 @@ struct LogbookColumn: Identifiable {
     var alignment: NSTextAlignment = .left
 
     static let frozenColumns: [LogbookColumn] = [
-        LogbookColumn(id: "date",    title: "Date",   minWidth: 72, idealWidth: 84, value: { $0.dateDisplay }),
-        LogbookColumn(id: "flight",  title: "Flight", minWidth: 52, idealWidth: 68, value: { $0.flightNumber }, alignment: .center),
+        LogbookColumn(id: "date",    title: "Date",   minWidth: 72, idealWidth: 84, value: { $0.dateDisplay }, alignment: .center),
+        LogbookColumn(id: "flight",  title: "Flt No", minWidth: 52, idealWidth: 68, value: { $0.flightNumber }, alignment: .center),
     ]
 
     static let scrollingColumns: [LogbookColumn] = [
@@ -50,24 +132,24 @@ struct LogbookColumn: Identifiable {
         LogbookColumn(id: "in",      title: "IN",      minWidth: 40,  idealWidth: 48,  value: { $0.inTime },             alignment: .center),
         LogbookColumn(id: "block",   title: "Block",   minWidth: 44,  idealWidth: 52,  value: { $0.blockDisplay },       alignment: .right),
         LogbookColumn(id: "night",   title: "Night",   minWidth: 44,  idealWidth: 52,  value: { $0.nightDisplay },       alignment: .right),
-        LogbookColumn(id: "instr",   title: "Instr",   minWidth: 44,  idealWidth: 52,  value: { $0.instrumentDisplay },  alignment: .right),
-        LogbookColumn(id: "captain", title: "Captain", minWidth: 80,  idealWidth: 100, value: { $0.captainName }),
-        LogbookColumn(id: "fo",      title: "FO",      minWidth: 80,  idealWidth: 100, value: { $0.foName }),
-        LogbookColumn(id: "so1",     title: "SO1",     minWidth: 80,  idealWidth: 100, value: { $0.so1Name }),
-        LogbookColumn(id: "so2",     title: "SO2",     minWidth: 80,  idealWidth: 100, value: { $0.so2Name }),
+        LogbookColumn(id: "instr",   title: "Inst",   minWidth: 44,  idealWidth: 52,  value: { $0.instrumentDisplay },  alignment: .right),
+        LogbookColumn(id: "captain", title: "Captain", minWidth: 80,  idealWidth: 100, value: { $0.captainName }, alignment: .center),
+        LogbookColumn(id: "fo",      title: "FO",      minWidth: 80,  idealWidth: 100, value: { $0.foName },      alignment: .center),
+        LogbookColumn(id: "so1",     title: "SO1",     minWidth: 80,  idealWidth: 100, value: { $0.so1Name },     alignment: .center),
+        LogbookColumn(id: "so2",     title: "SO2",     minWidth: 80,  idealWidth: 100, value: { $0.so2Name },     alignment: .center),
         LogbookColumn(id: "p1",      title: "P1",      minWidth: 40,  idealWidth: 48,  value: { $0.p1Display },          alignment: .right),
-        LogbookColumn(id: "p1s",     title: "P1s",     minWidth: 40,  idealWidth: 48,  value: { $0.p1usDisplay },        alignment: .right),
+        LogbookColumn(id: "p1s",     title: "ICUS",     minWidth: 40,  idealWidth: 48,  value: { $0.p1usDisplay },        alignment: .right),
         LogbookColumn(id: "p2",      title: "P2",      minWidth: 40,  idealWidth: 48,  value: { $0.p2Display },          alignment: .right),
         LogbookColumn(id: "sim",     title: "Sim",     minWidth: 40,  idealWidth: 48,  value: { $0.simDisplay },         alignment: .right),
-        LogbookColumn(id: "spins",   title: "SpIns",   minWidth: 44,  idealWidth: 52,  value: { $0.spInsDisplay },       alignment: .right),
+        LogbookColumn(id: "spins",   title: "Sp/Ins",   minWidth: 44,  idealWidth: 52,  value: { $0.spInsDisplay },       alignment: .right),
         LogbookColumn(id: "type",    title: "Type",    minWidth: 48,  idealWidth: 60,  value: { $0.aircraftType },       alignment: .center),
         LogbookColumn(id: "reg",     title: "Reg",     minWidth: 60,  idealWidth: 76,  value: { $0.aircraftReg },        alignment: .center),
-        LogbookColumn(id: "tod",     title: "T/O D",   minWidth: 36,  idealWidth: 42,  value: { $0.dayTakeoffs   > 0 ? "\($0.dayTakeoffs)"   : "" }, alignment: .center),
-        LogbookColumn(id: "ton",     title: "T/O N",   minWidth: 36,  idealWidth: 42,  value: { $0.nightTakeoffs > 0 ? "\($0.nightTakeoffs)" : "" }, alignment: .center),
-        LogbookColumn(id: "ldgd",    title: "Ldg D",   minWidth: 36,  idealWidth: 42,  value: { $0.dayLandings   > 0 ? "\($0.dayLandings)"   : "" }, alignment: .center),
-        LogbookColumn(id: "ldgn",    title: "Ldg N",   minWidth: 36,  idealWidth: 42,  value: { $0.nightLandings > 0 ? "\($0.nightLandings)" : "" }, alignment: .center),
-        LogbookColumn(id: "pf",      title: "PF",      minWidth: 28,  idealWidth: 32,  value: { $0.isPilotFlying  ? "✓" : "" }, alignment: .center),
-        LogbookColumn(id: "pax",     title: "PAX",     minWidth: 28,  idealWidth: 32,  value: { $0.isPositioning  ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "tod",     title: "T/O Day",   minWidth: 36,  idealWidth: 42,  value: { $0.dayTakeoffs   > 0 ? "\($0.dayTakeoffs)"   : "" }, alignment: .center),
+        LogbookColumn(id: "ton",     title: "T/O Night",   minWidth: 36,  idealWidth: 42,  value: { $0.nightTakeoffs > 0 ? "\($0.nightTakeoffs)" : "" }, alignment: .center),
+        LogbookColumn(id: "ldgd",    title: "Ldg Day",   minWidth: 36,  idealWidth: 42,  value: { $0.dayLandings   > 0 ? "\($0.dayLandings)"   : "" }, alignment: .center),
+        LogbookColumn(id: "ldgn",    title: "Ldg Night",   minWidth: 36,  idealWidth: 42,  value: { $0.nightLandings > 0 ? "\($0.nightLandings)" : "" }, alignment: .center),
+        LogbookColumn(id: "pf",      title: "Was PF",      minWidth: 28,  idealWidth: 32,  value: { $0.isPilotFlying  ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "pax",     title: "PAXING",     minWidth: 28,  idealWidth: 32,  value: { $0.isPositioning  ? "✓" : "" }, alignment: .center),
         LogbookColumn(id: "ils",     title: "ILS",     minWidth: 28,  idealWidth: 32,  value: { $0.isILS  ? "✓" : "" }, alignment: .center),
         LogbookColumn(id: "gls",     title: "GLS",     minWidth: 28,  idealWidth: 32,  value: { $0.isGLS  ? "✓" : "" }, alignment: .center),
         LogbookColumn(id: "npa",     title: "NPA",     minWidth: 28,  idealWidth: 32,  value: { $0.isNPA  ? "✓" : "" }, alignment: .center),
@@ -84,7 +166,7 @@ struct LogbookColumn: Identifiable {
 final class SplitLogbookView: NSView {
     let leftScroll  = NSScrollView()
     let rightScroll = NSScrollView()
-    let leftTable   = NSTableView()
+    fileprivate let leftTable = SquareTableView()
     let rightTable  = NSTableView()
     let divider     = NSBox()
 
@@ -109,7 +191,7 @@ final class SplitLogbookView: NSView {
 
     private func setupScroll(_ scroll: NSScrollView, table: NSTableView, hasHorizontal: Bool) {
         scroll.documentView = table
-        scroll.hasVerticalScroller = false
+        scroll.hasVerticalScroller = hasHorizontal
         scroll.hasHorizontalScroller = hasHorizontal
         scroll.autohidesScrollers = false
         scroll.borderType = .noBorder
@@ -144,6 +226,11 @@ final class SplitLogbookView: NSView {
 struct MacLogbookTableView: NSViewRepresentable {
     let rows: [MacFlightRow]
     @Binding var selection: Set<UUID>
+    var columns: [LogbookColumn] = LogbookColumn.scrollingColumns
+    var prefs: ColumnPreferences? = nil
+
+    // Equatable row count + IDs used to skip reloadData when nothing changed
+    private var rowIDs: [UUID] { rows.map(\.id) }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -158,16 +245,24 @@ struct MacLogbookTableView: NSViewRepresentable {
             view.leftTable.addTableColumn(makeColumn(col))
         }
 
-        // Right table — scrolling columns
+        // Right table — scrolling columns (initial set)
         view.rightTable.delegate   = c
         view.rightTable.dataSource = c
-        for col in LogbookColumn.scrollingColumns {
+        for col in columns {
             view.rightTable.addTableColumn(makeColumn(col))
         }
 
         c.splitView  = view
         c.leftTable  = view.leftTable
         c.rightTable = view.rightTable
+
+        // Sync column reorder from NSTableView drag → ColumnPreferences
+        NotificationCenter.default.addObserver(
+            c,
+            selector: #selector(Coordinator.columnMoved(_:)),
+            name: NSTableView.columnDidMoveNotification,
+            object: view.rightTable
+        )
 
         // Sync vertical scroll: right drives left
         NotificationCenter.default.addObserver(
@@ -203,12 +298,62 @@ struct MacLogbookTableView: NSViewRepresentable {
     }
 
     func updateNSView(_ splitView: SplitLogbookView, context: Context) {
-        context.coordinator.parent = self
-        splitView.leftTable.reloadData()
-        splitView.rightTable.reloadData()
-        splitView.needsLayout = true
+        let c = context.coordinator
+        c.parent = self
 
-        // Sync selection SwiftUI → tables
+        // Diff right table columns — only add/remove/move what changed
+        let existingIDs = splitView.rightTable.tableColumns.map(\.identifier.rawValue)
+        let newIDs = columns.map(\.id)
+        if existingIDs != newIDs {
+            NSAnimationContext.beginGrouping()
+            NSAnimationContext.current.duration = 0
+            splitView.rightTable.beginUpdates()
+
+            // Remove columns no longer in the visible set
+            for tc in splitView.rightTable.tableColumns where !newIDs.contains(tc.identifier.rawValue) {
+                splitView.rightTable.removeTableColumn(tc)
+            }
+
+            // Add newly visible columns at correct position
+            for (idx, col) in columns.enumerated() {
+                let currentIDs = splitView.rightTable.tableColumns.map(\.identifier.rawValue)
+                if !currentIDs.contains(col.id) {
+                    let tc = makeColumn(col)
+                    splitView.rightTable.addTableColumn(tc)
+                    let insertedAt = splitView.rightTable.tableColumns.count - 1
+                    if insertedAt != idx {
+                        splitView.rightTable.moveColumn(insertedAt, toColumn: min(idx, splitView.rightTable.tableColumns.count - 1))
+                    }
+                }
+            }
+
+            // Fix ordering if columns were reordered
+            let afterIDs = splitView.rightTable.tableColumns.map(\.identifier.rawValue)
+            if afterIDs != newIDs {
+                for (targetIdx, id) in newIDs.enumerated() {
+                    let currentIDs = splitView.rightTable.tableColumns.map(\.identifier.rawValue)
+                    if let currentIdx = currentIDs.firstIndex(of: id), currentIdx != targetIdx {
+                        splitView.rightTable.moveColumn(currentIdx, toColumn: targetIdx)
+                    }
+                }
+            }
+
+            splitView.rightTable.endUpdates()
+            NSAnimationContext.endGrouping()
+            splitView.needsLayout = true
+        }
+
+        if rowIDs != c.lastRowIDs {
+            splitView.leftTable.reloadData()
+            splitView.rightTable.reloadData()
+            splitView.needsLayout = true
+            if c.lastRowIDs.isEmpty && !rowIDs.isEmpty {
+                autofitColumns(splitView)
+            }
+        }
+        c.lastRowIDs = rowIDs
+
+        // Sync selection SwiftUI → tables (cheap, no cell recreation)
         var indexSet = IndexSet()
         for (i, row) in rows.enumerated() {
             if selection.contains(row.id) { indexSet.insert(i) }
@@ -220,12 +365,37 @@ struct MacLogbookTableView: NSViewRepresentable {
         }
     }
 
+    private func autofitColumns(_ splitView: SplitLogbookView) {
+        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let sampleRows = Array(rows.prefix(100))
+        let padding: CGFloat = 16
+
+        let allColumns = LogbookColumn.frozenColumns + columns
+        for col in allColumns {
+            let headerWidth = (col.title as NSString).size(withAttributes: attrs).width + padding
+            let maxContentWidth = sampleRows.reduce(headerWidth) { maxW, row in
+                let text = col.value(row)
+                let w = (text as NSString).size(withAttributes: attrs).width + padding
+                return max(maxW, w)
+            }
+            let targetWidth = max(col.minWidth, min(maxContentWidth, 240))
+            let isFrozen = LogbookColumn.frozenColumns.contains(where: { $0.id == col.id })
+            let table = isFrozen ? splitView.leftTable : splitView.rightTable
+            if let tc = table.tableColumn(withIdentifier: NSUserInterfaceItemIdentifier(col.id)) {
+                tc.width = targetWidth
+            }
+        }
+        splitView.needsLayout = true
+    }
+
     private func makeColumn(_ col: LogbookColumn) -> NSTableColumn {
         let tc = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(col.id))
         tc.title = col.title
         tc.minWidth = col.minWidth
         tc.width = col.idealWidth
         tc.resizingMask = .userResizingMask
+        tc.headerCell.alignment = col.alignment
         return tc
     }
 
@@ -237,6 +407,7 @@ struct MacLogbookTableView: NSViewRepresentable {
         weak var leftTable: NSTableView?
         weak var rightTable: NSTableView?
 
+        var lastRowIDs: [UUID] = []
         private var isSyncingScroll = false
         private var isSyncingSelection = false
 
@@ -245,7 +416,17 @@ struct MacLogbookTableView: NSViewRepresentable {
         // MARK: Row view — left pane uses square rows to match right pane visually
 
         func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
-            tableView === leftTable ? SquareRowView() : nil
+            guard row < parent.rows.count else { return nil }
+            let accent = parent.rows[row].accent
+            if tableView === leftTable {
+                let rv = SquareRowView()
+                rv.accent = accent
+                return rv
+            } else {
+                let rv = AccentRowView()
+                rv.accent = accent
+                return rv
+            }
         }
 
         // MARK: Data source
@@ -256,7 +437,7 @@ struct MacLogbookTableView: NSViewRepresentable {
             guard let colID = tableColumn?.identifier.rawValue,
                   row < parent.rows.count else { return nil }
 
-            let allColumns = LogbookColumn.frozenColumns + LogbookColumn.scrollingColumns
+            let allColumns = LogbookColumn.frozenColumns + parent.columns
             guard let col = allColumns.first(where: { $0.id == colID }) else { return nil }
 
             let flight = parent.rows[row]
@@ -277,12 +458,7 @@ struct MacLogbookTableView: NSViewRepresentable {
             cell.textColor = text.isEmpty ? .tertiaryLabelColor : .labelColor
             cell.alignment = col.alignment
 
-            let baseFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-            if flight.isPositioning && (colID == "date" || colID == "flight") {
-                cell.font = NSFont(descriptor: baseFont.fontDescriptor.withSymbolicTraits(.italic), size: 12) ?? baseFont
-            } else {
-                cell.font = baseFont
-            }
+            cell.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
 
             return cell
         }
@@ -308,6 +484,27 @@ struct MacLogbookTableView: NSViewRepresentable {
         }
 
         // MARK: Vertical scroll sync
+
+        @objc func columnMoved(_ notification: Notification) {
+            guard let tv = notification.object as? NSTableView,
+                  let prefs = parent.prefs else { return }
+            // Visible IDs in new drag order
+            let visibleOrder = tv.tableColumns.map(\.identifier.rawValue)
+            // Rebuild full order: slot hidden columns back into their relative positions
+            let hidden = prefs.hidden
+            var result: [String] = []
+            var visibleIdx = 0
+            for id in prefs.order {
+                if hidden.contains(id) {
+                    result.append(id)
+                } else if visibleIdx < visibleOrder.count {
+                    result.append(visibleOrder[visibleIdx])
+                    visibleIdx += 1
+                }
+            }
+            prefs.order = result
+            prefs.persist()
+        }
 
         @objc func rightScrolled(_ notification: Notification) {
             guard !isSyncingScroll,
