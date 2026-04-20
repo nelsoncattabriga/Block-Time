@@ -16,15 +16,22 @@ import Combine
 
 struct MacFlightRow: Identifiable {
     let id: UUID
-    var rawDate: Date         // actual Date for sorting
-    var date: String          // dd/MM/yyyy for display
+    var rawDate: Date
+    var date: String
     var flightNumber: String
     var fromAirport: String
     var toAirport: String
-    var outTime: String       // HH:MM or ""
-    var inTime: String        // HH:MM or ""
-    var blockTime: Double     // decimal hours
+    var scheduledDeparture: String
+    var scheduledArrival: String
+    var outTime: String
+    var inTime: String
+    var blockTime: Double
     var nightTime: Double
+    var instrumentTime: Double
+    var captainName: String
+    var foName: String
+    var so1Name: String
+    var so2Name: String
     var p1Time: Double
     var p1usTime: Double
     var p2Time: Double
@@ -36,9 +43,14 @@ struct MacFlightRow: Identifiable {
     var nightTakeoffs: Int
     var dayLandings: Int
     var nightLandings: Int
-    var captainName: String
-    var foName: String
+    var isPilotFlying: Bool
     var isPositioning: Bool
+    var isILS: Bool
+    var isGLS: Bool
+    var isNPA: Bool
+    var isRNP: Bool
+    var isAIII: Bool
+    var customCount: Int
     var remarks: String
 
     // MARK: Formatted display helpers
@@ -63,12 +75,14 @@ struct MacFlightRow: Identifiable {
         return String(format: "%d:%02d", totalMinutes / 60, totalMinutes % 60)
     }
 
-    var blockDisplay:  String { Self.hhmmDisplay(blockTime) }
-    var nightDisplay:  String { Self.hhmmDisplay(nightTime) }
-    var p1Display:     String { Self.hhmmDisplay(p1Time) }
-    var p1usDisplay:   String { Self.hhmmDisplay(p1usTime) }
-    var p2Display:     String { Self.hhmmDisplay(p2Time) }
-    var simDisplay:    String { Self.hhmmDisplay(simTime) }
+    var blockDisplay:      String { Self.hhmmDisplay(blockTime) }
+    var nightDisplay:      String { Self.hhmmDisplay(nightTime) }
+    var instrumentDisplay: String { Self.hhmmDisplay(instrumentTime) }
+    var p1Display:         String { Self.hhmmDisplay(p1Time) }
+    var p1usDisplay:       String { Self.hhmmDisplay(p1usTime) }
+    var p2Display:         String { Self.hhmmDisplay(p2Time) }
+    var simDisplay:        String { Self.hhmmDisplay(simTime) }
+    var spInsDisplay:      String { Self.hhmmDisplay(spInsTime) }
 }
 
 // MARK: - Mac Logbook ViewModel
@@ -82,9 +96,6 @@ final class MacLogbookViewModel: ObservableObject {
     @Published var searchText = "" {
         didSet { applySort() }
     }
-    @Published var sortOrder: [KeyPathComparator<MacFlightRow>] = [
-        KeyPathComparator(\.rawDate, order: .reverse)
-    ]
 
     private var flights: [MacFlightRow] = []
 
@@ -102,7 +113,7 @@ final class MacLogbookViewModel: ObservableObject {
             row.captainName.localizedCaseInsensitiveContains(searchText) ||
             row.foName.localizedCaseInsensitiveContains(searchText)
         }
-        displayedFlights = base.sorted(using: sortOrder)
+        displayedFlights = base.sorted { $0.rawDate > $1.rawDate }
     }
 
     // MARK: Core Data
@@ -180,13 +191,6 @@ final class MacLogbookViewModel: ObservableObject {
         ctx.performAndWait {
             let request = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
             request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-            request.predicate = NSPredicate(
-                format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR " +
-                        "(simTime != %@ AND simTime != %@ AND simTime != %@) OR " +
-                        "isPositioning == YES",
-                "0", "0.0", "0.00",
-                "0", "0.0", "0.00"
-            )
             guard let entities = try? ctx.fetch(request) else { return }
             rows = entities.compactMap { MacFlightRow(entity: $0) }
         }
@@ -206,37 +210,55 @@ private extension MacFlightRow {
         fmt.timeZone = TimeZone(secondsFromGMT: 0)
         fmt.locale = Locale(identifier: "en_US_POSIX")
 
-        self.id            = id
-        self.rawDate       = date
-        self.date          = fmt.string(from: date)
-        self.flightNumber  = entity.value(forKey: "flightNumber") as? String ?? ""
-        self.fromAirport   = entity.value(forKey: "fromAirport") as? String ?? ""
-        self.toAirport     = entity.value(forKey: "toAirport") as? String ?? ""
-        self.outTime       = entity.value(forKey: "outTime") as? String ?? ""
-        self.inTime        = entity.value(forKey: "inTime") as? String ?? ""
-        self.aircraftType  = entity.value(forKey: "aircraftType") as? String ?? ""
-        self.aircraftReg   = entity.value(forKey: "aircraftReg") as? String ?? ""
-        self.captainName   = entity.value(forKey: "captainName") as? String ?? ""
-        self.foName        = entity.value(forKey: "foName") as? String ?? ""
-        self.isPositioning = entity.value(forKey: "isPositioning") as? Bool ?? false
-        self.remarks       = entity.value(forKey: "remarks") as? String ?? ""
-
-        self.dayTakeoffs   = Int(entity.value(forKey: "dayTakeoffs") as? Int16 ?? 0)
-        self.nightTakeoffs = Int(entity.value(forKey: "nightTakeoffs") as? Int16 ?? 0)
-        self.dayLandings   = Int(entity.value(forKey: "dayLandings") as? Int16 ?? 0)
-        self.nightLandings = Int(entity.value(forKey: "nightLandings") as? Int16 ?? 0)
-
+        func str(_ key: String) -> String {
+            entity.value(forKey: key) as? String ?? ""
+        }
+        func flag(_ key: String) -> Bool {
+            entity.value(forKey: key) as? Bool ?? false
+        }
         func parseTime(_ key: String) -> Double {
-            let raw = entity.value(forKey: key) as? String ?? "0"
-            return Double(raw) ?? 0
+            Double(entity.value(forKey: key) as? String ?? "0") ?? 0
         }
 
-        self.blockTime  = parseTime("blockTime")
-        self.nightTime  = parseTime("nightTime")
-        self.p1Time     = parseTime("p1Time")
-        self.p1usTime   = parseTime("p1usTime")
-        self.p2Time     = parseTime("p2Time")
-        self.simTime    = parseTime("simTime")
-        self.spInsTime  = parseTime("spInsTime")
+        self.id                 = id
+        self.rawDate            = date
+        self.date               = fmt.string(from: date)
+        self.flightNumber       = str("flightNumber")
+        self.fromAirport        = str("fromAirport")
+        self.toAirport          = str("toAirport")
+        self.scheduledDeparture = str("scheduledDeparture")
+        self.scheduledArrival   = str("scheduledArrival")
+        self.outTime            = str("outTime")
+        self.inTime             = str("inTime")
+        self.captainName        = str("captainName")
+        self.foName             = str("foName")
+        self.so1Name            = str("so1Name")
+        self.so2Name            = str("so2Name")
+        self.aircraftType       = str("aircraftType")
+        self.aircraftReg        = str("aircraftReg")
+        self.remarks            = str("remarks")
+
+        self.dayTakeoffs        = Int(entity.value(forKey: "dayTakeoffs") as? Int16 ?? 0)
+        self.nightTakeoffs      = Int(entity.value(forKey: "nightTakeoffs") as? Int16 ?? 0)
+        self.dayLandings        = Int(entity.value(forKey: "dayLandings") as? Int16 ?? 0)
+        self.nightLandings      = Int(entity.value(forKey: "nightLandings") as? Int16 ?? 0)
+        self.customCount        = Int(entity.value(forKey: "customCount") as? Int16 ?? 0)
+
+        self.isPilotFlying      = flag("isPilotFlying")
+        self.isPositioning      = flag("isPositioning")
+        self.isILS              = flag("isILS")
+        self.isGLS              = flag("isGLS")
+        self.isNPA              = flag("isNPA")
+        self.isRNP              = flag("isRNP")
+        self.isAIII             = flag("isAIII")
+
+        self.blockTime          = parseTime("blockTime")
+        self.nightTime          = parseTime("nightTime")
+        self.instrumentTime     = parseTime("instrumentTime")
+        self.p1Time             = parseTime("p1Time")
+        self.p1usTime           = parseTime("p1usTime")
+        self.p2Time             = parseTime("p2Time")
+        self.simTime            = parseTime("simTime")
+        self.spInsTime          = parseTime("spInsTime")
     }
 }
