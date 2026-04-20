@@ -10,11 +10,19 @@ import SwiftUI
 struct MacContentAreaView: View {
     let section: MacSection
     @Binding var tableSelection: Set<UUID>
+    @Binding var showingFilter: Bool
+    var filterState: MacFilterState
+    var onRowsLoaded: ([MacFlightRow]) -> Void
 
     var body: some View {
         switch section {
         case .logbook:
-            MacLogbookView(selection: $tableSelection)
+            MacLogbookView(
+                selection: $tableSelection,
+                showingFilter: $showingFilter,
+                filterState: filterState,
+                onRowsLoaded: onRowsLoaded
+            )
         case .dashboard:
             MacSectionPlaceholder(section: section)
         case .map:
@@ -22,7 +30,7 @@ struct MacContentAreaView: View {
         case .frms:
             MacSectionPlaceholder(section: section)
         case .settings:
-            MacSectionPlaceholder(section: section)
+            MacSettingsView()
         }
     }
 }

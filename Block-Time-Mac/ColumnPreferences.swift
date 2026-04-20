@@ -13,9 +13,11 @@ import SwiftUI
 final class ColumnPreferences {
     private static let orderKey  = "logbook.column.order"
     private static let hiddenKey = "logbook.column.hidden"
+    private static let widthsKey = "logbook.column.widths"
 
-    var order:  [String]    // IDs of scrolling columns in user order
-    var hidden: Set<String> // IDs of hidden scrolling columns
+    var order:  [String]
+    var hidden: Set<String>
+    var widths: [String: CGFloat]
 
     init() {
         let defaultIDs = LogbookColumn.scrollingColumns.map(\.id)
@@ -32,6 +34,17 @@ final class ColumnPreferences {
         } else {
             hidden = []
         }
+
+        if let saved = UserDefaults.standard.dictionary(forKey: Self.widthsKey) as? [String: Double] {
+            widths = saved.mapValues { CGFloat($0) }
+        } else {
+            widths = [:]
+        }
+    }
+
+    func saveWidth(_ width: CGFloat, forID id: String) {
+        widths[id] = width
+        UserDefaults.standard.set(widths.mapValues { Double($0) }, forKey: Self.widthsKey)
     }
 
     var visibleColumns: [LogbookColumn] {
@@ -52,7 +65,9 @@ final class ColumnPreferences {
     func reset() {
         order  = LogbookColumn.scrollingColumns.map(\.id)
         hidden = []
+        widths = [:]
         persist()
+        UserDefaults.standard.removeObject(forKey: Self.widthsKey)
     }
 
     func persist() {

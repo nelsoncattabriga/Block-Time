@@ -10,20 +10,28 @@ import SwiftUI
 struct MacDetailPanelView: View {
     let section: MacSection
     let tableSelection: Set<UUID>
+    var showingFilter: Bool = false
+    var filter: MacFilterState? = nil
+    var allRows: [MacFlightRow] = []
+    var onCloseFilter: () -> Void = {}
 
     var body: some View {
         Group {
-            switch section {
-            case .logbook:
-                MacLogbookDetailPlaceholder()
-            case .dashboard:
-                MacDetailPlaceholder(icon: "chart.bar.fill", label: "Select a card")
-            case .map:
-                MacDetailPlaceholder(icon: "airplane.arrival", label: "Select an airport")
-            case .frms:
-                MacDetailPlaceholder(icon: "shield.fill", label: "FRMS Detail")
-            case .settings:
-                EmptyView()
+            if showingFilter, let filter {
+                MacFilterPanelView(filter: filter, rows: allRows, onClose: onCloseFilter)
+            } else {
+                switch section {
+                case .logbook:
+                    MacLogbookDetailPlaceholder()
+                case .dashboard:
+                    MacDetailPlaceholder(icon: "chart.bar.fill", label: "Select a card")
+                case .map:
+                    MacDetailPlaceholder(icon: "airplane.arrival", label: "Select an airport")
+                case .frms:
+                    MacDetailPlaceholder(icon: "shield.fill", label: "FRMS Detail")
+                case .settings:
+                    EmptyView()
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

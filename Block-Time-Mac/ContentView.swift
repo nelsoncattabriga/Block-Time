@@ -2,7 +2,8 @@
 //  ContentView.swift
 //  Block-Time-Mac
 //
-//  Root 3-column NavigationSplitView shell.
+//  Root layout: 2-column NavigationSplitView (sidebar + content).
+//  The detail panel is an inline trailing pane that slides in/out within the content column.
 //
 
 import SwiftUI
@@ -35,34 +36,61 @@ enum MacSection: String, Hashable, CaseIterable {
         case .settings:  return .gray
         }
     }
-
-    /// Whether this section uses the detail panel column.
-    var usesDetailPanel: Bool {
-        switch self {
-        case .logbook, .dashboard, .map, .frms: return true
-        case .settings: return false
-        }
-    }
 }
 
 // MARK: - Mac Root View
 
 struct MacRootView: View {
     @State private var selectedSection: MacSection = .logbook
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var tableSelection = Set<UUID>()
+    @State private var showingFilter = false
+    @State private var filterState = MacFilterState()
+    @State private var allLogbookRows: [MacFlightRow] = []
+    @AppStorage("macAppearance") private var appearanceRaw: String = "system"
+
+    private var panelHasContent: Bool {
+        showingFilter && selectedSection == .logbook
+    }
+
+    private var preferredColorScheme: ColorScheme? {
+        switch appearanceRaw {
+        case "light": return .light
+        case "dark":  return .dark
+        default:      return nil
+        }
+    }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        NavigationSplitView {
             MacSidebarView(selectedSection: $selectedSection)
                 .navigationSplitViewColumnWidth(200)
-        } content: {
-            MacContentAreaView(section: selectedSection, tableSelection: $tableSelection)
-                .navigationSplitViewColumnWidth(min: 500, ideal: 800)
         } detail: {
-            MacDetailPanelView(section: selectedSection, tableSelection: tableSelection)
-                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 400)
+            HStack(spacing: 0) {
+                MacContentAreaView(
+                    section: selectedSection,
+                    tableSelection: $tableSelection,
+                    showingFilter: $showingFilter,
+                    filterState: filterState,
+                    onRowsLoaded: { allLogbookRows = $0 }
+                )
+
+                if panelHasContent {
+                    Divider()
+                    MacDetailPanelView(
+                        section: selectedSection,
+                        tableSelection: tableSelection,
+                        showingFilter: true,
+                        filter: filterState,
+                        allRows: allLogbookRows,
+                        onCloseFilter: { showingFilter = false }
+                    )
+                    .frame(width: 350)
+                    .transition(.move(edge: .trailing))
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: panelHasContent)
         }
         .navigationSplitViewStyle(.balanced)
+        .preferredColorScheme(preferredColorScheme)
     }
 }

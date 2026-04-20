@@ -53,8 +53,9 @@ struct MacFlightRow: Identifiable {
     var customCount: Int
     var remarks: String
 
-    enum RowAccent { case none, pax, sim, spIns }
+    enum RowAccent { case none, pax, sim, spIns, summary }
     var accent: RowAccent {
+        if flightNumber == "SUMMARY" { return .summary }
         if spInsTime > 0 { return .spIns }
         if simTime   > 0 { return .sim }
         if isPositioning  { return .pax }
@@ -100,28 +101,130 @@ final class MacLogbookViewModel: ObservableObject {
 
     // MARK: State
     @Published var displayedFlights: [MacFlightRow] = []
+    @Published var allFlights: [MacFlightRow] = []
     @Published var isLoading = false
     @Published var searchText = "" {
         didSet { applySort() }
     }
 
     private var flights: [MacFlightRow] = []
+    private var filterState: MacFilterState?
 
     var totalBlockHours: Double {
-        flights.reduce(0) { $0 + $1.blockTime }
+        displayedFlights.reduce(0) { $0 + $1.blockTime }
     }
 
     func applySort() {
-        let base = searchText.isEmpty ? flights : flights.filter { row in
-            row.flightNumber.localizedCaseInsensitiveContains(searchText) ||
-            row.fromAirport.localizedCaseInsensitiveContains(searchText) ||
-            row.toAirport.localizedCaseInsensitiveContains(searchText) ||
-            row.aircraftReg.localizedCaseInsensitiveContains(searchText) ||
-            row.aircraftType.localizedCaseInsensitiveContains(searchText) ||
-            row.captainName.localizedCaseInsensitiveContains(searchText) ||
-            row.foName.localizedCaseInsensitiveContains(searchText)
+        applyFilters(filterState)
+    }
+
+    func applyFilters(_ state: MacFilterState?) {
+        filterState = state
+
+        var base = flights
+
+        // Search text
+        if !searchText.isEmpty {
+            base = base.filter { row in
+                row.flightNumber.localizedCaseInsensitiveContains(searchText) ||
+                row.fromAirport.localizedCaseInsensitiveContains(searchText) ||
+                row.toAirport.localizedCaseInsensitiveContains(searchText) ||
+                row.aircraftReg.localizedCaseInsensitiveContains(searchText) ||
+                row.aircraftType.localizedCaseInsensitiveContains(searchText) ||
+                row.captainName.localizedCaseInsensitiveContains(searchText) ||
+                row.foName.localizedCaseInsensitiveContains(searchText)
+            }
         }
-        displayedFlights = base.sorted { $0.rawDate > $1.rawDate }
+
+        if let f = state, f.isActive {
+            let now = Date()
+            let startDate: Date = {
+                switch f.selectedDateRange {
+                case .allFlights:     return .distantPast
+                case .twelveMonths:   return Calendar.current.date(byAdding: .month, value: -12, to: now)!
+                case .sixMonths:      return Calendar.current.date(byAdding: .month, value: -6,  to: now)!
+                case .twentyEightDays:return Calendar.current.date(byAdding: .day,   value: -28, to: now)!
+                case .custom:         return f.filterStartDate
+                }
+            }()
+            let endDate: Date = f.selectedDateRange == .custom ? f.filterEndDate : now
+
+            base = base.filter { row in
+                // Date range
+                if f.selectedDateRange != .allFlights {
+                    guard row.rawDate >= startDate && row.rawDate <= endDate else { return false }
+                }
+                // Aircraft
+                if !f.filterAircraftType.isEmpty {
+                    guard row.aircraftType.localizedCaseInsensitiveContains(f.filterAircraftType) else { return false }
+                }
+                if !f.filterAircraftReg.isEmpty {
+                    guard row.aircraftReg.localizedCaseInsensitiveContains(f.filterAircraftReg) else { return false }
+                }
+                // Crew
+                if !f.filterCaptainName.isEmpty {
+                    guard row.captainName.localizedCaseInsensitiveContains(f.filterCaptainName) else { return false }
+                }
+                if !f.filterFOName.isEmpty {
+                    guard row.foName.localizedCaseInsensitiveContains(f.filterFOName) else { return false }
+                }
+                if !f.filterSOName.isEmpty {
+                    guard row.so1Name.localizedCaseInsensitiveContains(f.filterSOName) ||
+                          row.so2Name.localizedCaseInsensitiveContains(f.filterSOName) else { return false }
+                }
+                // Airports & flight number
+                if !f.filterFromAirport.isEmpty {
+                    guard row.fromAirport.localizedCaseInsensitiveContains(f.filterFromAirport) else { return false }
+                }
+                if !f.filterToAirport.isEmpty {
+                    guard row.toAirport.localizedCaseInsensitiveContains(f.filterToAirport) else { return false }
+                }
+                if !f.filterFlightNumber.isEmpty {
+                    guard row.flightNumber.localizedCaseInsensitiveContains(f.filterFlightNumber) else { return false }
+                }
+                // Keyword
+                if !f.filterKeywordSearch.isEmpty {
+                    let kw = f.filterKeywordSearch
+                    guard row.flightNumber.localizedCaseInsensitiveContains(kw) ||
+                          row.aircraftType.localizedCaseInsensitiveContains(kw) ||
+                          row.aircraftReg.localizedCaseInsensitiveContains(kw) ||
+                          row.fromAirport.localizedCaseInsensitiveContains(kw) ||
+                          row.toAirport.localizedCaseInsensitiveContains(kw) ||
+                          row.captainName.localizedCaseInsensitiveContains(kw) ||
+                          row.foName.localizedCaseInsensitiveContains(kw) ||
+                          row.remarks.localizedCaseInsensitiveContains(kw) else { return false }
+                }
+                // Operation toggles
+                if f.filterPilotFlyingOnly  { guard row.isPilotFlying  else { return false } }
+                if f.filterContainsRemarks  { guard !row.remarks.isEmpty else { return false } }
+                if f.filterSimulator        { guard row.simTime > 0      else { return false } }
+                if f.filterPositioning      { guard row.isPositioning    else { return false } }
+                if f.filterSpIns            { guard row.spInsTime > 0    else { return false } }
+                if f.filterTypeSummary      { guard row.flightNumber == "SUMMARY" else { return false } }
+                // Approach type
+                if let approach = f.filterApproachType {
+                    switch approach {
+                    case "ILS":  guard row.isILS  else { return false }
+                    case "GLS":  guard row.isGLS  else { return false }
+                    case "NPA":  guard row.isNPA  else { return false }
+                    case "RNP":  guard row.isRNP  else { return false }
+                    case "AIII": guard row.isAIII else { return false }
+                    default: break
+                    }
+                }
+                // Missing data
+                if f.filterNoBlockTime      { guard row.blockTime == 0   else { return false } }
+                if f.filterNoCrewNames      { guard row.captainName.isEmpty && row.foName.isEmpty else { return false } }
+                if f.filterNoFlightNumber   { guard row.flightNumber.isEmpty else { return false } }
+                if f.filterNoAircraftType   { guard row.aircraftType.isEmpty  else { return false } }
+                if f.filterNoAircraftReg    { guard row.aircraftReg.isEmpty   else { return false } }
+
+                return true
+            }
+        }
+
+        let ascending = filterState?.sortOrderReversed ?? false
+        displayedFlights = base.sorted { ascending ? $0.rawDate < $1.rawDate : $0.rawDate > $1.rawDate }
     }
 
     // MARK: Core Data
@@ -168,6 +271,7 @@ final class MacLogbookViewModel: ObservableObject {
             Self.fetchRows(from: container)
         }.value
         flights = rows
+        allFlights = rows
         applySort()
         isLoading = false
 
@@ -188,6 +292,7 @@ final class MacLogbookViewModel: ObservableObject {
             Self.fetchRows(from: container)
         }.value
         flights = rows
+        allFlights = rows
         applySort()
     }
 
