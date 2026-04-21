@@ -138,7 +138,7 @@ extension FlightDatabaseService {
     private func computeDailyActivity(_ flights: [FlightEntity]) -> [NDDailyActivity] {
         let cal = Calendar.current
         let now = Date()
-        guard let cutoff = cal.date(byAdding: .day, value: -35, to: now) else { return [] }
+        guard let cutoff = cal.date(byAdding: .day, value: -56, to: now) else { return [] }
 
         var block: [Date: Double] = [:]
         var sim: [Date: Double] = [:]
