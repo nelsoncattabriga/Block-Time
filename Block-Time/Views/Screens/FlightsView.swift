@@ -837,10 +837,10 @@ struct FlightsView: View {
                 return false
             }
 
-            // No Aircraft Type filter
-            if filterViewModel.filterNoAircraftType &&
-               !sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return false
+            // No Aircraft Type filter — exclude PAX flights unless the PAX toggle is also on
+            if filterViewModel.filterNoAircraftType {
+                if sector.isPositioning && !filterViewModel.filterPositioning { return false }
+                if !sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
             }
 
             // No Aircraft Registration filter
