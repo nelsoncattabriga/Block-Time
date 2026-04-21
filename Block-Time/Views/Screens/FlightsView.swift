@@ -1693,12 +1693,12 @@ struct FilterSheet: View {
                 
                 Section(header: Text("Missing Data")) {
                     Toggle("No Block Time", isOn: $filterNoBlockTime)
+                    Toggle("No P1, ICUS, P2 Assigned", isOn: $filterNoRoleAssigned)
+                    Toggle("Multiple P1, ICUS, P2 Assigned", isOn: $filterMultipleRolesAssigned)
                     Toggle("No Crew Names", isOn: $filterNoCrewNames)
                     Toggle("No Flight Number", isOn: $filterNoFlightNumber)
                     Toggle("No Type Assigned", isOn: $filterNoAircraftType)
                     Toggle("No Registration", isOn: $filterNoAircraftReg)
-                    Toggle("No P1, ICUS, P2 Assigned", isOn: $filterNoRoleAssigned)
-                    Toggle("Multiple P1, ICUS, P2 Assigned", isOn: $filterMultipleRolesAssigned)
                 }
                 
                 
