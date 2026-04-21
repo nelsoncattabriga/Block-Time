@@ -27,7 +27,7 @@ struct WorkRateHeatmapCard: View {
 
     private let accentColor          = Color.orange
     private let spacing: CGFloat     = 3
-    private let labelWidth: CGFloat  = 36
+    private let labelWidth: CGFloat  = 18
     private let cellHeightMonthly: CGFloat = 28
     private let cellHeightDaily: CGFloat   = 28
     private let dateStripHeight: CGFloat   = 14
@@ -231,7 +231,7 @@ struct WorkRateHeatmapCard: View {
             // Year rows
             ForEach(years, id: \.self) { year in
                 HStack(spacing: spacing) {
-                    Text(String(year))
+                    Text(String(format: "%02d", year % 100))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: labelWidth, alignment: .leading)
@@ -261,14 +261,14 @@ struct WorkRateHeatmapCard: View {
         switch period {
         case .twentyEightDays, .fiftyFiveDays:
             let days   = calendarDays
-            let total  = days.reduce(0.0) { $0 + dailyHours(for: $1) }
+            //let total  = days.reduce(0.0) { $0 + dailyHours(for: $1) }
             let active = days.filter { dailyHours(for: $0) > 0 }.count
-            Label(String(format: "%.0f hrs · %d active days", total, active), systemImage: "airplane")
+            Label(String(format: "%d active days", active), systemImage: "airplane")
                 .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
         case .fiveYears:
-            let total  = filteredMonthly.reduce(0.0) { $0 + $1.totalHours }
+            //let total  = filteredMonthly.reduce(0.0) { $0 + $1.totalHours }
             let active = filteredMonthly.filter { $0.totalHours > 0 }.count
-            Label(String(format: "%.0f hrs · %d months", total, active), systemImage: "airplane")
+            Label(String(format: "%d active months", active), systemImage: "airplane")
                 .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
         }
     }
