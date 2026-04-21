@@ -45,7 +45,6 @@ extension FlightDatabaseService {
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
                 request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
                     NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
-                    NSPredicate(format: "flightNumber != %@", "SUMMARY"),
                     NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
                 ])
                 request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
@@ -809,7 +808,7 @@ extension FlightDatabaseService {
 
         var h7 = 0.0, h28 = 0.0, h365 = 0.0
         for f in flights {
-            guard let date = f.date else { continue }
+            guard let date = f.date, f.flightNumber != "SUMMARY" else { continue }
             let total = hrs(f.blockTime) + (isSpInsOnly(f) ? 0 : hrs(f.simTime))
             if date >= ago7   { h7   += total }
             if date >= ago28  { h28  += total }
