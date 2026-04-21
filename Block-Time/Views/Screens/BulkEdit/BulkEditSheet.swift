@@ -57,7 +57,8 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.aircraftType,
                                 textCase: .uppercase,
                                 autocapitalization: .characters,
-                                placeholder: "e.g. B738"
+                                placeholder: "e.g. B738",
+                                showClearButton: true
                             )
 
                             BulkEditPrefixManager(
