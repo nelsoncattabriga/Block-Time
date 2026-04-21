@@ -237,6 +237,10 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.selectedApproachType,
                                 isPilotFlying: bulkEditViewModel.isPilotFlying
                             )
+
+                            BulkEditBlockTimeRolePicker(
+                                fieldState: $bulkEditViewModel.blockTimeRole
+                            )
                         }
                     }
 

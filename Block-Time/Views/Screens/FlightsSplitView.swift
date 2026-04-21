@@ -552,6 +552,8 @@ private struct FlightsListContent: View {
                 filterNoFlightNumber: $filterViewModel.filterNoFlightNumber,
                 filterNoAircraftType: $filterViewModel.filterNoAircraftType,
                 filterNoAircraftReg: $filterViewModel.filterNoAircraftReg,
+                filterNoRoleAssigned: $filterViewModel.filterNoRoleAssigned,
+                filterMultipleRolesAssigned: $filterViewModel.filterMultipleRolesAssigned,
                 filterTypeSummary: $filterViewModel.filterTypeSummary,
                 filterKeywordSearch: $filterViewModel.filterKeywordSearch,
                 selectedDateRange: $filterViewModel.selectedDateRange,
@@ -917,6 +919,24 @@ private struct FlightsListContent: View {
                 }
             }
 
+            // No Role Assigned filter (block time > 0, no P1/ICUS/P2, not a SUMMARY)
+            if filterViewModel.filterNoRoleAssigned {
+                let isSummary = sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "SUMMARY"
+                if isSummary || sector.blockTimeValue == 0 ||
+                   sector.p1TimeValue > 0 || sector.p1usTimeValue > 0 || sector.p2TimeValue > 0 {
+                    return false
+                }
+            }
+
+            // Multiple Roles Assigned filter (block time > 0, more than one role column > 0, not a SUMMARY)
+            if filterViewModel.filterMultipleRolesAssigned {
+                let isSummary = sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "SUMMARY"
+                let roleCount = (sector.p1TimeValue > 0 ? 1 : 0) + (sector.p1usTimeValue > 0 ? 1 : 0) + (sector.p2TimeValue > 0 ? 1 : 0)
+                if isSummary || sector.blockTimeValue == 0 || roleCount < 2 {
+                    return false
+                }
+            }
+
             // No Flight Number filter
             if filterViewModel.filterNoFlightNumber &&
                !sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -1036,6 +1056,8 @@ private struct FlightsListContent: View {
                         filterViewModel.filterNoFlightNumber ||
                         filterViewModel.filterNoAircraftType ||
                         filterViewModel.filterNoAircraftReg ||
+                        filterViewModel.filterNoRoleAssigned ||
+                        filterViewModel.filterMultipleRolesAssigned ||
                         filterViewModel.filterTypeSummary ||
                         filterViewModel.filterImportSessionID != nil ||
                         !filterViewModel.filterKeywordSearch.isEmpty
@@ -1265,6 +1287,8 @@ private struct FlightsListContent: View {
                !filterViewModel.filterNoFlightNumber &&
                !filterViewModel.filterNoAircraftType &&
                !filterViewModel.filterNoAircraftReg &&
+               !filterViewModel.filterNoRoleAssigned &&
+               !filterViewModel.filterMultipleRolesAssigned &&
                !filterViewModel.filterTypeSummary &&
                filterViewModel.filterImportSessionID == nil
     }

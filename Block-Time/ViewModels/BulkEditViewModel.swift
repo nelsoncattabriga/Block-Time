@@ -79,6 +79,9 @@ class BulkEditViewModel: ObservableObject {
     // Time Credit Type
     @Published var selectedTimeCredit: FieldState<TimeCreditType> = .notEdited
 
+    // Copy each flight's own block time into the chosen role field
+    @Published var blockTimeRole: FieldState<TimeCreditType> = .notEdited
+
     // Approach types (stored as individual bools but presented as single selection)
     @Published var isAIII: FieldState<Bool> = .notEdited
     @Published var isRNP: FieldState<Bool> = .notEdited
@@ -357,6 +360,13 @@ class BulkEditViewModel: ObservableObject {
         }
         .store(in: &cancellables)
 
+        $blockTimeRole
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.checkForModifications()
+            }
+            .store(in: &cancellables)
+
         Publishers.CombineLatest3(
             $isGLS, $isNPA, $selectedApproachType
         )
@@ -423,6 +433,7 @@ class BulkEditViewModel: ObservableObject {
                           hasFieldBeenModified(isPositioning, key: "isPositioning") ||
                           hasFieldBeenModified(isSimulator, key: "isSimulator") ||
                           hasFieldBeenModified(selectedTimeCredit, key: "selectedTimeCredit") ||
+                          (blockTimeRole != .notEdited) ||
                           hasFieldBeenModified(selectedApproachType, key: "selectedApproachType") ||
                           hasFieldBeenModified(isAIII, key: "isAIII") ||
                           hasFieldBeenModified(isRNP, key: "isRNP") ||
@@ -566,6 +577,18 @@ class BulkEditViewModel: ObservableObject {
                 }
             }
 
+            // Copy each flight's own block time into the chosen role field
+            if case .value(let role) = blockTimeRole {
+                updated.p1Time = "0.0"
+                updated.p1usTime = "0.0"
+                updated.p2Time = "0.0"
+                switch role {
+                case .p1:   updated.p1Time = updated.blockTime
+                case .p1us: updated.p1usTime = updated.blockTime
+                case .p2:   updated.p2Time = updated.blockTime
+                }
+            }
+
             // Apply individual time fields (these override time credit selection if specified)
             if case .value(let block) = blockTime {
                 updated.blockTime = block
@@ -573,13 +596,13 @@ class BulkEditViewModel: ObservableObject {
             if case .value(let night) = nightTime {
                 updated.nightTime = night
             }
-            if case .value(let p1) = p1Time {
+            if case .value(let p1) = p1Time, case .notEdited = blockTimeRole {
                 updated.p1Time = p1
             }
-            if case .value(let p1us) = p1usTime {
+            if case .value(let p1us) = p1usTime, case .notEdited = blockTimeRole {
                 updated.p1usTime = p1us
             }
-            if case .value(let p2) = p2Time {
+            if case .value(let p2) = p2Time, case .notEdited = blockTimeRole {
                 updated.p2Time = p2
             }
             if case .value(let inst) = instrumentTime {
