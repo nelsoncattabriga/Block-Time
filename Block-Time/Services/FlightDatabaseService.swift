@@ -3318,6 +3318,10 @@ struct FlightStatistics {
         return formatTime(totalNightTime, asHoursMinutes: asHoursMinutes)
     }
 
+    func formattedInstrumentTime(asHoursMinutes: Bool) -> String {
+        return formatTime(totalInstrumentTime, asHoursMinutes: asHoursMinutes)
+    }
+
     func formattedSIMTime(asHoursMinutes: Bool) -> String {
         return formatTime(totalSIMTime, asHoursMinutes: asHoursMinutes)
     }
