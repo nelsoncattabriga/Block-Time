@@ -23,25 +23,43 @@ struct BulkEditAircraftRegField: View {
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
 
-            Button(action: {
-                showingPicker = true
-            }) {
-                HStack {
-                    Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select aircraft..." : textValue))
-                        .font(.body)
-                        .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
+            HStack(spacing: 0) {
+                Button(action: {
+                    showingPicker = true
+                }) {
+                    HStack {
+                        Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select aircraft..." : textValue))
+                            .font(.body)
+                            .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
 
-                    Spacer()
+                        Spacer()
 
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(PlainButtonStyle())
+                .padding(10)
+                .background(Color(.secondarySystemBackground))
+
+                if !textValue.isEmpty || fieldState.isMixed {
+                    Button(action: {
+                        textValue = ""
+                        fieldState = .value("")
+                        aircraftTypeFieldState = .value("")
+                        HapticManager.shared.impact(.light)
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 10)
+                            .frame(maxHeight: .infinity)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .background(Color(.secondarySystemBackground))
+                }
             }
-            .buttonStyle(PlainButtonStyle())
-            .padding(10)
-            .background(Color(.secondarySystemBackground))
             .cornerRadius(8)
             .sheet(isPresented: $showingPicker) {
                 BulkEditAircraftPickerSheet(

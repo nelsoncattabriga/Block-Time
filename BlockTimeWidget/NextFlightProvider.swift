@@ -101,6 +101,24 @@ struct NextFlightProvider: AppIntentTimelineProvider {
                     noMoreFlightsToday: noMoreToday,
                     configuration: configuration
                 ))
+
+                // Midnight rollovers for the next flight's card — ensures "Tomorrow" → "Today"
+                // flips for the entry that was just added above (switchDate may be before midnight).
+                let nextDeparture = next.departureDatetime ?? next.flightDate
+                var scanNext = switchDate
+                while let midnight = cal.nextDate(
+                    after: scanNext,
+                    matching: DateComponents(hour: 0, minute: 0, second: 0),
+                    matchingPolicy: .nextTime
+                ), midnight < nextDeparture {
+                    entries.append(NextFlightTimelineEntry(
+                        date: midnight, flight: next,
+                        sameDayFlights: nextSameDay,
+                        noMoreFlightsToday: false,
+                        configuration: configuration
+                    ))
+                    scanNext = midnight
+                }
             } else {
                 // Last flight has departed — no future flights remain
                 entries.append(NextFlightTimelineEntry(

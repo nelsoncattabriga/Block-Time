@@ -57,7 +57,8 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.aircraftType,
                                 textCase: .uppercase,
                                 autocapitalization: .characters,
-                                placeholder: "e.g. B738"
+                                placeholder: "e.g. B738",
+                                showClearButton: true
                             )
 
                             BulkEditPrefixManager(
@@ -236,6 +237,10 @@ struct BulkEditSheet: View {
                             BulkEditApproachPicker(
                                 fieldState: $bulkEditViewModel.selectedApproachType,
                                 isPilotFlying: bulkEditViewModel.isPilotFlying
+                            )
+
+                            BulkEditBlockTimeRolePicker(
+                                fieldState: $bulkEditViewModel.blockTimeRole
                             )
                         }
                     }

@@ -15,6 +15,7 @@ struct BulkEditTextField: View {
     var keyboardType: UIKeyboardType = .default
     var placeholder: String? = nil
     var isTimeField: Bool = false
+    var showClearButton: Bool = false
 
     @State private var textValue: String = ""
     @FocusState private var isFocused: Bool
@@ -52,44 +53,60 @@ struct BulkEditTextField: View {
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
 
-            TextField(
-                fieldState.isMixed ? "(Mixed)" : (placeholder ?? label),
-                text: $textValue
-            )
-            .keyboardType(keyboardType)
-            .textCase(textCase)
-            .textInputAutocapitalization(autocapitalization)
-            .autocorrectionDisabled()
-            .focused($isFocused)
-            .font(.body)
-            .padding(10)
+            HStack(spacing: 0) {
+                TextField(
+                    fieldState.isMixed ? "(Mixed)" : (placeholder ?? label),
+                    text: $textValue
+                )
+                .keyboardType(keyboardType)
+                .textCase(textCase)
+                .textInputAutocapitalization(autocapitalization)
+                .autocorrectionDisabled()
+                .focused($isFocused)
+                .font(.body)
+                .padding(10)
+                .contentShape(Rectangle())
+                .onTapGesture { isFocused = true }
+                .onChange(of: textValue) { _, newValue in
+                    let formattedValue = isTimeField ? applyTimeFormatting(newValue) : newValue
+                    textValue = formattedValue
+                    fieldState = .value(formattedValue)
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if focused && fieldState.isMixed {
+                        textValue = ""
+                    } else if !focused && isTimeField && !textValue.isEmpty {
+                        textValue = formatTimeWithLeadingZeros(textValue)
+                        fieldState = .value(textValue)
+                    }
+                }
+                .onAppear {
+                    if case .value(let val) = fieldState {
+                        textValue = val
+                    }
+                }
+
+                if showClearButton && (!textValue.isEmpty || fieldState.isMixed) {
+                    Button(action: {
+                        textValue = ""
+                        fieldState = .value("")
+                        isFocused = false
+                        HapticManager.shared.impact(.light)
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 10)
+                            .frame(maxHeight: .infinity)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
             .background(Color(.secondarySystemBackground))
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
             )
-            .contentShape(Rectangle())
-            .onTapGesture { isFocused = true }
-            .onChange(of: textValue) { _, newValue in
-                let formattedValue = isTimeField ? applyTimeFormatting(newValue) : newValue
-                textValue = formattedValue
-                fieldState = .value(formattedValue)
-            }
-            .onChange(of: isFocused) { _, focused in
-                if focused && fieldState.isMixed {
-                    textValue = ""
-                } else if !focused && isTimeField && !textValue.isEmpty {
-                    // Format with leading zeros when user finishes editing
-                    textValue = formatTimeWithLeadingZeros(textValue)
-                    fieldState = .value(textValue)
-                }
-            }
-            .onAppear {
-                if case .value(let val) = fieldState {
-                    textValue = val
-                }
-            }
         }
     }
 }

@@ -429,6 +429,8 @@ struct FlightsView: View {
                     filterNoFlightNumber: $filterViewModel.filterNoFlightNumber,
                     filterNoAircraftType: $filterViewModel.filterNoAircraftType,
                     filterNoAircraftReg: $filterViewModel.filterNoAircraftReg,
+                    filterNoRoleAssigned: $filterViewModel.filterNoRoleAssigned,
+                    filterMultipleRolesAssigned: $filterViewModel.filterMultipleRolesAssigned,
                     filterTypeSummary: $filterViewModel.filterTypeSummary,
                     filterKeywordSearch: $filterViewModel.filterKeywordSearch,
                     selectedDateRange: $filterViewModel.selectedDateRange,
@@ -811,16 +813,34 @@ struct FlightsView: View {
                 }
             }
 
+            // No Role Assigned filter (block time > 0, no P1/ICUS/P2, not a SUMMARY)
+            if filterViewModel.filterNoRoleAssigned {
+                let isSummary = sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "SUMMARY"
+                if isSummary || sector.blockTimeValue == 0 ||
+                   sector.p1TimeValue > 0 || sector.p1usTimeValue > 0 || sector.p2TimeValue > 0 {
+                    return false
+                }
+            }
+
+            // Multiple Roles Assigned filter (block time > 0, more than one role column > 0, not a SUMMARY)
+            if filterViewModel.filterMultipleRolesAssigned {
+                let isSummary = sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "SUMMARY"
+                let roleCount = (sector.p1TimeValue > 0 ? 1 : 0) + (sector.p1usTimeValue > 0 ? 1 : 0) + (sector.p2TimeValue > 0 ? 1 : 0)
+                if isSummary || sector.blockTimeValue == 0 || roleCount < 2 {
+                    return false
+                }
+            }
+
             // No Flight Number filter
             if filterViewModel.filterNoFlightNumber &&
                !sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return false
             }
 
-            // No Aircraft Type filter
-            if filterViewModel.filterNoAircraftType &&
-               !sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return false
+            // No Aircraft Type filter — exclude PAX flights unless the PAX toggle is also on
+            if filterViewModel.filterNoAircraftType {
+                if sector.isPositioning && !filterViewModel.filterPositioning { return false }
+                if !sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
             }
 
             // No Aircraft Registration filter
@@ -932,6 +952,8 @@ struct FlightsView: View {
                         filterViewModel.filterNoFlightNumber ||
                         filterViewModel.filterNoAircraftType ||
                         filterViewModel.filterNoAircraftReg ||
+                        filterViewModel.filterNoRoleAssigned ||
+                        filterViewModel.filterMultipleRolesAssigned ||
                         filterViewModel.filterTypeSummary ||
                         filterViewModel.filterImportSessionID != nil ||
                         !filterViewModel.filterKeywordSearch.isEmpty
@@ -1167,6 +1189,8 @@ struct FlightsView: View {
                !filterViewModel.filterNoFlightNumber &&
                !filterViewModel.filterNoAircraftType &&
                !filterViewModel.filterNoAircraftReg &&
+               !filterViewModel.filterNoRoleAssigned &&
+               !filterViewModel.filterMultipleRolesAssigned &&
                !filterViewModel.filterTypeSummary &&
                filterViewModel.filterImportSessionID == nil
     }
@@ -1261,6 +1285,8 @@ struct FilterSheet: View {
     @Binding var filterNoFlightNumber: Bool
     @Binding var filterNoAircraftType: Bool
     @Binding var filterNoAircraftReg: Bool
+    @Binding var filterNoRoleAssigned: Bool
+    @Binding var filterMultipleRolesAssigned: Bool
     @Binding var filterTypeSummary: Bool
     @Binding var filterKeywordSearch: String
     @Binding var selectedDateRange: FlightsView.DateRangeOption
@@ -1667,6 +1693,8 @@ struct FilterSheet: View {
                 
                 Section(header: Text("Missing Data")) {
                     Toggle("No Block Time", isOn: $filterNoBlockTime)
+                    Toggle("No P1, ICUS, P2 Assigned", isOn: $filterNoRoleAssigned)
+                    Toggle("Multiple P1, ICUS, P2 Assigned", isOn: $filterMultipleRolesAssigned)
                     Toggle("No Crew Names", isOn: $filterNoCrewNames)
                     Toggle("No Flight Number", isOn: $filterNoFlightNumber)
                     Toggle("No Type Assigned", isOn: $filterNoAircraftType)

@@ -30,6 +30,8 @@ class FlightsFilterViewModel: ObservableObject {
     @Published var filterNoFlightNumber: Bool = false
     @Published var filterNoAircraftType: Bool = false
     @Published var filterNoAircraftReg: Bool = false
+    @Published var filterNoRoleAssigned: Bool = false
+    @Published var filterMultipleRolesAssigned: Bool = false
     @Published var filterTypeSummary: Bool = false
     @Published var filterKeywordSearch: String = ""
     @Published var selectedDateRange: FlightsView.DateRangeOption = .allFlights
@@ -58,6 +60,8 @@ class FlightsFilterViewModel: ObservableObject {
         filterNoFlightNumber = false
         filterNoAircraftType = false
         filterNoAircraftReg = false
+        filterNoRoleAssigned = false
+        filterMultipleRolesAssigned = false
         filterTypeSummary = false
         filterKeywordSearch = ""
         selectedDateRange = .allFlights

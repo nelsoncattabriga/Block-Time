@@ -3,9 +3,8 @@
 //  Block-Time
 //
 //  Rate-of-work heatmap.
-//  1M → daily grid (Mon–Sun columns, 5-week rows).
-//  12M / 5Y → year × month grid.
-//  Cells fill the card width dynamically.
+//  28D / 56D → raw daily grid (7 cols, 4 or 8 rows), no weekday alignment.
+//  5Y → year × month grid.
 //
 
 import SwiftUI
@@ -13,9 +12,9 @@ import SwiftUI
 // MARK: - Period
 
 private enum HeatmapPeriod: String, CaseIterable {
-    case oneMonth     = "1M"
-    case twelveMonths = "12M"
-    case fiveYears    = "5Y"
+    case twentyEightDays = "28D"
+    case fiftyFiveDays   = "56D"
+    case fiveYears       = "5Y"
 }
 
 // MARK: - Card
@@ -24,38 +23,45 @@ struct WorkRateHeatmapCard: View {
     let monthlyActivity: [NDMonthlyActivity]
     let dailyActivity: [NDDailyActivity]
 
-    @AppStorage("workRateCard_period") private var period: HeatmapPeriod = .oneMonth
+    @AppStorage("workRateCard_period") private var period: HeatmapPeriod = .twentyEightDays
 
-    private let accentColor       = Color.orange
-    private let spacing: CGFloat  = 3
-    private let labelWidth: CGFloat = 36
-    private let cellHeightMonthly: CGFloat = 18
+    private let accentColor          = Color.orange
+    private let spacing: CGFloat     = 3
+    private let labelWidth: CGFloat  = 18
+    private let cellHeightMonthly: CGFloat = 28
     private let cellHeightDaily: CGFloat   = 28
-    private let dayLabels   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    private let dateStripHeight: CGFloat   = 14
     private let monthLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    private static let dateStripFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM dd"
+        return f
+    }()
 
     // MARK: - Derived data
 
+    private var dayCount: Int {
+        period == .fiftyFiveDays ? 56 : 28
+    }
+
+    private var rowCount: Int { dayCount / 7 }
+
+    private var calendarDays: [Date] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        guard let start = cal.date(byAdding: .day, value: -(dayCount - 1), to: today) else { return [] }
+        return (0..<dayCount).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
+    }
+
     private var filteredMonthly: [NDMonthlyActivity] {
+        guard period == .fiveYears else { return [] }
         let cal = Calendar.current
         let now = Date()
-        guard let nowMonthStart = cal.date(from: cal.dateComponents([.year, .month], from: now)) else {
+        guard let nowMonthStart = cal.date(from: cal.dateComponents([.year, .month], from: now)),
+              let cutoff = cal.date(byAdding: .month, value: -59, to: nowMonthStart) else {
             return monthlyActivity
         }
-        switch period {
-        case .oneMonth:
-            return []
-        case .twelveMonths:
-            guard let cutoff = cal.date(byAdding: .month, value: -11, to: nowMonthStart) else {
-                return monthlyActivity
-            }
-            return monthlyActivity.filter { $0.month >= cutoff }
-        case .fiveYears:
-            guard let cutoff = cal.date(byAdding: .month, value: -59, to: nowMonthStart) else {
-                return monthlyActivity
-            }
-            return monthlyActivity.filter { $0.month >= cutoff }
-        }
+        return monthlyActivity.filter { $0.month >= cutoff }
     }
 
     private var yearsInRange: [Int] {
@@ -65,21 +71,29 @@ struct WorkRateHeatmapCard: View {
 
     private var maxHours: Double {
         switch period {
-        case .oneMonth:
+        case .twentyEightDays, .fiftyFiveDays:
             return max(dailyActivity.map { $0.totalHours }.max() ?? 1, 1)
-        default:
+        case .fiveYears:
             return max(filteredMonthly.map { $0.totalHours }.max() ?? 1, 1)
         }
     }
 
     private var heatmapHeight: CGFloat {
-        let labelRow: CGFloat = 14 + spacing
         switch period {
-        case .oneMonth:
-            return labelRow + 5 * cellHeightDaily + 4 * spacing
-        default:
+        case .twentyEightDays, .fiftyFiveDays:
+            let rowHeight = cellHeightDaily + spacing + dateStripHeight
+            return CGFloat(rowCount) * rowHeight + CGFloat(rowCount - 1) * spacing
+        case .fiveYears:
+            let labelRow: CGFloat = 14 + spacing
             let rows = CGFloat(max(yearsInRange.count, 1))
             return labelRow + rows * cellHeightMonthly + (rows - 1) * spacing
+        }
+    }
+
+    private var isEmpty: Bool {
+        switch period {
+        case .twentyEightDays, .fiftyFiveDays: return dailyActivity.isEmpty
+        case .fiveYears:                        return filteredMonthly.isEmpty
         }
     }
 
@@ -89,6 +103,11 @@ struct WorkRateHeatmapCard: View {
         guard hours > 0 else { return Color.secondary.opacity(0.08) }
         let intensity = min(hours / maxHours, 1.0)
         return accentColor.opacity(0.18 + intensity * 0.78)
+    }
+
+    private func dailyHours(for day: Date) -> Double {
+        let cal = Calendar.current
+        return dailyActivity.first(where: { cal.isDate($0.day, inSameDayAs: day) })?.totalHours ?? 0
     }
 
     // MARK: - Body
@@ -110,27 +129,25 @@ struct WorkRateHeatmapCard: View {
             } else {
                 GeometryReader { geo in
                     Group {
-                        if period == .oneMonth {
-                            dailyHeatmap(width: geo.size.width)
-                        } else {
+                        if period == .fiveYears {
                             monthlyHeatmap(width: geo.size.width)
+                        } else {
+                            dailyHeatmap(width: geo.size.width)
                         }
                     }
                 }
                 .frame(height: heatmapHeight)
+                
+                Text("UTC Departure Date")
+                    .font(.caption)
+                    .foregroundStyle(.secondary.opacity(0.8))
+                    .frame(maxWidth: .infinity, alignment: .center)
 
                 summaryRow
             }
         }
         .padding(16)
         .appCardStyle()
-    }
-
-    private var isEmpty: Bool {
-        switch period {
-        case .oneMonth:     return dailyActivity.isEmpty
-        default:            return filteredMonthly.isEmpty
-        }
     }
 
     // MARK: - Empty State
@@ -144,60 +161,46 @@ struct WorkRateHeatmapCard: View {
         .frame(height: 100)
     }
 
-    // MARK: - Daily Heatmap (1M)
-
-    /// 35-day window: the Monday 4 complete weeks before this week's Monday → this week's Sunday.
-    private var calendarDays: [Date] {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let weekday = cal.component(.weekday, from: today) // 1=Sun … 7=Sat
-        let daysFromMonday = (weekday + 5) % 7             // Mon=0 … Sun=6
-        guard let startMonday = cal.date(byAdding: .day, value: -(daysFromMonday + 28), to: today) else {
-            return []
-        }
-        return (0..<35).compactMap { cal.date(byAdding: .day, value: $0, to: startMonday) }
-    }
-
-    private func dailyHours(for day: Date) -> Double {
-        let cal = Calendar.current
-        return dailyActivity.first(where: { cal.isDate($0.day, inSameDayAs: day) })?.totalHours ?? 0
-    }
+    // MARK: - Daily Heatmap (28D / 56D)
 
     @ViewBuilder
     private func dailyHeatmap(width: CGFloat) -> some View {
         let cellW = (width - spacing * 6) / 7
         let days  = calendarDays
-        let today = Calendar.current.startOfDay(for: Date())
 
         VStack(alignment: .leading, spacing: spacing) {
-            // Day-of-week labels
-            HStack(spacing: spacing) {
-                ForEach(0..<7, id: \.self) { i in
-                    Text(dayLabels[i])
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                        .frame(width: cellW, alignment: .center)
-                }
-            }
-            .frame(height: 14)
-
-            // Week rows
-            ForEach(0..<5, id: \.self) { week in
-                HStack(spacing: spacing) {
-                    ForEach(0..<7, id: \.self) { dayIdx in
-                        let day     = days[week * 7 + dayIdx]
-                        let isFuture = day > today
-                        let h = isFuture ? 0.0 : dailyHours(for: day)
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(isFuture ? Color.clear : cellColor(hours: h))
-                            .frame(width: cellW, height: cellHeightDaily)
+            ForEach(0..<rowCount, id: \.self) { row in
+                VStack(alignment: .leading, spacing: spacing) {
+                    HStack(spacing: spacing) {
+                        ForEach(0..<7, id: \.self) { col in
+                            let day = days[row * 7 + col]
+                            let h   = dailyHours(for: day)
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(cellColor(hours: h))
+                                .frame(width: cellW, height: cellHeightDaily)
+                        }
                     }
+                    // Date strip
+                    HStack(spacing: spacing) {
+                        ForEach(0..<7, id: \.self) { col in
+                            let day     = days[row * 7 + col]
+                            let isToday = Calendar.current.isDateInToday(day)
+                            Text(Self.dateStripFormatter.string(from: day))
+                                .font(.caption2)
+                                .foregroundStyle(isToday ? accentColor : Color.secondary.opacity(0.8))
+                                .fontWeight(isToday ? .semibold : .regular)
+                                .frame(width: cellW, alignment: .center)
+                                .minimumScaleFactor(0.6)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(height: dateStripHeight)
                 }
             }
         }
     }
 
-    // MARK: - Monthly Heatmap (12M / 5Y)
+    // MARK: - Monthly Heatmap (5Y)
 
     private func monthHours(year: Int, month: Int) -> Double {
         let cal = Calendar.current
@@ -218,7 +221,7 @@ struct WorkRateHeatmapCard: View {
                 Color.clear.frame(width: labelWidth)
                 ForEach(0..<12, id: \.self) { i in
                     Text(monthLabels[i])
-                        .font(.system(size: 10))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: cellW, alignment: .center)
                 }
@@ -228,11 +231,10 @@ struct WorkRateHeatmapCard: View {
             // Year rows
             ForEach(years, id: \.self) { year in
                 HStack(spacing: spacing) {
-                    Text(String(year))
-                        .font(.system(size: 10))
+                    Text(String(format: "%02d", year % 100))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: labelWidth, alignment: .leading)
-
                     ForEach(1...12, id: \.self) { month in
                         let h = monthHours(year: year, month: month)
                         RoundedRectangle(cornerRadius: 3)
@@ -257,28 +259,29 @@ struct WorkRateHeatmapCard: View {
     @ViewBuilder
     private var summaryLabel: some View {
         switch period {
-        case .oneMonth:
-            let total  = dailyActivity.reduce(0.0) { $0 + $1.totalHours }
-            let active = dailyActivity.filter { $0.totalHours > 0 }.count
-            Label(String(format: "%.0f hrs · %d active days", total, active), systemImage: "airplane")
-                .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
-        default:
-            let total  = filteredMonthly.reduce(0.0) { $0 + $1.totalHours }
+        case .twentyEightDays, .fiftyFiveDays:
+            let days   = calendarDays
+            //let total  = days.reduce(0.0) { $0 + dailyHours(for: $1) }
+            let active = days.filter { dailyHours(for: $0) > 0 }.count
+            Label(String(format: "%d active days", active), systemImage: "airplane")
+                .iPadScaledFont(.caption2, phoneFont: .footnote).foregroundStyle(.secondary)
+        case .fiveYears:
+            //let total  = filteredMonthly.reduce(0.0) { $0 + $1.totalHours }
             let active = filteredMonthly.filter { $0.totalHours > 0 }.count
-            Label(String(format: "%.0f hrs · %d months", total, active), systemImage: "airplane")
-                .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
+            Label(String(format: "%d active months", active), systemImage: "airplane")
+                .iPadScaledFont(.caption2, phoneFont: .footnote).foregroundStyle(.secondary)
         }
     }
 
     private var legendView: some View {
         HStack(spacing: 3) {
-            Text("Less").font(.system(size: 9)).foregroundStyle(.secondary)
+            Text("Less").font(.caption2).foregroundStyle(.secondary)
             ForEach([0.1, 0.3, 0.55, 0.8, 1.0], id: \.self) { i in
                 RoundedRectangle(cornerRadius: 2)
                     .fill(accentColor.opacity(0.18 + i * 0.78))
                     .frame(width: 10, height: 10)
             }
-            Text("More").font(.system(size: 9)).foregroundStyle(.secondary)
+            Text("More").font(.caption2).foregroundStyle(.secondary)
         }
     }
 }

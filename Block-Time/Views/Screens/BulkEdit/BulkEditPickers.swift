@@ -343,6 +343,62 @@ struct BulkEditTimeCreditRadioButton: View {
     }
 }
 
+// MARK: - BulkEditBlockTimeRolePicker
+
+struct BulkEditBlockTimeRolePicker: View {
+    @Binding var fieldState: BulkEditViewModel.FieldState<TimeCreditType>
+
+    @State private var selectedRole: TimeCreditType? = nil
+
+    var body: some View {
+        HStack {
+            Text("Copy Block Time to")
+                .font(.body)
+                .fontWeight(.medium)
+
+            Spacer()
+
+            HStack(spacing: 0) {
+                ForEach([TimeCreditType.p1, .p1us, .p2], id: \.self) { role in
+                    if role != .p1 { Divider().frame(height: 20) }
+                    Button(action: {
+                        if selectedRole == role {
+                            selectedRole = nil
+                            fieldState = .notEdited
+                        } else {
+                            selectedRole = role
+                            fieldState = .value(role)
+                        }
+                        HapticManager.shared.impact(.light)
+                    }) {
+                        Text(role == .p1us ? "ICUS" : role == .p1 ? "P1" : "P2")
+                            .font(.subheadline.bold())
+                            .foregroundColor(selectedRole == role ? .white : .secondary)
+                            .frame(width: role == .p1us ? 52 : 44, height: 28)
+                            .background(selectedRole == role ? Color.blue : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .padding(.vertical, 4)
+        .onAppear {
+            if case .value(let role) = fieldState {
+                selectedRole = role
+            } else {
+                selectedRole = nil
+            }
+        }
+    }
+}
+
 // MARK: - BulkEditApproachPicker
 
 struct BulkEditApproachPicker: View {
