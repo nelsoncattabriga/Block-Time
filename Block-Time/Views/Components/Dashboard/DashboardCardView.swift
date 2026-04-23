@@ -145,6 +145,15 @@ struct DashboardCardView: View {
                 icon: "moon.fill",
                 fraction: stats.totalBlockTime > 0 ? stats.totalNightTime / stats.totalBlockTime : nil
             )
+        case .instrumentTime:
+            StatCard(
+                title: "Instrument Time",
+                value: stats.formattedInstrumentTime(asHoursMinutes: showTimesInHoursMinutes),
+                subtitle: stats.totalBlockTime > 0 ? String(format: "%.0f%% of total block time", stats.totalInstrumentTime / stats.totalBlockTime * 100) : "Instrument flying",
+                color: .teal,
+                icon: "gauge.with.dots.needle.67percent",
+                fraction: stats.totalBlockTime > 0 ? stats.totalInstrumentTime / stats.totalBlockTime : nil
+            )
         case .simTime:
             StatCard(
                 title: "SIM Time",

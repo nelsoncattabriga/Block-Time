@@ -9,6 +9,7 @@ struct AddFlightView: View {
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.hidePhotoCapture) private var hidePhotoCapture
     @State private var showSuccessNotification = false
     @State private var successMessage = ""
     @State private var keyboardToolbar = KeyboardToolbarState()
@@ -26,10 +27,10 @@ struct AddFlightView: View {
                 ScrollViewReader { scrollProxy in
                     ScrollView {
                         if useWideLayout {
-                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture)
                                 .id("top")
                         } else {
-                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture)
                                 .id("top")
                         }
                     }
@@ -136,6 +137,7 @@ private struct CompactLayoutView: View {
     var keyboardToolbar: KeyboardToolbarState
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
+    var hidePhotoCapture: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
@@ -150,7 +152,7 @@ private struct CompactLayoutView: View {
     var body: some View {
             LazyVStack(spacing: 16) {
                 // Photo Capture Card - show for supported fleets in both add and edit mode
-                if selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A321" || selectedFleetID == "A380" {
+                if !hidePhotoCapture && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A321" || selectedFleetID == "A380") {
                     ModernPhotoCaptureCard(viewModel: viewModel, fleetType: selectedFleetID)
                 }
 
@@ -225,6 +227,7 @@ private struct WideLayoutView: View {
     var keyboardToolbar: KeyboardToolbarState
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
+    var hidePhotoCapture: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
@@ -243,7 +246,7 @@ private struct WideLayoutView: View {
                     VStack(spacing: 16) {
 
                         // Photo Capture Card - show for supported fleets in both add and edit mode
-                        if selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A321" || selectedFleetID == "A380" {
+                        if !hidePhotoCapture && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A321" || selectedFleetID == "A380") {
                             ModernPhotoCaptureCard(viewModel: viewModel, fleetType: selectedFleetID)
                         }
 

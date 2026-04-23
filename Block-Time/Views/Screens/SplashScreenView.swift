@@ -70,7 +70,8 @@ struct SplashScreenView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(themeService.getGradient().ignoresSafeArea())
+        .ignoresSafeArea()
+        .background(themeService.getGradient())
         .task {
             // Animate the splash content
             withAnimation(.easeIn(duration: Constants.animationDuration)) {

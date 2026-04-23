@@ -25,8 +25,8 @@ final class FlightMapViewModel {
     }
 
     enum DateFilter: String, CaseIterable, Identifiable {
-        case all       = "All Time"
-        case last90    = "Last 90 Days"
+        case all       = "All Flights"
+        case last90    = "Last Month"
         case last12    = "Last 12 Months"
 
         var id: String { rawValue }
@@ -148,7 +148,7 @@ final class FlightMapViewModel {
     private func buildCutoffDate() -> Date? {
         switch dateFilter {
         case .all:    return nil
-        case .last90: return Calendar.current.date(byAdding: .day,   value: -90, to: Date())
+        case .last90: return Calendar.current.date(byAdding: .month, value: -1,  to: Date())
         case .last12: return Calendar.current.date(byAdding: .month, value: -12, to: Date())
         }
     }
