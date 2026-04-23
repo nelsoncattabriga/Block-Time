@@ -8,11 +8,12 @@
 import SwiftUI
 
 struct MacLogbookView: View {
-    @StateObject private var viewModel = MacLogbookViewModel()
+    @ObservedObject var viewModel: MacLogbookViewModel
     @Binding var selection: Set<UUID>
     @Binding var showingFilter: Bool
     var filterState: MacFilterState
     var onRowsLoaded: ([MacFlightRow]) -> Void
+    var onSyncingChanged: (Bool) -> Void = { _ in }
 
     @State private var columnPrefs = ColumnPreferences()
     @State private var showingColumnManager = false
@@ -26,13 +27,16 @@ struct MacLogbookView: View {
             footerBar
         }
         .task {
-            await viewModel.load()
+            if viewModel.allFlights.isEmpty {
+                await viewModel.load()
+            }
             onRowsLoaded(viewModel.allFlights)
         }
         .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: "Search flights…")
         .toolbar { tableToolbar }
         .onChange(of: filterState.version) { applyFilters() }
         .onChange(of: viewModel.allFlights.count) { onRowsLoaded(viewModel.allFlights) }
+        .onChange(of: viewModel.isSyncing) { onSyncingChanged(viewModel.isSyncing) }
     }
 
     private func applyFilters() {

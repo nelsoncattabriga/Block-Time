@@ -103,6 +103,7 @@ final class MacLogbookViewModel: ObservableObject {
     @Published var displayedFlights: [MacFlightRow] = []
     @Published var allFlights: [MacFlightRow] = []
     @Published var isLoading = false
+    @Published var isSyncing = false
     @Published var searchText = "" {
         didSet { applySort() }
     }
@@ -284,6 +285,36 @@ final class MacLogbookViewModel: ObservableObject {
                 await self?.reload()
             }
         }
+
+        NotificationCenter.default.addObserver(
+            forName: NSPersistentCloudKitContainer.eventChangedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let event = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
+                    as? NSPersistentCloudKitContainer.Event else { return }
+            Task { @MainActor [weak self] in
+                self?.handleCloudKitEvent(event)
+            }
+        }
+    }
+
+    private var syncSettleTask: Task<Void, Never>?
+
+    @MainActor
+    private func handleCloudKitEvent(_ event: NSPersistentCloudKitContainer.Event) {
+        guard event.type == .import || event.type == .export else { return }
+        if event.endDate == nil {
+            syncSettleTask?.cancel()
+            isSyncing = true
+        } else {
+            syncSettleTask?.cancel()
+            syncSettleTask = Task {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled else { return }
+                isSyncing = false
+            }
+        }
     }
 
     func reload() async {
@@ -294,6 +325,119 @@ final class MacLogbookViewModel: ObservableObject {
         flights = rows
         allFlights = rows
         applySort()
+    }
+
+    // MARK: Save / Update / Delete
+
+    func saveFlight(_ sector: MacEditableFlight) -> Bool {
+        var success = false
+        let ctx = persistentContainer.viewContext
+        ctx.performAndWait {
+            let checkReq = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
+            checkReq.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
+            checkReq.fetchLimit = 1
+            guard (try? ctx.fetch(checkReq))?.isEmpty == true else { return }
+
+            let entity = NSEntityDescription.insertNewObject(forEntityName: "FlightEntity", into: ctx)
+            applyFields(sector, to: entity, ctx: ctx, isNew: true)
+            do {
+                try ctx.save()
+                success = true
+            } catch {
+                ctx.rollback()
+            }
+        }
+        if success { Task { await reload() } }
+        return success
+    }
+
+    func updateFlight(_ sector: MacEditableFlight) -> Bool {
+        var success = false
+        let ctx = persistentContainer.viewContext
+        ctx.performAndWait {
+            let req = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
+            req.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
+            req.fetchLimit = 1
+            guard let entity = (try? ctx.fetch(req))?.first else { return }
+            applyFields(sector, to: entity, ctx: ctx, isNew: false)
+            do {
+                try ctx.save()
+                success = true
+            } catch {
+                ctx.rollback()
+            }
+        }
+        if success { Task { await reload() } }
+        return success
+    }
+
+    func deleteFlight(id: UUID) -> Bool {
+        var success = false
+        let ctx = persistentContainer.viewContext
+        ctx.performAndWait {
+            let req = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
+            req.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+            req.fetchLimit = 1
+            guard let entity = (try? ctx.fetch(req))?.first else { return }
+            ctx.delete(entity)
+            do {
+                try ctx.save()
+                success = true
+            } catch {
+                ctx.rollback()
+            }
+        }
+        if success { Task { await reload() } }
+        return success
+    }
+
+    private func applyFields(_ s: MacEditableFlight, to entity: NSManagedObject, ctx: NSManagedObjectContext, isNew: Bool) {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "dd/MM/yyyy"
+        fmt.timeZone = TimeZone(secondsFromGMT: 0)
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+
+        if isNew {
+            entity.setValue(s.id, forKey: "id")
+            entity.setValue(Date(), forKey: "createdAt")
+        }
+        entity.setValue(fmt.date(from: s.date) ?? Date(), forKey: "date")
+        entity.setValue(s.flightNumber,        forKey: "flightNumber")
+        entity.setValue(s.fromAirport,         forKey: "fromAirport")
+        entity.setValue(s.toAirport,           forKey: "toAirport")
+        entity.setValue(s.scheduledDeparture,  forKey: "scheduledDeparture")
+        entity.setValue(s.scheduledArrival,    forKey: "scheduledArrival")
+        entity.setValue(s.outTime,             forKey: "outTime")
+        entity.setValue(s.inTime,              forKey: "inTime")
+        entity.setValue(s.blockTime,           forKey: "blockTime")
+        entity.setValue(s.nightTime,           forKey: "nightTime")
+        entity.setValue(s.instrumentTime,      forKey: "instrumentTime")
+        entity.setValue(s.p1Time,              forKey: "p1Time")
+        entity.setValue(s.p1usTime,            forKey: "p1usTime")
+        entity.setValue(s.p2Time,              forKey: "p2Time")
+        entity.setValue(s.simTime,             forKey: "simTime")
+        let spIns = s.spInsTime.isEmpty || s.spInsTime == "0.00" ? nil : s.spInsTime
+        entity.setValue(spIns,                 forKey: "spInsTime")
+        entity.setValue(s.aircraftType,        forKey: "aircraftType")
+        entity.setValue(s.aircraftReg,         forKey: "aircraftReg")
+        entity.setValue(s.captainName,         forKey: "captainName")
+        entity.setValue(s.foName,              forKey: "foName")
+        entity.setValue(s.so1Name,             forKey: "so1Name")
+        entity.setValue(s.so2Name,             forKey: "so2Name")
+        entity.setValue(s.remarks,             forKey: "remarks")
+        entity.setValue(Int16(s.dayTakeoffs),  forKey: "dayTakeoffs")
+        entity.setValue(Int16(s.nightTakeoffs),forKey: "nightTakeoffs")
+        entity.setValue(Int16(s.dayLandings),  forKey: "dayLandings")
+        entity.setValue(Int16(s.nightLandings),forKey: "nightLandings")
+        entity.setValue(s.isPilotFlying,       forKey: "isPilotFlying")
+        entity.setValue(s.isPositioning,       forKey: "isPositioning")
+        entity.setValue(s.isILS,               forKey: "isILS")
+        entity.setValue(s.isGLS,               forKey: "isGLS")
+        entity.setValue(s.isNPA,               forKey: "isNPA")
+        entity.setValue(s.isRNP,               forKey: "isRNP")
+        entity.setValue(s.isAIII,              forKey: "isAIII")
+        entity.setValue(Int16(s.customCount),  forKey: "customCount")
+        entity.setValue(Date(),                forKey: "modifiedAt")
     }
 
     // MARK: Fetch (background)
@@ -374,4 +518,97 @@ private extension MacFlightRow {
         self.simTime            = parseTime("simTime")
         self.spInsTime          = parseTime("spInsTime")
     }
+}
+
+// MARK: - MacEditableFlight
+// Mutable form model used by the Add / Edit panel. Mirrors FlightSector fields but is
+// Mac-only and has no iOS dependencies.
+
+struct MacEditableFlight {
+    var id: UUID = UUID()
+    var date: String = ""
+    var flightNumber: String = ""
+    var fromAirport: String = ""
+    var toAirport: String = ""
+    var scheduledDeparture: String = ""
+    var scheduledArrival: String = ""
+    var outTime: String = ""
+    var inTime: String = ""
+    var blockTime: String = ""
+    var nightTime: String = ""
+    var instrumentTime: String = ""
+    var p1Time: String = ""
+    var p1usTime: String = ""
+    var p2Time: String = ""
+    var simTime: String = ""
+    var spInsTime: String = ""
+    var aircraftType: String = ""
+    var aircraftReg: String = ""
+    var captainName: String = ""
+    var foName: String = ""
+    var so1Name: String = ""
+    var so2Name: String = ""
+    var remarks: String = ""
+    var dayTakeoffs: Int = 0
+    var nightTakeoffs: Int = 0
+    var dayLandings: Int = 0
+    var nightLandings: Int = 0
+    var isPilotFlying: Bool = false
+    var isPositioning: Bool = false
+    var isILS: Bool = false
+    var isGLS: Bool = false
+    var isNPA: Bool = false
+    var isRNP: Bool = false
+    var isAIII: Bool = false
+    var customCount: Int = 0
+
+    static func empty() -> MacEditableFlight {
+        var f = MacEditableFlight()
+        let fmt = DateFormatter()
+        fmt.dateFormat = "dd/MM/yyyy"
+        fmt.timeZone = TimeZone(secondsFromGMT: 0)
+        f.date = fmt.string(from: Date())
+        return f
+    }
+
+    init(from row: MacFlightRow) {
+        id                 = row.id
+        date               = row.date
+        flightNumber       = row.flightNumber
+        fromAirport        = row.fromAirport
+        toAirport          = row.toAirport
+        scheduledDeparture = row.scheduledDeparture
+        scheduledArrival   = row.scheduledArrival
+        outTime            = row.outTime
+        inTime             = row.inTime
+        blockTime          = row.blockTime > 0 ? String(format: "%.2f", row.blockTime) : ""
+        nightTime          = row.nightTime > 0 ? String(format: "%.2f", row.nightTime) : ""
+        instrumentTime     = row.instrumentTime > 0 ? String(format: "%.2f", row.instrumentTime) : ""
+        p1Time             = row.p1Time > 0 ? String(format: "%.2f", row.p1Time) : ""
+        p1usTime           = row.p1usTime > 0 ? String(format: "%.2f", row.p1usTime) : ""
+        p2Time             = row.p2Time > 0 ? String(format: "%.2f", row.p2Time) : ""
+        simTime            = row.simTime > 0 ? String(format: "%.2f", row.simTime) : ""
+        spInsTime          = row.spInsTime > 0 ? String(format: "%.2f", row.spInsTime) : ""
+        aircraftType       = row.aircraftType
+        aircraftReg        = row.aircraftReg
+        captainName        = row.captainName
+        foName             = row.foName
+        so1Name            = row.so1Name
+        so2Name            = row.so2Name
+        remarks            = row.remarks
+        dayTakeoffs        = row.dayTakeoffs
+        nightTakeoffs      = row.nightTakeoffs
+        dayLandings        = row.dayLandings
+        nightLandings      = row.nightLandings
+        isPilotFlying      = row.isPilotFlying
+        isPositioning      = row.isPositioning
+        isILS              = row.isILS
+        isGLS              = row.isGLS
+        isNPA              = row.isNPA
+        isRNP              = row.isRNP
+        isAIII             = row.isAIII
+        customCount        = row.customCount
+    }
+
+    private init() {}
 }

@@ -12,16 +12,20 @@ struct MacContentAreaView: View {
     @Binding var tableSelection: Set<UUID>
     @Binding var showingFilter: Bool
     var filterState: MacFilterState
+    var logbookVM: MacLogbookViewModel
     var onRowsLoaded: ([MacFlightRow]) -> Void
+    var onSyncingChanged: (Bool) -> Void = { _ in }
 
     var body: some View {
         switch section {
         case .logbook:
             MacLogbookView(
+                viewModel: logbookVM,
                 selection: $tableSelection,
                 showingFilter: $showingFilter,
                 filterState: filterState,
-                onRowsLoaded: onRowsLoaded
+                onRowsLoaded: onRowsLoaded,
+                onSyncingChanged: onSyncingChanged
             )
         case .dashboard:
             MacSectionPlaceholder(section: section)
