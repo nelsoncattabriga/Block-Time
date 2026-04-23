@@ -111,7 +111,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .picTime:           return "person.badge.shield.checkmark.fill"
         case .icusTime:          return "person.2.fill"
         case .nightTime:         return "moon.fill"
-        case .instrumentTime:    return "cloud.fill"
+        case .instrumentTime:    return "gauge.with.dots.needle.67percent"
         case .simTime:           return "desktopcomputer"
         case .insTime:           return "person.fill.badge.plus"
 //        case .pfRatioStat:       return "chart.pie.fill"
