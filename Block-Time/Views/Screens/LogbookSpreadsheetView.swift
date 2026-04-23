@@ -112,27 +112,54 @@ struct LogbookSpreadsheetView: View {
         }
     }
 
+    // MARK: - Legend strip
+
+    private var legendStrip: some View {
+        HStack(spacing: 8) {
+            Spacer()
+            legendPill("PAX",     color: .orange)
+            legendPill("SIM",     color: .purple)
+            legendPill("Sp/Ins",  color: .red)
+            Spacer()
+        }
+        .padding(.vertical, 5)
+        .background(.bar)
+    }
+
+    private func legendPill(_ label: String, color: Color) -> some View {
+        Text(label)
+            .font(.caption2)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.85), in: Capsule())
+    }
+
     // MARK: - Spreadsheet
 
     private var spreadsheet: some View {
-        FrozenColumnSpreadsheetView(
-            flights: flights,
-            highlightedFlightID: highlightedFlight?.id,
-            displayConfig: SpreadsheetDisplayConfig(
-                useLocalTime: viewModel.displayFlightsInLocalTime,
-                useIATA:      viewModel.useIATACodes,
-                showHHMM:     viewModel.showTimesInHoursMinutes,
-                roundingMode: viewModel.decimalRoundingMode
-            )
-        ) { tappedFlight in
-            if highlightedFlight?.id == tappedFlight.id {
-                viewModel.loadFlightForEditing(tappedFlight)
-                selectedFlight = tappedFlight
-            } else {
-                highlightedFlight = tappedFlight
+        VStack(spacing: 0) {
+            legendStrip
+            Divider()
+            FrozenColumnSpreadsheetView(
+                flights: flights,
+                highlightedFlightID: highlightedFlight?.id,
+                displayConfig: SpreadsheetDisplayConfig(
+                    useLocalTime: viewModel.displayFlightsInLocalTime,
+                    useIATA:      viewModel.useIATACodes,
+                    showHHMM:     viewModel.showTimesInHoursMinutes,
+                    roundingMode: viewModel.decimalRoundingMode
+                )
+            ) { tappedFlight in
+                if highlightedFlight?.id == tappedFlight.id {
+                    viewModel.loadFlightForEditing(tappedFlight)
+                    selectedFlight = tappedFlight
+                } else {
+                    highlightedFlight = tappedFlight
+                }
             }
+            .ignoresSafeArea(edges: .bottom)
         }
-        .ignoresSafeArea(edges: .bottom)
     }
 
     // MARK: - Helpers

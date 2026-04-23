@@ -562,16 +562,24 @@ final class LeftCell: UITableViewCell {
 
     static let reuseID = "LeftCell"
 
+    private static let barWidth: CGFloat = 3
+
     private let dateLabel   = CellLabel(mono: true)
     private let flightLabel = CellLabel(mono: true)
+    private let typeBar     = UIView()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         selectionStyle = .none
         separatorInset = .zero
 
-        dateLabel.frame   = CGRect(x: 6,            y: 0, width: Col.date   - 12, height: Col.rowHeight)
-        flightLabel.frame = CGRect(x: Col.date + 6, y: 0, width: Col.flight - 12, height: Col.rowHeight)
+        let bar = Self.barWidth
+        typeBar.frame = CGRect(x: 0, y: 0, width: bar, height: Col.rowHeight)
+        typeBar.autoresizingMask = [.flexibleHeight]
+        contentView.addSubview(typeBar)
+
+        dateLabel.frame   = CGRect(x: bar + 4,          y: 0, width: Col.date   - bar - 8, height: Col.rowHeight)
+        flightLabel.frame = CGRect(x: Col.date + bar,   y: 0, width: Col.flight - bar - 4, height: Col.rowHeight)
         dateLabel.textAlignment   = .center
         flightLabel.textAlignment = .center
         contentView.addSubview(dateLabel)
@@ -590,6 +598,29 @@ final class LeftCell: UITableViewCell {
         contentView.backgroundColor = highlighted
             ? UIColor.tintColor.withAlphaComponent(0.3)
             : rowBackground(index: index)
+
+        let tintColor: UIColor?
+        if flight.spInsTimeValue > 0 {
+            typeBar.backgroundColor = .systemRed
+            tintColor = .systemRed
+        } else if flight.simTimeValue > 0 {
+            typeBar.backgroundColor = .systemPurple
+            tintColor = .systemPurple
+        } else if flight.isPositioning {
+            typeBar.backgroundColor = .systemOrange
+            tintColor = .systemOrange
+        } else {
+            typeBar.backgroundColor = .clear
+            tintColor = nil
+        }
+
+        if !highlighted {
+            if let tint = tintColor {
+                contentView.backgroundColor = rowTint(tint)
+            } else {
+                contentView.backgroundColor = rowBackground(index: index)
+            }
+        }
     }
 
     private func addCellDivider(at x: CGFloat) {
@@ -726,13 +757,27 @@ final class RightCell: UITableViewCell {
             }
         }
 
-        contentView.backgroundColor = highlighted
-            ? UIColor.tintColor.withAlphaComponent(0.3)
-            : rowBackground(index: index)
+        if highlighted {
+            contentView.backgroundColor = UIColor.tintColor.withAlphaComponent(0.3)
+        } else if flight.spInsTimeValue > 0 {
+            contentView.backgroundColor = rowTint(.systemRed)
+        } else if flight.simTimeValue > 0 {
+            contentView.backgroundColor = rowTint(.systemPurple)
+        } else if flight.isPositioning {
+            contentView.backgroundColor = rowTint(.systemOrange)
+        } else {
+            contentView.backgroundColor = rowBackground(index: index)
+        }
     }
 }
 
 // MARK: - Shared helpers (free functions, available to cells + container)
+
+func rowTint(_ color: UIColor) -> UIColor {
+    UIColor { traits in
+        color.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.22 : 0.15)
+    }
+}
 
 func rowBackground(index: Int) -> UIColor {
     index.isMultiple(of: 2) ? .systemBackground : .secondarySystemBackground
