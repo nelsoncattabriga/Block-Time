@@ -350,8 +350,8 @@ final class SpreadsheetContainerView: UIView {
         // Row 1 — column labels
         let headerRow = rowView(width: Col.frozenWidth, height: Col.headerHeight, y: 0)
         var x: CGFloat = 0
-        addHeaderLabel("Date",   width: Col.date,   to: headerRow, x: &x)
-        addHeaderLabel("Flt No", width: Col.flight, to: headerRow, x: &x)
+        addHeaderLabel("Date",   width: Col.date,   to: headerRow, x: &x, alignment: .center)
+        addHeaderLabel("Flt No", width: Col.flight, to: headerRow, x: &x, alignment: .center)
         container.addSubview(headerRow)
 
         // Row 2 — totals label + blank
@@ -384,18 +384,18 @@ final class SpreadsheetContainerView: UIView {
         addHeaderLabel("STA",          width: Col.sta,      to: headerRow, x: &x)
         addHeaderLabel("OUT",          width: Col.out,      to: headerRow, x: &x)
         addHeaderLabel("IN",           width: Col.inn,      to: headerRow, x: &x)
-        addHeaderLabel("Block Time",   width: Col.block,    to: headerRow, x: &x)
-        addHeaderLabel("Night Time",   width: Col.night,    to: headerRow, x: &x)
+        addHeaderLabel("Block Time",   width: Col.block,    to: headerRow, x: &x, alignment: .center)
+        addHeaderLabel("Night Time",   width: Col.night,    to: headerRow, x: &x, alignment: .center)
         addHeaderLabel("Captain",      width: Col.crew,     to: headerRow, x: &x)
         addHeaderLabel("F/O",          width: Col.crew,     to: headerRow, x: &x)
         addHeaderLabel("S/O1",         width: Col.crew,     to: headerRow, x: &x)
         addHeaderLabel("S/O2",         width: Col.crew,     to: headerRow, x: &x)
-        addHeaderLabel("P1 Time",      width: Col.p1,       to: headerRow, x: &x)
-        addHeaderLabel("P1US Time",    width: Col.p1us,     to: headerRow, x: &x)
-        addHeaderLabel("P2 Time",      width: Col.p2,       to: headerRow, x: &x)
-        addHeaderLabel("Instrument",   width: Col.instr,    to: headerRow, x: &x)
-        addHeaderLabel("SIM Time",     width: Col.sim,      to: headerRow, x: &x)
-        addHeaderLabel("Sp/Ins Time",  width: Col.spIns,    to: headerRow, x: &x)
+        addHeaderLabel("P1 Time",      width: Col.p1,       to: headerRow, x: &x, alignment: .center)
+        addHeaderLabel("P1US Time",    width: Col.p1us,     to: headerRow, x: &x, alignment: .center)
+        addHeaderLabel("P2 Time",      width: Col.p2,       to: headerRow, x: &x, alignment: .center)
+        addHeaderLabel("Instrument",   width: Col.instr,    to: headerRow, x: &x, alignment: .center)
+        addHeaderLabel("SIM Time",     width: Col.sim,      to: headerRow, x: &x, alignment: .center)
+        addHeaderLabel("Sp/Ins Time",  width: Col.spIns,    to: headerRow, x: &x, alignment: .center)
         addHeaderLabel("PAX",          width: Col.pax,      to: headerRow, x: &x)
         addHeaderLabel("Pilot Flying", width: Col.pf,       to: headerRow, x: &x)
         addHeaderLabel("AIII",         width: Col.aiii,     to: headerRow, x: &x)
@@ -463,11 +463,12 @@ final class SpreadsheetContainerView: UIView {
         return v
     }
 
-    private func addHeaderLabel(_ title: String, width: CGFloat, to parent: UIView, x: inout CGFloat) {
+    private func addHeaderLabel(_ title: String, width: CGFloat, to parent: UIView, x: inout CGFloat, alignment: NSTextAlignment = .center) {
         let label = UILabel(frame: CGRect(x: x + 6, y: 0, width: width - 12, height: Col.headerHeight))
         label.text = title
         label.font = .preferredFont(forTextStyle: .caption1).withWeight(.semibold)
         label.textColor = .secondaryLabel
+        label.textAlignment = alignment
         label.numberOfLines = 1
         parent.addSubview(label)
         addDivider(to: parent, x: x + width, height: Col.headerHeight)
@@ -495,6 +496,7 @@ final class SpreadsheetContainerView: UIView {
         label.text = value
         label.font = UIFont.monospacedDigitSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption1).pointSize, weight: .semibold)
         label.textColor = value.isEmpty ? .tertiaryLabel : .label
+        label.textAlignment = .center
         label.numberOfLines = 1
         parent.addSubview(label)
         addDivider(to: parent, x: x + width, height: Col.headerHeight)
@@ -506,6 +508,7 @@ final class SpreadsheetContainerView: UIView {
         label.text = value == 0 ? "" : String(value)
         label.font = UIFont.monospacedDigitSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption1).pointSize, weight: .semibold)
         label.textColor = value == 0 ? .tertiaryLabel : .label
+        label.textAlignment = .center
         label.numberOfLines = 1
         parent.addSubview(label)
         addDivider(to: parent, x: x + width, height: Col.headerHeight)
@@ -569,6 +572,8 @@ final class LeftCell: UITableViewCell {
 
         dateLabel.frame   = CGRect(x: 6,            y: 0, width: Col.date   - 12, height: Col.rowHeight)
         flightLabel.frame = CGRect(x: Col.date + 6, y: 0, width: Col.flight - 12, height: Col.rowHeight)
+        dateLabel.textAlignment   = .center
+        flightLabel.textAlignment = .center
         contentView.addSubview(dateLabel)
         contentView.addSubview(flightLabel)
 
@@ -629,6 +634,9 @@ final class RightCell: UITableViewCell {
     // Flag columns (centered, show "1"/blank)
     private static let flagColumns = Set([20, 21, 22, 23, 24, 25, 26])
 
+    // Time columns (centered): block, night, p1, p1us, p2, instr, sim, spIns
+    private static let rightAlignedColumns = Set([8, 9, 14, 15, 16, 17, 18, 19])
+
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         selectionStyle = .none
@@ -640,7 +648,11 @@ final class RightCell: UITableViewCell {
             if Self.flagColumns.contains(i) {
                 label.textAlignment = .center
                 label.frame = CGRect(x: x, y: 0, width: width, height: Col.rowHeight)
+            } else if Self.rightAlignedColumns.contains(i) {
+                label.textAlignment = .center
+                label.frame = CGRect(x: x + 6, y: 0, width: width - 12, height: Col.rowHeight)
             } else {
+                label.textAlignment = .center
                 label.frame = CGRect(x: x + 6, y: 0, width: width - 12, height: Col.rowHeight)
             }
             contentView.addSubview(label)
