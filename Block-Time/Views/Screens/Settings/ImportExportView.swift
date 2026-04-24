@@ -58,6 +58,9 @@ struct ImportExportView: View {
     // Calendar export state
     @State private var showingCalendarExport = false
 
+    // PDF logbook export state
+    @State private var showingPDFExport = false
+
     // Migration import state
     @State private var showingMigrationImport = false
 
@@ -245,6 +248,11 @@ struct ImportExportView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showingPDFExport) {
+            LogbookPDFExportView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showingAircraftSummary) {
             AircraftSummarySheet { summary in
                 saveAircraftSummary(summary)
@@ -379,6 +387,17 @@ struct ImportExportView: View {
                     isLoading: false
                 ) {
                     showingExportView = true
+                }
+
+                // PDF Logbook
+                ActionButton(
+                    title: "Print Logbook (PDF)",
+                    subtitle: "Formatted paper logbook layout",
+                    icon: "doc.richtext.fill",
+                    color: .brown.opacity(0.8),
+                    isLoading: false
+                ) {
+                    showingPDFExport = true
                 }
 
 //                Divider()

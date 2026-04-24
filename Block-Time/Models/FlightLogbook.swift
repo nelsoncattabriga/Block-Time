@@ -32,7 +32,7 @@ func validateTimeString(_ timeString: String) -> String {
 // MARK: - Updated Flight Logbook Data Models
 struct FlightSector: Identifiable, Codable, Hashable {
     // Cached date formatters for performance - shared across all instances
-    private static let cachedDateFormatter: DateFormatter = {
+    private static nonisolated let cachedDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone to match AirportService
@@ -40,7 +40,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return formatter
     }()
 
-    private static let cachedMonthYearFormatter: DateFormatter = {
+    private static nonisolated let cachedMonthYearFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM yyyy"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone to match cachedDateFormatter
@@ -48,7 +48,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return formatter
     }()
 
-    private static let cachedUTCDateFormatter: DateFormatter = {
+    private static nonisolated let cachedUTCDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone
@@ -165,7 +165,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     // MARK: - Safe Numeric Conversion Methods
     
     /// Safely convert string to Double, returning 0.0 for invalid values
-    private func safeDoubleValue(_ string: String) -> Double {
+    private nonisolated func safeDoubleValue(_ string: String) -> Double {
         let cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanString.isEmpty, let value = Double(cleanString) else {
             return 0.0
@@ -179,42 +179,19 @@ struct FlightSector: Identifiable, Codable, Hashable {
     // MARK: - Safe Numeric Accessors
     
     /// Safe numeric accessors that prevent NaN errors
-    var blockTimeValue: Double {
-        return safeDoubleValue(blockTime)
-    }
-    
-    var nightTimeValue: Double {
-        return safeDoubleValue(nightTime)
-    }
-    
-    var p1TimeValue: Double {
-        return safeDoubleValue(p1Time)
-    }
-    
-    var p1usTimeValue: Double {
-        return safeDoubleValue(p1usTime)
-    }
-
-    var p2TimeValue: Double {
-        return safeDoubleValue(p2Time)
-    }
-
-    var instrumentTimeValue: Double {
-        return safeDoubleValue(instrumentTime)
-    }
-    
-    var simTimeValue: Double {
-        return safeDoubleValue(simTime)
-    }
-
-    var spInsTimeValue: Double {
-        return safeDoubleValue(spInsTime)
-    }
+    nonisolated var blockTimeValue: Double { safeDoubleValue(blockTime) }
+    nonisolated var nightTimeValue: Double { safeDoubleValue(nightTime) }
+    nonisolated var p1TimeValue: Double { safeDoubleValue(p1Time) }
+    nonisolated var p1usTimeValue: Double { safeDoubleValue(p1usTime) }
+    nonisolated var p2TimeValue: Double { safeDoubleValue(p2Time) }
+    nonisolated var instrumentTimeValue: Double { safeDoubleValue(instrumentTime) }
+    nonisolated var simTimeValue: Double { safeDoubleValue(simTime) }
+    nonisolated var spInsTimeValue: Double { safeDoubleValue(spInsTime) }
 
     /// True when this entry is a pure Sp/Ins (instructor) session:
     /// spInsTime is set AND simTime equals spInsTime (pilot ran the sim but didn't fly it).
     /// In this case neither simTime nor spInsTime counts toward flight totals.
-    var isSpInsOnly: Bool {
+    nonisolated var isSpInsOnly: Bool {
         let spVal = spInsTimeValue
         guard spVal > 0 else { return false }
         return abs(simTimeValue - spVal) < 0.01
@@ -222,7 +199,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
 
     /// True when this entry is aircraft instruction (INS in FLT):
     /// spInsTime is set AND blockTime > 0 (flew the actual aircraft while instructing).
-    var isAircraftInstruction: Bool {
+    nonisolated var isAircraftInstruction: Bool {
         spInsTimeValue > 0 && blockTimeValue > 0
     }
 
