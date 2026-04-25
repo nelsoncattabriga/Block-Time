@@ -192,7 +192,7 @@ struct LogbookPDFExportView: View {
                 }
 
                 HStack(alignment: .center) {
-                    Text("Timezone")
+                    Text("Flight Date")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     Spacer()
