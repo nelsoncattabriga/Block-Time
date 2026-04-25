@@ -6,6 +6,16 @@
 import SwiftUI
 import PDFKit
 
+// MARK: - Date Range Preset
+
+enum PDFDateRangePreset: String, CaseIterable {
+    case all          = "All"
+    case last12Months = "Last 12 Months"
+    case custom       = "Custom"
+}
+
+// MARK: - Export View
+
 struct LogbookPDFExportView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -14,10 +24,33 @@ struct LogbookPDFExportView: View {
     @State private var errorMessage: String?
     @State private var showPreview = false
     @State private var flightCount = 0
+    @State private var earliestDate: Date = Date()
+    @State private var latestDate: Date = Date()
 
-    private var pilotName: String {
-        UserDefaults.standard.string(forKey: "defaultCaptainName") ?? ""
+    @AppStorage("logbookPDFPilotName")    private var logbookName: String = ""
+    @AppStorage("logbookPDFArn")          private var arn: String = ""
+    @AppStorage("logbookPDFDatePreset")   private var datePresetRaw: String = PDFDateRangePreset.all.rawValue
+    @AppStorage("logbookPDFDateFormat")   private var dateFormat: String = "d MMM yy"
+    @AppStorage("logbookPDFCustomFrom")   private var customFromInterval: Double = 0
+    @AppStorage("logbookPDFCustomTo")     private var customToInterval: Double = 0
+    @AppStorage("logbookPDFUseLocalDates") private var useLocalDates: Bool = true
+
+    private var datePreset: PDFDateRangePreset {
+        PDFDateRangePreset(rawValue: datePresetRaw) ?? .all
     }
+    private var customFrom: Date {
+        get { customFromInterval > 0 ? Date(timeIntervalSince1970: customFromInterval) : earliestDate }
+    }
+    private var customTo: Date {
+        get { customToInterval > 0 ? Date(timeIntervalSince1970: customToInterval) : latestDate }
+    }
+
+    private static let dateFormats: [(label: String, format: String)] = [
+        ("25 Apr 26",   "d MMM yy"),
+        ("25/04/26",    "dd/MM/yy"),
+        ("25 Apr 2026", "d MMM yyyy"),
+        ("25/04/2026",  "dd/MM/yyyy"),
+    ]
 
     var body: some View {
         NavigationView {
@@ -47,7 +80,7 @@ struct LogbookPDFExportView: View {
                     PDFPreviewView(url: url)
                 }
             }
-            .onAppear { loadFlightCount() }
+            .onAppear { loadFlights() }
         }
     }
 
@@ -64,40 +97,119 @@ struct LogbookPDFExportView: View {
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("Generates a formatted PDF in the style of a paper logbook.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+//                Text("Generates a formatted PDF in the style of a paper logbook.")
+//                    .font(.subheadline)
+//                    .foregroundColor(.secondary)
+//                    .multilineTextAlignment(.center)
             }
-            .padding(.top)
+//            .padding(.top)
 
-            VStack(spacing: 8) {
-                Text("\(flightCount)")
-                    .font(.system(size: 48, weight: .bold))
-                    .foregroundColor(.brown)
+            // Name + ARN
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Name for cover page")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    TextField("e.g. J. Smith", text: $logbookName)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("ARN")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    TextField("e.g. 123456", text: $arn)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .keyboardType(.numbersAndPunctuation)
+                }
+                .frame(width: 110)
+            }
 
-                Text(flightCount == 1 ? "flight to include" : "flights to include")
+            // Date Range
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Date Range")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
-                Text("Positioning and future flights are excluded")
+                Picker("Date Range", selection: $datePresetRaw) {
+                    ForEach(PDFDateRangePreset.allCases, id: \.rawValue) { preset in
+                        Text(preset.rawValue).tag(preset.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: datePresetRaw) { _, _ in updateFlightCount() }
+
+                if datePreset == .custom {
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("From")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            DatePicker("", selection: Binding(
+                                get: { customFrom },
+                                set: { customFromInterval = $0.timeIntervalSince1970 }
+                            ), in: earliestDate...latestDate, displayedComponents: .date)
+                            .labelsHidden()
+                            .onChange(of: customFromInterval) { _, _ in updateFlightCount() }
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("To")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            DatePicker("", selection: Binding(
+                                get: { customTo },
+                                set: { customToInterval = $0.timeIntervalSince1970 }
+                            ), in: earliestDate...latestDate, displayedComponents: .date)
+                            .labelsHidden()
+                            .onChange(of: customToInterval) { _, _ in updateFlightCount() }
+                        }
+                        Spacer()
+                    }
+                }
+
+                Text("\(flightCount) \(flightCount == 1 ? "flight" : "flights") in range")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             .padding()
-            .background(Color.brown.opacity(0.1))
+            .background(Color.brown.opacity(0.06))
             .cornerRadius(12)
 
-            VStack(alignment: .leading, spacing: 12) {
-                PDFInfoRow(icon: "person.fill",       text: "Pilot: \(pilotName.isEmpty ? "Not set" : pilotName)")
-                PDFInfoRow(icon: "doc.text",           text: "A4 landscape, 20 rows per page")
-                PDFInfoRow(icon: "tablecells",         text: "Block, Night, P1, P1US, P2, Instr, Sim, Sp·Ins")
-                PDFInfoRow(icon: "airplane.departure", text: "T/O & landings, approach types")
+            // Date Format + timezone
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center) {
+                    Text("Date Format")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Picker("", selection: $dateFormat) {
+                        ForEach(Self.dateFormats, id: \.format) { option in
+                            Text(option.label).tag(option.format)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.brown)
+                }
+
+                HStack(alignment: .center) {
+                    Text("Timezone")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Picker("", selection: $useLocalDates) {
+                        Text("Local").tag(true)
+                        Text("UTC").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 100)
+                }
             }
             .padding()
-            .background(Color.brown.opacity(0.08))
+            .background(Color.brown.opacity(0.06))
             .cornerRadius(12)
 
+            // Generate button
             Button(action: generatePDF) {
                 HStack {
                     if isGenerating {
@@ -123,51 +235,140 @@ struct LogbookPDFExportView: View {
 
     // MARK: - Actions
 
-    private func loadFlightCount() {
-        let flights = FlightDatabaseService.shared.fetchAllFlights()
-        flightCount = flights.filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }.count
+    private static let inputDF: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy"
+        f.locale = Locale(identifier: "en_AU")
+        return f
+    }()
+
+    /// Returns the effective date string for a flight — local if enabled, UTC otherwise.
+    /// Falls back to UTC if outTime is empty or airport is unknown.
+    private func effectiveDateString(for flight: FlightSector) -> String {
+        guard useLocalDates, !flight.outTime.isEmpty else { return flight.date }
+        let local = AirportService.shared.convertToLocalDate(
+            utcDateString: flight.date,
+            utcTimeString: flight.outTime,
+            airportICAO: flight.fromAirport
+        )
+        return local.isEmpty ? flight.date : local
+    }
+
+    /// Returns a Date representing the full local departure datetime for sort ordering.
+    /// Combines the local date string with the local time so ordering is correct across midnight.
+    private func effectiveSortDate(for flight: FlightSector) -> Date {
+        let utcTime = flight.outTime.isEmpty ? flight.scheduledDeparture : flight.outTime
+        guard useLocalDates, !utcTime.isEmpty else {
+            // UTC: combine date string + time string directly
+            let combined = "\(flight.date) \(utcTime)"
+            return Self.utcDateTimeDF.date(from: combined) ?? Self.inputDF.date(from: flight.date) ?? .distantPast
+        }
+        let localTime = AirportService.shared.convertToLocalTime(
+            utcDateString: flight.date,
+            utcTimeString: utcTime,
+            airportICAO: flight.fromAirport
+        )
+        let localDate = AirportService.shared.convertToLocalDate(
+            utcDateString: flight.date,
+            utcTimeString: utcTime,
+            airportICAO: flight.fromAirport
+        )
+        let combined = "\(localDate) \(localTime)"
+        return Self.localDateTimeDF.date(from: combined) ?? Self.inputDF.date(from: localDate) ?? .distantPast
+    }
+
+    private static let utcDateTimeDF: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy HHmm"
+        f.locale = Locale(identifier: "en_AU")
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        return f
+    }()
+
+    private static let localDateTimeDF: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy HHmm"
+        f.locale = Locale(identifier: "en_AU")
+        f.timeZone = TimeZone(secondsFromGMT: 0)  // local time already offset-adjusted, parse as flat
+        return f
+    }()
+
+    private func loadFlights() {
+        let all = FlightDatabaseService.shared.fetchAllFlights()
+            .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
+        let dates = all.compactMap { Self.inputDF.date(from: effectiveDateString(for: $0)) }
+        earliestDate = dates.min() ?? Date()
+        latestDate   = dates.max() ?? Date()
+        if customFromInterval == 0 { customFromInterval = earliestDate.timeIntervalSince1970 }
+        if customToInterval   == 0 { customToInterval   = latestDate.timeIntervalSince1970 }
+        updateFlightCount()
+    }
+
+    private func updateFlightCount() {
+        let all = FlightDatabaseService.shared.fetchAllFlights()
+            .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
+        flightCount = filtered(from: all).count
+    }
+
+    private func filtered(from flights: [FlightSector]) -> [FlightSector] {
+        switch datePreset {
+        case .all:
+            return flights
+        case .last12Months:
+            let cutoff = Calendar.current.date(byAdding: .month, value: -12, to: Date()) ?? Date()
+            return flights.filter {
+                (Self.inputDF.date(from: effectiveDateString(for: $0)) ?? .distantPast) >= cutoff
+            }
+        case .custom:
+            let from = customFrom
+            let to   = Calendar.current.date(byAdding: .day, value: 1, to: customTo) ?? customTo
+            return flights.filter {
+                guard let d = Self.inputDF.date(from: effectiveDateString(for: $0)) else { return false }
+                return d >= from && d < to
+            }
+        }
     }
 
     private func generatePDF() {
         isGenerating = true
+        let name      = logbookName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let arnNumber = arn.trimmingCharacters(in: .whitespacesAndNewlines)
+        let format    = dateFormat
 
-        // Fetch and filter on the main actor (required by FlightDatabaseService / FlightSector)
-        let df = DateFormatter()
-        df.dateFormat = "dd/MM/yyyy"
-        df.locale = Locale(identifier: "en_AU")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            let all = FlightDatabaseService.shared.fetchAllFlights()
+                .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
 
-        let sorted = FlightDatabaseService.shared.fetchAllFlights()
-            .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
-            .sorted {
-                guard let d1 = df.date(from: $0.date), let d2 = df.date(from: $1.date) else {
-                    return $0.date < $1.date
-                }
-                return d1 < d2
+            let sorted = self.filtered(from: all).sorted {
+                self.effectiveSortDate(for: $0) < self.effectiveSortDate(for: $1)
             }
 
-        let name = UserDefaults.standard.string(forKey: "defaultCaptainName") ?? ""
+            // Resolve all dates on the main actor before handing off to Task.detached
+            let resolvedDates = sorted.map { self.effectiveDateString(for: $0) }
 
-        // Hand value-type array to background for CPU-heavy rendering
-        Task.detached(priority: .userInitiated) {
-            let pdfData = LogbookPDFRenderer.render(flights: sorted, pilotName: name)
+            Task.detached(priority: .userInitiated) {
+                let pdfData = LogbookPDFRenderer.render(
+                    flights: sorted, resolvedDates: resolvedDates,
+                    pilotName: name, arn: arnNumber, dateFormat: format)
 
-            let timestamp = DateFormatter()
-            timestamp.dateFormat = "yyyy-MM-dd_HHmm"
-            let fileName = "Logbook_\(timestamp.string(from: Date())).pdf"
-            let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-            let url = cacheDir.appendingPathComponent(fileName)
+                let timestamp = DateFormatter()
+                timestamp.dateFormat = "yyyy-MM-dd_HHmm"
+                let fileName = "Logbook_\(timestamp.string(from: Date())).pdf"
+                let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+                let url = cacheDir.appendingPathComponent(fileName)
 
-            do {
-                try pdfData.write(to: url, options: .atomic)
-                await MainActor.run {
-                    self.isGenerating = false
-                    self.pdfURL = url
-                    self.showPreview = true
-                }
-            } catch {
-                await MainActor.run {
-                    self.isGenerating = false
-                    self.errorMessage = "Failed to write PDF: \(error.localizedDescription)"
+                do {
+                    try pdfData.write(to: url, options: .atomic)
+                    await MainActor.run {
+                        self.isGenerating = false
+                        self.pdfURL = url
+                        self.showPreview = true
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.isGenerating = false
+                        self.errorMessage = "Failed to write PDF: \(error.localizedDescription)"
+                    }
                 }
             }
         }

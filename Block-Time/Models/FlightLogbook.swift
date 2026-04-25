@@ -32,7 +32,7 @@ func validateTimeString(_ timeString: String) -> String {
 // MARK: - Updated Flight Logbook Data Models
 struct FlightSector: Identifiable, Codable, Hashable {
     // Cached date formatters for performance - shared across all instances
-    private static nonisolated let cachedDateFormatter: DateFormatter = {
+    private static let cachedDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone to match AirportService
@@ -40,7 +40,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return formatter
     }()
 
-    private static nonisolated let cachedMonthYearFormatter: DateFormatter = {
+    private static let cachedMonthYearFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM yyyy"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone to match cachedDateFormatter
@@ -48,7 +48,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return formatter
     }()
 
-    private static nonisolated let cachedUTCDateFormatter: DateFormatter = {
+    private static let cachedUTCDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone
@@ -91,8 +91,8 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var inTime: String
     var scheduledDeparture: String  // STD - Scheduled Time of Departure (HHMM format)
     var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
-    var customCount: Int            // User-defined counter (e.g. PAX carried)
-    var createdAt: Date?            // Insertion timestamp — used as tiebreaker when no OUT/STD
+    var customCount: Int
+    var createdAt: Date?
 
     // MARK: - Validate and clean time string values
     private static func validateTimeString(_ timeString: String) -> String {
@@ -188,17 +188,12 @@ struct FlightSector: Identifiable, Codable, Hashable {
     nonisolated var simTimeValue: Double { safeDoubleValue(simTime) }
     nonisolated var spInsTimeValue: Double { safeDoubleValue(spInsTime) }
 
-    /// True when this entry is a pure Sp/Ins (instructor) session:
-    /// spInsTime is set AND simTime equals spInsTime (pilot ran the sim but didn't fly it).
-    /// In this case neither simTime nor spInsTime counts toward flight totals.
     nonisolated var isSpInsOnly: Bool {
         let spVal = spInsTimeValue
         guard spVal > 0 else { return false }
         return abs(simTimeValue - spVal) < 0.01
     }
 
-    /// True when this entry is aircraft instruction (INS in FLT):
-    /// spInsTime is set AND blockTime > 0 (flew the actual aircraft while instructing).
     nonisolated var isAircraftInstruction: Bool {
         spInsTimeValue > 0 && blockTimeValue > 0
     }
@@ -264,8 +259,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
             outTime: entity.outTime ?? "",
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
-            scheduledArrival: entity.scheduledArrival ?? "",
-            customCount: Int(entity.customCount)
+            scheduledArrival: entity.scheduledArrival ?? ""
         )
     }
     
@@ -386,24 +380,26 @@ struct FlightSector: Identifiable, Codable, Hashable {
 
     func getSTD(useLocalTime: Bool) -> String {
         guard !scheduledDeparture.isEmpty else { return "" }
-        guard useLocalTime else { return scheduledDeparture.replacingOccurrences(of: ":", with: "") }
-        let time = AirportService.shared.convertToLocalTime(
-            utcDateString: date,
-            utcTimeString: scheduledDeparture,
-            airportICAO: fromAirport
-        )
-        return time.replacingOccurrences(of: ":", with: "")
+        if useLocalTime {
+            return AirportService.shared.convertToLocalTime(
+                utcDateString: date,
+                utcTimeString: scheduledDeparture,
+                airportICAO: fromAirport
+            ).replacingOccurrences(of: ":", with: "")
+        }
+        return scheduledDeparture.replacingOccurrences(of: ":", with: "")
     }
 
     func getSTA(useLocalTime: Bool) -> String {
         guard !scheduledArrival.isEmpty else { return "" }
-        guard useLocalTime else { return scheduledArrival.replacingOccurrences(of: ":", with: "") }
-        let time = AirportService.shared.convertToLocalTime(
-            utcDateString: date,
-            utcTimeString: scheduledArrival,
-            airportICAO: toAirport
-        )
-        return time.replacingOccurrences(of: ":", with: "")
+        if useLocalTime {
+            return AirportService.shared.convertToLocalTime(
+                utcDateString: date,
+                utcTimeString: scheduledArrival,
+                airportICAO: toAirport
+            ).replacingOccurrences(of: ":", with: "")
+        }
+        return scheduledArrival.replacingOccurrences(of: ":", with: "")
     }
 
     var blockTimeFormatted: String {

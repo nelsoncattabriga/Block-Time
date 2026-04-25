@@ -10,37 +10,56 @@ struct LogbookPDFRenderer {
     /// Generates a PDF logbook from the given flights.
     /// - Parameters:
     ///   - flights: All flights, pre-sorted oldest-first. Positioning flights are filtered internally.
-    ///   - pilotName: Displayed in the page header.
+    ///   - pilotName: Displayed on the cover page.
     /// - Returns: PDF data ready to write to disk or share.
-    static nonisolated func render(flights: [FlightSector], pilotName: String) -> Data {
+    /// resolvedDates: pre-computed effective date string per flight (local or UTC),
+    /// resolved on the main actor before Task.detached. Same order as flights.
+    static nonisolated func render(
+        flights: [FlightSector],
+        resolvedDates: [String],
+        pilotName: String,
+        arn: String = "",
+        dateFormat: String = "d MMM yy"
+    ) -> Data {
         let slots = LogbookPDFPaginator.buildSlots(from: flights)
         let pages = LogbookPDFPaginator.paginate(slots)
         let totals = LogbookPDFPaginator.computeTotals(pages: pages)
         let totalPages = pages.count
-        let dateRange = makeDateRange(flights: flights)
+        let dateRange = makeDateRange(resolvedDates: resolvedDates, dateFormat: dateFormat)
 
-        // Page size defined locally to avoid referencing @MainActor layout properties
         let pageSize = CGSize(width: 842, height: 595)
-        let format = UIGraphicsPDFRendererFormat()
-        let renderer = UIGraphicsPDFRenderer(
-            bounds: CGRect(origin: .zero, size: pageSize),
-            format: format
-        )
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: pageSize))
 
         let data = renderer.pdfData { ctx in
+            ctx.beginPage()
+            LogbookPDFCoverDrawer(
+                context: ctx,
+                pilotName: pilotName,
+                arn: arn,
+                dateRange: dateRange
+            ).draw()
+
+            // Build slot→resolvedDate mapping by matching against the sorted flights array
+            var flightToDate: [String: String] = [:]
+            for (i, flight) in flights.enumerated() {
+                let key = "\(flight.date)|\(flight.outTime)|\(flight.fromAirport)|\(flight.toAirport)"
+                if flightToDate[key] == nil, i < resolvedDates.count {
+                    flightToDate[key] = resolvedDates[i]
+                }
+            }
+
             for (index, pageSlots) in pages.enumerated() {
                 ctx.beginPage()
-                let drawer = LogbookPDFPageDrawer(
+                LogbookPDFPageDrawer(
                     context: ctx,
                     slots: pageSlots,
                     pageTotals: totals[index].page,
                     broughtForward: totals[index].broughtForward,
                     pageNumber: index + 1,
                     totalPages: totalPages,
-                    pilotName: pilotName,
-                    dateRange: dateRange
-                )
-                drawer.draw()
+                    dateFormat: dateFormat,
+                    flightToDate: flightToDate
+                ).draw()
             }
         }
 
@@ -56,17 +75,13 @@ struct LogbookPDFRenderer {
         return f
     }()
 
-    private static nonisolated let outputDF: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "dd MMM yyyy"
-        f.locale = Locale(identifier: "en_AU")
-        return f
-    }()
-
-    private static nonisolated func makeDateRange(flights: [FlightSector]) -> String {
-        guard !flights.isEmpty else { return "" }
-        let dates = flights.compactMap { inputDF.date(from: $0.date) }
+    private static nonisolated func makeDateRange(resolvedDates: [String], dateFormat: String) -> String {
+        guard !resolvedDates.isEmpty else { return "" }
+        let dates = resolvedDates.compactMap { inputDF.date(from: $0) }
         guard let first = dates.min(), let last = dates.max() else { return "" }
-        return "\(outputDF.string(from: first)) – \(outputDF.string(from: last))"
+        let f = DateFormatter()
+        f.dateFormat = dateFormat
+        f.locale = Locale(identifier: "en_AU")
+        return "\(f.string(from: first)) – \(f.string(from: last))"
     }
 }
