@@ -1703,6 +1703,8 @@ class FileImportService {
             "dd.MM.yyyy",      // 31.12.2024 (European)
             "d.M.yyyy",        // 1.1.2024 (European short)
             "yyyyMMdd",        // 20241231
+            "dd-MMM-yyyy",     // 31-Dec-2024
+            "d-MMM-yyyy",      // 8-Nov-2023
             "dd MMM yyyy",     // 31 Dec 2024
             "d MMM yyyy",      // 1 Dec 2024
             "dd MMMM yyyy",    // 31 December 2024
