@@ -30,7 +30,7 @@ struct LogbookPDFExportView: View {
     @AppStorage("logbookPDFPilotName")    private var logbookName: String = ""
     @AppStorage("logbookPDFArn")          private var arn: String = ""
     @AppStorage("logbookPDFDatePreset")   private var datePresetRaw: String = PDFDateRangePreset.all.rawValue
-    @AppStorage("logbookPDFDateFormat")   private var dateFormat: String = "d MMM yy"
+    @AppStorage("logbookPDFDateFormat")   private var dateFormat: String = "dd MMM yyyy"
     @AppStorage("logbookPDFCustomFrom")   private var customFromInterval: Double = 0
     @AppStorage("logbookPDFCustomTo")     private var customToInterval: Double = 0
     @AppStorage("logbookPDFUseLocalDates") private var useLocalDates: Bool = true
@@ -46,10 +46,14 @@ struct LogbookPDFExportView: View {
     }
 
     private static let dateFormats: [(label: String, format: String)] = [
-        ("25 Apr 26",   "d MMM yy"),
-        ("25/04/26",    "dd/MM/yy"),
-        ("25 Apr 2026", "d MMM yyyy"),
-        ("25/04/2026",  "dd/MM/yyyy"),
+        ("04 Apr 2026", "dd MMM yyyy"),
+        ("4 Apr 2026",  "d MMM yyyy"),
+        ("04 Apr 26",   "dd MMM yy"),
+        ("4 Apr 26",    "d MMM yy"),
+        ("04/04/2026",  "dd/MM/yyyy"),
+        ("04/04/26",    "dd/MM/yy"),
+        ("04-04-2026",  "dd-MM-yyyy"),
+        ("04-04-26",    "dd-MM-yy"),
     ]
 
     var body: some View {

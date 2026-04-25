@@ -380,7 +380,7 @@ struct ImportExportView: View {
             
                 // Export Data
                 ActionButton(
-                    title: "Export Entire Logbook",
+                    title: "Export Logbook",
                     subtitle: "Save as a CSV file",
                     icon: "square.and.arrow.up.fill",
                     color: .indigo.opacity(0.6),

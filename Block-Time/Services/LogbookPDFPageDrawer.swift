@@ -170,7 +170,7 @@ struct LogbookPDFPageDrawer {
             let geo = L.groupGeometry(for: group)
             let isMerged = mergedHeaderGroups.contains(group)
             let height = isMerged ? totalHeight : L.groupHeaderHeight
-            ctx.setFillColor(L.headerBg.cgColor)
+            ctx.setFillColor(L.rowAlt.cgColor)
             ctx.fill(CGRect(x: geo.x, y: groupTop, width: geo.width, height: height))
             let label = L.groupTitles[group] ?? ""
             drawTextVCentred(label,
@@ -181,7 +181,7 @@ struct LogbookPDFPageDrawer {
         // Row 2: leaf column labels — fill and label only for non-merged groups
         for group in L.groupOrder where !mergedHeaderGroups.contains(group) {
             let geo = L.groupGeometry(for: group)
-            ctx.setFillColor(L.headerBg.cgColor)
+            ctx.setFillColor(L.rowAlt.cgColor)
             ctx.fill(CGRect(x: geo.x, y: leafTop, width: geo.width, height: L.leafHeaderHeight))
         }
         for col in L.columns where !mergedHeaderGroups.contains(col.group) {
@@ -304,7 +304,7 @@ struct LogbookPDFPageDrawer {
         let boxRight = lastColX + lastCol.width
 
         // Fill box background
-        ctx.setFillColor(L.totalsBg.cgColor)
+        ctx.setFillColor(L.rowAlt.cgColor)
         ctx.fill(CGRect(x: boxLeft, y: footerY,
                         width: boxRight - boxLeft,
                         height: CGFloat(L.footerRowCount) * L.footerRowHeight))
