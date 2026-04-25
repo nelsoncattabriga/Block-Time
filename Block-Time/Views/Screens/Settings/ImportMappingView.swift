@@ -628,7 +628,7 @@ struct ImportMappingView: View {
         "aircrafttype":   ["aircrafttype", "aircraftmodel", "makemodel", "actype", "type", "model", "make"],
         "fromairport":    ["fromairport", "departureplace", "depairport", "departure", "origin", "from", "dep"],
         "toairport":      ["toairport", "arrivalplace", "arrairport", "destination", "arrival", "dest", "arr"],
-        "captainname":    ["captainname", "crewpic", "p1crew", "picname", "captain", "cpt", "pic"],
+        "captainname":    ["captainname", "crewpic", "p1crew", "picname", "captain", "capt", "cpt", "pic"],
         "f/oname":        ["f/oname", "crewsic", "p2crew", "sicname", "firstofficer", "copilot", "fo"],
         "s/o1name":       ["relief1", "crewrelief", "secondofficer1", "so1", "relief", "cruise", "p3"],
         "s/o2name":       ["relief2", "crewrelief2", "secondofficer2", "so2", "p4"],

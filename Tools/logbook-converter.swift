@@ -21,6 +21,47 @@
 
 import Foundation
 
+// MARK: - Merge map
+// Add extra source columns to sum into each Block-Time field.
+// Use this when your logbook splits a value across multiple columns.
+//
+// Syntax: list column header strings exactly as they appear in your CSV, comma-separated.
+//   "Night Time": ["night_captain", "night_fo"]          ← two extra columns summed in
+//   "P1 Time":    ["flight_pic", "flight_picRelief"]      ← LogTen Pro example
+//   "P2 Time":    ["time_sic", "time_sicRelief"]          ← PilotLog example
+//
+// The primary column is auto-detected as usual — only list the EXTRA columns here.
+// A warning is printed for any column name not found in the input file.
+//
+// Known column names by app:
+//   LogTen Pro  — flight_night, flight_pic, flight_p1us, flight_sic, flight_actualInstrument, flight_totalTime
+//   PilotLog    — time_night, time_pic, time_picus, time_sic, time_actual, time_total
+//   Safelog     — NIGHT, PIC, SIC, IFR, TOTAL
+//   Generic     — night, picnight, p1night, sicnight, p2night, fonight, captainnight,
+//                 pictime, p1time, sictime, p2time, actualinstrument, actualimc, ifr, inst,
+//                 totaltime, blocktime, total, block
+//let mergeColumns: [String: [String]] = [
+//    "Block Time":       [],
+//    "Night Time":       ["SEIN","SEDN","SECN","MEIN","MEDN","MECN","MEFN"],  // supports multiple columns
+//    "P1 Time":          ["SECD","SECN","MECD","MECN"],  // supports multiple columns
+//    "P1US Time":        ["SEID","SEIN","MEID","MEIN"],  // supports multiple columns
+//    "P2 Time":          ["SEDD","SEDN","MEFD","MEFN","MEDD","MEDN"],  // supports multiple columns
+//    "Instrument Time":  [],  // supports multiple columns
+//    "SIM Time":         [],
+//    "Sp/Ins Time":      [],
+//]
+
+let mergeColumns: [String: [String]] = [
+    "Block Time":       [],
+    "Night Time":       [],  // supports multiple columns
+    "P1 Time":          [],  // supports multiple columns
+    "P1US Time":        [],  // supports multiple columns
+    "P2 Time":          [],  // supports multiple columns
+    "Instrument Time":  [],  // supports multiple columns
+    "SIM Time":         [],
+    "Sp/Ins Time":      [],
+]
+
 // MARK: - Output CSV header (must match FileImportService.exportToCSV exactly)
 let outputHeader = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks,Custom Count"
 
@@ -418,9 +459,9 @@ let synonyms: [String: [String]] = [
     "aircraftreg":    ["aircraftreg", "registration", "tailnumber", "tail", "reg", "rego", "regno"],
     "aircrafttype":   ["aircrafttype", "aircraftmodel", "makemodel", "actype", "type", "model", "make"],
     "fromairport":    ["fromairport", "departureplace", "depairport", "departure", "origin", "from", "dep"],
-    "toairport":      ["toairport", "arrivalplace", "arrairport", "destination", "arrival", "dest", "arr"],
-    "captainname":    ["captainname", "crewpic", "p1crew", "picname", "captain", "cpt", "pic"],
-    "f/oname":        ["f/oname", "crewsic", "p2crew", "sicname", "firstofficer", "copilot", "fo"],
+    "toairport":      ["toairport", "arrivalplace", "arrairport", "destination", "arrival", "dest", "arr", "to"],
+    "captainname":    ["captainname", "crewpic", "p1crew", "picname", "captain", "capt", "cpt", "pic"],
+    "f/oname":        ["f/oname", "crewsic", "p2crew", "sicname", "firstofficer", "copilot", "fo", "crew"],
     "s/o1name":       ["relief1", "crewrelief", "secondofficer1", "so1", "relief", "cruise", "p3"],
     "s/o2name":       ["relief2", "crewrelief2", "secondofficer2", "so2", "p4"],
     "std":            ["scheduleddeparturetime", "scheduleddeparture", "scheduleddep", "scheddep", "std", "etd"],
@@ -479,8 +520,9 @@ func detectColumn(for logbookField: String, in headers: [String], profileMap: [S
         }
     }
 
-    // Tier 3: synonym
-    guard let fieldSynonyms = synonyms[fieldKey] else { return nil }
+    // Tier 3: synonym (keys may contain non-alphanumeric chars like "f/oname" — normalise for lookup)
+    let synonymKey = synonyms.keys.first(where: { normalize($0) == fieldKey }) ?? fieldKey
+    guard let fieldSynonyms = synonyms[synonymKey] else { return nil }
     for synonym in fieldSynonyms {
         if let match = normalizedHeaders.first(where: { tokenMatches($0.norm, synonym: synonym) }) {
             return match.original
@@ -578,6 +620,23 @@ func parseTime(_ s: String) -> String {
     return t
 }
 
+/// Sum extra columns from mergeColumns into a parsed duration value.
+/// Warns once per run for any listed column not found in headers.
+func applyMerge(field: String, baseValue: String, headers: [String], get: (String) -> String) -> String {
+    guard let extras = mergeColumns[field], !extras.isEmpty else { return baseValue }
+    let headerSet = Set(headers)
+    var total = Double(baseValue) ?? 0.0
+    for col in extras {
+        if !headerSet.contains(col) {
+            fputs("Warning: merge column '\(col)' for '\(field)' not found in input headers\n", stderr)
+            continue
+        }
+        let raw = get(col)
+        total += Double(parseDurationTime(raw)) ?? 0.0
+    }
+    return String(format: "%.2f", total)
+}
+
 func parseBool(_ s: String) -> Bool {
     let n = s.lowercased().trimmingCharacters(in: .whitespaces)
     if n.isEmpty { return false }
@@ -596,6 +655,7 @@ func parseDate(_ s: String) -> String {
         "dd/MM/yyyy", "d/M/yyyy", "dd-MM-yyyy", "d-M-yyyy",
         "yyyy-MM-dd", "MM/dd/yyyy", "M/d/yyyy",
         "dd.MM.yyyy", "d.M.yyyy", "yyyyMMdd",
+        "dd-MMM-yyyy", "d-MMM-yyyy",
         "dd MMM yyyy", "d MMM yyyy", "dd MMMM yyyy",
         "MMM dd, yyyy", "MMMM dd, yyyy", "yyyy/MM/dd",
     ]
@@ -720,7 +780,8 @@ func convert(inputPath: String, outputPath: String?, timesAreLocal: Bool) {
             mappedCount += 1
         }
     }
-    print("Mapped:  \(mappedCount)/\(fields.count) fields")
+    let activeMergeCount = mergeColumns.values.filter { !$0.isEmpty }.count
+    print("Mapped:  \(mappedCount)/\(fields.count) fields\(activeMergeCount > 0 ? ", \(activeMergeCount) field(s) with merge columns" : "")")
 
     guard columnMap["Date"] != nil else {
         fputs("Error: could not detect a Date column — cannot proceed\n", stderr)
@@ -730,8 +791,12 @@ func convert(inputPath: String, outputPath: String?, timesAreLocal: Bool) {
     // Print mapping summary
     print("\nField mapping:")
     for field in fields {
+        let extras = mergeColumns[field.key]?.filter { !$0.isEmpty } ?? []
         if let col = columnMap[field.key] {
-            print("  \(field.label.padding(toLength: 18, withPad: " ", startingAt: 0)) ← \(col)")
+            let mergeNote = extras.isEmpty ? "" : " + \(extras.joined(separator: ", "))"
+            print("  \(field.label.padding(toLength: 18, withPad: " ", startingAt: 0)) ← \(col)\(mergeNote)")
+        } else if !extras.isEmpty {
+            print("  \(field.label.padding(toLength: 18, withPad: " ", startingAt: 0)) ← (merge only: \(extras.joined(separator: ", ")))")
         } else {
             print("  \(field.label.padding(toLength: 18, withPad: " ", startingAt: 0))   (not mapped)")
         }
@@ -745,6 +810,7 @@ func convert(inputPath: String, outputPath: String?, timesAreLocal: Bool) {
     for row in rows {
         let get = makeGetter(row: row, headers: headers)
         func field(_ f: String) -> String { get(columnMap[f] ?? "") }
+        func merged(_ f: String) -> String { applyMerge(field: f, baseValue: parseDurationTime(field(f)), headers: headers, get: get) }
 
         let date = parseDate(field("Date"))
         if date.isEmpty { skipped += 1; continue }
@@ -771,14 +837,14 @@ func convert(inputPath: String, outputPath: String?, timesAreLocal: Bool) {
             flight.inTime  = convertLocalToUTCTime(dateString: date, timeString: flight.inTime,  icao: flight.toAirport)
             flight.sta     = convertLocalToUTCTime(dateString: date, timeString: flight.sta,     icao: flight.toAirport)
         }
-        flight.blockTime = parseDurationTime(field("Block Time"))
-        flight.nightTime = parseDurationTime(field("Night Time"))
-        flight.p1Time = parseDurationTime(field("P1 Time"))
-        flight.p1usTime = parseDurationTime(field("P1US Time"))
-        flight.p2Time = parseDurationTime(field("P2 Time"))
-        flight.instrumentTime = parseDurationTime(field("Instrument Time"))
-        flight.simTime = parseDurationTime(field("SIM Time"))
-        flight.spInsTime = parseDurationTime(field("Sp/Ins Time"))
+        flight.blockTime = merged("Block Time")
+        flight.nightTime = merged("Night Time")
+        flight.p1Time = merged("P1 Time")
+        flight.p1usTime = merged("P1US Time")
+        flight.p2Time = merged("P2 Time")
+        flight.instrumentTime = merged("Instrument Time")
+        flight.simTime = merged("SIM Time")
+        flight.spInsTime = merged("Sp/Ins Time")
         flight.isPAX = parseBool(field("PAX"))
         flight.isAIII = parseBool(field("AIII"))
         flight.isRNP = parseBool(field("RNP"))
