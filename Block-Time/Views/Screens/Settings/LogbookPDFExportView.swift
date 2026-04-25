@@ -34,6 +34,7 @@ struct LogbookPDFExportView: View {
     @AppStorage("logbookPDFCustomFrom")   private var customFromInterval: Double = 0
     @AppStorage("logbookPDFCustomTo")     private var customToInterval: Double = 0
     @AppStorage("logbookPDFUseLocalDates") private var useLocalDates: Bool = true
+    @AppStorage("logbookPDFUseHHMM")       private var useHHMM: Bool = false
 
     private var datePreset: PDFDateRangePreset {
         PDFDateRangePreset(rawValue: datePresetRaw) ?? .all
@@ -208,6 +209,19 @@ struct LogbookPDFExportView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 100)
                 }
+
+                HStack(alignment: .center) {
+                    Text("Time Format")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Picker("", selection: $useHHMM) {
+                        Text("Decimal").tag(false)
+                        Text("HH:MM").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 130)
+                }
             }
             .padding()
             .background(Color.brown.opacity(0.06))
@@ -338,6 +352,7 @@ struct LogbookPDFExportView: View {
         let name      = logbookName.trimmingCharacters(in: .whitespacesAndNewlines)
         let arnNumber = arn.trimmingCharacters(in: .whitespacesAndNewlines)
         let format    = dateFormat
+        let hhmm      = useHHMM
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             let all = FlightDatabaseService.shared.fetchAllFlights()
@@ -353,7 +368,7 @@ struct LogbookPDFExportView: View {
             Task.detached(priority: .userInitiated) {
                 let pdfData = LogbookPDFRenderer.render(
                     flights: sorted, resolvedDates: resolvedDates,
-                    pilotName: name, arn: arnNumber, dateFormat: format)
+                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm)
 
                 let timestamp = DateFormatter()
                 timestamp.dateFormat = "yyyy-MM-dd_HHmm"

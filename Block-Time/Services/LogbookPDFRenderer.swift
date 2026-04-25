@@ -19,7 +19,8 @@ struct LogbookPDFRenderer {
         resolvedDates: [String],
         pilotName: String,
         arn: String = "",
-        dateFormat: String = "d MMM yy"
+        dateFormat: String = "dd MMM yyyy",
+        useHHMM: Bool = false
     ) -> Data {
         let slots = LogbookPDFPaginator.buildSlots(from: flights)
         let pages = LogbookPDFPaginator.paginate(slots)
@@ -58,6 +59,7 @@ struct LogbookPDFRenderer {
                     pageNumber: index + 1,
                     totalPages: totalPages,
                     dateFormat: dateFormat,
+                    useHHMM: useHHMM,
                     flightToDate: flightToDate
                 ).draw()
             }

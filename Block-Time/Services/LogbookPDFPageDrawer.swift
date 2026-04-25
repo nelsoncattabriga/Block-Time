@@ -99,6 +99,7 @@ struct LogbookPDFPageDrawer {
     let pageNumber: Int
     let totalPages: Int
     let dateFormat: String
+    let useHHMM: Bool
     /// Pre-resolved date strings keyed by "date|outTime|from|to"
     let flightToDate: [String: String]
 
@@ -278,7 +279,9 @@ struct LogbookPDFPageDrawer {
         ]
         for (colId, value) in timeMap {
             guard value > 0, let r = cellRect(colId) else { continue }
-            drawTextVCentred(String(format: "%.1f", value), in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
+            let font = colId == 9 ? L.fontDataBold : L.fontDataCell
+            let text = useHHMM ? Self.decimalToHHMM(value) : String(format: "%.1f", value)
+            drawTextVCentred(text, in: r, font: font, color: L.bodyText, alignment: .center)
         }
     }
 
@@ -340,11 +343,12 @@ struct LogbookPDFPageDrawer {
             for colId in 9...16 {
                 guard let col = L.columns.first(where: { $0.id == colId }),
                       let x = L.columnOffsets[colId] else { continue }
-                let val = row.totals.formattedValue(for: colId)
+                let val = row.totals.formattedValue(for: colId, useHHMM: useHHMM)
                 guard !val.isEmpty else { continue }
+                let colFont = (colId == 9 || row.bold) ? L.fontFooterTotal : valueFont
                 drawTextVCentred(val,
                                  in: CGRect(x: x + 1, y: y, width: col.width - 2, height: L.footerRowHeight),
-                                 font: valueFont, color: L.bodyText, alignment: .center)
+                                 font: colFont, color: L.bodyText, alignment: .center)
             }
         }
     }
@@ -452,6 +456,11 @@ struct LogbookPDFPageDrawer {
         let vOffset = max(0, (rect.height - textSize.height) / 2)
         let drawRect = CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: textSize.height)
         (text as NSString).draw(in: drawRect, withAttributes: attrs)
+    }
+
+    private static func decimalToHHMM(_ v: Double) -> String {
+        let totalMinutes = Int((v * 60).rounded())
+        return String(format: "%d:%02d", totalMinutes / 60, totalMinutes % 60)
     }
 
 }

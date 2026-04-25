@@ -64,8 +64,29 @@ struct PageTotals: Sendable {
         }
     }
 
+    nonisolated func formattedValue(for columnId: Int, useHHMM: Bool) -> String {
+        guard useHHMM else { return formattedValue(for: columnId) }
+        switch columnId {
+        case 9:  return formatHHMM(block)
+        case 10: return formatHHMM(night)
+        case 11: return formatHHMM(p1)
+        case 12: return formatHHMM(p1us)
+        case 13: return formatHHMM(p2)
+        case 14: return formatHHMM(instr)
+        case 15: return formatHHMM(sim)
+        case 16: return formatHHMM(spins)
+        default: return ""
+        }
+    }
+
     private nonisolated func formatTime(_ v: Double) -> String {
         v > 0 ? String(format: "%.1f", v) : ""
+    }
+
+    private nonisolated func formatHHMM(_ v: Double) -> String {
+        guard v > 0 else { return "" }
+        let totalMinutes = Int((v * 60).rounded())
+        return String(format: "%d:%02d", totalMinutes / 60, totalMinutes % 60)
     }
 
     private nonisolated func formatInt(_ v: Int) -> String {

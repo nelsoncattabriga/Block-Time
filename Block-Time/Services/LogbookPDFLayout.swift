@@ -36,8 +36,8 @@ enum LogbookPDFLayout {
     static nonisolated let marginH: CGFloat = 18
     static nonisolated let pageHeaderHeight: CGFloat = 0   // no per-page header band
     static nonisolated let subHeaderHeight: CGFloat = 0
-    static nonisolated let groupHeaderHeight: CGFloat = 16
-    static nonisolated let leafHeaderHeight: CGFloat = 14
+    static nonisolated let groupHeaderHeight: CGFloat = 24
+    static nonisolated let leafHeaderHeight: CGFloat = 18
     static nonisolated let dataRowHeight: CGFloat = 18
     static nonisolated let footerRowHeight: CGFloat = 14
     static nonisolated let footerRowCount: Int = 3
@@ -63,9 +63,10 @@ enum LogbookPDFLayout {
 
     // MARK: Fonts
 
-    static nonisolated let fontGroupHeader = UIFont(name: "TimesNewRomanPS-BoldMT", size: 7) ?? .boldSystemFont(ofSize: 7)
+    static nonisolated let fontGroupHeader = UIFont(name: "TimesNewRomanPS-BoldMT", size: 8) ?? .boldSystemFont(ofSize: 8)
     static nonisolated let fontLeafHeader  = UIFont(name: "TimesNewRomanPS-BoldMT", size: 7) ?? .boldSystemFont(ofSize: 7)
     static nonisolated let fontDataCell    = UIFont(name: "HelveticaNeue", size: 7) ?? .systemFont(ofSize: 7)
+    static nonisolated let fontDataBold    = UIFont(name: "HelveticaNeue-Bold", size: 7) ?? .boldSystemFont(ofSize: 7)
     static nonisolated let fontDataRemarks = UIFont(name: "HelveticaNeue", size: 6.5) ?? .systemFont(ofSize: 6.5)
     static nonisolated let fontFooterLabel = UIFont(name: "HelveticaNeue-Bold", size: 7) ?? .boldSystemFont(ofSize: 7)
     static nonisolated let fontFooterValue = UIFont(name: "HelveticaNeue", size: 7) ?? .systemFont(ofSize: 7)
