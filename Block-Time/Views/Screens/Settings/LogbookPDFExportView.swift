@@ -60,7 +60,7 @@ struct LogbookPDFExportView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 16) {
                     setupView
                 }
                 .padding()
@@ -92,22 +92,16 @@ struct LogbookPDFExportView: View {
     // MARK: - Setup
 
     private var setupView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 16) {
             VStack(spacing: 12) {
-                Image(systemName: "doc.richtext.fill")
+                Image(systemName: "books.vertical.fill")
                     .font(.system(size: 60))
                     .foregroundColor(.brown)
 
                 Text("Print Logbook")
                     .font(.title2)
                     .fontWeight(.bold)
-
-//                Text("Generates a formatted PDF in the style of a paper logbook.")
-//                    .font(.subheadline)
-//                    .foregroundColor(.secondary)
-//                    .multilineTextAlignment(.center)
             }
-//            .padding(.top)
 
             // Name + ARN
             HStack(alignment: .top, spacing: 12) {
@@ -228,13 +222,13 @@ struct LogbookPDFExportView: View {
             .cornerRadius(12)
 
             // Generate button
-            Button(action: generatePDF) {
+            Button { Task { await generatePDF() } } label: {
                 HStack {
                     if isGenerating {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .brown))
                     } else {
-                        Image(systemName: "doc.richtext.fill")
+                        Image(systemName: "books.vertical.fill")
                             .foregroundColor(.brown)
                     }
                     Text(isGenerating ? "Generating…" : "Generate PDF")
@@ -347,49 +341,63 @@ struct LogbookPDFExportView: View {
         }
     }
 
-    private func generatePDF() {
+    @MainActor
+    private func generatePDF() async {
         isGenerating = true
+        await Task.yield()  // let SwiftUI render the spinner before blocking work begins
         let name      = logbookName.trimmingCharacters(in: .whitespacesAndNewlines)
         let arnNumber = arn.trimmingCharacters(in: .whitespacesAndNewlines)
         let format    = dateFormat
         let hhmm      = useHHMM
+        let preset    = datePreset
+        let from      = customFrom
+        let to        = customTo
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        do {
+            // Fetch on main actor (fast)
             let all = FlightDatabaseService.shared.fetchAllFlights()
                 .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
 
-            let sorted = self.filtered(from: all).sorted {
-                self.effectiveSortDate(for: $0) < self.effectiveSortDate(for: $1)
-            }
-
-            // Resolve all dates on the main actor before handing off to Task.detached
-            let resolvedDates = sorted.map { self.effectiveDateString(for: $0) }
-
-            Task.detached(priority: .userInitiated) {
-                let pdfData = LogbookPDFRenderer.render(
-                    flights: sorted, resolvedDates: resolvedDates,
-                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm)
-
-                let timestamp = DateFormatter()
-                timestamp.dateFormat = "yyyy-MM-dd_HHmm"
-                let fileName = "Logbook_\(timestamp.string(from: Date())).pdf"
-                let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-                let url = cacheDir.appendingPathComponent(fileName)
-
-                do {
-                    try pdfData.write(to: url, options: .atomic)
-                    await MainActor.run {
-                        self.isGenerating = false
-                        self.pdfURL = url
-                        self.showPreview = true
-                    }
-                } catch {
-                    await MainActor.run {
-                        self.isGenerating = false
-                        self.errorMessage = "Failed to write PDF: \(error.localizedDescription)"
-                    }
+            // Filter on main actor (AirportService calls for effective dates)
+            let filtered: [FlightSector]
+            switch preset {
+            case .all:
+                filtered = all
+            case .last12Months:
+                let cutoff = Calendar.current.date(byAdding: .month, value: -12, to: Date()) ?? Date()
+                filtered = all.filter { (Self.inputDF.date(from: effectiveDateString(for: $0)) ?? .distantPast) >= cutoff }
+            case .custom:
+                let toExclusive = Calendar.current.date(byAdding: .day, value: 1, to: to) ?? to
+                filtered = all.filter {
+                    guard let d = Self.inputDF.date(from: effectiveDateString(for: $0)) else { return false }
+                    return d >= from && d < toExclusive
                 }
             }
+
+            // Sort + resolve dates on main actor
+            let sorted = filtered.sorted { effectiveSortDate(for: $0) < effectiveSortDate(for: $1) }
+            let resolvedDates = sorted.map { effectiveDateString(for: $0) }
+
+            // Render off-thread
+            let pdfData = await Task.detached(priority: .userInitiated) {
+                LogbookPDFRenderer.render(
+                    flights: sorted, resolvedDates: resolvedDates,
+                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm)
+            }.value
+
+            let timestamp = DateFormatter()
+            timestamp.dateFormat = "yyyy-MM-dd_HHmm"
+            let fileName = "Logbook_\(timestamp.string(from: Date())).pdf"
+            let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+            let url = cacheDir.appendingPathComponent(fileName)
+
+            try pdfData.write(to: url, options: .atomic)
+            isGenerating = false
+            pdfURL = url
+            showPreview = true
+        } catch {
+            isGenerating = false
+            errorMessage = "Failed to write PDF: \(error.localizedDescription)"
         }
     }
 }

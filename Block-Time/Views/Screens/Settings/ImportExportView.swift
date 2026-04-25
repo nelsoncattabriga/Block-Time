@@ -391,9 +391,9 @@ struct ImportExportView: View {
 
                 // PDF Logbook
                 ActionButton(
-                    title: "Print Logbook (PDF)",
+                    title: "Print Logbook",
                     subtitle: "Formatted paper logbook layout",
-                    icon: "doc.richtext.fill",
+                    icon: "books.vertical.fill",
                     color: .brown.opacity(0.8),
                     isLoading: false
                 ) {
