@@ -148,9 +148,11 @@ struct NextFlightProvider: AppIntentTimelineProvider {
         for (index, flight) in flights.enumerated() {
             let departure = flight.departureDatetime ?? flight.flightDate
             let nextFlight: WidgetFlightEntry? = index + 1 < flights.count ? flights[index + 1] : nil
+            let sameDay = Self.sameDayFlights(as: flight, from: flights)
 
             entries.append(NextFlightTimelineEntry(
                 date: entryDate, flight: flight,
+                sameDayFlights: sameDay,
                 configuration: configuration
             ))
 
