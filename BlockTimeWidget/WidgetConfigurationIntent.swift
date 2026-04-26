@@ -9,6 +9,19 @@
 import AppIntents
 import WidgetKit
 
+// MARK: - Display mode option
+
+enum WidgetDisplayModeOption: String, AppEnum {
+    case flightInfo
+    case countdown
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Display")
+    static var caseDisplayRepresentations: [WidgetDisplayModeOption: DisplayRepresentation] = [
+        .flightInfo: "Flight Info",
+        .countdown:  "Countdown",
+    ]
+}
+
 // MARK: - Style option
 
 enum WidgetStyleOption: String, AppEnum {
@@ -56,6 +69,9 @@ struct NextFlightIntent: AppIntents.WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Widget Settings"
     static var description = IntentDescription("Customise the widget appearance.")
 
+    @Parameter(title: "Display", default: .flightInfo)
+    var displayMode: WidgetDisplayModeOption
+
     @Parameter(title: "Style", default: .gradient)
     var style: WidgetStyleOption
 
@@ -67,16 +83,26 @@ struct NextFlightIntent: AppIntents.WidgetConfigurationIntent {
     var timeZone: WidgetTimeZoneOption
 
     static var parameterSummary: some ParameterSummary {
-        When(\NextFlightIntent.$style, .equalTo, .solid) {
-            Summary {
-                \NextFlightIntent.$style
-                \NextFlightIntent.$appearance
-                \NextFlightIntent.$timeZone
+        When(\NextFlightIntent.$displayMode, .equalTo, .flightInfo) {
+            When(\NextFlightIntent.$style, .equalTo, .solid) {
+                Summary {
+                    \NextFlightIntent.$displayMode
+                    \NextFlightIntent.$style
+                    \NextFlightIntent.$appearance
+                    \NextFlightIntent.$timeZone
+                }
+            } otherwise: {
+                Summary {
+                    \NextFlightIntent.$displayMode
+                    \NextFlightIntent.$style
+                    \NextFlightIntent.$timeZone
+                }
             }
         } otherwise: {
+            // Countdown mode — style/appearance/timezone not relevant
             Summary {
+                \NextFlightIntent.$displayMode
                 \NextFlightIntent.$style
-                \NextFlightIntent.$timeZone
             }
         }
     }

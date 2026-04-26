@@ -139,11 +139,20 @@ struct NextFlightWidgetView: View {
 
     var body: some View {
         Group {
-            switch family {
-            case .systemSmall:  SmallView(entry: entry, scheme: scheme)
-            case .systemMedium: MediumView(entry: entry, scheme: scheme)
-            case .systemLarge:  LargeView(entry: entry, scheme: scheme)
-            default:            SmallView(entry: entry, scheme: scheme)
+            if entry.configuration.displayMode == .countdown {
+                switch family {
+                case .systemSmall:  CountdownSmallView(entry: entry, scheme: scheme)
+                case .systemMedium: CountdownMediumView(entry: entry, scheme: scheme)
+                case .systemLarge:  CountdownLargeView(entry: entry, scheme: scheme)
+                default:            CountdownSmallView(entry: entry, scheme: scheme)
+                }
+            } else {
+                switch family {
+                case .systemSmall:  SmallView(entry: entry, scheme: scheme)
+                case .systemMedium: MediumView(entry: entry, scheme: scheme)
+                case .systemLarge:  LargeView(entry: entry, scheme: scheme)
+                default:            SmallView(entry: entry, scheme: scheme)
+                }
             }
         }
         .environment(\.colorScheme, scheme)
@@ -547,6 +556,331 @@ private struct FlightRowView: View {
     }
 }
 
+// MARK: - Countdown Small Widget
+
+private struct CountdownSmallView: View {
+    let entry: NextFlightTimelineEntry
+    let scheme: ColorScheme
+
+    private var isDark: Bool { scheme == .dark }
+    private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
+
+    var body: some View {
+        ZStack {
+            WT.background(style: entry.configuration.style, dark: isDark)
+
+            if let flight = entry.flight {
+                VStack(alignment: .center, spacing: 0) {
+
+                    // Header
+                    HStack(spacing: 4) {
+                        Image(systemName: "airplane.departure")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(WT.orange)
+                        Text("NEXT FLIGHT")
+                            .font(.system(size: 10, weight: .semibold))
+                            .kerning(0.6)
+                            .foregroundStyle(WT.secondary)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    // Flight number
+                    Text(flight.flightNumber.isEmpty ? "—" : flight.flightNumber)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(WT.secondary)
+
+                    Spacer(minLength: 2)
+
+                    // Route
+                    HStack(spacing: 4) {
+                        Text(TimeFormatHelper.displayCode(flight.fromAirport, useIATA: flight.useIATACodes))
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(primary)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(WT.orange)
+                        Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(primary)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                    }
+
+                    // Divider
+                    Rectangle()
+                        .fill(WT.orange.opacity(0.25))
+                        .frame(height: 1)
+
+                    Spacer(minLength: 6)
+
+                    // Live countdown
+                    let depDate = flight.departureDatetime ?? flight.flightDate
+                    Text(depDate, style: .relative)
+                        .font(.system(size: 20, weight: .bold, design: .monospaced))
+                        .foregroundStyle(WT.orange)
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(14)
+
+            } else {
+                NoFlightView(isDark: isDark)
+            }
+        }
+    }
+}
+
+// MARK: - Countdown Medium Widget
+
+private struct CountdownMediumView: View {
+    let entry: NextFlightTimelineEntry
+    let scheme: ColorScheme
+
+    private var isDark: Bool { scheme == .dark }
+    private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
+
+    var body: some View {
+        ZStack {
+            WT.background(style: entry.configuration.style, dark: isDark)
+
+            if let flight = entry.flight {
+                VStack(spacing: 0) {
+
+                    // ── Header ───────────────────────────────────────────
+                    HStack(spacing: 4) {
+                        Image(systemName: "airplane.departure")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(WT.orange)
+                        Text("NEXT FLIGHT")
+                            .font(.system(size: 10, weight: .semibold))
+                            .kerning(0.8)
+                            .foregroundStyle(WT.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+
+                    Spacer(minLength: 4)
+
+                    // ── Route + spine (identical to MediumView) ──────────
+                    HStack(alignment: .center, spacing: 0) {
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(TimeFormatHelper.displayCode(flight.fromAirport, useIATA: flight.useIATACodes))
+                                .font(.system(size: 30, weight: .bold, design: .rounded))
+                                .foregroundStyle(primary)
+                            Text(flight.departureDatetime.map { TimeFormatHelper.displayTime($0, timeZone: entry.configuration.timeZone, airportICAO: flight.fromAirport) } ?? "–:––")
+                                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(WT.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        VStack(spacing: 2) {
+                            HStack(spacing: 2) {
+                                ForEach(0..<4, id: \.self) { _ in
+                                    Rectangle()
+                                        .fill(WT.orange.opacity(0.4))
+                                        .frame(width: 5, height: 1.5)
+                                }
+                                Image(systemName: "airplane")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(WT.orange)
+                                ForEach(0..<4, id: \.self) { _ in
+                                    Rectangle()
+                                        .fill(WT.orange.opacity(0.4))
+                                        .frame(width: 5, height: 1.5)
+                                }
+                            }
+                            Text(flight.flightNumber.isEmpty ? "—" : flight.flightNumber)
+                                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                                .foregroundStyle(WT.secondary)
+                        }
+                        .frame(width: 90)
+
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
+                                .font(.system(size: 30, weight: .bold, design: .rounded))
+                                .foregroundStyle(primary)
+                            Text(flight.arrivalDatetime.map { TimeFormatHelper.displayTime($0, timeZone: entry.configuration.timeZone, airportICAO: flight.toAirport) } ?? "–:––")
+                                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(WT.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .padding(.horizontal, 16)
+
+                    Spacer(minLength: 8)
+
+                    // ── Divider ──────────────────────────────────────────
+                    Rectangle()
+                        .fill(WT.orange.opacity(0.25))
+                        .frame(height: 1)
+                        .padding(.horizontal, 16)
+
+                    Spacer(minLength: 6)
+
+                    // ── Countdown (replaces date + time rows) ────────────
+                    let depDate = flight.departureDatetime ?? flight.flightDate
+                    Text(depDate, style: .relative)
+                        .font(.system(size: 20, weight: .bold, design: .monospaced))
+                        .foregroundStyle(WT.orange)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .center)
+
+                    Spacer(minLength: 8)
+                }
+
+            } else {
+                NoFlightView(isDark: isDark)
+            }
+        }
+    }
+}
+
+// MARK: - Countdown Large Widget
+
+private struct CountdownLargeView: View {
+    let entry: NextFlightTimelineEntry
+    let scheme: ColorScheme
+
+    private var isDark: Bool   { scheme == .dark }
+    private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
+
+    private var otherFlights: [WidgetFlightEntry] {
+        guard let next = entry.flight else { return [] }
+        let nextDep = next.departureDatetime ?? next.flightDate
+        return entry.sameDayFlights
+            .filter { ($0.departureDatetime ?? $0.flightDate) > nextDep }
+            .sorted { ($0.departureDatetime ?? $0.flightDate) < ($1.departureDatetime ?? $1.flightDate) }
+    }
+
+    private var emptyBottomLabel: String {
+        entry.noMoreFlightsToday ? "No More Flights Today" : "No Other Flights Today"
+    }
+
+    var body: some View {
+        ZStack {
+            WT.background(style: entry.configuration.style, dark: isDark)
+
+            if let flight = entry.flight {
+                VStack(spacing: 0) {
+
+                    // ── Header ───────────────────────────────────────────
+                    HStack(spacing: 4) {
+                        Image(systemName: "airplane.departure")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(WT.orange)
+                        Text("BLOCK-TIME")
+                            .font(.system(size: 10, weight: .semibold))
+                            .kerning(0.8)
+                            .foregroundStyle(WT.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+
+                    Spacer(minLength: 6)
+
+                    // ── Route + spine ─────────────────────────────────────
+                    HStack(alignment: .center, spacing: 0) {
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(TimeFormatHelper.displayCode(flight.fromAirport, useIATA: flight.useIATACodes))
+                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .foregroundStyle(primary)
+                            Text(flight.departureDatetime.map { TimeFormatHelper.displayTime($0, timeZone: entry.configuration.timeZone, airportICAO: flight.fromAirport) } ?? "–:––")
+                                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(WT.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        VStack(spacing: 2) {
+                            HStack(spacing: 2) {
+                                ForEach(0..<4, id: \.self) { _ in
+                                    Rectangle()
+                                        .fill(WT.orange.opacity(0.4))
+                                        .frame(width: 5, height: 1.5)
+                                }
+                                Image(systemName: "airplane")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(WT.orange)
+                                ForEach(0..<4, id: \.self) { _ in
+                                    Rectangle()
+                                        .fill(WT.orange.opacity(0.4))
+                                        .frame(width: 5, height: 1.5)
+                                }
+                            }
+                            Text(flight.flightNumber.isEmpty ? "—" : flight.flightNumber)
+                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .foregroundStyle(WT.secondary)
+                        }
+                        .frame(width: 90)
+
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text(TimeFormatHelper.displayCode(flight.toAirport, useIATA: flight.useIATACodes))
+                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .foregroundStyle(primary)
+                            Text(flight.arrivalDatetime.map { TimeFormatHelper.displayTime($0, timeZone: entry.configuration.timeZone, airportICAO: flight.toAirport) } ?? "–:––")
+                                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(WT.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .padding(.horizontal, 16)
+
+                    Spacer(minLength: 8)
+
+                    // ── Countdown (replaces date + time rows) ────────────
+                    let depDate = flight.departureDatetime ?? flight.flightDate
+                    Text(depDate, style: .relative)
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .foregroundStyle(WT.orange)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .center)
+
+                    Spacer(minLength: 12)
+
+                    // ── Divider ───────────────────────────────────────────
+                    Rectangle()
+                        .fill(WT.orange.opacity(0.25))
+                        .frame(height: 1)
+                        .padding(.horizontal, 16)
+
+                    Spacer(minLength: 10)
+
+                    // ── Other flights today ───────────────────────────────
+                    if otherFlights.isEmpty {
+                        Text(emptyBottomLabel)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(WT.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    } else {
+                        VStack(spacing: 8) {
+                            ForEach(otherFlights, id: \.stableID) { f in
+                                FlightRowView(flight: f, primary: primary, timeZone: entry.configuration.timeZone)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+
+                    Spacer(minLength: 14)
+                }
+
+            } else {
+                NoFlightView(isDark: isDark)
+            }
+        }
+    }
+}
+
 // MARK: - No flight empty state
 
 private struct NoFlightView: View {
@@ -629,6 +963,15 @@ private let e5 = NextFlightTimelineEntry(date: now.addingTimeInterval(25.5 * 360
 // State 6 — All done
 private let e6 = NextFlightTimelineEntry(date: now.addingTimeInterval(36 * 3600), flight: nil)
 
+private let countdownIntent: NextFlightIntent = {
+    var intent = NextFlightIntent()
+    intent.displayMode = .countdown
+    return intent
+}()
+
+private let ec1 = NextFlightTimelineEntry(date: now, flight: f4, configuration: countdownIntent)
+private let ec2 = NextFlightTimelineEntry(date: now, flight: f1, configuration: countdownIntent)
+
 #Preview("Small — Full scenario", as: .systemSmall) {
     BlockTimeWidget()
 } timeline: {
@@ -645,4 +988,40 @@ private let e6 = NextFlightTimelineEntry(date: now.addingTimeInterval(36 * 3600)
     BlockTimeWidget()
 } timeline: {
     e1; e2; e3; e4; e5; e6
+}
+
+#Preview("Countdown Small — days away", as: .systemSmall) {
+    BlockTimeWidget()
+} timeline: {
+    ec1
+}
+
+#Preview("Countdown Medium — days away", as: .systemMedium) {
+    BlockTimeWidget()
+} timeline: {
+    ec1
+}
+
+#Preview("Countdown Small — imminent", as: .systemSmall) {
+    BlockTimeWidget()
+} timeline: {
+    ec2
+}
+
+#Preview("Countdown Medium — imminent", as: .systemMedium) {
+    BlockTimeWidget()
+} timeline: {
+    ec2
+}
+
+#Preview("Countdown Large — days away", as: .systemLarge) {
+    BlockTimeWidget()
+} timeline: {
+    NextFlightTimelineEntry(date: now, flight: f4, sameDayFlights: tomorrowFlights, configuration: countdownIntent)
+}
+
+#Preview("Countdown Large — imminent", as: .systemLarge) {
+    BlockTimeWidget()
+} timeline: {
+    NextFlightTimelineEntry(date: now, flight: f1, sameDayFlights: todayFlights, configuration: countdownIntent)
 }
