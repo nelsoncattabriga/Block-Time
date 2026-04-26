@@ -458,9 +458,7 @@ class FRMSViewModel {
         var consolidatedDuties: [FRMSDuty] = []
         var currentDutyFlights: [(flight: FlightSector, duty: FRMSDuty)] = []
 
-        let maxGapBetweenSectors: TimeInterval = 3 * 3600 // 3 hours max gap between sectors in same duty
-
-        // Note: homeTimeZone and localCalendar already declared above for isFirstOfDay logic
+        let maxGapBetweenSectors: TimeInterval = 8 * 3600 // 8 hours — below minimum rest, captures delayed sectors
 
         for flightDuty in individualFlightDuties {
             if currentDutyFlights.isEmpty {
@@ -471,24 +469,8 @@ class FRMSViewModel {
                 let lastFlight = currentDutyFlights.last!
                 let gapBetweenFlights = flightDuty.duty.signOn.timeIntervalSince(lastFlight.duty.signOff)
 
-                // Get the local calendar day for both the first and new flight
-                let firstSignOn = currentDutyFlights.first!.duty.signOn
-                let firstSignOnDay = localCalendar.startOfDay(for: firstSignOn)
-                let newSignOnDay = localCalendar.startOfDay(for: flightDuty.duty.signOn)
-
-                // Flights belong to same duty if:
-                // 1. Gap is less than max allowed (typically 3 hours - accounts for turnaround time)
-                // 2. Sign-on times are on the same local calendar day OR
-                //    new flight signs on within 6 hours after midnight of the next local day
-                let nextLocalDay = localCalendar.date(byAdding: .day, value: 1, to: firstSignOnDay)!
-                let sixHoursAfterNextMidnight = localCalendar.date(byAdding: .hour, value: 6, to: nextLocalDay)!
-
-                let sameDayOrEarlyNextDay = (newSignOnDay == firstSignOnDay) ||
-                                           (newSignOnDay == nextLocalDay && flightDuty.duty.signOn < sixHoursAfterNextMidnight)
-
-                // Allow negative gaps (overlapping flights due to STD/OUT differences) or small positive gaps
-                // Flights on the same day with gaps < 3 hours should be consolidated into one duty
-                let shouldConsolidate = sameDayOrEarlyNextDay && (gapBetweenFlights <= maxGapBetweenSectors)
+                // Consolidate if gap is within the max (negative gaps = overlapping STD/OUT times)
+                let shouldConsolidate = gapBetweenFlights <= maxGapBetweenSectors
 
                 if shouldConsolidate {
                     // Add to current duty period
