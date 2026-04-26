@@ -18,6 +18,8 @@ struct FlightsSplitView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
     @State private var isSelectMode: Bool = false
     @State private var showingDiscardAlert: Bool = false
+    @State private var pendingFlightSelection: FlightSector?
+    @State private var showingSaveFailedAlert: Bool = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @Environment(PurchaseService.self) private var purchaseService
@@ -38,9 +40,13 @@ struct FlightsSplitView: View {
                     isAddingNewFlight: $isAddingNewFlight,
                     isSelectMode: $isSelectMode,
                     onFlightSelected: { flight in
-//                                LogManager.shared.debug("onFlightSelected callback: \(flight.flightNumberFormatted)")
-                        isAddingNewFlight = false
-                        viewModel.loadFlightForEditing(flight)
+                        if viewModel.hasUnsavedChanges {
+                            pendingFlightSelection = flight
+                            showingDiscardAlert = true
+                        } else {
+                            isAddingNewFlight = false
+                            viewModel.loadFlightForEditing(flight)
+                        }
                     }
                 )
                 .navigationSplitViewColumnWidth(min: 400, ideal: 500, max: 600)
@@ -87,17 +93,41 @@ struct FlightsSplitView: View {
                             .alert("Save Changes?", isPresented: $showingDiscardAlert) {
                                 Button("Save") {
                                     if viewModel.updateExistingFlight() {
+                                        if let pending = pendingFlightSelection {
+                                            selectedFlight = pending
+                                            isAddingNewFlight = false
+                                            viewModel.loadFlightForEditing(pending)
+                                            pendingFlightSelection = nil
+                                        } else {
+                                            selectedFlight = nil
+                                            viewModel.exitEditingMode()
+                                        }
+                                    } else {
+                                        pendingFlightSelection = nil
+                                        showingSaveFailedAlert = true
+                                    }
+                                }
+                                Button("Discard", role: .destructive) {
+                                    if let pending = pendingFlightSelection {
+                                        selectedFlight = pending
+                                        isAddingNewFlight = false
+                                        viewModel.loadFlightForEditing(pending)
+                                        pendingFlightSelection = nil
+                                    } else {
                                         selectedFlight = nil
                                         viewModel.exitEditingMode()
                                     }
                                 }
-                                Button("Discard", role: .destructive) {
-                                    selectedFlight = nil
-                                    viewModel.exitEditingMode()
+                                Button("Cancel", role: .cancel) {
+                                    pendingFlightSelection = nil
                                 }
-                                Button("Cancel", role: .cancel) { }
                             } message: {
                                 Text(viewModel.changesSummary)
+                            }
+                            .alert("Save Failed", isPresented: $showingSaveFailedAlert) {
+                                Button("OK", role: .cancel) { }
+                            } message: {
+                                Text("Your changes could not be saved. Please try again.")
                             }
                             .onAppear {
 //                                        LogManager.shared.debug("Detail view appeared for flight: \(flight.flightNumberFormatted)")
