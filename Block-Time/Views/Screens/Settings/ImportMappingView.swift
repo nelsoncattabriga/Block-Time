@@ -452,7 +452,7 @@ struct ImportMappingView: View {
             ("STA", "Scheduled Arrival Time", false, false),
             ("OUT Time", "Block OUT time (1130 or 11:30)", false, false),
             ("IN Time", "Block IN time (1130 or 11:30)", false, false),
-            ("Block Time", "Block time", false, false),
+            ("Block Time", "Block time - can combine multiple sources", true, true),
             ("Night Time", "Night time - can combine multiple sources", false, true),  // Supports multiple!
             ("P1 Time", "P1/PIC time - can combine multiple sources", false, true),  // Supports multiple!
             ("P1US Time", "P1US/ICUS time - can combine multiple sources", false, true),  // Supports multiple!
@@ -627,10 +627,10 @@ struct ImportMappingView: View {
         "aircraftreg":    ["aircraftreg", "registration", "tailnumber", "tail", "reg", "rego", "regno"],
         "aircrafttype":   ["aircrafttype", "aircraftmodel", "makemodel", "actype", "type", "model", "make"],
         "fromairport":    ["fromairport", "departureplace", "depairport", "departure", "origin", "from", "dep"],
-        "toairport":      ["toairport", "arrivalplace", "arrairport", "destination", "arrival", "dest", "arr"],
+        "toairport":      ["toairport", "arrivalplace", "arrairport", "destination", "arrival", "dest", "arr","des"],
         "captainname":    ["captainname", "crewpic", "p1crew", "picname", "captain", "capt", "cpt", "pic"],
         "f/oname":        ["f/oname", "crewsic", "p2crew", "sicname", "firstofficer", "copilot", "fo"],
-        "s/o1name":       ["relief1", "crewrelief", "secondofficer1", "so1", "relief", "cruise", "p3"],
+        "s/o1name":       ["relief1", "crewrelief", "secondofficer1", "so1", "relief", "cruise", "p3", "so"],
         "s/o2name":       ["relief2", "crewrelief2", "secondofficer2", "so2", "p4"],
         "std":            ["scheduleddeparturetime", "scheduleddeparture", "scheduleddep", "scheddep", "std", "etd"],
         "sta":            ["scheduledarrivaltime", "scheduledarrival", "scheduledarr", "schedarr", "sta", "eta"],
@@ -655,7 +655,7 @@ struct ImportMappingView: View {
         "gls":            ["glsapproach", "gls"],
         "npa":            ["npaapproach", "npa"],
         "aiii":           ["aiiiapproach", "catiii", "cat3", "aiii"],
-        "remarks":        ["remarks", "endorsements", "comments", "notes"],
+        "remarks":        ["remarks", "endorsements", "comments", "notes", "details"],
         "customcount":    ["customcount", "paxcount", "totalpax", "passengercount", "soulsonboard", "sob", "passengers"],
     ]
 
