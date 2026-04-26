@@ -452,9 +452,9 @@ struct ImportMappingView: View {
             ("STA", "Scheduled Arrival Time", false, false),
             ("OUT Time", "Block OUT time (1130 or 11:30)", false, false),
             ("IN Time", "Block IN time (1130 or 11:30)", false, false),
-            ("Block Time", "Block time - can combine multiple sources", true, true),
+            ("Block Time", "Block time - can combine multiple sources", true, true),    // Supports multiple!
             ("Night Time", "Night time - can combine multiple sources", false, true),  // Supports multiple!
-            ("P1 Time", "P1/PIC time - can combine multiple sources", false, true),  // Supports multiple!
+            ("P1 Time", "P1/PIC time - can combine multiple sources", false, true),    // Supports multiple!
             ("P1US Time", "P1US/ICUS time - can combine multiple sources", false, true),  // Supports multiple!
             ("P2 Time", "P2/SIC time - can combine multiple sources", false, true),  // Supports multiple!
             ("Instrument Time", "Instrument time - can combine multiple sources", false, true),  // Supports multiple!
