@@ -99,10 +99,18 @@ struct NextFlightIntent: AppIntents.WidgetConfigurationIntent {
                 }
             }
         } otherwise: {
-            // Countdown mode — style/appearance/timezone not relevant
-            Summary {
-                \NextFlightIntent.$displayMode
-                \NextFlightIntent.$style
+            // Countdown mode — timezone not relevant
+            When(\NextFlightIntent.$style, .equalTo, .solid) {
+                Summary {
+                    \NextFlightIntent.$displayMode
+                    \NextFlightIntent.$style
+                    \NextFlightIntent.$appearance
+                }
+            } otherwise: {
+                Summary {
+                    \NextFlightIntent.$displayMode
+                    \NextFlightIntent.$style
+                }
             }
         }
     }
