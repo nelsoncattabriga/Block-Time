@@ -17,6 +17,7 @@ struct NextFlightTimelineEntry: TimelineEntry {
     var sameDayFlights: [WidgetFlightEntry] = [] // All flights on the same day as `flight` (large widget)
     /// True when today had flights but all have now departed — large widget bottom shows "No More Flights Today"
     var noMoreFlightsToday: Bool = false
+    var isPastDeparture: Bool = false
     var configuration: NextFlightIntent = NextFlightIntent()
 }
 
@@ -134,8 +135,8 @@ struct NextFlightProvider: AppIntentTimelineProvider {
     }
 
     // MARK: - Countdown timeline
-    // Two entries per flight: one at `now` (or switchDate of previous), one at dep+30min.
-    // Text(.relative) drives the live countdown — no extra entries needed.
+    // Three entries per flight: one at `now` (or switchDate of previous), one at departure (flips label),
+    // one at dep+30min (advances to next flight). Text(.relative) drives the live timer — no extra entries needed.
 
     private func countdownTimeline(
         flights: [WidgetFlightEntry],
@@ -153,8 +154,19 @@ struct NextFlightProvider: AppIntentTimelineProvider {
             entries.append(NextFlightTimelineEntry(
                 date: entryDate, flight: flight,
                 sameDayFlights: sameDay,
+                isPastDeparture: departure < now,
                 configuration: configuration
             ))
+
+            // At STD: flip label to "PAST STD"
+            if departure > now {
+                entries.append(NextFlightTimelineEntry(
+                    date: departure, flight: flight,
+                    sameDayFlights: sameDay,
+                    isPastDeparture: true,
+                    configuration: configuration
+                ))
+            }
 
             let switchDate = departure.addingTimeInterval(30 * 60)
 

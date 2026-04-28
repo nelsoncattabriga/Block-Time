@@ -618,12 +618,18 @@ private struct CountdownSmallView: View {
 
                     // Live countdown
                     let depDate = flight.departureDatetime ?? flight.flightDate
-                    Text(depDate, style: .relative)
-                        .font(.system(size: 20, weight: .bold, design: .monospaced))
-                        .foregroundStyle(WT.orange)
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
+                    VStack(spacing: 2) {
+                        Text(entry.isPastDeparture ? "PAST STD" : "DEPARTS IN")
+                            .font(.system(size: 11, weight: .semibold))
+                            .kerning(0.6)
+                            .foregroundStyle(WT.secondary)
+                        Text(depDate, style: .relative)
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundStyle(WT.orange)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                    }
                 }
                 .padding(14)
 
@@ -725,13 +731,19 @@ private struct CountdownMediumView: View {
 
                     // ── Countdown (replaces date + time rows) ────────────
                     let depDate = flight.departureDatetime ?? flight.flightDate
-                    Text(depDate, style: .relative)
-                        .font(.system(size: 20, weight: .bold, design: .monospaced))
-                        .foregroundStyle(WT.orange)
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    VStack(spacing: 2) {
+                        Text(entry.isPastDeparture ? "PAST STD" : "DEPARTS IN")
+                            .font(.system(size: 11, weight: .semibold))
+                            .kerning(0.6)
+                            .foregroundStyle(WT.secondary)
+                        Text(depDate, style: .relative)
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundStyle(WT.orange)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
 
                     Spacer(minLength: 8)
                 }
@@ -838,13 +850,19 @@ private struct CountdownLargeView: View {
 
                     // ── Countdown (replaces date + time rows) ────────────
                     let depDate = flight.departureDatetime ?? flight.flightDate
-                    Text(depDate, style: .relative)
-                        .font(.system(size: 22, weight: .bold, design: .monospaced))
-                        .foregroundStyle(WT.orange)
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    VStack(spacing: 2) {
+                        Text(entry.isPastDeparture ? "PAST STD" : "DEPARTS IN")
+                            .font(.system(size: 11, weight: .semibold))
+                            .kerning(0.6)
+                            .foregroundStyle(WT.secondary)
+                        Text(depDate, style: .relative)
+                            .font(.system(size: 22, weight: .bold, design: .monospaced))
+                            .foregroundStyle(WT.orange)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
 
                     Spacer(minLength: 12)
 
