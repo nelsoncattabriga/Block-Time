@@ -99,7 +99,7 @@ struct NextFlightProvider: AppIntentTimelineProvider {
                     next.departureDatetime ?? next.flightDate,
                     inSameDayAs: departure
                 )
-                let noMoreToday = nextIsNewDay && !sameDay.isEmpty
+                let noMoreToday = nextIsNewDay
                 let nextSameDay = Self.sameDayFlights(as: next, from: flights)
                 entries.append(NextFlightTimelineEntry(
                     date: switchDate, flight: next,

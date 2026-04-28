@@ -377,7 +377,7 @@ private struct LargeView: View {
     }
 
     private var emptyBottomLabel: String {
-        entry.noMoreFlightsToday ? "No More Flights Today" : "No Other Flights Today"
+        "No More Flights"
     }
 
     var body: some View {
@@ -773,7 +773,7 @@ private struct CountdownLargeView: View {
     }
 
     private var emptyBottomLabel: String {
-        entry.noMoreFlightsToday ? "No More Flights Today" : "No Other Flights Today"
+        "No Other Flights"
     }
 
     var body: some View {
