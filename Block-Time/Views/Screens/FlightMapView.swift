@@ -23,20 +23,29 @@ struct FlightMapView: View {
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
                 }
             }
-            .navigationTitle("Flight Map")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Done") { dismiss() }
                 }
 
-                ToolbarItem(placement: .topBarLeading) {
-                    Picker("Date", selection: $viewModel.dateFilter) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
                         ForEach(FlightMapViewModel.DateFilter.allCases) { filter in
-                            Text(filter.rawValue).tag(filter)
+                            Button {
+                                viewModel.dateFilter = filter
+                            } label: {
+                                if viewModel.dateFilter == filter {
+                                    Label(filter.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(filter.rawValue)
+                                }
+                            }
                         }
+                    } label: {
+                        Text(viewModel.dateFilter.rawValue)
                     }
-                    .pickerStyle(.menu)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
