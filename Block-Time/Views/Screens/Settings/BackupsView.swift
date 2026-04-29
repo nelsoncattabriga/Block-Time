@@ -18,6 +18,7 @@ struct BackupsView: View {
     @State private var resultMessage = ""
     @State private var isAutomaticBackupsExpanded = false
     @State private var showingManageBackups = false
+    @State private var showBackupHelp = false
 
     var body: some View {
         ScrollView {
@@ -69,6 +70,18 @@ struct BackupsView: View {
                     .foregroundColor(.primary)
 
                 Spacer()
+
+                Button {
+                    showBackupHelp = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .sheet(isPresented: $showBackupHelp) {
+                DataBackupHelpSheet()
             }
 
             VStack(spacing: 12) {
@@ -1074,6 +1087,221 @@ private struct RestoreModeSheet: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
+        }
+    }
+}
+
+// MARK: - Data Backup Help Sheet
+private struct DataBackupHelpSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Accent banner
+                    HStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.title2)
+                            .foregroundColor(.white)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Automatic Backup")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                            Text("Saves a CSV of all flights on a schedule you choose.")
+                                .font(.footnote)
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color.blue)
+
+                    VStack(spacing: 12) {
+                        // When backups run
+                        infoBlock(
+                            icon: "clock.badge.checkmark",
+                            title: "When backups run",
+                            body: "A scheduled backup runs when the app comes to the foreground if one is due. It also runs when flight data changes, provided at least one hour has passed since the last backup."
+                        )
+
+                        // Backup locations
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Backup locations", systemImage: "folder")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+
+                            locationRow(
+                                icon: "iphone",
+                                title: "On My iPhone / iPad",
+                                detail: "Saved to the app's local Documents folder. Accessible via the Files app under Block-Time. Not available on other devices."
+                            )
+
+                            locationRow(
+                                icon: "icloud",
+                                title: "iCloud",
+                                detail: "Saved to iCloud Drive in a Block-Time/Backups/ folder. Accessible across all your devices via the Files app."
+                            )
+                        }
+                        .padding(14)
+                        .background(Color(.systemGray6).opacity(0.5))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                        )
+
+                        // Restore modes
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Restoring from a backup", systemImage: "arrow.counterclockwise")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+
+                            Text("Tap Manage Backups to view saved backups and restore from one. Two modes are available:")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            restoreModeRow(
+                                icon: "arrow.left.arrow.right",
+                                color: .blue,
+                                title: "Merge",
+                                detail: "Adds backup flights to your current logbook. Duplicate flights (same date, flight number, and registration) are skipped."
+                            )
+
+                            restoreModeRow(
+                                icon: "trash",
+                                color: .red,
+                                title: "Overwrite",
+                                detail: "Deletes all existing flights first, then imports everything from the backup. Cannot be undone."
+                            )
+                        }
+                        .padding(14)
+                        .background(Color(.systemGray6).opacity(0.5))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                        )
+                    }
+                    .padding(16)
+
+                    // Learn More
+                    Button {
+                        if let url = URL(string: "https://block-time.app/guide/backup-and-sync.html") {
+                            openURL(url)
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "safari")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            Text("Learn more in the User Guide")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.footnote)
+                                .foregroundColor(.blue.opacity(0.7))
+                        }
+                        .padding(14)
+                        .background(Color(.systemGray6).opacity(0.5))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
+                }
+            }
+            .navigationTitle("Data Backup")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func infoBlock(icon: String, title: String, body: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.footnote)
+                    .foregroundColor(.blue)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Text(body)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+        )
+    }
+
+    private func locationRow(icon: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.footnote)
+                .foregroundColor(.blue)
+                .frame(width: 20)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func restoreModeRow(icon: String, color: Color, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.footnote)
+                .foregroundColor(color)
+                .frame(width: 20)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }

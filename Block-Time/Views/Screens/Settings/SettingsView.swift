@@ -1865,6 +1865,7 @@ struct ModernCloudKitSyncCard: View {
     @ObservedObject var databaseService = FlightDatabaseService.shared
     @Environment(CloudKitSettingsSyncService.self) var settingsService
     @AppStorage("debugModeEnabled") private var debugModeEnabled = false
+    @State private var showSyncHelp = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -1881,6 +1882,15 @@ struct ModernCloudKitSyncCard: View {
 
                 Spacer()
 
+                Button {
+                    showSyncHelp = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+
                 // Debug mode indicator
                 if debugModeEnabled {
                     Text("DEBUG")
@@ -1892,6 +1902,9 @@ struct ModernCloudKitSyncCard: View {
                         .background(Color.orange.opacity(0.2))
                         .cornerRadius(4)
                 }
+            }
+            .sheet(isPresented: $showSyncHelp) {
+                ICloudSyncHelpSheet()
             }
 
             if !settingsService.isCloudAvailable() {
@@ -2273,5 +2286,150 @@ private struct SyncDetailRowView: View {
         .padding(8)
         .background(Color(.systemGray6).opacity(0.5))
         .cornerRadius(6)
+    }
+}
+
+// MARK: - iCloud Sync Help Sheet
+private struct ICloudSyncHelpSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    private struct Requirement: Identifiable {
+        let id: Int
+        let icon: String
+        let title: String
+        let detail: String
+    }
+
+    private let requirements: [Requirement] = [
+        Requirement(id: 1, icon: "person.crop.circle.badge.checkmark", title: "Same Apple ID", detail: "All devices must be signed in with the same Apple ID."),
+        Requirement(id: 2, icon: "externaldrive.connected.to.line.below", title: "iCloud Drive enabled", detail: "Go to Settings → [your name] → iCloud → iCloud Drive and make sure it is on."),
+        Requirement(id: 3, icon: "arrow.clockwise.icloud", title: "Block-Time allowed", detail: "In the Saved to iCloud app list, make sure Block-Time is toggled on."),
+        Requirement(id: 4, icon: "internaldrive", title: "iCloud storage not full", detail: "Check your storage at Settings → [your name] → iCloud → Storage."),
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Blue accent banner
+                    HStack(spacing: 12) {
+                        Image(systemName: "icloud.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("For sync to work across devices")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                            Text("all of the following must be true:")
+                                .font(.footnote)
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color.blue)
+
+                    // First sync note
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "clock")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 1)
+                        Text("The first sync can take a few minutes and may happen in stages — this is normal.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(14)
+                    .background(Color(.systemGray6).opacity(0.5))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+
+                    // Requirements list
+                    VStack(spacing: 0) {
+                        ForEach(requirements) { req in
+                            HStack(alignment: .top, spacing: 14) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.blue.opacity(0.12))
+                                        .frame(width: 36, height: 36)
+                                    Image(systemName: req.icon)
+                                        .font(.footnote)
+                                        .foregroundColor(.blue)
+                                }
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(req.title)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.primary)
+                                    Text(req.detail)
+                                        .font(.footnote)
+                                        .foregroundColor(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+
+                            if req.id < requirements.count {
+                                Divider().padding(.leading, 66)
+                            }
+                        }
+                    }
+                    .background(Color(.systemGray6).opacity(0.5))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                    )
+                    .padding(16)
+
+                    // Learn More link row
+                    Button {
+                        if let url = URL(string: "https://block-time.app/guide/backup-and-sync.html") {
+                            openURL(url)
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "safari")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            Text("Learn more in the User Guide")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.footnote)
+                                .foregroundColor(.blue.opacity(0.7))
+                        }
+                        .padding(14)
+                        .background(Color(.systemGray6).opacity(0.5))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
+                }
+            }
+            .navigationTitle("iCloud Sync")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 }
