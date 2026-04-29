@@ -270,9 +270,8 @@ struct FlightsView: View {
                 AddFlightView()
                     .environmentObject(viewModel)
                     .onDisappear {
-                        // Reload flights when returning from edit
                         if !viewModel.isEditingMode {
-                            loadFlights()
+                            Task { await loadFlights() }
                         }
                         selectedFlight = nil
                     }
@@ -284,8 +283,7 @@ struct FlightsView: View {
                         viewModel.exitEditingMode() // Ensure we're not in edit mode
                     }
                     .onDisappear {
-                        // Reload flights and reset fields when returning from add
-                        loadFlights()
+                        Task { await loadFlights() }
                         viewModel.resetAllFields()
                         isAddingNewFlight = false
                     }
@@ -447,11 +445,10 @@ struct FlightsView: View {
                 )
             }
             .onAppear {
-                // Exit editing mode when returning to flights list
                 if viewModel.isEditingMode {
                     viewModel.exitEditingMode()
                 }
-                loadFlights()
+                Task { await loadFlights() }
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
                 debouncedLoadFlights()
@@ -625,41 +622,29 @@ struct FlightsView: View {
         .id(sector.id)
     }
 
-    private func loadFlights() {
-        self.allFlightSectors = self.databaseService.fetchAllFlights()
+    @MainActor
+    private func loadFlights() async {
+        let sectors = await databaseService.fetchAllFlightsAsync()
+        self.allFlightSectors = sectors
         self.flightStatistics = self.databaseService.getFlightStatistics()
         self.applyFilters()
     }
 
     /// Debounced flight reload to prevent cascading reloads on rapid changes
     private func debouncedLoadFlights() {
-        // Cancel any pending reload task
         reloadTask?.cancel()
-
-        // Schedule new reload with 300ms delay
         reloadTask = Task {
-            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-
-            // Check if task was cancelled
+            try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
-
-            await MainActor.run {
-                loadFlights()
-            }
+            await loadFlights()
         }
     }
 
     /// Async function for pull-to-refresh
     private func refreshFlights() async {
         HapticManager.shared.impact(.light)
-
-        // Reload flights from database
-        await MainActor.run {
-            loadFlights()
-        }
-
-        // Small delay to ensure refresh animation completes smoothly
-        try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+        await loadFlights()
+        try? await Task.sleep(nanoseconds: 300_000_000)
     }
 
     private func applyFilters() {
@@ -687,7 +672,7 @@ struct FlightsView: View {
         let filtered = allFlightSectors.filter { sector in
             // Date range filter
             if let start = startDate, let end = endDate,
-               let sectorDate = dateFormatter.date(from: sector.date) {
+               let sectorDate = sector.parsedDate {
                 if sectorDate < start || sectorDate > end {
                     return false
                 }
@@ -1033,9 +1018,8 @@ struct FlightsView: View {
 
     private func deleteFlightSector(_ sector: FlightSector) {
         if databaseService.deleteFlight(sector) {
-            // Remove deleted sector immediately from the local list
             allFlightSectors.removeAll { $0.id == sector.id }
-            loadFlights()
+            Task { await loadFlights() }
             hasLoadedFlights = true
         }
     }
@@ -1044,8 +1028,7 @@ struct FlightsView: View {
         if let index = allFlightSectors.firstIndex(where: { $0.id == updated.id }) {
             allFlightSectors[index] = updated
         } else {
-            // Fallback: reload if the sector isn't in the current list
-            loadFlights()
+            Task { await loadFlights() }
         }
     }
 
@@ -1090,7 +1073,7 @@ struct FlightsView: View {
         databaseService.duplicateFlights(flightsToDuplicate)
         selectedFlights.removeAll()
         isSelectMode = false
-        loadFlights()
+        Task { await loadFlights() }
     }
 
     private func performBulkUpdate(_ updates: [UUID: FlightSector]) {
@@ -1108,7 +1091,7 @@ struct FlightsView: View {
                 selectedFlights.removeAll()
                 isSelectMode = false
                 HapticManager.shared.notification(.success)
-                loadFlights()
+                await loadFlights()
             } else {
                 if cloudKitWasEnabled { databaseService.enableCloudKitSync() }
                 HapticManager.shared.notification(.error)
@@ -1138,7 +1121,7 @@ struct FlightsView: View {
         } else {
             // Save new summary
             if databaseService.saveFlight(summary) {
-                loadFlights()
+                Task { await loadFlights() }
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             } else {
                 HapticManager.shared.notification(.error)

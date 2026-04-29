@@ -603,7 +603,7 @@ private struct FlightsListContent: View {
             if viewModel.isEditingMode {
                 viewModel.exitEditingMode()
             }
-            loadFlights()
+            Task { await loadFlights() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .reviewImportSession)) { notification in
             if let sessionID = notification.userInfo?["sessionID"] as? UUID {
@@ -621,12 +621,14 @@ private struct FlightsListContent: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             let selectedFlightId = selectedFlight?.id
-            loadFlights()
-            if let selectedId = selectedFlightId {
-                if let updatedFlight = filteredFlightSectors.first(where: { $0.id == selectedId }) {
-                    selectedFlight = updatedFlight
-                } else {
-                    selectedFlight = nil
+            Task {
+                await loadFlights()
+                if let selectedId = selectedFlightId {
+                    if let updatedFlight = filteredFlightSectors.first(where: { $0.id == selectedId }) {
+                        selectedFlight = updatedFlight
+                    } else {
+                        selectedFlight = nil
+                    }
                 }
             }
         }
@@ -794,21 +796,17 @@ private struct FlightsListContent: View {
         .id(sector.id)
     }
 
-    private func loadFlights() {
-//        LogManager.shared.debug("FlightsSplitView: loadFlights() called")
-        self.allFlightSectors = self.databaseService.fetchAllFlights()
+    @MainActor
+    private func loadFlights() async {
+        let sectors = await databaseService.fetchAllFlightsAsync()
+        self.allFlightSectors = sectors
         LogManager.shared.debug("FlightsSplitView: Loaded \(self.allFlightSectors.count) flights from database")
         self.applyFilters()
-//        LogManager.shared.debug("FlightsSplitView: After filtering: \(self.filteredFlightSectors.count) flights")
     }
 
     private func refreshFlights() async {
         HapticManager.shared.impact(.light)
-
-        await MainActor.run {
-            loadFlights()
-        }
-
+        await loadFlights()
         try? await Task.sleep(nanoseconds: 300_000_000)
     }
 
@@ -824,7 +822,7 @@ private struct FlightsListContent: View {
         let filtered = allFlightSectors.filter { sector in
             // Date range filter
             if let start = startDate, let end = endDate,
-               let sectorDate = dateFormatter.date(from: sector.date) {
+               let sectorDate = sector.parsedDate {
                 if sectorDate < start || sectorDate > end {
                     return false
                 }
@@ -1175,7 +1173,7 @@ private struct FlightsListContent: View {
         databaseService.duplicateFlights(flightsToDuplicate)
         selectedFlightsForDeletion.removeAll()
         isSelectMode = false
-        loadFlights()
+        Task { await loadFlights() }
     }
 
     private func performBulkDelete() {
@@ -1236,7 +1234,7 @@ private struct FlightsListContent: View {
                 selectedFlightsForDeletion.removeAll()
                 isSelectMode = false
                 HapticManager.shared.notification(.success)
-                loadFlights()
+                await loadFlights()
             } else {
                 if cloudKitWasEnabled { databaseService.enableCloudKitSync() }
                 HapticManager.shared.notification(.error)
@@ -1266,7 +1264,7 @@ private struct FlightsListContent: View {
         } else {
             // Save new summary
             if databaseService.saveFlight(summary) {
-                loadFlights()
+                Task { await loadFlights() }
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             } else {
                 HapticManager.shared.notification(.error)

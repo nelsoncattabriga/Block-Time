@@ -31,30 +31,40 @@ func validateTimeString(_ timeString: String) -> String {
 
 // MARK: - Updated Flight Logbook Data Models
 struct FlightSector: Identifiable, Codable, Hashable {
-    // Cached date formatters for performance - shared across all instances
-    private static let cachedDateFormatter: DateFormatter = {
+    // Thread-local date formatters — DateFormatter is not thread-safe, so each thread
+    // gets its own instance via threadDictionary to avoid ICU clone contention.
+    private static var cachedDateFormatter: DateFormatter {
+        let key = "FlightSector.dateFormatter"
+        if let existing = Thread.current.threadDictionary[key] as? DateFormatter { return existing }
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone to match AirportService
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.locale = Locale(identifier: "en_AU")
+        Thread.current.threadDictionary[key] = formatter
         return formatter
-    }()
+    }
 
-    private static let cachedMonthYearFormatter: DateFormatter = {
+    private static var cachedMonthYearFormatter: DateFormatter {
+        let key = "FlightSector.monthYearFormatter"
+        if let existing = Thread.current.threadDictionary[key] as? DateFormatter { return existing }
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM yyyy"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone to match cachedDateFormatter
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.locale = Locale(identifier: "en_AU")
+        Thread.current.threadDictionary[key] = formatter
         return formatter
-    }()
+    }
 
-    private static let cachedUTCDateFormatter: DateFormatter = {
+    private static var cachedUTCDateFormatter: DateFormatter {
+        let key = "FlightSector.utcDateFormatter"
+        if let existing = Thread.current.threadDictionary[key] as? DateFormatter { return existing }
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)  // UTC timezone
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        Thread.current.threadDictionary[key] = formatter
         return formatter
-    }()
+    }
 
     let id: UUID
     var date: String
@@ -93,6 +103,16 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
     var customCount: Int
     var createdAt: Date?
+    let parsedDate: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, date, flightNumber, aircraftReg, aircraftType, fromAirport, toAirport
+        case captainName, foName, so1Name, so2Name
+        case blockTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, simTime, spInsTime
+        case isPilotFlying, isPositioning, isAIII, isRNP, isILS, isGLS, isNPA
+        case remarks, dayTakeoffs, dayLandings, nightTakeoffs, nightLandings
+        case outTime, inTime, scheduledDeparture, scheduledArrival, customCount, createdAt
+    }
 
     // MARK: - Validate and clean time string values
     private static func validateTimeString(_ timeString: String) -> String {
@@ -151,6 +171,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         self.scheduledArrival = scheduledArrival
         self.customCount = max(0, customCount)
         self.createdAt = createdAt
+        self.parsedDate = FlightSector.cachedDateFormatter.date(from: date)
 
         // MARK: - Development validation
         #if DEBUG
@@ -160,6 +181,48 @@ struct FlightSector: Identifiable, Codable, Hashable {
             LogManager.shared.warning("⚠️ FlightSector created with BOTH blockTime and simTime > 0: date=\(date), flight=\(flightNumber), block=\(self.blockTime), sim=\(self.simTime)")
         }
         #endif
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        date = try c.decode(String.self, forKey: .date)
+        flightNumber = try c.decode(String.self, forKey: .flightNumber)
+        aircraftReg = try c.decode(String.self, forKey: .aircraftReg)
+        aircraftType = try c.decode(String.self, forKey: .aircraftType)
+        fromAirport = try c.decode(String.self, forKey: .fromAirport)
+        toAirport = try c.decode(String.self, forKey: .toAirport)
+        captainName = try c.decode(String.self, forKey: .captainName)
+        foName = try c.decode(String.self, forKey: .foName)
+        so1Name = try c.decodeIfPresent(String.self, forKey: .so1Name)
+        so2Name = try c.decodeIfPresent(String.self, forKey: .so2Name)
+        blockTime = try c.decode(String.self, forKey: .blockTime)
+        nightTime = try c.decode(String.self, forKey: .nightTime)
+        p1Time = try c.decode(String.self, forKey: .p1Time)
+        p1usTime = try c.decode(String.self, forKey: .p1usTime)
+        p2Time = try c.decode(String.self, forKey: .p2Time)
+        instrumentTime = try c.decode(String.self, forKey: .instrumentTime)
+        simTime = try c.decode(String.self, forKey: .simTime)
+        spInsTime = try c.decode(String.self, forKey: .spInsTime)
+        isPilotFlying = try c.decode(Bool.self, forKey: .isPilotFlying)
+        isPositioning = try c.decode(Bool.self, forKey: .isPositioning)
+        isAIII = try c.decode(Bool.self, forKey: .isAIII)
+        isRNP = try c.decode(Bool.self, forKey: .isRNP)
+        isILS = try c.decode(Bool.self, forKey: .isILS)
+        isGLS = try c.decode(Bool.self, forKey: .isGLS)
+        isNPA = try c.decode(Bool.self, forKey: .isNPA)
+        remarks = try c.decode(String.self, forKey: .remarks)
+        dayTakeoffs = try c.decode(Int.self, forKey: .dayTakeoffs)
+        dayLandings = try c.decode(Int.self, forKey: .dayLandings)
+        nightTakeoffs = try c.decode(Int.self, forKey: .nightTakeoffs)
+        nightLandings = try c.decode(Int.self, forKey: .nightLandings)
+        outTime = try c.decode(String.self, forKey: .outTime)
+        inTime = try c.decode(String.self, forKey: .inTime)
+        scheduledDeparture = try c.decode(String.self, forKey: .scheduledDeparture)
+        scheduledArrival = try c.decode(String.self, forKey: .scheduledArrival)
+        customCount = try c.decode(Int.self, forKey: .customCount)
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
+        parsedDate = FlightSector.cachedDateFormatter.date(from: date)
     }
 
     // MARK: - Safe Numeric Conversion Methods

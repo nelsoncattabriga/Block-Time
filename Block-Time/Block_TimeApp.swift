@@ -21,6 +21,9 @@ struct Block_TimeApp: App {
     init() {
         // Reset debug mode to off every app launch
         UserDefaults.standard.set(false, forKey: "debugModeEnabled")
+        // Warm AirportService on a background thread so its airports.dat parse
+        // doesn't block the main thread when FlightTimeExtractorViewModel first accesses it.
+        DispatchQueue.global(qos: .userInitiated).async { _ = AirportService.shared }
 
     #if DEBUG
 //            PurchaseService.shared.resetToFreshInstall() // fresh trial

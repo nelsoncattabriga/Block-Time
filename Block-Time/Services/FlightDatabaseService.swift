@@ -774,12 +774,46 @@ class FlightDatabaseService: ObservableObject {
 
            return sectors
        }
-    
-    
-    
-    
-    
-    
+
+    func fetchAllFlightsAsync() async -> [FlightSector] {
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                request.predicate = NSPredicate(
+                    format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (isPositioning == YES) OR (scheduledDeparture != nil AND scheduledDeparture != %@) OR (scheduledArrival != nil AND scheduledArrival != %@)",
+                    "0", "0.0", "0.00", "0", "0.0", "0.00", "", ""
+                )
+                request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
+                request.fetchBatchSize = 100
+                request.returnsObjectsAsFaults = false
+
+                do {
+                    let flights = try context.fetch(request)
+                    let raw = flights.compactMap { entity -> (FlightSector, Date)? in
+                        guard let sector = self.convertToFlightSector(entity),
+                              let date = entity.date else { return nil }
+                        return (sector, date)
+                    }
+                    let sectors = raw.sorted { a, b in
+                        if a.1 != b.1 { return a.1 > b.1 }
+                        let aTime = a.0.outTime.isEmpty ? a.0.scheduledDeparture : a.0.outTime
+                        let bTime = b.0.outTime.isEmpty ? b.0.scheduledDeparture : b.0.outTime
+                        if aTime.isEmpty && bTime.isEmpty { return false }
+                        if aTime.isEmpty { return false }
+                        if bTime.isEmpty { return true }
+                        return aTime > bTime
+                    }.map(\.0)
+                    continuation.resume(returning: sectors)
+                } catch {
+                    LogManager.shared.error("Database: Error fetching all flights async - \(error.localizedDescription)")
+                    continuation.resume(returning: [])
+                }
+            }
+        }
+    }
+
     /// Fetch flights for a specific date
     func fetchFlights(for dateString: String) -> [FlightSector] {
         guard let date = dateFormatter.date(from: dateString) else {
