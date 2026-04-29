@@ -53,18 +53,20 @@ struct AverageMetricCard: View {
                         "comparisonPeriod": selectedComparisonPeriod
                     ]
                     settings.saveSettings()
-                    calculateAverage()
+                    Task { await calculateAverage() }
                 }
             )
         }
-        .onAppear {
+        .task {
             loadSettings()
-            loadAvailableAircraftTypes()
-            calculateAverage()
+            await loadAvailableAircraftTypes()
+            await calculateAverage()
         }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
-            loadAvailableAircraftTypes()
-            calculateAverage()
+            Task {
+                await loadAvailableAircraftTypes()
+                await calculateAverage()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             showTimesInHoursMinutes = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
@@ -110,32 +112,32 @@ struct AverageMetricCard: View {
         selectedComparisonPeriod = settings.averageMetricConfig["comparisonPeriod"] ?? ""
     }
 
-    private func loadAvailableAircraftTypes() {
-        availableAircraftTypes = databaseService.getAllAircraftTypes()
+    @MainActor
+    private func loadAvailableAircraftTypes() async {
+        availableAircraftTypes = await databaseService.getAllAircraftTypesAsync()
     }
 
-    private func calculateAverage() {
+    @MainActor
+    private func calculateAverage() async {
         guard let days = Int(selectedTimePeriod) else {
             averageHours = 0.0
             averageSectors = 0.0
             return
         }
-
         let comparisonDays = selectedComparisonPeriod.isEmpty ? nil : Int(selectedComparisonPeriod)
-
-        averageHours = databaseService.getAverageMetric(
+        async let hours = databaseService.getAverageMetricAsync(
             aircraftType: selectedAircraftType,
             days: days,
             metricType: "hours",
             comparisonPeriodDays: comparisonDays
         )
-
-        averageSectors = databaseService.getAverageMetric(
+        async let sectors = databaseService.getAverageMetricAsync(
             aircraftType: selectedAircraftType,
             days: days,
             metricType: "sectors",
             comparisonPeriodDays: comparisonDays
         )
+        (averageHours, averageSectors) = await (hours, sectors)
     }
 
     private var cardContent: some View {

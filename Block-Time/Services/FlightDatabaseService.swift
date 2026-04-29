@@ -814,6 +814,90 @@ class FlightDatabaseService: ObservableObject {
         }
     }
 
+    func fetchFlightsAsync(from startDateString: String, to endDateString: String) async -> [FlightSector] {
+        guard let startDate = dateFormatter.date(from: startDateString),
+              let endDate = dateFormatter.date(from: endDateString) else { return [] }
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                let calendar = Calendar.current
+                let startOfPeriod = calendar.startOfDay(for: startDate)
+                let endOfPeriod = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) ?? endDate
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "date >= %@ AND date <= %@ AND flightNumber != %@", startOfPeriod as NSDate, endOfPeriod as NSDate, "SUMMARY")
+                request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
+                request.fetchBatchSize = 100
+                request.returnsObjectsAsFaults = false
+                do {
+                    let flights = try context.fetch(request)
+                    continuation.resume(returning: flights.compactMap { self.convertToFlightSector($0) })
+                } catch {
+                    continuation.resume(returning: [])
+                }
+            }
+        }
+    }
+
+    func getAllAircraftTypesAsync() async -> [String] {
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "isPositioning == NO OR isPositioning == nil")
+                request.returnsObjectsAsFaults = false
+                do {
+                    let flights = try context.fetch(request)
+                    let types = flights.compactMap { flight -> String? in
+                        guard let raw = flight.aircraftType else { return nil }
+                        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                        return t.count >= 3 ? t : nil
+                    }
+                    continuation.resume(returning: Array(Set(types)).sorted())
+                } catch {
+                    continuation.resume(returning: [])
+                }
+            }
+        }
+    }
+
+    func getDetailedFlightStatisticsAsync(for aircraftType: String) async -> (totalHours: Double, totalSectors: Int, p1Time: Double, p1usTime: Double, p2Time: Double, simTime: Double) {
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        let countSimInTotal = UserDefaults.standard.object(forKey: "countSimInTotal") as? Bool ?? true
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    NSPredicate(format: "aircraftType == %@", aircraftType),
+                    NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
+                    NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+                ])
+                request.returnsObjectsAsFaults = false
+                do {
+                    let flights = try context.fetch(request)
+                    var totalHours: Double = 0, p1Time: Double = 0, p1usTime: Double = 0, p2Time: Double = 0, simTime: Double = 0
+                    for flight in flights {
+                        let blockTime = self.safeDoubleFromString(flight.blockTime)
+                        let flightSimTime = self.entityIsSpInsOnly(flight) ? 0 : self.safeDoubleFromString(flight.simTime)
+                        let isSimFlight = blockTime == 0 && flightSimTime > 0
+                        totalHours += blockTime > 0 ? blockTime : (countSimInTotal ? flightSimTime : 0)
+                        if !isSimFlight {
+                            p1Time += self.safeDoubleFromString(flight.p1Time)
+                            p1usTime += self.safeDoubleFromString(flight.p1usTime)
+                            p2Time += self.safeDoubleFromString(flight.p2Time)
+                        }
+                        simTime += flightSimTime
+                    }
+                    continuation.resume(returning: (totalHours, flights.count, p1Time, p1usTime, p2Time, simTime))
+                } catch {
+                    continuation.resume(returning: (0.0, 0, 0.0, 0.0, 0.0, 0.0))
+                }
+            }
+        }
+    }
+
     /// Fetch flights for a specific date
     func fetchFlights(for dateString: String) -> [FlightSector] {
         guard let date = dateFormatter.date(from: dateString) else {
@@ -2643,6 +2727,60 @@ class FlightDatabaseService: ObservableObject {
 
         } catch {
             return 0.0
+        }
+    }
+
+    func getAverageMetricAsync(aircraftType: String, days: Int, metricType: String, comparisonPeriodDays: Int? = nil) async -> Double {
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                var calendar = Calendar.current
+                calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? TimeZone.current
+                var predicates: [NSPredicate] = [
+                    NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+                ]
+                if !aircraftType.isEmpty {
+                    predicates.append(NSPredicate(format: "aircraftType == %@", aircraftType))
+                }
+                if let comparisonDays = comparisonPeriodDays {
+                    let now = Date()
+                    let endOfPeriod = calendar.startOfDay(for: now)
+                    let startOfPeriod = calendar.date(byAdding: .day, value: -comparisonDays, to: endOfPeriod)!
+                    predicates.append(NSPredicate(format: "date >= %@ AND date <= %@", startOfPeriod as NSDate, endOfPeriod as NSDate))
+                }
+                request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+                request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)]
+                request.returnsObjectsAsFaults = false
+                do {
+                    let flights = try context.fetch(request)
+                    guard !flights.isEmpty else { continuation.resume(returning: 0.0); return }
+                    let numberOfPeriods: Double
+                    if let comparisonDays = comparisonPeriodDays {
+                        numberOfPeriods = Double(comparisonDays) / Double(days)
+                    } else {
+                        guard let firstDate = flights.first?.date, let lastDate = flights.last?.date else {
+                            continuation.resume(returning: 0.0); return
+                        }
+                        let totalDays = calendar.dateComponents([.day], from: firstDate, to: lastDate).day ?? 0
+                        guard totalDays >= days else { continuation.resume(returning: 0.0); return }
+                        numberOfPeriods = Double(totalDays) / Double(days)
+                    }
+                    if metricType == "hours" {
+                        let total = flights.reduce(0.0) { sum, f in
+                            let b = self.safeDoubleFromString(f.blockTime)
+                            let s = self.safeDoubleFromString(f.simTime)
+                            return sum + (b > 0 ? b : s)
+                        }
+                        continuation.resume(returning: total / numberOfPeriods)
+                    } else {
+                        continuation.resume(returning: Double(flights.count) / numberOfPeriods)
+                    }
+                } catch {
+                    continuation.resume(returning: 0.0)
+                }
+            }
         }
     }
 

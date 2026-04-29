@@ -70,10 +70,7 @@ struct TopRoutesCard: View {
         }
         .padding(16)
         .appCardStyle()
-        .onAppear { loadRoutes() }
-        .onChange(of: period) {
-            loadRoutes()
-        }
+        .task(id: period) { await loadRoutes() }
         .sheet(isPresented: $showSheet) {
             RoutesSheetView(period: period)
         }
@@ -119,7 +116,8 @@ struct TopRoutesCard: View {
         .foregroundStyle(.secondary)
     }
 
-    private func loadRoutes() {
+    @MainActor
+    private func loadRoutes() async {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         let now = Date()
@@ -128,13 +126,13 @@ struct TopRoutesCard: View {
         let flights: [FlightSector]
         switch period {
         case .all:
-            flights = FlightDatabaseService.shared.fetchAllFlights()
+            flights = await FlightDatabaseService.shared.fetchAllFlightsAsync()
         case .oneMonth:
             let start = Calendar.current.date(byAdding: .month, value: -1, to: now)!
-            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+            flights = await FlightDatabaseService.shared.fetchFlightsAsync(from: formatter.string(from: start), to: endDate)
         case .twelveMonths:
             let start = Calendar.current.date(byAdding: .month, value: -12, to: now)!
-            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+            flights = await FlightDatabaseService.shared.fetchFlightsAsync(from: formatter.string(from: start), to: endDate)
         }
 
         var counts: [String: (from: String, to: String, n: Int)] = [:]
@@ -253,8 +251,7 @@ private struct RoutesSheetView: View {
                 }
             }
         }
-        .onAppear { loadAllRoutes() }
-        .onChange(of: period) { loadAllRoutes() }
+        .task(id: period) { await loadAllRoutes() }
     }
 
     @ViewBuilder
@@ -282,7 +279,8 @@ private struct RoutesSheetView: View {
         }
     }
 
-    private func loadAllRoutes() {
+    @MainActor
+    private func loadAllRoutes() async {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         let now = Date()
@@ -291,13 +289,13 @@ private struct RoutesSheetView: View {
         let flights: [FlightSector]
         switch period {
         case .all:
-            flights = FlightDatabaseService.shared.fetchAllFlights()
+            flights = await FlightDatabaseService.shared.fetchAllFlightsAsync()
         case .oneMonth:
             let start = Calendar.current.date(byAdding: .month, value: -1, to: now)!
-            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+            flights = await FlightDatabaseService.shared.fetchFlightsAsync(from: formatter.string(from: start), to: endDate)
         case .twelveMonths:
             let start = Calendar.current.date(byAdding: .month, value: -12, to: now)!
-            flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
+            flights = await FlightDatabaseService.shared.fetchFlightsAsync(from: formatter.string(from: start), to: endDate)
         }
 
         var counts: [String: (from: String, to: String, n: Int)] = [:]
