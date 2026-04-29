@@ -29,12 +29,83 @@ enum ImportMode: Sendable, Equatable {
     case replace
 }
 
+// MARK: - Registration Rule (one entry in an advanced mapping)
+struct RegistrationRule: Identifiable, Codable {
+    var id: UUID
+    var regFrom: String      // e.g. "EBA" — full reg, inclusive lower bound
+    var regTo: String        // e.g. "EBV" — inclusive upper bound; "" = exact match on regFrom
+    var afterDate: String?   // "dd/MM/yyyy" inclusive, nil = no lower bound
+    var beforeDate: String?  // "dd/MM/yyyy" inclusive, nil = no upper bound
+    var aircraftType: String
+
+    init(id: UUID = UUID(), regFrom: String = "", regTo: String = "", afterDate: String? = nil, beforeDate: String? = nil, aircraftType: String = "") {
+        self.id = id
+        self.regFrom = regFrom
+        self.regTo = regTo
+        self.afterDate = afterDate
+        self.beforeDate = beforeDate
+        self.aircraftType = aircraftType
+    }
+
+    func matches(reg: String, date: String) -> Bool {
+        guard !aircraftType.isEmpty else { return false }
+        let regUpper = reg.uppercased()
+        let fromUpper = regFrom.uppercased()
+        // Registration range check
+        if regTo.isEmpty {
+            guard regUpper == fromUpper else { return false }
+        } else {
+            let toUpper = regTo.uppercased()
+            guard regUpper >= fromUpper && regUpper <= toUpper else { return false }
+        }
+        // Date bounds — dd/MM/yyyy string comparison works correctly when zero-padded
+        if let after = afterDate, !after.isEmpty {
+            guard compareDDMMYYYY(date, isOnOrAfter: after) else { return false }
+        }
+        if let before = beforeDate, !before.isEmpty {
+            guard compareDDMMYYYY(date, isOnOrBefore: before) else { return false }
+        }
+        return true
+    }
+}
+
+// Compares two "dd/MM/yyyy" strings by converting to "yyyy/MM/dd" for lexicographic ordering.
+private func compareDDMMYYYY(_ date: String, isOnOrAfter bound: String) -> Bool {
+    ddmmyyyyToComparable(date) >= ddmmyyyyToComparable(bound)
+}
+private func compareDDMMYYYY(_ date: String, isOnOrBefore bound: String) -> Bool {
+    ddmmyyyyToComparable(date) <= ddmmyyyyToComparable(bound)
+}
+private func ddmmyyyyToComparable(_ s: String) -> String {
+    let p = s.split(separator: "/")
+    guard p.count == 3 else { return s }
+    return "\(p[2])/\(p[1])/\(p[0])"
+}
+
 // MARK: - Registration to Type Mapping
-struct RegistrationTypeMapping: Identifiable {
-    let id = UUID()
-    let pattern: String  // e.g., "EB*", "OE*"
-    var aircraftType: String  // e.g., "A330", "B787"
-    let sampleRegistrations: [String]  // Show examples to user
+struct RegistrationTypeMapping: Identifiable, Codable {
+    var id: UUID
+    let pattern: String              // e.g., "EB*", "OE*"
+    var sampleRegistrations: [String]
+    var useAdvancedRules: Bool
+    var simpleType: String           // used when !useAdvancedRules
+    var rules: [RegistrationRule]    // ordered, first-match wins; used when useAdvancedRules
+
+    init(id: UUID = UUID(), pattern: String, sampleRegistrations: [String], simpleType: String = "", useAdvancedRules: Bool = false, rules: [RegistrationRule] = []) {
+        self.id = id
+        self.pattern = pattern
+        self.sampleRegistrations = sampleRegistrations
+        self.simpleType = simpleType
+        self.useAdvancedRules = useAdvancedRules
+        self.rules = rules
+    }
+
+    func resolve(reg: String, date: String) -> String {
+        if useAdvancedRules {
+            return rules.first { $0.matches(reg: reg, date: date) }?.aircraftType ?? ""
+        }
+        return simpleType
+    }
 }
 
 // MARK: - Remarks Append Entry
@@ -248,7 +319,7 @@ struct ImportMappingView: View {
                                 Text("Configure Type Mappings")
                                 Spacer()
                                 if !registrationMappings.isEmpty {
-                                    Text("\(registrationMappings.filter { !$0.aircraftType.isEmpty }.count) mapped")
+                                    Text("\(registrationMappings.filter { !$0.simpleType.isEmpty }.count) mapped")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -365,11 +436,7 @@ struct ImportMappingView: View {
                 }
             }
             .sheet(isPresented: $showingRegistrationMapping) {
-                RegistrationTypeMappingView(
-                    mappings: $registrationMappings,
-                    importData: importData,
-                    fieldMappings: fieldMappings
-                )
+                RegistrationTypeMappingView(mappings: $registrationMappings)
             }
         }
     }
@@ -426,8 +493,8 @@ struct ImportMappingView: View {
 
             mappings.append(RegistrationTypeMapping(
                 pattern: pattern + "*",
-                aircraftType: detectedType,
-                sampleRegistrations: Array(regs.sorted())
+                sampleRegistrations: Array(regs.sorted()),
+                simpleType: detectedType
             ))
         }
 
@@ -1001,8 +1068,6 @@ struct ColumnPickerView: View {
 // MARK: - Registration Type Mapping View
 struct RegistrationTypeMappingView: View {
     @Binding var mappings: [RegistrationTypeMapping]
-    let importData: ImportData
-    let fieldMappings: [FieldMapping]
     @Environment(\.dismiss) private var dismiss
 
     @State private var availableTypes: [String] = []
@@ -1013,7 +1078,7 @@ struct RegistrationTypeMappingView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("Map registration patterns to aircraft types. Types will be automatically assigned during import.")
+                    Text("Map registration prefixes to aircraft types. Use Simple for one type per prefix, or Advanced for overlapping registrations or date-filtered history.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -1028,96 +1093,361 @@ struct RegistrationTypeMappingView: View {
                         }
                     }
                 }
-                
-                
+
                 Section(header: Text("Registration Patterns")) {
                     ForEach($mappings) { $mapping in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Registrations: \(mapping.pattern)")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                Spacer()
-                                Text("\(mapping.sampleRegistrations.count) aircraft")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Text("Examples: \(mapping.sampleRegistrations.joined(separator: ", "))")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-
-                            Picker("Aircraft Type", selection: $mapping.aircraftType) {
-                                Text("Not Mapped").tag("")
-                                ForEach(availableTypes.indices, id: \.self) { index in
-                                    Text(availableTypes[index]).tag(availableTypes[index])
-                                }
-                            }
-                            .pickerStyle(.menu)
-                        }
-                        .padding(.vertical, 4)
+                        RegistrationPatternRow(mapping: $mapping, availableTypes: availableTypes)
                     }
                 }
-
-//                Section {
-//                    Button {
-//                        showingAddCustomType = true
-//                    } label: {
-//                        HStack {
-//                            Image(systemName: "plus.circle")
-//                            Text("Add Custom Aircraft Type")
-//                        }
-//                    }
-//                }
             }
             .navigationTitle("Map Aircraft Types")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    Button("Cancel") { dismiss() }
                 }
-
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
                 }
             }
             .alert("Add Custom Type", isPresented: $showingAddCustomType) {
                 TextField("ICAO Type (B788, A35K, etc)", text: $customTypeName)
-                Button("Cancel", role: .cancel) {
-                    customTypeName = ""
-                }
+                Button("Cancel", role: .cancel) { customTypeName = "" }
                 Button("Add") {
-                    if !customTypeName.isEmpty && !availableTypes.contains(customTypeName) {
-                        availableTypes.append(customTypeName)
-                        customTypeName = ""
+                    let t = customTypeName.trimmingCharacters(in: .whitespaces).uppercased()
+                    if !t.isEmpty && !availableTypes.contains(t) {
+                        availableTypes.append(t)
+                        availableTypes.sort()
                     }
+                    customTypeName = ""
                 }
             } message: {
                 Text("Enter the ICAO aircraft type")
             }
-            .onAppear {
-                loadAvailableTypes()
-            }
+            .onAppear { loadAvailableTypes() }
         }
     }
 
     private func loadAvailableTypes() {
-        // Get types from AircraftFleetService
         var types = Set(AircraftFleetService.getAllAircraftTypes())
-
-        // Add any types already in the mappings
         for mapping in mappings {
-            if !mapping.aircraftType.isEmpty {
-                types.insert(mapping.aircraftType)
+            if !mapping.simpleType.isEmpty { types.insert(mapping.simpleType) }
+            for rule in mapping.rules where !rule.aircraftType.isEmpty { types.insert(rule.aircraftType) }
+        }
+        availableTypes = Array(types).sorted()
+    }
+}
+
+// MARK: - Registration Pattern Row
+private struct RegistrationPatternRow: View {
+    @Binding var mapping: RegistrationTypeMapping
+    let availableTypes: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header
+            HStack {
+                Text(mapping.pattern)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("\(mapping.sampleRegistrations.count) reg\(mapping.sampleRegistrations.count == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(mapping.sampleRegistrations.prefix(6).joined(separator: ", ") + (mapping.sampleRegistrations.count > 6 ? "…" : ""))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            // Simple / Advanced toggle
+            Picker("Mode", selection: $mapping.useAdvancedRules) {
+                Text("Simple").tag(false)
+                Text("Advanced").tag(true)
+            }
+            .pickerStyle(.segmented)
+
+            if mapping.useAdvancedRules {
+                AdvancedRulesEditor(rules: $mapping.rules, availableTypes: availableTypes)
+            } else {
+                Picker("Aircraft Type", selection: $mapping.simpleType) {
+                    Text("Not Mapped").tag("")
+                    ForEach(availableTypes, id: \.self) { Text($0).tag($0) }
+                }
+                .pickerStyle(.menu)
             }
         }
+        .padding(.vertical, 6)
+    }
+}
 
-        availableTypes = Array(types).sorted()
+// MARK: - Advanced Rules Editor
+private struct AdvancedRulesEditor: View {
+    @Binding var rules: [RegistrationRule]
+    let availableTypes: [String]
+    @State private var expandedRuleID: UUID? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach($rules) { $rule in
+                RegistrationRuleRow(
+                    rule: $rule,
+                    availableTypes: availableTypes,
+                    isExpanded: expandedRuleID == rule.id,
+                    onToggle: {
+                        expandedRuleID = (expandedRuleID == rule.id) ? nil : rule.id
+                    },
+                    onDelete: {
+                        rules.removeAll { $0.id == rule.id }
+                        if expandedRuleID == rule.id { expandedRuleID = nil }
+                    }
+                )
+            }
+
+            Button {
+                let newRule = RegistrationRule()
+                rules.append(newRule)
+                expandedRuleID = newRule.id
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Add Rule")
+                }
+                .font(.subheadline)
+                .foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
+
+            if !rules.isEmpty {
+                Text("Rules are evaluated top to bottom — first match wins.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+// MARK: - Registration Rule Row
+private struct RegistrationRuleRow: View {
+    @Binding var rule: RegistrationRule
+    let availableTypes: [String]
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    let onDelete: () -> Void
+
+    @State private var showAfterDatePicker = false
+    @State private var showBeforeDatePicker = false
+
+    private static let displayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        return f
+    }()
+
+    private func dateFromString(_ s: String?) -> Date {
+        guard let s, !s.isEmpty, let d = Self.displayFormatter.date(from: s) else { return Date() }
+        return d
+    }
+
+    private var summaryText: String {
+        var parts: [String] = []
+        let regPart = rule.regTo.isEmpty ? rule.regFrom : "\(rule.regFrom)–\(rule.regTo)"
+        if !regPart.trimmingCharacters(in: .whitespaces).isEmpty { parts.append(regPart) }
+        if let a = rule.afterDate, !a.isEmpty { parts.append("from \(a)") }
+        if let b = rule.beforeDate, !b.isEmpty { parts.append("to \(b)") }
+        if parts.isEmpty { parts.append("any reg / any date") }
+        return parts.joined(separator: ", ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Collapsed header — always visible
+            Button(action: onToggle) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(summaryText)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                        if !rule.aircraftType.isEmpty {
+                            Text("→ \(rule.aircraftType)")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.blue)
+                        } else {
+                            Text("→ not set")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 12) {
+                    Divider().padding(.top, 6)
+
+                    // Registration range
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Registration range")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            TextField("From (e.g. EBA)", text: $rule.regFrom)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
+                                .font(.subheadline)
+                                .padding(7)
+                                .background(Color(.systemGray6))
+                                .clipShape(RoundedRectangle(cornerRadius: 7))
+                            Text("–")
+                                .foregroundStyle(.secondary)
+                            TextField("To (e.g. EBV, or blank for exact)", text: $rule.regTo)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
+                                .font(.subheadline)
+                                .padding(7)
+                                .background(Color(.systemGray6))
+                                .clipShape(RoundedRectangle(cornerRadius: 7))
+                        }
+                    }
+
+                    // Date bounds
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Date range (optional)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            dateButton(label: "After", value: $rule.afterDate, showPicker: $showAfterDatePicker)
+                            Text("–")
+                                .foregroundStyle(.secondary)
+                            dateButton(label: "Before", value: $rule.beforeDate, showPicker: $showBeforeDatePicker)
+                        }
+                    }
+
+                    // Type picker
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Aircraft type")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Picker("Type", selection: $rule.aircraftType) {
+                            Text("Not set").tag("")
+                            ForEach(availableTypes, id: \.self) { Text($0).tag($0) }
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    // Delete
+                    Button(role: .destructive, action: onDelete) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trash")
+                            Text("Remove rule")
+                        }
+                        .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red)
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding(.vertical, 4)
+        .sheet(isPresented: $showAfterDatePicker) {
+            DatePickerSheet(
+                title: "Flights after",
+                initialDate: dateFromString(rule.afterDate),
+                onSelect: { rule.afterDate = Self.displayFormatter.string(from: $0) },
+                onClear: { rule.afterDate = nil }
+            )
+        }
+        .sheet(isPresented: $showBeforeDatePicker) {
+            DatePickerSheet(
+                title: "Flights before",
+                initialDate: dateFromString(rule.beforeDate),
+                onSelect: { rule.beforeDate = Self.displayFormatter.string(from: $0) },
+                onClear: { rule.beforeDate = nil }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func dateButton(label: String, value: Binding<String?>, showPicker: Binding<Bool>) -> some View {
+        Button {
+            showPicker.wrappedValue = true
+        } label: {
+            HStack(spacing: 4) {
+                Text(value.wrappedValue ?? label)
+                    .font(.caption)
+                    .foregroundStyle(value.wrappedValue == nil ? .secondary : .primary)
+                if value.wrappedValue != nil {
+                    Button {
+                        value.wrappedValue = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Date Picker Sheet
+private struct DatePickerSheet: View {
+    let title: String
+    let initialDate: Date
+    let onSelect: (Date) -> Void
+    let onClear: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var selected: Date
+
+    init(title: String, initialDate: Date, onSelect: @escaping (Date) -> Void, onClear: @escaping () -> Void) {
+        self.title = title
+        self.initialDate = initialDate
+        self.onSelect = onSelect
+        self.onClear = onClear
+        _selected = State(initialValue: initialDate)
+    }
+
+    var body: some View {
+        NavigationStack {
+            DatePicker(title, selection: $selected, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .padding()
+            Button("Clear date", role: .destructive) {
+                onClear()
+                dismiss()
+            }
+            .padding(.bottom)
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Set") {
+                    onSelect(selected)
+                    dismiss()
+                }
+                .fontWeight(.semibold)
+            }
+        }
+        .presentationDetents([.height(480)])
     }
 }
 

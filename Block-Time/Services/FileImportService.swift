@@ -269,8 +269,13 @@ class FileImportService {
             )
 
 
-            // Create registration to type lookup
-            let regToTypeMap = self.createRegistrationTypeMap(mappings: registrationMappings)
+            // Build prefix → mapping index for O(1) lookup during per-row resolution
+            let regMappingsByPrefix: [String: RegistrationTypeMapping] = Dictionary(
+                registrationMappings.map { m in
+                    (m.pattern.replacingOccurrences(of: "*", with: "").uppercased(), m)
+                },
+                uniquingKeysWith: { first, _ in first }
+            )
 
             var successCount = 0
             var failureCount = 0
@@ -286,7 +291,7 @@ class FileImportService {
 
             // First, create all flight objects
             for (index, row) in importData.rows.enumerated() {
-                let result = self.createFlightFromRow(row, mapping: columnMapping, registrationTypeMap: regToTypeMap, rowIndex: index + 1, timesAreLocal: timesAreLocal)
+                let result = self.createFlightFromRow(row, mapping: columnMapping, regMappingsByPrefix: regMappingsByPrefix, rowIndex: index + 1, timesAreLocal: timesAreLocal)
 
                 switch result {
                 case .success(let flight):
@@ -446,17 +451,12 @@ class FileImportService {
         return mapping
     }
 
-    // MARK: - Create Registration Type Map
-    private func createRegistrationTypeMap(mappings: [RegistrationTypeMapping]) -> [String: String] {
-        var map: [String: String] = [:]
-
-        for mapping in mappings where !mapping.aircraftType.isEmpty {
-            // Remove the * from pattern (e.g., "EB*" -> "EB")
-            let pattern = mapping.pattern.replacingOccurrences(of: "*", with: "")
-            map[pattern] = mapping.aircraftType
-        }
-
-        return map
+    // MARK: - Resolve Aircraft Type from Registration + Date
+    private func resolveAircraftType(reg: String, date: String, regMappingsByPrefix: [String: RegistrationTypeMapping]) -> String {
+        guard reg.count >= 2 else { return "" }
+        let prefix = String(reg.prefix(2)).uppercased()
+        guard let mapping = regMappingsByPrefix[prefix] else { return "" }
+        return mapping.resolve(reg: reg, date: date)
     }
 
     // Helper struct for mapping info
@@ -475,7 +475,7 @@ class FileImportService {
     private func createFlightFromRow(
         _ row: [String],
         mapping: [String: FieldMappingInfo],
-        registrationTypeMap: [String: String],
+        regMappingsByPrefix: [String: RegistrationTypeMapping],
         rowIndex: Int,
         timesAreLocal: Bool = false
     ) -> Result<FlightSector, FlightCreationError> {
@@ -669,15 +669,9 @@ class FileImportService {
         }
 
         // If no type in CSV, try to infer from registration mapping
-        if aircraftType.isEmpty && !registrationTypeMap.isEmpty {
-            let registration = aircraftReg
-            // Try to match registration pattern (first 2 chars)
-            if registration.count >= 2 {
-                let pattern = String(registration.prefix(2))
-                if let mappedType = registrationTypeMap[pattern] {
-                    aircraftType = mappedType
-                }
-            }
+        if aircraftType.isEmpty && !regMappingsByPrefix.isEmpty {
+            let resolved = resolveAircraftType(reg: aircraftReg, date: date, regMappingsByPrefix: regMappingsByPrefix)
+            if !resolved.isEmpty { aircraftType = resolved }
         }
 
         // Create deterministic ID based on flight data to prevent duplicates
