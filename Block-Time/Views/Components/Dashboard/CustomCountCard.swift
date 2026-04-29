@@ -16,7 +16,7 @@ private enum CCPeriod: String, CaseIterable {
 
 struct CustomCountCard: View {
     @AppStorage("customCountCard_period") private var period: CCPeriod = .oneMonth
-    @AppStorage("customCountLabel") private var label: String = "PAX"
+    @AppStorage("customCountLabel") private var label: String = "Passengers"
 
     @State private var total: Int = 0
     @State private var flightCount: Int = 0

@@ -681,7 +681,7 @@ private struct ModernOpsDataCard: View {
 
                 ModernToggleRow(
                     title: "Use Custom Counter",
-                    subtitle: "Show custom counter in Logbook",
+                    subtitle: "Use for logging PAX Numbers etc",
                     isOn: Binding(
                         get: { viewModel.logCustomCount },
                         set: { viewModel.updateLogCustomCount($0) }

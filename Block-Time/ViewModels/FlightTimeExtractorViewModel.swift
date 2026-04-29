@@ -181,7 +181,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var savePhotosToLibrary = false  // NEW SETTING
     @Published var showSONameFields = false  // Show/hide SO 1 and SO 2 fields
     @Published var logCustomCount = false    // Show/hide custom counter field
-    @Published var customCountLabel = "PAX" // Label for the custom counter
+    @Published var customCountLabel = "Passengers" // Label for the custom counter
     @Published var showSpInsSelector = false // Show/hide INS toggle for Sp/Ins logging
     @Published var defaultInstructionEnvironment: InstructionEnvironment = .simulator
     @Published var isInstructingInAircraft = false // true = aircraft instruction (counts as P1), false = sim instruction
@@ -826,7 +826,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
     func updateCustomCountLabel(_ value: String) {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let label = trimmed.isEmpty ? "PAX" : String(trimmed.prefix(20))
+        let label = trimmed.isEmpty ? "Passengers" : String(trimmed.prefix(20))
         customCountLabel = label
         userDefaultsService.setCustomCountLabel(label)
     }

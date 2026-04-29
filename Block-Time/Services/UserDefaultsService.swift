@@ -163,7 +163,7 @@ struct AppSettings {
         showOutInTimes: true,
         countSimInTotal: true,
         logCustomCount: false,
-        customCountLabel: "PAX"
+        customCountLabel: "Passengers"
     )
 }
 
@@ -280,7 +280,7 @@ class UserDefaultsService: ObservableObject {
             showOutInTimes: userDefaults.object(forKey: Keys.showOutInTimes) as? Bool ?? true,
             countSimInTotal: userDefaults.object(forKey: Keys.countSimInTotal) as? Bool ?? true,
             logCustomCount: userDefaults.bool(forKey: Keys.logCustomCount),
-            customCountLabel: userDefaults.string(forKey: Keys.customCountLabel) ?? "PAX"
+            customCountLabel: userDefaults.string(forKey: Keys.customCountLabel) ?? "Passengers"
         )
     }
 
