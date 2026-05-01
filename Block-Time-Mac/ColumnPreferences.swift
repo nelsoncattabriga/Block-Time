@@ -20,7 +20,7 @@ final class ColumnPreferences {
     var widths: [String: CGFloat]
 
     init() {
-        let defaultIDs = LogbookColumn.scrollingColumns.map(\.id)
+        let defaultIDs = LogbookColumn.scrollingColumns(hhmm: true, rounding: "standard", localTime: false).map(\.id)
 
         if let saved = UserDefaults.standard.stringArray(forKey: Self.orderKey),
            Set(saved) == Set(defaultIDs) {
@@ -28,6 +28,7 @@ final class ColumnPreferences {
         } else {
             order = defaultIDs
         }
+
 
         if let savedHidden = UserDefaults.standard.stringArray(forKey: Self.hiddenKey) {
             hidden = Set(savedHidden)
@@ -47,8 +48,8 @@ final class ColumnPreferences {
         UserDefaults.standard.set(widths.mapValues { Double($0) }, forKey: Self.widthsKey)
     }
 
-    var visibleColumns: [LogbookColumn] {
-        let lookup = Dictionary(uniqueKeysWithValues: LogbookColumn.scrollingColumns.map { ($0.id, $0) })
+    func visibleColumns(hhmm: Bool, rounding: String, localTime: Bool, useIATA: Bool = true) -> [LogbookColumn] {
+        let lookup = Dictionary(uniqueKeysWithValues: LogbookColumn.scrollingColumns(hhmm: hhmm, rounding: rounding, localTime: localTime, useIATA: useIATA).map { ($0.id, $0) })
         return order.compactMap { lookup[$0] }.filter { !hidden.contains($0.id) }
     }
 
@@ -63,7 +64,7 @@ final class ColumnPreferences {
     }
 
     func reset() {
-        order  = LogbookColumn.scrollingColumns.map(\.id)
+        order  = LogbookColumn.scrollingColumns(hhmm: true, rounding: "standard", localTime: false).map(\.id)
         hidden = []
         widths = [:]
         persist()

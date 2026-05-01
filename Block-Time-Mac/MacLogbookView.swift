@@ -13,10 +13,17 @@ struct MacLogbookView: View {
     @Binding var showingFilter: Bool
     var filterState: MacFilterState
     var onRowsLoaded: ([MacFlightRow]) -> Void
+
+    @AppStorage("showTimesInHoursMinutes")   private var timesInHHMM: Bool = true
+    @AppStorage("decimalRoundingMode")       private var decimalRounding: String = "standard"
+    @AppStorage("displayFlightsInLocalTime") private var displayInLocalTime: Bool = true
+    @AppStorage("useIATACodes")              private var useIATA: Bool = true
+    @AppStorage("countSimInTotal")           private var countSimInTotal: Bool = false
     var onSyncingChanged: (Bool) -> Void = { _ in }
 
     @State private var columnPrefs = ColumnPreferences()
     @State private var showingColumnManager = false
+    @State private var showingViewOptions = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -62,8 +69,14 @@ struct MacLogbookView: View {
                 MacLogbookTableView(
                     rows: viewModel.displayedFlights,
                     selection: $selection,
-                    columns: columnPrefs.visibleColumns,
-                    prefs: columnPrefs
+                    columns: columnPrefs.visibleColumns(hhmm: timesInHHMM, rounding: decimalRounding, localTime: displayInLocalTime, useIATA: useIATA),
+                    frozenColumns: LogbookColumn.frozenColumns(localTime: displayInLocalTime),
+                    prefs: columnPrefs,
+                    hhmm: timesInHHMM,
+                    rounding: decimalRounding,
+                    localTime: displayInLocalTime,
+                    useIATA: useIATA,
+                    saveVersion: viewModel.saveVersion
                 )
             }
         }
@@ -99,7 +112,7 @@ struct MacLogbookView: View {
     private var footerBar: some View {
         ZStack {
             // Centred block total
-            let totalBlock = MacFlightRow.hhmmDisplay(viewModel.totalBlockHours)
+            let totalBlock = MacFlightRow.formatTime(viewModel.totalHours(countSim: countSimInTotal), hhmm: timesInHHMM, rounding: decimalRounding)
             Text("\(totalBlock) hours")
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(.secondary)
@@ -141,11 +154,13 @@ struct MacLogbookView: View {
 
         ToolbarItem(placement: .automatic) {
             Button {
-                Task { await viewModel.reload() }
+                showingViewOptions.toggle()
             } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
+                Label("View Options", systemImage: "slider.horizontal.3")
             }
-            .keyboardShortcut("r", modifiers: .command)
+            .popover(isPresented: $showingViewOptions, arrowEdge: .bottom) {
+                LogbookViewOptionsPopover()
+            }
         }
 
         ToolbarItem(placement: .automatic) {
@@ -169,6 +184,8 @@ struct MacLogbookView: View {
         }
     }
 
+    // MARK: - Filter Button Label
+
     private var filterButtonLabel: some View {
         ZStack(alignment: .topTrailing) {
             Image(systemName: showingFilter
@@ -183,5 +200,59 @@ struct MacLogbookView: View {
                     .offset(x: 3, y: -3)
             }
         }
+    }
+}
+
+// MARK: - Logbook View Options Popover
+
+private struct LogbookViewOptionsPopover: View {
+    @AppStorage("displayFlightsInLocalTime") private var displayInLocalTime: Bool = true
+    @AppStorage("showTimesInHoursMinutes")   private var timesInHHMM: Bool = true
+    @AppStorage("decimalRoundingMode")       private var decimalRounding: String = "standard"
+    @AppStorage("useIATACodes")              private var useIATA: Bool = true
+    @AppStorage("countSimInTotal")           private var countSimInTotal: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("View Options")
+                .font(.system(size: 13, weight: .semibold))
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
+            Divider()
+
+            Form {
+                Section("Times") {
+                    Picker("Show Times In", selection: $displayInLocalTime) {
+                        Text("UTC").tag(false)
+                        Text("Local").tag(true)
+                    }
+                    Picker("Hours in", selection: $timesInHHMM) {
+                        Text("HH:MM").tag(true)
+                        Text("Decimal").tag(false)
+                    }
+                    if !timesInHHMM {
+                        Picker("Rounding", selection: $decimalRounding) {
+                            Text("Standard").tag("standard")
+                            Text("Alternate").tag("alternate")
+                        }
+                    }
+                    Toggle("Count SIM in Total", isOn: $countSimInTotal)
+                }
+
+                Section("Display") {
+                    Picker("Airport Codes", selection: $useIATA) {
+                        Text("IATA (BNE)").tag(true)
+                        Text("ICAO (YBBN)").tag(false)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .frame(width: 300)
+            // Shrink-wrap the form height
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.bottom, 8)
     }
 }

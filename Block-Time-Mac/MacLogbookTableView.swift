@@ -139,46 +139,46 @@ struct LogbookColumn: Identifiable {
     let value: (MacFlightRow) -> String
     var alignment: NSTextAlignment = .left
 
-    static let frozenColumns: [LogbookColumn] = [
-        LogbookColumn(id: "date",    title: "Date",   minWidth: 72, idealWidth: 84, value: { $0.dateDisplay }, alignment: .center),
+    static func frozenColumns(localTime: Bool) -> [LogbookColumn] { [
+        LogbookColumn(id: "date",    title: "Date",   minWidth: 72, idealWidth: 84, value: { $0.dateDisplay(localTime: localTime) }, alignment: .center),
         LogbookColumn(id: "flight",  title: "Flt No", minWidth: 52, idealWidth: 68, value: { $0.flightNumber }, alignment: .center),
-    ]
+    ] }
 
-    static let scrollingColumns: [LogbookColumn] = [
-        LogbookColumn(id: "dep",     title: "DEP",     minWidth: 36,  idealWidth: 44,  value: { $0.fromAirport },        alignment: .center),
-        LogbookColumn(id: "arr",     title: "ARR",     minWidth: 36,  idealWidth: 44,  value: { $0.toAirport },          alignment: .center),
-        LogbookColumn(id: "std",     title: "STD",     minWidth: 40,  idealWidth: 48,  value: { $0.scheduledDeparture }, alignment: .center),
-        LogbookColumn(id: "sta",     title: "STA",     minWidth: 40,  idealWidth: 48,  value: { $0.scheduledArrival },   alignment: .center),
-        LogbookColumn(id: "out",     title: "OUT",     minWidth: 40,  idealWidth: 48,  value: { $0.outTime },            alignment: .center),
-        LogbookColumn(id: "in",      title: "IN",      minWidth: 40,  idealWidth: 48,  value: { $0.inTime },             alignment: .center),
-        LogbookColumn(id: "block",   title: "Block",   minWidth: 44,  idealWidth: 52,  value: { $0.blockDisplay },       alignment: .center),
-        LogbookColumn(id: "night",   title: "Night",   minWidth: 44,  idealWidth: 52,  value: { $0.nightDisplay },       alignment: .center),
-        LogbookColumn(id: "instr",   title: "Inst",   minWidth: 44,  idealWidth: 52,  value: { $0.instrumentDisplay },  alignment: .center),
-        LogbookColumn(id: "captain", title: "Captain", minWidth: 80,  idealWidth: 130, value: { $0.captainName }, alignment: .center),
-        LogbookColumn(id: "fo",      title: "FO",      minWidth: 80,  idealWidth: 130, value: { $0.foName },      alignment: .center),
-        LogbookColumn(id: "so1",     title: "SO1",     minWidth: 80,  idealWidth: 130, value: { $0.so1Name },     alignment: .center),
-        LogbookColumn(id: "so2",     title: "SO2",     minWidth: 80,  idealWidth: 130, value: { $0.so2Name },     alignment: .center),
-        LogbookColumn(id: "p1",      title: "P1",      minWidth: 40,  idealWidth: 48,  value: { $0.p1Display },          alignment: .center),
-        LogbookColumn(id: "p1s",     title: "ICUS",    minWidth: 40,  idealWidth: 48,  value: { $0.p1usDisplay },        alignment: .center),
-        LogbookColumn(id: "p2",      title: "P2",      minWidth: 40,  idealWidth: 48,  value: { $0.p2Display },          alignment: .center),
-        LogbookColumn(id: "sim",     title: "Sim",     minWidth: 40,  idealWidth: 48,  value: { $0.simDisplay },         alignment: .center),
-        LogbookColumn(id: "spins",   title: "Sp/Ins",  minWidth: 44,  idealWidth: 52,  value: { $0.spInsDisplay },       alignment: .center),
-        LogbookColumn(id: "type",    title: "Type",    minWidth: 48,  idealWidth: 60,  value: { $0.aircraftType },       alignment: .center),
-        LogbookColumn(id: "reg",     title: "Reg",     minWidth: 60,  idealWidth: 76,  value: { $0.aircraftReg },        alignment: .center),
+    static func scrollingColumns(hhmm: Bool, rounding: String, localTime: Bool, useIATA: Bool = true) -> [LogbookColumn] { [
+        LogbookColumn(id: "dep",     title: "DEP",       minWidth: 36,  idealWidth: 44,  value: { AirportService.shared.getDisplayCode($0.fromAirport, useIATA: useIATA) }, alignment: .center),
+        LogbookColumn(id: "arr",     title: "ARR",       minWidth: 36,  idealWidth: 44,  value: { AirportService.shared.getDisplayCode($0.toAirport,   useIATA: useIATA) }, alignment: .center),
+        LogbookColumn(id: "std",     title: "STD",       minWidth: 40,  idealWidth: 48,  value: { $0.displayTime($0.scheduledDeparture, localTime: localTime, airportICAO: $0.fromAirport) }, alignment: .center),
+        LogbookColumn(id: "sta",     title: "STA",       minWidth: 40,  idealWidth: 48,  value: { $0.displayTime($0.scheduledArrival,   localTime: localTime, airportICAO: $0.toAirport)   }, alignment: .center),
+        LogbookColumn(id: "out",     title: "OUT",       minWidth: 40,  idealWidth: 48,  value: { $0.displayTime($0.outTime,            localTime: localTime, airportICAO: $0.fromAirport) }, alignment: .center),
+        LogbookColumn(id: "in",      title: "IN",        minWidth: 40,  idealWidth: 48,  value: { $0.displayTime($0.inTime,             localTime: localTime, airportICAO: $0.toAirport)   }, alignment: .center),
+        LogbookColumn(id: "block",   title: "Block",     minWidth: 44,  idealWidth: 52,  value: { $0.blockDisplay(hhmm: hhmm, rounding: rounding) },       alignment: .center),
+        LogbookColumn(id: "night",   title: "Night",     minWidth: 44,  idealWidth: 52,  value: { $0.nightDisplay(hhmm: hhmm, rounding: rounding) },       alignment: .center),
+        LogbookColumn(id: "instr",   title: "Inst",      minWidth: 44,  idealWidth: 52,  value: { $0.instrumentDisplay(hhmm: hhmm, rounding: rounding) },  alignment: .center),
+        LogbookColumn(id: "captain", title: "Captain",   minWidth: 80,  idealWidth: 130, value: { $0.captainName }, alignment: .center),
+        LogbookColumn(id: "fo",      title: "FO",        minWidth: 80,  idealWidth: 130, value: { $0.foName },      alignment: .center),
+        LogbookColumn(id: "so1",     title: "SO1",       minWidth: 80,  idealWidth: 130, value: { $0.so1Name },     alignment: .center),
+        LogbookColumn(id: "so2",     title: "SO2",       minWidth: 80,  idealWidth: 130, value: { $0.so2Name },     alignment: .center),
+        LogbookColumn(id: "p1",      title: "P1",        minWidth: 40,  idealWidth: 48,  value: { $0.p1Display(hhmm: hhmm, rounding: rounding) },          alignment: .center),
+        LogbookColumn(id: "p1s",     title: "ICUS",      minWidth: 40,  idealWidth: 48,  value: { $0.p1usDisplay(hhmm: hhmm, rounding: rounding) },        alignment: .center),
+        LogbookColumn(id: "p2",      title: "P2",        minWidth: 40,  idealWidth: 48,  value: { $0.p2Display(hhmm: hhmm, rounding: rounding) },          alignment: .center),
+        LogbookColumn(id: "sim",     title: "Sim",       minWidth: 40,  idealWidth: 48,  value: { $0.simDisplay(hhmm: hhmm, rounding: rounding) },         alignment: .center),
+        LogbookColumn(id: "spins",   title: "Sp/Ins",    minWidth: 44,  idealWidth: 52,  value: { $0.spInsDisplay(hhmm: hhmm, rounding: rounding) },       alignment: .center),
+        LogbookColumn(id: "type",    title: "Type",      minWidth: 48,  idealWidth: 60,  value: { $0.aircraftType },       alignment: .center),
+        LogbookColumn(id: "reg",     title: "Reg",       minWidth: 60,  idealWidth: 76,  value: { $0.aircraftReg },        alignment: .center),
         LogbookColumn(id: "tod",     title: "T/O Day",   minWidth: 36,  idealWidth: 42,  value: { $0.dayTakeoffs   > 0 ? "\($0.dayTakeoffs)"   : "" }, alignment: .center),
-        LogbookColumn(id: "ton",     title: "T/O Night",   minWidth: 36,  idealWidth: 42,  value: { $0.nightTakeoffs > 0 ? "\($0.nightTakeoffs)" : "" }, alignment: .center),
+        LogbookColumn(id: "ton",     title: "T/O Night", minWidth: 36,  idealWidth: 42,  value: { $0.nightTakeoffs > 0 ? "\($0.nightTakeoffs)" : "" }, alignment: .center),
         LogbookColumn(id: "ldgd",    title: "Ldg Day",   minWidth: 36,  idealWidth: 42,  value: { $0.dayLandings   > 0 ? "\($0.dayLandings)"   : "" }, alignment: .center),
-        LogbookColumn(id: "ldgn",    title: "Ldg Night",   minWidth: 36,  idealWidth: 42,  value: { $0.nightLandings > 0 ? "\($0.nightLandings)" : "" }, alignment: .center),
-        LogbookColumn(id: "pf",      title: "Was PF",      minWidth: 28,  idealWidth: 32,  value: { $0.isPilotFlying  ? "✓" : "" }, alignment: .center),
-        LogbookColumn(id: "pax",     title: "PAXING",     minWidth: 28,  idealWidth: 32,  value: { $0.isPositioning  ? "✓" : "" }, alignment: .center),
-        LogbookColumn(id: "ils",     title: "ILS",     minWidth: 28,  idealWidth: 32,  value: { $0.isILS  ? "✓" : "" }, alignment: .center),
-        LogbookColumn(id: "gls",     title: "GLS",     minWidth: 28,  idealWidth: 32,  value: { $0.isGLS  ? "✓" : "" }, alignment: .center),
-        LogbookColumn(id: "npa",     title: "NPA",     minWidth: 28,  idealWidth: 32,  value: { $0.isNPA  ? "✓" : "" }, alignment: .center),
-        LogbookColumn(id: "rnp",     title: "RNP",     minWidth: 28,  idealWidth: 32,  value: { $0.isRNP  ? "✓" : "" }, alignment: .center),
-        LogbookColumn(id: "aiii",    title: "AIII",    minWidth: 28,  idealWidth: 36,  value: { $0.isAIII ? "✓" : "" }, alignment: .center),
-        LogbookColumn(id: "custom",  title: "Custom",  minWidth: 44,  idealWidth: 52,  value: { $0.customCount > 0 ? "\($0.customCount)" : "" }, alignment: .center),
-        LogbookColumn(id: "remarks", title: "Remarks", minWidth: 120, idealWidth: 800, value: { $0.remarks }),
-    ]
+        LogbookColumn(id: "ldgn",    title: "Ldg Night", minWidth: 36,  idealWidth: 42,  value: { $0.nightLandings > 0 ? "\($0.nightLandings)" : "" }, alignment: .center),
+        LogbookColumn(id: "pf",      title: "Was PF",    minWidth: 28,  idealWidth: 32,  value: { $0.isPilotFlying  ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "pax",     title: "PAXING",    minWidth: 28,  idealWidth: 32,  value: { $0.isPositioning  ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "ils",     title: "ILS",       minWidth: 28,  idealWidth: 32,  value: { $0.isILS  ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "gls",     title: "GLS",       minWidth: 28,  idealWidth: 32,  value: { $0.isGLS  ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "npa",     title: "NPA",       minWidth: 28,  idealWidth: 32,  value: { $0.isNPA  ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "rnp",     title: "RNP",       minWidth: 28,  idealWidth: 32,  value: { $0.isRNP  ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "aiii",    title: "AIII",      minWidth: 28,  idealWidth: 36,  value: { $0.isAIII ? "✓" : "" }, alignment: .center),
+        LogbookColumn(id: "custom",  title: "Custom",    minWidth: 44,  idealWidth: 52,  value: { $0.customCount > 0 ? "\($0.customCount)" : "" }, alignment: .center),
+        LogbookColumn(id: "remarks", title: "Remarks",   minWidth: 120, idealWidth: 800, value: { $0.remarks }),
+    ] }
 }
 
 // MARK: - Container NSView
@@ -248,10 +248,15 @@ final class SplitLogbookView: NSView {
 struct MacLogbookTableView: NSViewRepresentable {
     let rows: [MacFlightRow]
     @Binding var selection: Set<UUID>
-    var columns: [LogbookColumn] = LogbookColumn.scrollingColumns
+    var columns: [LogbookColumn]
+    var frozenColumns: [LogbookColumn]
     var prefs: ColumnPreferences? = nil
+    var hhmm: Bool = true
+    var rounding: String = "standard"
+    var localTime: Bool = false
+    var useIATA: Bool = true
+    var saveVersion: Int = 0
 
-    // Equatable row count + IDs used to skip reloadData when nothing changed
     private var rowIDs: [UUID] { rows.map(\.id) }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -263,7 +268,7 @@ struct MacLogbookTableView: NSViewRepresentable {
         // Left table — frozen columns
         view.leftTable.delegate   = c
         view.leftTable.dataSource = c
-        for col in LogbookColumn.frozenColumns {
+        for col in frozenColumns {
             view.leftTable.addTableColumn(makeColumn(col))
         }
 
@@ -382,7 +387,13 @@ struct MacLogbookTableView: NSViewRepresentable {
             splitView.needsLayout = true
         }
 
-        if rowIDs != c.lastRowIDs {
+        let needsReload = rowIDs        != c.lastRowIDs
+            || saveVersion  != c.lastSaveVersion
+            || hhmm         != c.lastHHMM
+            || rounding     != c.lastRounding
+            || localTime    != c.lastLocalTime
+            || useIATA      != c.lastUseIATA
+        if needsReload {
             splitView.leftTable.reloadData()
             splitView.rightTable.reloadData()
             splitView.needsLayout = true
@@ -390,7 +401,12 @@ struct MacLogbookTableView: NSViewRepresentable {
                 autofitColumns(splitView)
             }
         }
-        c.lastRowIDs = rowIDs
+        c.lastRowIDs      = rowIDs
+        c.lastSaveVersion = saveVersion
+        c.lastHHMM        = hhmm
+        c.lastRounding    = rounding
+        c.lastLocalTime   = localTime
+        c.lastUseIATA     = useIATA
 
         // Sync selection SwiftUI → tables (cheap, no cell recreation)
         var indexSet = IndexSet()
@@ -411,7 +427,8 @@ struct MacLogbookTableView: NSViewRepresentable {
         let padding: CGFloat = 16
 
         let savedWidths = prefs?.widths ?? [:]
-        let allColumns = LogbookColumn.frozenColumns + columns
+        let allColumns = frozenColumns + columns
+        let frozenIDs  = Set(frozenColumns.map(\.id))
         for col in allColumns {
             if savedWidths[col.id] != nil { continue }
             let headerWidth = (col.title as NSString).size(withAttributes: attrs).width + padding
@@ -421,7 +438,7 @@ struct MacLogbookTableView: NSViewRepresentable {
                 return max(maxW, w)
             }
             let targetWidth = max(col.minWidth, headerWidth, min(maxContentWidth, col.idealWidth))
-            let isFrozen = LogbookColumn.frozenColumns.contains(where: { $0.id == col.id })
+            let isFrozen = frozenIDs.contains(col.id)
             let table = isFrozen ? splitView.leftTable : splitView.rightTable
             if let tc = table.tableColumn(withIdentifier: NSUserInterfaceItemIdentifier(col.id)) {
                 tc.width = targetWidth
@@ -451,6 +468,11 @@ struct MacLogbookTableView: NSViewRepresentable {
         weak var rightTable: NSTableView?
 
         var lastRowIDs: [UUID] = []
+        var lastSaveVersion: Int = 0
+        var lastHHMM: Bool = true
+        var lastRounding: String = "standard"
+        var lastLocalTime: Bool = false
+        var lastUseIATA: Bool = true
         private var isSyncingScroll = false
         private var isSyncingSelection = false
 
@@ -480,7 +502,7 @@ struct MacLogbookTableView: NSViewRepresentable {
             guard let colID = tableColumn?.identifier.rawValue,
                   row < parent.rows.count else { return nil }
 
-            let allColumns = LogbookColumn.frozenColumns + parent.columns
+            let allColumns = parent.frozenColumns + parent.columns
             guard let col = allColumns.first(where: { $0.id == colID }) else { return nil }
 
             let flight = parent.rows[row]

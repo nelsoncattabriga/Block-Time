@@ -172,6 +172,7 @@ struct MacRootView: View {
                     detailMode = .none
                     tableSelection.removeAll()
                 }
+                .id(id)
             } else {
                 // Row deleted or not yet loaded
                 Text("Flight not found")

@@ -50,7 +50,7 @@ struct ColumnManagerPopover: View {
                 .padding(.top, 6)
                 .padding(.bottom, 2)
 
-            ForEach(LogbookColumn.frozenColumns) { col in
+            ForEach(LogbookColumn.frozenColumns(localTime: false)) { col in
                 HStack(spacing: 8) {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 10))
@@ -73,7 +73,7 @@ struct ColumnManagerPopover: View {
     private var columnList: some View {
         List {
             ForEach(prefs.order, id: \.self) { id in
-                if let col = LogbookColumn.scrollingColumns.first(where: { $0.id == id }) {
+                if let col = LogbookColumn.scrollingColumns(hhmm: true, rounding: "standard", localTime: false).first(where: { $0.id == id }) {
                     ColumnRow(col: col, isHidden: prefs.hidden.contains(id)) {
                         prefs.toggleVisibility(id)
                     }

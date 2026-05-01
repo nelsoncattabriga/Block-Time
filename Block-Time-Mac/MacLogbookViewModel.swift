@@ -62,21 +62,84 @@ struct MacFlightRow: Identifiable {
         return .none
     }
 
+    /// UTC instant of departure — rawDate (midnight) + OUT time, falling back to STD.
+    var departureDatetime: Date {
+        let t = outTime.isEmpty ? scheduledDeparture : outTime
+        let clean = t.replacingOccurrences(of: ":", with: "")
+        guard clean.count == 4,
+              let h = Int(clean.prefix(2)),
+              let m = Int(clean.suffix(2)) else { return rawDate }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(secondsFromGMT: 0)!
+        return cal.date(bySettingHour: h, minute: m, second: 0, of: rawDate) ?? rawDate
+    }
+
     // MARK: Formatted display helpers
 
-    var dateDisplay: String {
-        // dd/MM/yyyy → "16 Apr 26"
-        let parts = date.split(separator: "/")
-        guard parts.count == 3,
-              let day = Int(parts[0]),
-              let month = Int(parts[1]),
-              let year = Int(parts[2]) else { return date }
+    func dateDisplay(localTime: Bool) -> String {
         let monthAbbr = ["Jan","Feb","Mar","Apr","May","Jun",
                          "Jul","Aug","Sep","Oct","Nov","Dec"]
-        guard month >= 1, month <= 12 else { return date }
-        let yy = year % 100
-        return String(format: "%d %@ %02d", day, monthAbbr[month - 1], yy)
+
+        guard localTime else {
+            // UTC: rawDate is stored as midnight UTC so just decompose it
+            var utcCal = Calendar(identifier: .gregorian)
+            utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
+            let c = utcCal.dateComponents([.day, .month, .year], from: rawDate)
+            guard let d = c.day, let m = c.month, let y = c.year,
+                  m >= 1, m <= 12 else { return date }
+            return String(format: "%d %@ %02d", d, monthAbbr[m - 1], y % 100)
+        }
+
+        // Local: combine rawDate with departure time (OUT preferred, fall back to STD)
+        // to get the true UTC instant, then read the date in the airport's local timezone.
+        let depTime = outTime.isEmpty ? scheduledDeparture : outTime
+        let icao = AirportService.shared.convertToICAO(fromAirport)
+
+        let refDate: Date
+        if !depTime.isEmpty {
+            let clean = depTime.replacingOccurrences(of: ":", with: "")
+            if clean.count == 4,
+               let h = Int(clean.prefix(2)), let m = Int(clean.suffix(2)) {
+                var utcCal = Calendar(identifier: .gregorian)
+                utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
+                refDate = utcCal.date(bySettingHour: h, minute: m, second: 0, of: rawDate) ?? rawDate
+            } else {
+                refDate = rawDate
+            }
+        } else {
+            refDate = rawDate
+        }
+
+        let tz = AirportService.shared.getTimeZone(for: icao, on: refDate)
+                 ?? TimeZone(secondsFromGMT: 0)!
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = tz
+        let c = cal.dateComponents([.day, .month, .year], from: refDate)
+        guard let d = c.day, let m = c.month, let y = c.year,
+              m >= 1, m <= 12 else { return date }
+        return String(format: "%d %@ %02d", d, monthAbbr[m - 1], y % 100)
     }
+
+    // MARK: - UTC HHMM → local HHMM conversion (airport timezone, DST-aware)
+
+    func displayTime(_ hhmm: String, localTime: Bool, airportICAO: String) -> String {
+        guard !hhmm.isEmpty else { return "" }
+        let raw: String
+        if localTime {
+            let icao = AirportService.shared.convertToICAO(airportICAO)
+            raw = AirportService.shared.convertToLocalTime(
+                utcDateString: date,
+                utcTimeString: hhmm,
+                airportICAO: icao
+            )
+        } else {
+            raw = hhmm.replacingOccurrences(of: ":", with: "")
+        }
+        guard raw.count == 4 else { return raw }
+        return "\(raw.prefix(2)):\(raw.suffix(2))"
+    }
+
+    // MARK: - Static time formatters
 
     static func hhmmDisplay(_ decimal: Double) -> String {
         guard decimal > 0 else { return "" }
@@ -84,14 +147,45 @@ struct MacFlightRow: Identifiable {
         return String(format: "%d:%02d", totalMinutes / 60, totalMinutes % 60)
     }
 
-    var blockDisplay:      String { Self.hhmmDisplay(blockTime) }
-    var nightDisplay:      String { Self.hhmmDisplay(nightTime) }
-    var instrumentDisplay: String { Self.hhmmDisplay(instrumentTime) }
-    var p1Display:         String { Self.hhmmDisplay(p1Time) }
-    var p1usDisplay:       String { Self.hhmmDisplay(p1usTime) }
-    var p2Display:         String { Self.hhmmDisplay(p2Time) }
-    var simDisplay:        String { Self.hhmmDisplay(simTime) }
-    var spInsDisplay:      String { Self.hhmmDisplay(spInsTime) }
+    static func decimalDisplay(_ decimal: Double, rounding: String) -> String {
+        guard decimal > 0 else { return "" }
+        let rounded: Double
+        if rounding == "alternate" {
+            let scaled = decimal * 10
+            let frac = scaled.truncatingRemainder(dividingBy: 1.0)
+            rounded = (frac < 0.6 ? floor(scaled) : ceil(scaled)) / 10
+        } else {
+            rounded = (decimal * 10).rounded(.toNearestOrAwayFromZero) / 10
+        }
+        return String(format: "%.1f", rounded)
+    }
+
+    static func formatTime(_ decimal: Double, hhmm: Bool, rounding: String = "standard") -> String {
+        guard decimal > 0 else { return "" }
+        return hhmm ? hhmmDisplay(decimal) : decimalDisplay(decimal, rounding: rounding)
+    }
+
+    /// Parse a time string (decimal or HH:MM) back to a decimal Double.
+    nonisolated static func parseTime(_ s: String) -> Double {
+        let trimmed = s.trimmingCharacters(in: .whitespaces)
+        if trimmed.contains(":") {
+            let parts = trimmed.split(separator: ":", maxSplits: 1)
+            guard parts.count == 2,
+                  let h = Double(parts[0]),
+                  let m = Double(parts[1]) else { return 0 }
+            return h + m / 60.0
+        }
+        return Double(trimmed) ?? 0
+    }
+
+    func blockDisplay(hhmm: Bool, rounding: String)      -> String { Self.formatTime(blockTime,      hhmm: hhmm, rounding: rounding) }
+    func nightDisplay(hhmm: Bool, rounding: String)      -> String { Self.formatTime(nightTime,      hhmm: hhmm, rounding: rounding) }
+    func instrumentDisplay(hhmm: Bool, rounding: String) -> String { Self.formatTime(instrumentTime, hhmm: hhmm, rounding: rounding) }
+    func p1Display(hhmm: Bool, rounding: String)         -> String { Self.formatTime(p1Time,         hhmm: hhmm, rounding: rounding) }
+    func p1usDisplay(hhmm: Bool, rounding: String)       -> String { Self.formatTime(p1usTime,       hhmm: hhmm, rounding: rounding) }
+    func p2Display(hhmm: Bool, rounding: String)         -> String { Self.formatTime(p2Time,         hhmm: hhmm, rounding: rounding) }
+    func simDisplay(hhmm: Bool, rounding: String)        -> String { Self.formatTime(simTime,         hhmm: hhmm, rounding: rounding) }
+    func spInsDisplay(hhmm: Bool, rounding: String)      -> String { Self.formatTime(spInsTime,       hhmm: hhmm, rounding: rounding) }
 }
 
 // MARK: - Mac Logbook ViewModel
@@ -104,6 +198,7 @@ final class MacLogbookViewModel: ObservableObject {
     @Published var allFlights: [MacFlightRow] = []
     @Published var isLoading = false
     @Published var isSyncing = false
+    @Published var saveVersion: Int = 0
     @Published var searchText = "" {
         didSet { applySort() }
     }
@@ -111,8 +206,8 @@ final class MacLogbookViewModel: ObservableObject {
     private var flights: [MacFlightRow] = []
     private var filterState: MacFilterState?
 
-    var totalBlockHours: Double {
-        displayedFlights.reduce(0) { $0 + $1.blockTime }
+    func totalHours(countSim: Bool) -> Double {
+        displayedFlights.reduce(0) { $0 + $1.blockTime + (countSim ? $1.simTime : 0) }
     }
 
     func applySort() {
@@ -225,7 +320,10 @@ final class MacLogbookViewModel: ObservableObject {
         }
 
         let ascending = filterState?.sortOrderReversed ?? false
-        displayedFlights = base.sorted { ascending ? $0.rawDate < $1.rawDate : $0.rawDate > $1.rawDate }
+        displayedFlights = base.sorted {
+            ascending ? $0.departureDatetime < $1.departureDatetime
+                      : $0.departureDatetime > $1.departureDatetime
+        }
     }
 
     // MARK: Core Data
@@ -246,20 +344,20 @@ final class MacLogbookViewModel: ObservableObject {
         description.setOption(true as NSNumber,
                               forKey: NSPersistentHistoryTrackingKey)
 
-        if FileManager.default.ubiquityIdentityToken != nil {
-            description.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(
-                containerIdentifier: "iCloud.com.thezoolab.blocktime"
-            )
-        } else {
-            description.cloudKitContainerOptions = nil
-        }
+        description.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(
+            containerIdentifier: "iCloud.com.thezoolab.blocktime"
+        )
 
-        container.loadPersistentStores { _, error in
+        container.loadPersistentStores { desc, error in
             if let error {
-                print("Mac Core Data load error: \(error)")
+                print("[MacCoreData] Store load error: \(error)")
+            } else {
+                print("[MacCoreData] Store URL: \(desc.url?.absoluteString ?? "nil")")
+                print("[MacCoreData] CloudKit container: \(desc.cloudKitContainerOptions?.containerIdentifier ?? "none")")
             }
         }
         container.viewContext.automaticallyMergesChangesFromParent = true
+        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
         self.persistentContainer = container
     }
 
@@ -267,13 +365,7 @@ final class MacLogbookViewModel: ObservableObject {
 
     func load() async {
         isLoading = true
-        let container = persistentContainer
-        let rows = await Task.detached(priority: .userInitiated) {
-            Self.fetchRows(from: container)
-        }.value
-        flights = rows
-        allFlights = rows
-        applySort()
+        await reload()
         isLoading = false
 
         NotificationCenter.default.addObserver(
@@ -304,94 +396,93 @@ final class MacLogbookViewModel: ObservableObject {
     @MainActor
     private func handleCloudKitEvent(_ event: NSPersistentCloudKitContainer.Event) {
         guard event.type == .import || event.type == .export else { return }
+        let typeStr = event.type == .import ? "import" : "export"
+        let phase   = event.endDate == nil ? "started" : "finished (error: \(event.error?.localizedDescription ?? "none"))"
+        print("[MacCoreData] CloudKit \(typeStr) \(phase)")
         if event.endDate == nil {
             syncSettleTask?.cancel()
             isSyncing = true
         } else {
             syncSettleTask?.cancel()
             syncSettleTask = Task {
-                try? await Task.sleep(for: .seconds(5))
+                try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled else { return }
+                await reload()
                 isSyncing = false
             }
         }
     }
 
     func reload() async {
-        let container = persistentContainer
-        let rows = await Task.detached(priority: .userInitiated) {
-            Self.fetchRows(from: container)
-        }.value
+        let ctx = persistentContainer.viewContext
+        // viewContext is main-queue — fetch directly since we're @MainActor
+        let request = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
+        request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
+        let rows = ((try? ctx.fetch(request)) ?? []).compactMap { MacFlightRow(entity: $0) }
         flights = rows
         allFlights = rows
         applySort()
+        saveVersion += 1
     }
 
     // MARK: Save / Update / Delete
 
-    func saveFlight(_ sector: MacEditableFlight) -> Bool {
-        var success = false
+    func saveFlight(_ sector: MacEditableFlight) async -> Bool {
         let ctx = persistentContainer.viewContext
-        ctx.performAndWait {
-            let checkReq = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
-            checkReq.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
-            checkReq.fetchLimit = 1
-            guard (try? ctx.fetch(checkReq))?.isEmpty == true else { return }
+        let checkReq = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
+        checkReq.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
+        checkReq.fetchLimit = 1
+        guard (try? ctx.fetch(checkReq))?.isEmpty == true else { return false }
 
-            let entity = NSEntityDescription.insertNewObject(forEntityName: "FlightEntity", into: ctx)
-            applyFields(sector, to: entity, ctx: ctx, isNew: true)
-            do {
-                try ctx.save()
-                success = true
-            } catch {
-                ctx.rollback()
-            }
+        let entity = NSEntityDescription.insertNewObject(forEntityName: "FlightEntity", into: ctx)
+        applyFields(sector, to: entity, ctx: ctx, isNew: true)
+        do {
+            try ctx.save()
+            print("[MacCoreData] Save succeeded for flight \(sector.id)")
+            await reload()
+            return true
+        } catch {
+            print("[MacCoreData] Save failed: \(error)")
+            ctx.rollback()
+            return false
         }
-        if success { Task { await reload() } }
-        return success
     }
 
-    func updateFlight(_ sector: MacEditableFlight) -> Bool {
-        var success = false
+    func updateFlight(_ sector: MacEditableFlight) async -> Bool {
         let ctx = persistentContainer.viewContext
-        ctx.performAndWait {
-            let req = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
-            req.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
-            req.fetchLimit = 1
-            guard let entity = (try? ctx.fetch(req))?.first else { return }
-            applyFields(sector, to: entity, ctx: ctx, isNew: false)
-            do {
-                try ctx.save()
-                success = true
-            } catch {
-                ctx.rollback()
-            }
+        let req = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
+        req.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
+        req.fetchLimit = 1
+        guard let entity = (try? ctx.fetch(req))?.first else { return false }
+        applyFields(sector, to: entity, ctx: ctx, isNew: false)
+        do {
+            try ctx.save()
+            await reload()
+            return true
+        } catch {
+            ctx.rollback()
+            return false
         }
-        if success { Task { await reload() } }
-        return success
     }
 
-    func deleteFlight(id: UUID) -> Bool {
-        var success = false
+    func deleteFlight(id: UUID) async -> Bool {
         let ctx = persistentContainer.viewContext
-        ctx.performAndWait {
-            let req = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
-            req.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-            req.fetchLimit = 1
-            guard let entity = (try? ctx.fetch(req))?.first else { return }
-            ctx.delete(entity)
-            do {
-                try ctx.save()
-                success = true
-            } catch {
-                ctx.rollback()
-            }
+        let req = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
+        req.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        req.fetchLimit = 1
+        guard let entity = (try? ctx.fetch(req))?.first else { return false }
+        ctx.delete(entity)
+        do {
+            try ctx.save()
+            await reload()
+            return true
+        } catch {
+            ctx.rollback()
+            return false
         }
-        if success { Task { await reload() } }
-        return success
     }
 
-    private func applyFields(_ s: MacEditableFlight, to entity: NSManagedObject, ctx: NSManagedObjectContext, isNew: Bool) {
+    private nonisolated func applyFields(_ s: MacEditableFlight, to entity: NSManagedObject, ctx: NSManagedObjectContext, isNew: Bool) {
         let fmt = DateFormatter()
         fmt.dateFormat = "dd/MM/yyyy"
         fmt.timeZone = TimeZone(secondsFromGMT: 0)
@@ -400,6 +491,9 @@ final class MacLogbookViewModel: ObservableObject {
         if isNew {
             entity.setValue(s.id, forKey: "id")
             entity.setValue(Date(), forKey: "createdAt")
+            print("[MacCoreData] Inserting new flight id=\(s.id) date=\(s.date) flt=\(s.flightNumber) \(s.fromAirport)-\(s.toAirport) block=\(s.blockTime)")
+        } else {
+            print("[MacCoreData] Updating flight id=\(s.id) date=\(s.date) flt=\(s.flightNumber)")
         }
         entity.setValue(fmt.date(from: s.date) ?? Date(), forKey: "date")
         entity.setValue(s.flightNumber,        forKey: "flightNumber")
@@ -409,15 +503,18 @@ final class MacLogbookViewModel: ObservableObject {
         entity.setValue(s.scheduledArrival,    forKey: "scheduledArrival")
         entity.setValue(s.outTime,             forKey: "outTime")
         entity.setValue(s.inTime,              forKey: "inTime")
-        entity.setValue(s.blockTime,           forKey: "blockTime")
-        entity.setValue(s.nightTime,           forKey: "nightTime")
-        entity.setValue(s.instrumentTime,      forKey: "instrumentTime")
-        entity.setValue(s.p1Time,              forKey: "p1Time")
-        entity.setValue(s.p1usTime,            forKey: "p1usTime")
-        entity.setValue(s.p2Time,              forKey: "p2Time")
-        entity.setValue(s.simTime,             forKey: "simTime")
-        let spIns = s.spInsTime.isEmpty || s.spInsTime == "0.00" ? nil : s.spInsTime
-        entity.setValue(spIns,                 forKey: "spInsTime")
+        func decStr(_ raw: String) -> String? {
+            let v = MacFlightRow.parseTime(raw)
+            return v > 0 ? String(format: "%.2f", v) : nil
+        }
+        entity.setValue(decStr(s.blockTime),      forKey: "blockTime")
+        entity.setValue(decStr(s.nightTime),      forKey: "nightTime")
+        entity.setValue(decStr(s.instrumentTime), forKey: "instrumentTime")
+        entity.setValue(decStr(s.p1Time),         forKey: "p1Time")
+        entity.setValue(decStr(s.p1usTime),       forKey: "p1usTime")
+        entity.setValue(decStr(s.p2Time),         forKey: "p2Time")
+        entity.setValue(decStr(s.simTime),        forKey: "simTime")
+        entity.setValue(decStr(s.spInsTime),      forKey: "spInsTime")
         entity.setValue(s.aircraftType,        forKey: "aircraftType")
         entity.setValue(s.aircraftReg,         forKey: "aircraftReg")
         entity.setValue(s.captainName,         forKey: "captainName")
@@ -440,19 +537,6 @@ final class MacLogbookViewModel: ObservableObject {
         entity.setValue(Date(),                forKey: "modifiedAt")
     }
 
-    // MARK: Fetch (background)
-
-    private nonisolated static func fetchRows(from container: NSPersistentCloudKitContainer) -> [MacFlightRow] {
-        var rows: [MacFlightRow] = []
-        let ctx = container.newBackgroundContext()
-        ctx.performAndWait {
-            let request = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
-            request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-            guard let entities = try? ctx.fetch(request) else { return }
-            rows = entities.compactMap { MacFlightRow(entity: $0) }
-        }
-        return rows
-    }
 }
 
 // MARK: - MacFlightRow init from NSManagedObject
@@ -524,7 +608,7 @@ private extension MacFlightRow {
 // Mutable form model used by the Add / Edit panel. Mirrors FlightSector fields but is
 // Mac-only and has no iOS dependencies.
 
-struct MacEditableFlight {
+struct MacEditableFlight: Equatable {
     var id: UUID = UUID()
     var date: String = ""
     var flightNumber: String = ""
@@ -571,7 +655,7 @@ struct MacEditableFlight {
         return f
     }
 
-    init(from row: MacFlightRow) {
+    init(from row: MacFlightRow, hhmm: Bool = false, rounding: String = "standard") {
         id                 = row.id
         date               = row.date
         flightNumber       = row.flightNumber
@@ -581,14 +665,14 @@ struct MacEditableFlight {
         scheduledArrival   = row.scheduledArrival
         outTime            = row.outTime
         inTime             = row.inTime
-        blockTime          = row.blockTime > 0 ? String(format: "%.2f", row.blockTime) : ""
-        nightTime          = row.nightTime > 0 ? String(format: "%.2f", row.nightTime) : ""
-        instrumentTime     = row.instrumentTime > 0 ? String(format: "%.2f", row.instrumentTime) : ""
-        p1Time             = row.p1Time > 0 ? String(format: "%.2f", row.p1Time) : ""
-        p1usTime           = row.p1usTime > 0 ? String(format: "%.2f", row.p1usTime) : ""
-        p2Time             = row.p2Time > 0 ? String(format: "%.2f", row.p2Time) : ""
-        simTime            = row.simTime > 0 ? String(format: "%.2f", row.simTime) : ""
-        spInsTime          = row.spInsTime > 0 ? String(format: "%.2f", row.spInsTime) : ""
+        blockTime          = MacFlightRow.formatTime(row.blockTime,      hhmm: hhmm, rounding: rounding)
+        nightTime          = MacFlightRow.formatTime(row.nightTime,      hhmm: hhmm, rounding: rounding)
+        instrumentTime     = MacFlightRow.formatTime(row.instrumentTime, hhmm: hhmm, rounding: rounding)
+        p1Time             = MacFlightRow.formatTime(row.p1Time,         hhmm: hhmm, rounding: rounding)
+        p1usTime           = MacFlightRow.formatTime(row.p1usTime,       hhmm: hhmm, rounding: rounding)
+        p2Time             = MacFlightRow.formatTime(row.p2Time,         hhmm: hhmm, rounding: rounding)
+        simTime            = MacFlightRow.formatTime(row.simTime,        hhmm: hhmm, rounding: rounding)
+        spInsTime          = MacFlightRow.formatTime(row.spInsTime,      hhmm: hhmm, rounding: rounding)
         aircraftType       = row.aircraftType
         aircraftReg        = row.aircraftReg
         captainName        = row.captainName
