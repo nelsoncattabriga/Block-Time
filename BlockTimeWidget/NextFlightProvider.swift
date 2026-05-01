@@ -17,6 +17,7 @@ struct NextFlightTimelineEntry: TimelineEntry {
     var sameDayFlights: [WidgetFlightEntry] = [] // All flights on the same day as `flight` (large widget)
     /// True when today had flights but all have now departed — large widget bottom shows "No More Flights Today"
     var noMoreFlightsToday: Bool = false
+    var isPastDeparture: Bool = false
     var configuration: NextFlightIntent = NextFlightIntent()
 }
 
@@ -44,11 +45,22 @@ struct NextFlightProvider: AppIntentTimelineProvider {
         let flights = readSnapshots()
 
         guard !flights.isEmpty else {
-            // No flights at all — show empty state and let WidgetKit refresh naturally
             let entry = NextFlightTimelineEntry(date: now, flight: nil, configuration: configuration)
             return Timeline(entries: [entry], policy: .atEnd)
         }
 
+        return configuration.displayMode == .countdown
+            ? countdownTimeline(flights: flights, now: now, configuration: configuration)
+            : flightInfoTimeline(flights: flights, now: now, configuration: configuration)
+    }
+
+    // MARK: - Flight Info timeline (existing behaviour)
+
+    private func flightInfoTimeline(
+        flights: [WidgetFlightEntry],
+        now: Date,
+        configuration: NextFlightIntent
+    ) -> Timeline<NextFlightTimelineEntry> {
         let cal = Calendar.current
         var entries: [NextFlightTimelineEntry] = []
 
@@ -57,7 +69,6 @@ struct NextFlightProvider: AppIntentTimelineProvider {
             let nextFlight: WidgetFlightEntry? = index + 1 < flights.count ? flights[index + 1] : nil
             let sameDay = Self.sameDayFlights(as: flight, from: flights)
 
-            // Seed a "now" entry if nothing yet covers the present moment
             if !entries.contains(where: { $0.date <= now }) {
                 entries.insert(NextFlightTimelineEntry(
                     date: now, flight: flight,
@@ -66,8 +77,7 @@ struct NextFlightProvider: AppIntentTimelineProvider {
                 ), at: 0)
             }
 
-            // Midnight rollovers — add an entry for every midnight between now and departure
-            // so "Tomorrow" → "Today" (and "Mon 7th" → "Today") flips correctly for any flight.
+            // Midnight rollovers so "Tomorrow" → "Today" flips correctly.
             var scanFrom = now
             while let midnight = cal.nextDate(
                 after: scanFrom,
@@ -82,10 +92,6 @@ struct NextFlightProvider: AppIntentTimelineProvider {
                 scanFrom = midnight
             }
 
-            // 30 mins after departure: advance to next flight.
-            // - If there is a next flight on a new day, set noMoreFlightsToday so the large
-            //   widget bottom shows "No More Flights Today" while the main card shows tomorrow.
-            // - If there is no next flight at all, flight=nil → full empty state.
             let switchDate = departure.addingTimeInterval(30 * 60)
 
             if let next = nextFlight {
@@ -93,7 +99,7 @@ struct NextFlightProvider: AppIntentTimelineProvider {
                     next.departureDatetime ?? next.flightDate,
                     inSameDayAs: departure
                 )
-                let noMoreToday = nextIsNewDay && !sameDay.isEmpty
+                let noMoreToday = nextIsNewDay
                 let nextSameDay = Self.sameDayFlights(as: next, from: flights)
                 entries.append(NextFlightTimelineEntry(
                     date: switchDate, flight: next,
@@ -102,8 +108,6 @@ struct NextFlightProvider: AppIntentTimelineProvider {
                     configuration: configuration
                 ))
 
-                // Midnight rollovers for the next flight's card — ensures "Tomorrow" → "Today"
-                // flips for the entry that was just added above (switchDate may be before midnight).
                 let nextDeparture = next.departureDatetime ?? next.flightDate
                 var scanNext = switchDate
                 while let midnight = cal.nextDate(
@@ -120,7 +124,6 @@ struct NextFlightProvider: AppIntentTimelineProvider {
                     scanNext = midnight
                 }
             } else {
-                // Last flight has departed — no future flights remain
                 entries.append(NextFlightTimelineEntry(
                     date: switchDate, flight: nil,
                     configuration: configuration
@@ -128,8 +131,55 @@ struct NextFlightProvider: AppIntentTimelineProvider {
             }
         }
 
-        // Use .atEnd so WidgetKit refreshes as soon as entries are exhausted.
-        // The main app calls reloadTimelines whenever flight data changes.
+        return Timeline(entries: entries, policy: .atEnd)
+    }
+
+    // MARK: - Countdown timeline
+    // Three entries per flight: one at `now` (or switchDate of previous), one at departure (flips label),
+    // one at dep+30min (advances to next flight). Text(.relative) drives the live timer — no extra entries needed.
+
+    private func countdownTimeline(
+        flights: [WidgetFlightEntry],
+        now: Date,
+        configuration: NextFlightIntent
+    ) -> Timeline<NextFlightTimelineEntry> {
+        var entries: [NextFlightTimelineEntry] = []
+        var entryDate = now
+
+        for (index, flight) in flights.enumerated() {
+            let departure = flight.departureDatetime ?? flight.flightDate
+            let nextFlight: WidgetFlightEntry? = index + 1 < flights.count ? flights[index + 1] : nil
+            let sameDay = Self.sameDayFlights(as: flight, from: flights)
+
+            entries.append(NextFlightTimelineEntry(
+                date: entryDate, flight: flight,
+                sameDayFlights: sameDay,
+                isPastDeparture: departure < now,
+                configuration: configuration
+            ))
+
+            // At STD: flip label to "PAST STD"
+            if departure > now {
+                entries.append(NextFlightTimelineEntry(
+                    date: departure, flight: flight,
+                    sameDayFlights: sameDay,
+                    isPastDeparture: true,
+                    configuration: configuration
+                ))
+            }
+
+            let switchDate = departure.addingTimeInterval(30 * 60)
+
+            if nextFlight == nil {
+                entries.append(NextFlightTimelineEntry(
+                    date: switchDate, flight: nil,
+                    configuration: configuration
+                ))
+            }
+
+            entryDate = switchDate
+        }
+
         return Timeline(entries: entries, policy: .atEnd)
     }
 

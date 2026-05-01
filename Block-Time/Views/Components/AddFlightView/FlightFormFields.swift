@@ -50,12 +50,13 @@ struct ModernDatePickerField: View {
     private var localDate: Date? {
         guard showLocalDate,
               !dateString.isEmpty,
-              !airportCode.isEmpty else { return nil }
-        let timeToUse = !timeString.isEmpty ? timeString : "01:00"
+              !airportCode.isEmpty,
+              !timeString.isEmpty else { return nil }
+        let icao = useIATACodes ? AirportService.shared.convertToICAO(airportCode) : airportCode
         let localDateString = AirportService.shared.convertToLocalDate(
             utcDateString: dateString,
-            utcTimeString: timeToUse,
-            airportICAO: airportCode
+            utcTimeString: timeString,
+            airportICAO: icao
         )
         return Self.dateFormatter.date(from: localDateString)
     }

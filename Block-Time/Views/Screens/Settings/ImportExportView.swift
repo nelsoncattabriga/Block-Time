@@ -58,6 +58,9 @@ struct ImportExportView: View {
     // Calendar export state
     @State private var showingCalendarExport = false
 
+    // PDF logbook export state
+    @State private var showingPDFExport = false
+
     // Migration import state
     @State private var showingMigrationImport = false
 
@@ -245,6 +248,11 @@ struct ImportExportView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showingPDFExport) {
+            LogbookPDFExportView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showingAircraftSummary) {
             AircraftSummarySheet { summary in
                 saveAircraftSummary(summary)
@@ -372,13 +380,24 @@ struct ImportExportView: View {
             
                 // Export Data
                 ActionButton(
-                    title: "Export Entire Logbook",
+                    title: "Export Logbook",
                     subtitle: "Save as a CSV file",
                     icon: "square.and.arrow.up.fill",
                     color: .indigo.opacity(0.6),
                     isLoading: false
                 ) {
                     showingExportView = true
+                }
+
+                // PDF Logbook
+                ActionButton(
+                    title: "Print Logbook",
+                    subtitle: "Formatted paper logbook layout",
+                    icon: "books.vertical.fill",
+                    color: .brown.opacity(0.8),
+                    isLoading: false
+                ) {
+                    showingPDFExport = true
                 }
 
 //                Divider()
@@ -708,8 +727,15 @@ struct WebCISMappingView: View {
     @State private var registrationMappings: [RegistrationTypeMapping] = []
     @State private var showingRegistrationMapping = false
 
+    private static let persistenceKey = "WebCISRegistrationMappings"
+
     private var allTypesResolved: Bool {
-        !registrationMappings.isEmpty && registrationMappings.allSatisfy { !$0.aircraftType.isEmpty }
+        !registrationMappings.isEmpty && registrationMappings.allSatisfy { mapping in
+            if mapping.useAdvancedRules {
+                return !mapping.rules.isEmpty && mapping.rules.allSatisfy { !$0.aircraftType.isEmpty }
+            }
+            return !mapping.simpleType.isEmpty
+        }
     }
 
     private func detectWebCISRegistrationPatterns() -> [RegistrationTypeMapping] {
@@ -733,54 +759,64 @@ struct WebCISMappingView: View {
             let detectedType = AircraftFleetService.getAircraftType(byRegistration: regs.first ?? "")
             mappings.append(RegistrationTypeMapping(
                 pattern: pattern + "*",
-                aircraftType: detectedType,
-                sampleRegistrations: Array(regs.sorted())
+                sampleRegistrations: Array(regs.sorted()),
+                simpleType: detectedType
             ))
         }
         return mappings
     }
 
+    private func loadSaved() -> [String: RegistrationTypeMapping] {
+        guard let data = UserDefaults.standard.data(forKey: Self.persistenceKey),
+              let saved = try? JSONDecoder().decode([RegistrationTypeMapping].self, from: data)
+        else { return [:] }
+        return Dictionary(saved.map { ($0.pattern, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    private func saveMappings() {
+        if let data = try? JSONEncoder().encode(registrationMappings) {
+            UserDefaults.standard.set(data, forKey: Self.persistenceKey)
+        }
+    }
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 20) {
-                        // Header
                         VStack(spacing: 8) {
                             Image(systemName: "doc.text.fill")
                                 .font(.system(size: 50))
                                 .foregroundColor(.green)
-
                             Text("webCIS Import")
                                 .font(.title2)
                                 .fontWeight(.bold)
-
                             Text("\(importData.rows.count) flights ready to import")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                         .padding(.top)
 
-                        // Registration Mappings Section
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Aircraft Type Mapping")
                                     .font(.headline)
                                 Spacer()
-                                if allTypesResolved {
-                                    Button(action: { showingRegistrationMapping = true }) {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "pencil")
-                                            Text("Edit")
-                                        }
-                                        .font(.subheadline)
-                                        .foregroundColor(.blue)
+                                Button(action: { showingRegistrationMapping = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "pencil")
+                                        Text("Edit")
                                     }
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
                                 }
                             }
 
-                            if allTypesResolved {
-                                // All types auto-detected — show summary with edit option
+                            if registrationMappings.isEmpty {
+                                Text("No registration patterns found")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else if allTypesResolved {
                                 VStack(spacing: 8) {
                                     ForEach(registrationMappings) { mapping in
                                         HStack {
@@ -790,7 +826,7 @@ struct WebCISMappingView: View {
                                                 .foregroundColor(.secondary)
                                             Text("→")
                                                 .foregroundColor(.secondary)
-                                            Text(mapping.aircraftType)
+                                            Text(mapping.useAdvancedRules ? "\(mapping.rules.count) rule\(mapping.rules.count == 1 ? "" : "s")" : mapping.simpleType)
                                                 .fontWeight(.medium)
                                             Spacer()
                                         }
@@ -802,21 +838,12 @@ struct WebCISMappingView: View {
                                 .cornerRadius(8)
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.green.opacity(0.3), lineWidth: 1))
                             } else {
-                                // Some types missing — prompt user to set them up
-                                if !registrationMappings.isEmpty {
-                                    Text("\(registrationMappings.filter { $0.aircraftType.isEmpty }.count) registration pattern(s) need a type assigned")
-                                        .font(.caption)
-                                        .foregroundColor(.orange)
-                                } else {
-                                    Text("Map registration patterns to aircraft types (optional)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-
+                                Text("\(registrationMappings.filter { m in m.useAdvancedRules ? m.rules.isEmpty : m.simpleType.isEmpty }.count) pattern(s) need a type assigned")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
                                 Button(action: { showingRegistrationMapping = true }) {
                                     HStack {
-                                        Image(systemName: "airplane")
-                                            .foregroundColor(.blue)
+                                        Image(systemName: "airplane").foregroundColor(.blue)
                                         Text(registrationMappings.isEmpty ? "Setup Aircraft Types" : "Edit Aircraft Types")
                                             .foregroundColor(.primary)
                                         Spacer()
@@ -836,15 +863,14 @@ struct WebCISMappingView: View {
                     .padding(.bottom, 8)
                 }
 
-                // Import Button — always visible, pinned outside the scroll
                 Divider()
                 Button(action: {
+                    saveMappings()
                     dismiss()
                     onImport(registrationMappings)
                 }) {
                     HStack {
-                        Image(systemName: "arrow.down.circle.fill")
-                            .foregroundColor(.green)
+                        Image(systemName: "arrow.down.circle.fill").foregroundColor(.green)
                         Text("Import webCIS History")
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
@@ -853,10 +879,7 @@ struct WebCISMappingView: View {
                     .padding()
                     .background(Color.green.opacity(0.12))
                     .cornerRadius(10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.green.opacity(0.4), lineWidth: 1)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.green.opacity(0.4), lineWidth: 1))
                 }
                 .padding()
             }
@@ -868,15 +891,18 @@ struct WebCISMappingView: View {
                 }
             }
             .onAppear {
-                registrationMappings = detectWebCISRegistrationPatterns()
+                let fresh = detectWebCISRegistrationPatterns()
+                let saved = loadSaved()
+                registrationMappings = fresh.map { detected in
+                    if var existing = saved[detected.pattern] {
+                        existing.sampleRegistrations = detected.sampleRegistrations
+                        return existing
+                    }
+                    return detected
+                }
             }
             .sheet(isPresented: $showingRegistrationMapping) {
-                let fieldMappings = FileImportService.shared.createWebCISFieldMappingPublic(headers: importData.headers)
-                RegistrationTypeMappingView(
-                    mappings: $registrationMappings,
-                    importData: importData,
-                    fieldMappings: fieldMappings
-                )
+                RegistrationTypeMappingView(mappings: $registrationMappings)
             }
         }
     }

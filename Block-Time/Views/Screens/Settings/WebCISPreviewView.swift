@@ -527,7 +527,7 @@ struct WebCISPreviewView: View {
                 onConfirm(filtered)
                 dismiss()
             } label: {
-                Text("Import \(vm.selectedCount) Row\(vm.selectedCount == 1 ? "" : "s")")
+                Text("Next")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)

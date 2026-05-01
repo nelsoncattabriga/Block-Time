@@ -44,7 +44,7 @@ struct AircraftTypeTimeCard: View {
                                 selectedAircraftType = item
                                 settings.selectedAircraftType = item
                                 settings.saveSettings()
-                                loadAircraftStats()
+                                Task { await loadAircraftStats() }
                             } label: {
                                 HStack {
                                     Text(item)
@@ -114,7 +114,7 @@ struct AircraftTypeTimeCard: View {
                         }
                         settings.selectedAircraftType = selectedAircraftType
                         settings.saveSettings()
-                        loadAircraftStats()
+                        Task { await loadAircraftStats() }
                     } label: {
                         Label(groupByFamily ? "Family" : "Type",
                               systemImage: "chevron.up.chevron.down")
@@ -128,10 +128,10 @@ struct AircraftTypeTimeCard: View {
         }
         .padding(16)
         .appCardStyle()
-        .onAppear {
+        .task {
             selectedAircraftType = settings.selectedAircraftType
-            loadAvailableAircraftTypes()
-            loadAircraftStats()
+            await loadAvailableAircraftTypes()
+            await loadAircraftStats()
             UIDevice.current.beginGeneratingDeviceOrientationNotifications()
             updateOrientation()
         }
@@ -142,12 +142,14 @@ struct AircraftTypeTimeCard: View {
             updateOrientation()
         }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
-            loadAvailableAircraftTypes()
-            loadAircraftStats()
+            Task {
+                await loadAvailableAircraftTypes()
+                await loadAircraftStats()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             showTimesInHoursMinutes = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
-            loadAircraftStats()
+            Task { await loadAircraftStats() }
         }
     }
 
@@ -168,25 +170,27 @@ struct AircraftTypeTimeCard: View {
         }
     }
 
-    private func loadAvailableAircraftTypes() {
-        availableAircraftTypes = FlightDatabaseService.shared.getAllAircraftTypes()
+    @MainActor
+    private func loadAvailableAircraftTypes() async {
+        availableAircraftTypes = await FlightDatabaseService.shared.getAllAircraftTypesAsync()
         let validItems = groupByFamily ? availableFamilies : availableAircraftTypes
         if selectedAircraftType.isEmpty && !validItems.isEmpty {
             selectedAircraftType = validItems[0]
             settings.selectedAircraftType = selectedAircraftType
             settings.saveSettings()
-            loadAircraftStats()
+            await loadAircraftStats()
         } else if !selectedAircraftType.isEmpty && !validItems.contains(selectedAircraftType) {
             if !validItems.isEmpty {
                 selectedAircraftType = validItems[0]
                 settings.selectedAircraftType = selectedAircraftType
                 settings.saveSettings()
-                loadAircraftStats()
+                await loadAircraftStats()
             }
         }
     }
 
-    private func loadAircraftStats() {
+    @MainActor
+    private func loadAircraftStats() async {
         guard !selectedAircraftType.isEmpty else {
             aircraftStats = (0.0, 0, 0.0, 0.0, 0.0, 0.0)
             return
@@ -197,13 +201,15 @@ struct AircraftTypeTimeCard: View {
                 aircraftStats = (0.0, 0, 0.0, 0.0, 0.0, 0.0)
                 return
             }
-            let results = types.map { FlightDatabaseService.shared.getDetailedFlightStatistics(for: $0) }
-            aircraftStats = results.reduce((0.0, 0, 0.0, 0.0, 0.0, 0.0)) { acc, r in
-                (acc.0 + r.totalHours, acc.1 + r.totalSectors, acc.2 + r.p1Time,
-                 acc.3 + r.p1usTime, acc.4 + r.p2Time, acc.5 + r.simTime)
+            var merged = (totalHours: 0.0, totalSectors: 0, p1Time: 0.0, p1usTime: 0.0, p2Time: 0.0, simTime: 0.0)
+            for type in types {
+                let r = await FlightDatabaseService.shared.getDetailedFlightStatisticsAsync(for: type)
+                merged = (merged.0 + r.totalHours, merged.1 + r.totalSectors, merged.2 + r.p1Time,
+                          merged.3 + r.p1usTime, merged.4 + r.p2Time, merged.5 + r.simTime)
             }
+            aircraftStats = merged
         } else {
-            aircraftStats = FlightDatabaseService.shared.getDetailedFlightStatistics(for: selectedAircraftType)
+            aircraftStats = await FlightDatabaseService.shared.getDetailedFlightStatisticsAsync(for: selectedAircraftType)
         }
     }
 
