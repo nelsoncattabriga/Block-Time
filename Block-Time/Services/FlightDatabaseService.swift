@@ -1209,7 +1209,11 @@ class FlightDatabaseService: ObservableObject {
                         let existingReg  = (existing.aircraftReg  ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         let displayDate = sector.date
                         let displayRoute = "\(sector.fromAirport) → \(sector.toAirport)"
-                        if !incomingType.isEmpty && incomingType != existingType {
+                        // Auto-fill blank aircraftType — no conflict, no user review needed
+                        if !incomingType.isEmpty && existingType.isEmpty {
+                            existing.aircraftType = incomingType
+                            LogManager.shared.info("✏️ Auto-filled blank aircraftType: \(displayDate) \(displayRoute) → \(incomingType)")
+                        } else if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
                                 route: displayRoute,
@@ -1270,7 +1274,11 @@ class FlightDatabaseService: ObservableObject {
                                 newValue: incomingReg
                             ))
                         }
-                        if !incomingType.isEmpty && incomingType != existingType {
+                        // Auto-fill blank aircraftType — no conflict, no user review needed
+                        if !incomingType.isEmpty && existingType.isEmpty {
+                            existing.aircraftType = incomingType
+                            LogManager.shared.info("✏️ Auto-filled blank aircraftType (fuzzy): \(displayDate) \(displayRoute) → \(incomingType)")
+                        } else if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
                                 route: displayRoute,

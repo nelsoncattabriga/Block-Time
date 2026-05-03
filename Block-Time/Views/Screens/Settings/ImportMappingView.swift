@@ -51,12 +51,14 @@ struct RegistrationRule: Identifiable, Codable {
         guard !aircraftType.isEmpty else { return false }
         let regUpper = reg.uppercased()
         let fromUpper = regFrom.uppercased()
-        // Registration range check
-        if regTo.isEmpty {
-            guard regUpper == fromUpper else { return false }
-        } else {
-            let toUpper = regTo.uppercased()
-            guard regUpper >= fromUpper && regUpper <= toUpper else { return false }
+        // Registration range check — empty regFrom means "all regs in group", skip check
+        if !fromUpper.isEmpty {
+            if regTo.isEmpty {
+                guard regUpper == fromUpper else { return false }
+            } else {
+                let toUpper = regTo.uppercased()
+                guard regUpper >= fromUpper && regUpper <= toUpper else { return false }
+            }
         }
         // Date bounds — dd/MM/yyyy string comparison works correctly when zero-padded
         if let after = afterDate, !after.isEmpty {
