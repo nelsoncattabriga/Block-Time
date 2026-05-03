@@ -230,6 +230,18 @@ private struct FlightsListContent: View {
             .first?.windows.first(where: { $0.isKeyWindow })?.safeAreaInsets.top) ?? 0
     }
 
+    private var allFilteredIds: Set<UUID> { Set(filteredFlightSectors.map { $0.id }) }
+
+    private func toggleSelectAll() {
+        HapticManager.shared.impact(.light)
+        let allIds = allFilteredIds
+        if selectedFlightsForDeletion == allIds {
+            selectedFlightsForDeletion.removeAll()
+        } else {
+            selectedFlightsForDeletion = allIds
+        }
+    }
+
     private var flightCountHeader: some View {
         HStack {
             Text("\(filteredFlightSectors.count) \(filteredFlightSectors.count == 1 ? "Entry" : "Entries")")
@@ -399,17 +411,35 @@ private struct FlightsListContent: View {
         }
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            // Custom toolbar row replacing the system nav bar
-            HStack(spacing: 12) {
-                if isSelectMode {
-                    Button(action: {
-                        HapticManager.shared.impact(.light)
-                        isSelectMode = false
-                        selectedFlightsForDeletion.removeAll()
-                    }) {
-                        Text("Cancel")
+    @ViewBuilder
+    private var customToolbar: some View {
+        HStack(spacing: 12) {
+            if isSelectMode {
+                Button(action: {
+                    HapticManager.shared.impact(.light)
+                    isSelectMode = false
+                    selectedFlightsForDeletion.removeAll()
+                }) {
+                    Text("Cancel")
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(Color.blue, lineWidth: 1.5)
+                        )
+                }
+
+                Spacer()
+
+                Text(selectedFlightsForDeletion.isEmpty ? "Select Entries" : "\(selectedFlightsForDeletion.count) Selected")
+                    .font(.headline)
+
+                Spacer()
+
+                if !filteredFlightSectors.isEmpty {
+                    Button(action: toggleSelectAll) {
+                        let allSelected = selectedFlightsForDeletion == allFilteredIds
+                        Text(allSelected ? "Deselect All" : "Select All")
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(
@@ -417,72 +447,45 @@ private struct FlightsListContent: View {
                                     .strokeBorder(Color.blue, lineWidth: 1.5)
                             )
                     }
-
-                    Spacer()
-
-                    Text(selectedFlightsForDeletion.isEmpty ? "Select Entries" : "\(selectedFlightsForDeletion.count) Selected")
-                        .font(.headline)
-
-                    Spacer()
-
-                    if !filteredFlightSectors.isEmpty {
-                        Button(action: {
-                            HapticManager.shared.impact(.light)
-                            let allFilteredIds = Set(filteredFlightSectors.map { $0.id })
-                            if selectedFlightsForDeletion == allFilteredIds {
-                                selectedFlightsForDeletion.removeAll()
-                            } else {
-                                selectedFlightsForDeletion = allFilteredIds
-                            }
-                        }) {
-                            let allSelected = selectedFlightsForDeletion == Set(filteredFlightSectors.map { $0.id })
-                            Text(allSelected ? "Deselect All" : "Select All")
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .strokeBorder(Color.blue, lineWidth: 1.5)
-                                )
-                        }
+                }
+            } else {
+                // Add + Select buttons on the left
+                Button(action: {
+                    HapticManager.shared.impact(.light)
+                    if purchaseService.canAddFlight {
+                        selectedFlight = nil
+                        isAddingNewFlight = true
+                    } else {
+                        showingPaywall = true
                     }
-                } else {
-                    // Add + Select buttons on the left
+                }) {
+                    Image(systemName: "plus.circle")
+                        .font(.title)
+                }
+
+                if !filteredFlightSectors.isEmpty {
                     Button(action: {
                         HapticManager.shared.impact(.light)
-                        if purchaseService.canAddFlight {
-                            selectedFlight = nil
-                            isAddingNewFlight = true
-                        } else {
-                            showingPaywall = true
+                        isSelectMode = true
+                        if let selectedId = selectedFlight?.id {
+                            selectedFlightsForDeletion.insert(selectedId)
                         }
+                        selectedFlight = nil
                     }) {
-                        Image(systemName: "plus.circle")
-                            .font(.title)
+                        Text("Select")
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(Color.blue, lineWidth: 1.5)
+                            )
                     }
+                }
 
-                    if !filteredFlightSectors.isEmpty {
-                        Button(action: {
-                            HapticManager.shared.impact(.light)
-                            isSelectMode = true
-                            if let selectedId = selectedFlight?.id {
-                                selectedFlightsForDeletion.insert(selectedId)
-                            }
-                            selectedFlight = nil
-                        }) {
-                            Text("Select")
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .strokeBorder(Color.blue, lineWidth: 1.5)
-                                )
-                        }
-                    }
+                Spacer()
 
-                    Spacer()
-
-                    // Map, Data, Filter buttons on the right
-                    HStack(spacing: 20) {
+                // Map, Data, Filter buttons on the right
+                HStack(spacing: 20) {
                     Button(action: {
                         HapticManager.shared.impact(.light)
                         showingMap = true
@@ -514,22 +517,27 @@ private struct FlightsListContent: View {
                             }
                         }
                     }
-                    } // end HStack
+                } // end HStack
 
-                    if filterViewModel.filterImportSessionID != nil {
-                        Button(role: .destructive) {
-                            showingDeleteSessionAlert = true
-                        } label: {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red)
-                                .font(.title3)
-                        }
+                if filterViewModel.filterImportSessionID != nil {
+                    Button(role: .destructive) {
+                        showingDeleteSessionAlert = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                            .font(.title3)
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .padding(.top, safeAreaTopInset)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .padding(.top, safeAreaTopInset)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            customToolbar
 
             if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
                 NoResultsView(onClearFilters: clearFilters)
@@ -700,100 +708,76 @@ private struct FlightsListContent: View {
     // MARK: - Row Builders
 
     @ViewBuilder
+    private func sectorRowContent(for sector: FlightSector) -> some View {
+        if sector.flightNumber == "SUMMARY" {
+            SummaryRow(sector: sector, showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes).equatable()
+        } else {
+            FlightSectorRow(
+                sector: sector,
+                useLocalTime: viewModel.displayFlightsInLocalTime,
+                useIATACodes: viewModel.useIATACodes,
+                showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
+                roundingMode: viewModel.decimalRoundingMode
+            ).equatable()
+        }
+    }
+
+    @ViewBuilder
     private func selectModeRow(for sector: FlightSector) -> some View {
         let isSelected = selectedFlightsForDeletion.contains(sector.id)
-        let isSummary = sector.flightNumber == "SUMMARY"
-
-        Group {
-            if isSummary {
-                SummaryRow(
-                    sector: sector,
-                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes
-                )
-                .equatable()
-            } else {
-                FlightSectorRow(
-                    sector: sector,
-                    useLocalTime: viewModel.displayFlightsInLocalTime,
-                    useIATACodes: viewModel.useIATACodes,
-                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
-                    roundingMode: viewModel.decimalRoundingMode
-                )
-                .equatable()
+        sectorRowContent(for: sector)
+            .padding(4)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.blue.opacity(0.2) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                HapticManager.shared.impact(.light)
+                if isSelected {
+                    selectedFlightsForDeletion.remove(sector.id)
+                } else {
+                    selectedFlightsForDeletion.insert(sector.id)
+                }
             }
-        }
-        .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isSelected ? Color.blue.opacity(0.2) : Color.clear)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            HapticManager.shared.impact(.light)
-            if isSelected {
-                selectedFlightsForDeletion.remove(sector.id)
-            } else {
-                selectedFlightsForDeletion.insert(sector.id)
-            }
-        }
-        .id(sector.id)
+            .id(sector.id)
     }
 
     @ViewBuilder
     private func normalModeRow(for sector: FlightSector) -> some View {
         let isSummary = sector.flightNumber == "SUMMARY"
-
-        Group {
-            if isSummary {
-                SummaryRow(
-                    sector: sector,
-                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes
-                )
-                .equatable()
-            } else {
-                FlightSectorRow(
-                    sector: sector,
-                    useLocalTime: viewModel.displayFlightsInLocalTime,
-                    useIATACodes: viewModel.useIATACodes,
-                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
-                    roundingMode: viewModel.decimalRoundingMode
-                )
-                .equatable()
+        let isActive = selectedFlight?.id == sector.id
+        sectorRowContent(for: sector)
+            .padding(4)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isActive ? Color.blue.opacity(0.2) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isActive ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                HapticManager.shared.impact(.light)
+                if isSummary {
+                    summaryToEdit = sector
+                } else {
+//                    LogManager.shared.debug("Flight tapped: \(sector.flightNumberFormatted)")
+                    selectedFlight = sector
+                    onFlightSelected(sector)
+                }
             }
-        }
-        .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(selectedFlight?.id == sector.id ? Color.blue.opacity(0.2) : Color.clear)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(selectedFlight?.id == sector.id ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            HapticManager.shared.impact(.light)
-            if isSummary {
-                // Show summary edit sheet instead of detail pane
-                summaryToEdit = sector
-            } else {
-                // Normal flight - show in detail pane
-//                LogManager.shared.debug("Flight tapped: \(sector.flightNumberFormatted)")
-                selectedFlight = sector
-                onFlightSelected(sector)
+            .onLongPressGesture {
+                HapticManager.shared.impact(.medium)
+                isSelectMode = true
+                selectedFlightsForDeletion.insert(sector.id)
             }
-        }
-        .onLongPressGesture {
-            // Enter select mode and select this flight
-            HapticManager.shared.impact(.medium)
-            isSelectMode = true
-            selectedFlightsForDeletion.insert(sector.id)
-        }
-        .id(sector.id)
+            .id(sector.id)
     }
 
     @MainActor
