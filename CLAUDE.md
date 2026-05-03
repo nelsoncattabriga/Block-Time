@@ -2,6 +2,7 @@
 Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
 I will build locally - don't build unless i ask you to.
 Be concise, be direct, don't waffle your answers and never use flowery language.
+Never remove any existing feature, button, logic, or behaviour without explicit approval — this includes during refactors, compiler fixes, or cleanups.
 
 ## Applied Learning
 When something fails repeatedly, when Nelson has to re-explain, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
