@@ -874,26 +874,23 @@ struct WebCISMappingView: View {
                 }
 
                 Divider()
-                let canImport = registrationMappings.isEmpty || allTypesResolved
                 Button(action: {
                     saveMappings()
                     dismiss()
                     onImport(registrationMappings)
                 }) {
                     HStack {
-                        Image(systemName: "arrow.down.circle.fill")
-                            .foregroundColor(canImport ? .green : .secondary)
+                        Image(systemName: "arrow.down.circle.fill").foregroundColor(.green)
                         Text("Import webCIS History")
                             .fontWeight(.semibold)
-                            .foregroundColor(canImport ? .primary : .secondary)
+                            .foregroundColor(.primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(canImport ? Color.green.opacity(0.12) : Color.secondary.opacity(0.08))
+                    .background(Color.green.opacity(0.12))
                     .cornerRadius(10)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(canImport ? Color.green.opacity(0.4) : Color.secondary.opacity(0.2), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.green.opacity(0.4), lineWidth: 1))
                 }
-                .disabled(!canImport)
                 .padding()
             }
             .navigationTitle("webCIS Import")

@@ -18,6 +18,8 @@ struct FlightsSplitView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
     @State private var isSelectMode: Bool = false
     @State private var showingDiscardAlert: Bool = false
+    @State private var pendingFlightSelection: FlightSector?
+    @State private var showingSaveFailedAlert: Bool = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @Environment(PurchaseService.self) private var purchaseService
@@ -38,9 +40,13 @@ struct FlightsSplitView: View {
                     isAddingNewFlight: $isAddingNewFlight,
                     isSelectMode: $isSelectMode,
                     onFlightSelected: { flight in
-//                                LogManager.shared.debug("onFlightSelected callback: \(flight.flightNumberFormatted)")
-                        isAddingNewFlight = false
-                        viewModel.loadFlightForEditing(flight)
+                        if viewModel.hasUnsavedChanges {
+                            pendingFlightSelection = flight
+                            showingDiscardAlert = true
+                        } else {
+                            isAddingNewFlight = false
+                            viewModel.loadFlightForEditing(flight)
+                        }
                     }
                 )
                 .navigationSplitViewColumnWidth(min: 400, ideal: 500, max: 600)
@@ -87,17 +93,41 @@ struct FlightsSplitView: View {
                             .alert("Save Changes?", isPresented: $showingDiscardAlert) {
                                 Button("Save") {
                                     if viewModel.updateExistingFlight() {
+                                        if let pending = pendingFlightSelection {
+                                            selectedFlight = pending
+                                            isAddingNewFlight = false
+                                            viewModel.loadFlightForEditing(pending)
+                                            pendingFlightSelection = nil
+                                        } else {
+                                            selectedFlight = nil
+                                            viewModel.exitEditingMode()
+                                        }
+                                    } else {
+                                        pendingFlightSelection = nil
+                                        showingSaveFailedAlert = true
+                                    }
+                                }
+                                Button("Discard", role: .destructive) {
+                                    if let pending = pendingFlightSelection {
+                                        selectedFlight = pending
+                                        isAddingNewFlight = false
+                                        viewModel.loadFlightForEditing(pending)
+                                        pendingFlightSelection = nil
+                                    } else {
                                         selectedFlight = nil
                                         viewModel.exitEditingMode()
                                     }
                                 }
-                                Button("Discard", role: .destructive) {
-                                    selectedFlight = nil
-                                    viewModel.exitEditingMode()
+                                Button("Cancel", role: .cancel) {
+                                    pendingFlightSelection = nil
                                 }
-                                Button("Cancel", role: .cancel) { }
                             } message: {
                                 Text(viewModel.changesSummary)
+                            }
+                            .alert("Save Failed", isPresented: $showingSaveFailedAlert) {
+                                Button("OK", role: .cancel) { }
+                            } message: {
+                                Text("Your changes could not be saved. Please try again.")
                             }
                             .onAppear {
 //                                        LogManager.shared.debug("Detail view appeared for flight: \(flight.flightNumberFormatted)")
@@ -153,6 +183,8 @@ private struct FlightsListContent: View {
     private let databaseService = FlightDatabaseService.shared
     @Environment(PurchaseService.self) private var purchaseService
     @State private var showingPaywall = false
+    @State private var showingMap = false
+    @State private var showingSpreadsheet = false
     @State private var allFlightSectors: [FlightSector] = []
     @State private var filteredFlightSectors: [FlightSector] = []
     @State private var showingFilterSheet = false
@@ -161,16 +193,13 @@ private struct FlightsListContent: View {
     @State private var showingDeleteAlert = false
     @State private var selectedFlightsForDeletion: Set<UUID> = []
     @State private var showingBulkDeleteAlert = false
+    @State private var showingBulkDuplicateAlert = false
     @State private var showingBulkEditSheet = false
     @State private var summaryToEdit: FlightSector?
     @State private var sessionFilterIDs: Set<UUID> = []
     @State private var showingDeleteSessionAlert = false
     @State private var cachedTotalHours: Double = 0.0
-    @State private var hasPerformedInitialScroll: Bool = false
-    @State private var shouldScrollToLastFlight: Bool = false
-    @State private var shouldScrollToTop: Bool = false
-    @State private var showSearchBar: Bool = false
-    @FocusState private var isSearchFieldFocused: Bool
+    @State private var hasScrolledOnLaunch = false
 
     // Cached date formatter for performance
     private let dateFormatter: DateFormatter = {
@@ -185,9 +214,20 @@ private struct FlightsListContent: View {
         UIDevice.current.userInterfaceIdiom == .pad ? 10 : 25
     }
 
+    private var bulkDuplicateAlertTitle: String {
+        let n = selectedFlightsForDeletion.count
+        return "Duplicate \(n) \(n == 1 ? "Entry" : "Entries")?"
+    }
+
     // Device-dependent vertical padding for action buttons
     private var actionButtonVerticalPadding: CGFloat {
         UIDevice.current.userInterfaceIdiom == .pad ? 10 : 14
+    }
+
+    private var safeAreaTopInset: CGFloat {
+        (UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.windows.first(where: { $0.isKeyWindow })?.safeAreaInsets.top) ?? 0
     }
 
     private var flightCountHeader: some View {
@@ -202,43 +242,6 @@ private struct FlightsListContent: View {
                 .foregroundColor(.secondary)
         }
         .padding()
-    }
-
-    @ViewBuilder
-    private var searchBar: some View {
-        if showSearchBar {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                    .padding(.leading, 12)
-                TextField("Search logbook...", text: $filterViewModel.filterKeywordSearch)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($isSearchFieldFocused)
-                    .onChange(of: filterViewModel.filterKeywordSearch) { _, _ in
-                        applyFilters()
-                    }
-                if !filterViewModel.filterKeywordSearch.isEmpty {
-                    Button(action: {
-                        filterViewModel.filterKeywordSearch = ""
-                        applyFilters()
-                        hasPerformedInitialScroll = false
-                        shouldScrollToLastFlight = true
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.trailing, 12)
-                }
-            }
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-            .transition(.move(edge: .top).combined(with: .opacity))
-        }
     }
 
     @ViewBuilder
@@ -262,23 +265,31 @@ private struct FlightsListContent: View {
                 await refreshFlights()
             }
             .onAppear {
-                scrollToFirstNonDimmedFlight(proxy: proxy)
-            }
-            .onChange(of: shouldScrollToLastFlight) { _, newValue in
-                if newValue {
-                    scrollToFirstNonDimmedFlight(proxy: proxy)
-                    shouldScrollToLastFlight = false
-                }
-            }
-            .onChange(of: shouldScrollToTop) { _, newValue in
-                if newValue, let firstFlight = filteredFlightSectors.first {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            proxy.scrollTo(firstFlight.id, anchor: .top)
-                        }
-                        shouldScrollToTop = false
+                guard !hasScrolledOnLaunch, !filteredFlightSectors.isEmpty else { return }
+                hasScrolledOnLaunch = true
+                let anchorID = filteredFlightSectors.first(where: {
+                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                })?.id ?? filteredFlightSectors.last?.id
+                if let id = anchorID {
+                    Task { @MainActor in
+                        proxy.scrollTo(id, anchor: .top)
                     }
                 }
+            }
+            .onChange(of: filteredFlightSectors) { _, sectors in
+                guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
+                hasScrolledOnLaunch = true
+                let anchorID = sectors.first(where: {
+                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                })?.id ?? sectors.last?.id
+                if let id = anchorID {
+                    Task { @MainActor in
+                        proxy.scrollTo(id, anchor: .top)
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .flightAdded)) { _ in
+                hasScrolledOnLaunch = false
             }
         }
     }
@@ -286,44 +297,60 @@ private struct FlightsListContent: View {
     @ViewBuilder
     private var selectModeOverlay: some View {
         if isSelectMode {
-            HStack(spacing: 12) {
-                Button(action: {
+            let isEmpty = selectedFlightsForDeletion.isEmpty
+            HStack(spacing: 0) {
+                // Edit
+                Button {
                     HapticManager.shared.impact(.medium)
                     showingBulkEditSheet = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "pencil").font(.body)
-                        Text("Edit \(selectedFlightsForDeletion.count)").font(.headline)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, actionButtonVerticalPadding)
-                    .background(selectedFlightsForDeletion.isEmpty ? Color.blue.opacity(0.5) : Color.blue)
-                    .cornerRadius(actionButtonCornerRadius)
-                    .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                } label: {
+                    Text("Edit")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(isEmpty ? Color.primary.opacity(0.3) : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                 }
-                .disabled(selectedFlightsForDeletion.isEmpty)
+                .disabled(isEmpty)
 
-                Button(action: {
+                Divider()
+                    .frame(height: 20)
+
+                // Duplicate
+                Button {
+                    HapticManager.shared.impact(.medium)
+                    showingBulkDuplicateAlert = true
+                } label: {
+                    Text("Duplicate")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(isEmpty ? Color.primary.opacity(0.3) : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .disabled(isEmpty)
+
+                Divider()
+                    .frame(height: 20)
+
+                // Delete
+                Button {
                     HapticManager.shared.notification(.warning)
                     showingBulkDeleteAlert = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "trash.fill").font(.body)
-                        Text("Delete \(selectedFlightsForDeletion.count)").font(.headline)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, actionButtonVerticalPadding)
-                    .background(selectedFlightsForDeletion.isEmpty ? Color.red.opacity(0.5) : Color.red)
-                    .cornerRadius(actionButtonCornerRadius)
-                    .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                } label: {
+                    Text("Delete")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundStyle(isEmpty ? Color.red.opacity(0.35) : .red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                 }
-                .disabled(selectedFlightsForDeletion.isEmpty)
+                .disabled(isEmpty)
             }
-            .padding(.trailing, 20)
+            .background(.thickMaterial)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.25), lineWidth: 1))
+            .shadow(color: Color.black.opacity(0.35), radius: 16, x: 0, y: 6)
+            .padding(.horizontal, 20)
             .padding(.bottom, 20)
-            .transition(.scale.combined(with: .opacity))
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
@@ -372,11 +399,54 @@ private struct FlightsListContent: View {
         }
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .navigationBarLeading) {
-            HStack(spacing: 16) {
-                if !isSelectMode {
+    var body: some View {
+        VStack(spacing: 0) {
+            // Custom toolbar row replacing the system nav bar
+            HStack(spacing: 12) {
+                if isSelectMode {
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        isSelectMode = false
+                        selectedFlightsForDeletion.removeAll()
+                    }) {
+                        Text("Cancel")
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(Color.blue, lineWidth: 1.5)
+                            )
+                    }
+
+                    Spacer()
+
+                    Text(selectedFlightsForDeletion.isEmpty ? "Select Entries" : "\(selectedFlightsForDeletion.count) Selected")
+                        .font(.headline)
+
+                    Spacer()
+
+                    if !filteredFlightSectors.isEmpty {
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            let allFilteredIds = Set(filteredFlightSectors.map { $0.id })
+                            if selectedFlightsForDeletion == allFilteredIds {
+                                selectedFlightsForDeletion.removeAll()
+                            } else {
+                                selectedFlightsForDeletion = allFilteredIds
+                            }
+                        }) {
+                            let allSelected = selectedFlightsForDeletion == Set(filteredFlightSectors.map { $0.id })
+                            Text(allSelected ? "Deselect All" : "Select All")
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(Color.blue, lineWidth: 1.5)
+                                )
+                        }
+                    }
+                } else {
+                    // Add + Select buttons on the left
                     Button(action: {
                         HapticManager.shared.impact(.light)
                         if purchaseService.canAddFlight {
@@ -387,108 +457,80 @@ private struct FlightsListContent: View {
                         }
                     }) {
                         Image(systemName: "plus.circle")
-                            .font(.title2)
+                            .font(.title)
                     }
-                }
-                if !filteredFlightSectors.isEmpty {
-                    Button(action: toggleSelectMode) {
-                        Text(isSelectMode ? "Cancel" : "Select")
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.primary, lineWidth: 1.5))
+
+                    if !filteredFlightSectors.isEmpty {
+                        Button(action: {
+                            HapticManager.shared.impact(.light)
+                            isSelectMode = true
+                            if let selectedId = selectedFlight?.id {
+                                selectedFlightsForDeletion.insert(selectedId)
+                            }
+                            selectedFlight = nil
+                        }) {
+                            Text("Select")
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(Color.blue, lineWidth: 1.5)
+                                )
+                        }
                     }
-                }
-            }
-        }
-        if isSelectMode {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if !filteredFlightSectors.isEmpty {
-                    Button(action: toggleSelectAll) {
-                        Text(allFilteredIdsSelected ? "Deselect All" : "Select All")
-                            .foregroundColor(.blue)
+
+                    Spacer()
+
+                    // Map, Data, Filter buttons on the right
+                    HStack(spacing: 20) {
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        showingMap = true
+                    }) {
+                        Image(systemName: "globe.asia.australia")
+                            .font(.title)
                     }
-                }
-            }
-        } else {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: toggleSearchBar) {
-                    Label {
-                        Text("Search")
-                    } icon: {
+
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        showingSpreadsheet = true
+                    }) {
+                        Image(systemName: "tablecells")
+                            .font(.title)
+                    }
+
+                    Button(action: {
+                        HapticManager.shared.impact(.light)
+                        showingFilterSheet = true
+                    }) {
                         ZStack {
-                            Image(systemName: "magnifyingglass.circle").font(.title3)
-                            if !filterViewModel.filterKeywordSearch.isEmpty {
-                                Circle().fill(Color.blue).frame(width: 8, height: 8).offset(x: 10, y: -10)
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .font(.title)
+                            if isFilterActive {
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 10, y: -10)
                             }
                         }
                     }
-                }
-                .labelStyle(.iconOnly)
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    HapticManager.shared.impact(.light)
-                    filterViewModel.sortOrderReversed.toggle()
-                    applyFilters()
-                    shouldScrollToTop = true
-                }) {
-                    Label("Sort", systemImage: "arrow.up.arrow.down.circle").font(.title3)
-                }
-                .labelStyle(.iconOnly)
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    HapticManager.shared.impact(.light)
-                    showingFilterSheet = true
-                }) {
-                    Label("Filter", systemImage: "line.3.horizontal.decrease.circle").font(.title3)
-                }
-                .labelStyle(.iconOnly)
-            }
-            if filterViewModel.filterImportSessionID != nil {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(role: .destructive) {
-                        showingDeleteSessionAlert = true
-                    } label: {
-                        Label("Delete Import", systemImage: "trash").foregroundColor(.red)
+                    } // end HStack
+
+                    if filterViewModel.filterImportSessionID != nil {
+                        Button(role: .destructive) {
+                            showingDeleteSessionAlert = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red)
+                                .font(.title3)
+                        }
                     }
                 }
             }
-        }
-    }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .padding(.top, safeAreaTopInset)
 
-    private func toggleSelectMode() {
-        HapticManager.shared.impact(.light)
-        isSelectMode.toggle()
-        if !isSelectMode {
-            selectedFlightsForDeletion.removeAll()
-        } else {
-            if let selectedId = selectedFlight?.id {
-                selectedFlightsForDeletion.insert(selectedId)
-            }
-            selectedFlight = nil
-        }
-    }
-
-    private func toggleSearchBar() {
-        HapticManager.shared.impact(.light)
-        if showSearchBar {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { showSearchBar = false }
-            isSearchFieldFocused = false
-            if !filterViewModel.filterKeywordSearch.isEmpty {
-                filterViewModel.filterKeywordSearch = ""
-                applyFilters()
-                hasPerformedInitialScroll = false
-                shouldScrollToLastFlight = true
-            }
-        } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { showSearchBar = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { isSearchFieldFocused = true }
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
             if filteredFlightSectors.isEmpty && !allFlightSectors.isEmpty && !isOnlyKeywordSearchActive() {
                 NoResultsView(onClearFilters: clearFilters)
             } else if filteredFlightSectors.isEmpty && allFlightSectors.isEmpty {
@@ -496,7 +538,6 @@ private struct FlightsListContent: View {
             } else {
                 flightCountHeader
                     .background(Color.clear)
-                searchBar
                 filterStatusBanner
                 flightListContent
             }
@@ -506,78 +547,153 @@ private struct FlightsListContent: View {
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelectMode)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedFlightsForDeletion.count)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbar { toolbarContent }
-        .modifier(FlightsListSheets(
-            showingPaywall: $showingPaywall,
-            showingFilterSheet: $showingFilterSheet,
-            showingBulkEditSheet: $showingBulkEditSheet,
-            summaryToEdit: $summaryToEdit,
-            showingDeleteAlert: $showingDeleteAlert,
-            showingBulkDeleteAlert: $showingBulkDeleteAlert,
-            showingDeleteSessionAlert: $showingDeleteSessionAlert,
-            flightToDelete: $flightToDelete,
-            bulkDeleteAlertTitle: bulkDeleteAlertTitle,
-            deleteAlertTitle: deleteAlertTitle,
-            filterViewModel: filterViewModel,
-            filteredFlightSectors: filteredFlightSectors,
-            selectedFlightsForDeletion: selectedFlightsForDeletion,
-            viewModel: viewModel,
-            onAppear: onBodyAppear,
-            onReviewImportSession: { sessionID in
+        .toolbar(.hidden, for: .navigationBar)
+        .ignoresSafeArea(.container, edges: .top)
+        .fullScreenCover(isPresented: $showingPaywall) {
+            PaywallView(isDismissible: true)
+        }
+        .fullScreenCover(isPresented: $showingMap) {
+            FlightMapView()
+        }
+        .fullScreenCover(isPresented: $showingSpreadsheet) {
+            LogbookSpreadsheetView(flights: isFilterActive ? filteredFlightSectors : nil)
+                .environmentObject(viewModel)
+        }
+        .sheet(isPresented: $showingFilterSheet) {
+            FilterSheet(
+                filterStartDate: $filterViewModel.filterStartDate,
+                filterEndDate: $filterViewModel.filterEndDate,
+                filterAircraftType: $filterViewModel.filterAircraftType,
+                filterAircraftReg: $filterViewModel.filterAircraftReg,
+                filterCaptainName: $filterViewModel.filterCaptainName,
+                filterFOName: $filterViewModel.filterFOName,
+                filterSOName: $filterViewModel.filterSOName,
+                filterFromAirport: $filterViewModel.filterFromAirport,
+                filterToAirport: $filterViewModel.filterToAirport,
+                filterFlightNumber: $filterViewModel.filterFlightNumber,
+                filterPilotFlyingOnly: $filterViewModel.filterPilotFlyingOnly,
+                filterApproachType: $filterViewModel.filterApproachType,
+                filterContainsRemarks: $filterViewModel.filterContainsRemarks,
+                filterSimulator: $filterViewModel.filterSimulator,
+                filterPositioning: $filterViewModel.filterPositioning,
+                filterSpIns: $filterViewModel.filterSpIns,
+                filterNoBlockTime: $filterViewModel.filterNoBlockTime,
+                filterNoCrewNames: $filterViewModel.filterNoCrewNames,
+                filterNoFlightNumber: $filterViewModel.filterNoFlightNumber,
+                filterNoAircraftType: $filterViewModel.filterNoAircraftType,
+                filterNoAircraftReg: $filterViewModel.filterNoAircraftReg,
+                filterNoRoleAssigned: $filterViewModel.filterNoRoleAssigned,
+                filterMultipleRolesAssigned: $filterViewModel.filterMultipleRolesAssigned,
+                filterTypeSummary: $filterViewModel.filterTypeSummary,
+                filterKeywordSearch: $filterViewModel.filterKeywordSearch,
+                selectedDateRange: $filterViewModel.selectedDateRange,
+                filterImportSessionID: $filterViewModel.filterImportSessionID,
+                sortOrderReversed: $filterViewModel.sortOrderReversed,
+                onApply: {
+                    applyFilters()
+                    showingFilterSheet = false
+                },
+                onClear: {
+                    clearFilters()
+                    showingFilterSheet = false
+                }
+            )
+        }
+        .onAppear {
+            if viewModel.isEditingMode {
+                viewModel.exitEditingMode()
+            }
+            Task { await loadFlights() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .reviewImportSession)) { notification in
+            if let sessionID = notification.userInfo?["sessionID"] as? UUID {
                 filterViewModel.filterImportSessionID = sessionID
                 loadSessionFilterIDs(sessionID)
-            },
-            onImportSessionIDChange: { new in
-                if let sessionID = new { loadSessionFilterIDs(sessionID) }
-                else { sessionFilterIDs = []; applyFilters() }
-            },
-            onFlightDataChanged: handleFlightDataChanged,
-            onDeleteFlight: { flight in HapticManager.shared.notification(.warning); performDelete(flight) },
-            onCancelDelete: { flightToDelete = nil },
-            onBulkDelete: { HapticManager.shared.notification(.warning); performBulkDelete() },
-            onDeleteImportSession: deleteImportSession,
-            onFilterApply: { applyFilters(); showingFilterSheet = false },
-            onFilterClear: { clearFilters(); showingFilterSheet = false },
-            onBulkEditSave: performBulkUpdate,
-            onSummarySave: saveSummary,
-            onSummaryDelete: deleteSummary
-        ))
-    }
-
-    private var deleteAlertTitle: String {
-        flightToDelete.map { "Delete flight \($0.flightNumberFormatted)?" } ?? "Delete Flight?"
-    }
-
-    private func onBodyAppear() {
-        if viewModel.isEditingMode { viewModel.exitEditingMode() }
-        loadFlights()
-    }
-
-    private func deleteImportSession() {
-        if let sessionID = filterViewModel.filterImportSessionID {
-            FlightDatabaseService.shared.deleteImportSession(sessionID)
-            filterViewModel.filterImportSessionID = nil
-            sessionFilterIDs = []
+            }
         }
-    }
-
-    // MARK: - Select All Helpers
-
-    private var allFilteredIds: Set<UUID> { Set(filteredFlightSectors.map { $0.id }) }
-    private var allFilteredIdsSelected: Bool { selectedFlightsForDeletion == allFilteredIds }
-    private var bulkDeleteAlertTitle: String {
-        let count = selectedFlightsForDeletion.count
-        return "Delete \(count) \(count == 1 ? "Entry" : "Entries")?"
-    }
-
-    private func toggleSelectAll() {
-        HapticManager.shared.impact(.light)
-        if allFilteredIdsSelected {
-            selectedFlightsForDeletion.removeAll()
-        } else {
-            selectedFlightsForDeletion = allFilteredIds
+        .onChange(of: filterViewModel.filterImportSessionID) { _, newSessionID in
+            if let sessionID = newSessionID {
+                loadSessionFilterIDs(sessionID)
+            } else {
+                sessionFilterIDs = []
+                applyFilters()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
+            let selectedFlightId = selectedFlight?.id
+            Task {
+                await loadFlights()
+                if let selectedId = selectedFlightId {
+                    if let updatedFlight = filteredFlightSectors.first(where: { $0.id == selectedId }) {
+                        selectedFlight = updatedFlight
+                    } else {
+                        selectedFlight = nil
+                    }
+                }
+            }
+        }
+        .alert(flightToDelete.map { "Delete flight \($0.flightNumberFormatted)?" } ?? "Delete Flight?",
+               isPresented: $showingDeleteAlert,
+               presenting: flightToDelete) { flight in
+            Button("Delete", role: .destructive) {
+                HapticManager.shared.notification(.warning)
+                performDelete(flight)
+            }
+            Button("Cancel", role: .cancel) {
+                flightToDelete = nil
+            }
+        }
+        .alert("Delete \(selectedFlightsForDeletion.count) \(selectedFlightsForDeletion.count == 1 ? "Entry" : "Entries")?",
+               isPresented: $showingBulkDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                HapticManager.shared.notification(.warning)
+                performBulkDelete()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This action cannot be undone.")
+        }
+        .alert(bulkDuplicateAlertTitle, isPresented: $showingBulkDuplicateAlert) {
+            Button("Duplicate") {
+                HapticManager.shared.notification(.success)
+                performBulkDuplicate()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Copies will be added to your logbook with the same details.")
+        }
+        .alert("Delete Import Batch?", isPresented: $showingDeleteSessionAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete All", role: .destructive) {
+                if let sessionID = filterViewModel.filterImportSessionID {
+                    FlightDatabaseService.shared.deleteImportSession(sessionID)
+                    filterViewModel.filterImportSessionID = nil
+                    sessionFilterIDs = []
+                }
+            }
+        } message: {
+            Text("This will permanently delete all flights from this import. This cannot be undone.")
+        }
+        .sheet(isPresented: $showingBulkEditSheet) {
+            let flights = filteredFlightSectors.filter { selectedFlightsForDeletion.contains($0.id) }
+            BulkEditSheet(
+                selectedFlights: flights,
+                onSave: { updatedFlights in
+                    performBulkUpdate(updatedFlights)
+                }
+            )
+            .environmentObject(viewModel)
+        }
+        .sheet(item: $summaryToEdit) { summary in
+            AircraftSummarySheet(
+                editingSector: summary,
+                onSave: { updatedSummary in
+                    saveSummary(updatedSummary)
+                },
+                onDelete: { summaryToDelete in
+                    deleteSummary(summaryToDelete)
+                }
+            )
         }
     }
 
@@ -586,91 +702,111 @@ private struct FlightsListContent: View {
     @ViewBuilder
     private func selectModeRow(for sector: FlightSector) -> some View {
         let isSelected = selectedFlightsForDeletion.contains(sector.id)
-        sectorRowContent(for: sector)
-            .padding(4)
-            .background(RoundedRectangle(cornerRadius: 12).fill(isSelected ? Color.blue.opacity(0.2) : Color.clear))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2))
-            .contentShape(Rectangle())
-            .onTapGesture { toggleSelection(for: sector) }
-            .id(sector.id)
-    }
+        let isSummary = sector.flightNumber == "SUMMARY"
 
-    private func toggleSelection(for sector: FlightSector) {
-        HapticManager.shared.impact(.light)
-        if selectedFlightsForDeletion.contains(sector.id) {
-            selectedFlightsForDeletion.remove(sector.id)
-        } else {
-            selectedFlightsForDeletion.insert(sector.id)
+        Group {
+            if isSummary {
+                SummaryRow(
+                    sector: sector,
+                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes
+                )
+                .equatable()
+            } else {
+                FlightSectorRow(
+                    sector: sector,
+                    useLocalTime: viewModel.displayFlightsInLocalTime,
+                    useIATACodes: viewModel.useIATACodes,
+                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
+                    roundingMode: viewModel.decimalRoundingMode
+                )
+                .equatable()
+            }
         }
-    }
-
-    @ViewBuilder
-    private func sectorRowContent(for sector: FlightSector) -> some View {
-        if sector.flightNumber == "SUMMARY" {
-            SummaryRow(sector: sector, showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes).equatable()
-        } else {
-            FlightSectorRow(
-                sector: sector,
-                useLocalTime: viewModel.displayFlightsInLocalTime,
-                useIATACodes: viewModel.useIATACodes,
-                showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
-                roundingMode: viewModel.decimalRoundingMode
-            ).equatable()
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isSelected ? Color.blue.opacity(0.2) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            HapticManager.shared.impact(.light)
+            if isSelected {
+                selectedFlightsForDeletion.remove(sector.id)
+            } else {
+                selectedFlightsForDeletion.insert(sector.id)
+            }
         }
+        .id(sector.id)
     }
 
     @ViewBuilder
     private func normalModeRow(for sector: FlightSector) -> some View {
-        let isActive = selectedFlight?.id == sector.id
-        sectorRowContent(for: sector)
-            .padding(4)
-            .background(RoundedRectangle(cornerRadius: 12).fill(isActive ? Color.blue.opacity(0.2) : Color.clear))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(isActive ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2))
-            .contentShape(Rectangle())
-            .onTapGesture { handleNormalTap(for: sector) }
-            .onLongPressGesture { handleLongPress(for: sector) }
-            .id(sector.id)
-    }
+        let isSummary = sector.flightNumber == "SUMMARY"
 
-    private func handleNormalTap(for sector: FlightSector) {
-        HapticManager.shared.impact(.light)
-        if sector.flightNumber == "SUMMARY" {
-            summaryToEdit = sector
-        } else {
-            selectedFlight = sector
-            onFlightSelected(sector)
+        Group {
+            if isSummary {
+                SummaryRow(
+                    sector: sector,
+                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes
+                )
+                .equatable()
+            } else {
+                FlightSectorRow(
+                    sector: sector,
+                    useLocalTime: viewModel.displayFlightsInLocalTime,
+                    useIATACodes: viewModel.useIATACodes,
+                    showTimesInHoursMinutes: viewModel.showTimesInHoursMinutes,
+                    roundingMode: viewModel.decimalRoundingMode
+                )
+                .equatable()
+            }
         }
-    }
-
-    private func handleLongPress(for sector: FlightSector) {
-        HapticManager.shared.impact(.medium)
-        isSelectMode = true
-        selectedFlightsForDeletion.insert(sector.id)
-    }
-
-    private func handleFlightDataChanged() {
-        let selectedFlightId = selectedFlight?.id
-        loadFlights()
-        if let selectedId = selectedFlightId {
-            selectedFlight = filteredFlightSectors.first(where: { $0.id == selectedId })
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(selectedFlight?.id == sector.id ? Color.blue.opacity(0.2) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(selectedFlight?.id == sector.id ? Color.blue.opacity(0.6) : Color.clear, lineWidth: 2)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            HapticManager.shared.impact(.light)
+            if isSummary {
+                // Show summary edit sheet instead of detail pane
+                summaryToEdit = sector
+            } else {
+                // Normal flight - show in detail pane
+//                LogManager.shared.debug("Flight tapped: \(sector.flightNumberFormatted)")
+                selectedFlight = sector
+                onFlightSelected(sector)
+            }
         }
+        .onLongPressGesture {
+            // Enter select mode and select this flight
+            HapticManager.shared.impact(.medium)
+            isSelectMode = true
+            selectedFlightsForDeletion.insert(sector.id)
+        }
+        .id(sector.id)
     }
 
-    private func loadFlights() {
-//        LogManager.shared.debug("FlightsSplitView: loadFlights() called")
-        self.allFlightSectors = self.databaseService.fetchAllFlights()
+    @MainActor
+    private func loadFlights() async {
+        let sectors = await databaseService.fetchAllFlightsAsync()
+        self.allFlightSectors = sectors
         LogManager.shared.debug("FlightsSplitView: Loaded \(self.allFlightSectors.count) flights from database")
         self.applyFilters()
-//        LogManager.shared.debug("FlightsSplitView: After filtering: \(self.filteredFlightSectors.count) flights")
     }
 
     private func refreshFlights() async {
         HapticManager.shared.impact(.light)
-
-        await MainActor.run {
-            loadFlights()
-        }
-
+        await loadFlights()
         try? await Task.sleep(nanoseconds: 300_000_000)
     }
 
@@ -686,7 +822,7 @@ private struct FlightsListContent: View {
         let filtered = allFlightSectors.filter { sector in
             // Date range filter
             if let start = startDate, let end = endDate,
-               let sectorDate = dateFormatter.date(from: sector.date) {
+               let sectorDate = sector.parsedDate {
                 if sectorDate < start || sectorDate > end {
                     return false
                 }
@@ -792,9 +928,14 @@ private struct FlightsListContent: View {
                 return false
             }
 
-            // No Block Time filter
-            if filterViewModel.filterNoBlockTime && sector.blockTimeValue != 0.0 {
-                return false
+            // No Block Time filter (exclude PAX and SIM flights — they legitimately have no block time)
+            if filterViewModel.filterNoBlockTime {
+                if sector.isPositioning || sector.simTimeValue > 0 {
+                    return false
+                }
+                if sector.blockTimeValue != 0.0 {
+                    return false
+                }
             }
 
             // No Crew Names filter
@@ -806,16 +947,34 @@ private struct FlightsListContent: View {
                 }
             }
 
+            // No Role Assigned filter (block time > 0, no P1/ICUS/P2, not a SUMMARY)
+            if filterViewModel.filterNoRoleAssigned {
+                let isSummary = sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "SUMMARY"
+                if isSummary || sector.blockTimeValue == 0 ||
+                   sector.p1TimeValue > 0 || sector.p1usTimeValue > 0 || sector.p2TimeValue > 0 {
+                    return false
+                }
+            }
+
+            // Multiple Roles Assigned filter (block time > 0, more than one role column > 0, not a SUMMARY)
+            if filterViewModel.filterMultipleRolesAssigned {
+                let isSummary = sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "SUMMARY"
+                let roleCount = (sector.p1TimeValue > 0 ? 1 : 0) + (sector.p1usTimeValue > 0 ? 1 : 0) + (sector.p2TimeValue > 0 ? 1 : 0)
+                if isSummary || sector.blockTimeValue == 0 || roleCount < 2 {
+                    return false
+                }
+            }
+
             // No Flight Number filter
             if filterViewModel.filterNoFlightNumber &&
                !sector.flightNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return false
             }
 
-            // No Aircraft Type filter
-            if filterViewModel.filterNoAircraftType &&
-               !sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return false
+            // No Aircraft Type filter — exclude PAX flights unless the PAX toggle is also on
+            if filterViewModel.filterNoAircraftType {
+                if sector.isPositioning && !filterViewModel.filterPositioning { return false }
+                if !sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
             }
 
             // No Aircraft Registration filter
@@ -879,6 +1038,11 @@ private struct FlightsListContent: View {
                 // Use scheduledDeparture if outTime is empty (rostered flights)
                 let time1 = flight1.outTime.isEmpty ? flight1.scheduledDeparture : flight1.outTime
                 let time2 = flight2.outTime.isEmpty ? flight2.scheduledDeparture : flight2.outTime
+                if time1.isEmpty && time2.isEmpty {
+                    // No time data — fall back to insertion order (descending createdAt so last-in-file = first in list)
+                    let result = (flight1.createdAt ?? .distantPast) > (flight2.createdAt ?? .distantPast)
+                    return filterViewModel.sortOrderReversed ? !result : result
+                }
                 let result = compareOutTimes(time1, time2)
                 return filterViewModel.sortOrderReversed ? !result : result
             } else {
@@ -894,8 +1058,7 @@ private struct FlightsListContent: View {
         } else if filterViewModel.filterSpIns {
             sorted.reduce(0.0) { $0 + $1.spInsTimeValue }
         } else {
-            // Match Dashboard logic: sum block + sim, excluding Sp/Ins-only entries
-            sorted.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly ? 0 : $1.simTimeValue) }
+            sorted.reduce(0.0) { $0 + $1.blockTimeValue + ($1.isSpInsOnly || !viewModel.countSimInTotal ? 0 : $1.simTimeValue) }
         }
 
         // Update filter active state
@@ -921,13 +1084,12 @@ private struct FlightsListContent: View {
                         filterViewModel.filterNoFlightNumber ||
                         filterViewModel.filterNoAircraftType ||
                         filterViewModel.filterNoAircraftReg ||
+                        filterViewModel.filterNoRoleAssigned ||
+                        filterViewModel.filterMultipleRolesAssigned ||
                         filterViewModel.filterTypeSummary ||
-                        filterViewModel.filterImportSessionID != nil
+                        filterViewModel.filterImportSessionID != nil ||
+                        !filterViewModel.filterKeywordSearch.isEmpty
 
-        // Scroll to top when filters are active
-        if isFilterActive {
-            shouldScrollToTop = true
-        }
     }
 
     private func compareOutTimes(_ time1: String, _ time2: String) -> Bool {
@@ -964,9 +1126,6 @@ private struct FlightsListContent: View {
         filterViewModel.clearFilters()
         sessionFilterIDs = []
         applyFilters()
-        // Reset scroll flag and trigger scroll to last flight after clearing filters
-        hasPerformedInitialScroll = false
-        shouldScrollToLastFlight = true
     }
 
     private func loadSessionFilterIDs(_ sessionID: UUID) {
@@ -1006,6 +1165,15 @@ private struct FlightsListContent: View {
             HapticManager.shared.notification(.error)
         }
         flightToDelete = nil
+    }
+
+    private func performBulkDuplicate() {
+        let flightsToDuplicate = filteredFlightSectors.filter { selectedFlightsForDeletion.contains($0.id) }
+        guard !flightsToDuplicate.isEmpty else { return }
+        databaseService.duplicateFlights(flightsToDuplicate)
+        selectedFlightsForDeletion.removeAll()
+        isSelectMode = false
+        Task { await loadFlights() }
     }
 
     private func performBulkDelete() {
@@ -1066,7 +1234,7 @@ private struct FlightsListContent: View {
                 selectedFlightsForDeletion.removeAll()
                 isSelectMode = false
                 HapticManager.shared.notification(.success)
-                loadFlights()
+                await loadFlights()
             } else {
                 if cloudKitWasEnabled { databaseService.enableCloudKitSync() }
                 HapticManager.shared.notification(.error)
@@ -1096,7 +1264,7 @@ private struct FlightsListContent: View {
         } else {
             // Save new summary
             if databaseService.saveFlight(summary) {
-                loadFlights()
+                Task { await loadFlights() }
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             } else {
                 HapticManager.shared.notification(.error)
@@ -1147,154 +1315,12 @@ private struct FlightsListContent: View {
                !filterViewModel.filterNoFlightNumber &&
                !filterViewModel.filterNoAircraftType &&
                !filterViewModel.filterNoAircraftReg &&
+               !filterViewModel.filterNoRoleAssigned &&
+               !filterViewModel.filterMultipleRolesAssigned &&
                !filterViewModel.filterTypeSummary &&
                filterViewModel.filterImportSessionID == nil
     }
 
-    private func scrollToFirstNonDimmedFlight(proxy: ScrollViewProxy) {
-        // Only scroll once per view lifecycle to avoid disrupting user scrolling
-        guard !hasPerformedInitialScroll else { return }
-
-        // Don't scroll if we're in select mode
-        guard !isSelectMode else { return }
-
-        // Find the FIRST completed flight (first one WITH block/sim time)
-        // This is the transition point between future and completed flights
-        // Note: PAX flights without logged time are still future flights
-        var firstCompletedIndex: Int?
-        for (index, sector) in filteredFlightSectors.enumerated() {
-            // A flight is considered completed if it has actual logged time
-            if sector.blockTimeValue > 0 || sector.simTimeValue > 0 {
-                firstCompletedIndex = index
-                break
-            }
-        }
-
-        // If we found a completed flight, scroll to it
-        if let completedIndex = firstCompletedIndex {
-            let targetFlight = filteredFlightSectors[completedIndex]
-
-            // Scroll to the target flight
-            // Use delay to ensure LazyVStack has rendered items
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    proxy.scrollTo(targetFlight.id, anchor: .center)
-                }
-                hasPerformedInitialScroll = true
-            }
-        } else {
-            hasPerformedInitialScroll = true
-        }
-    }
-}
-
-// MARK: - FlightsListContent Modifiers
-
-private struct FlightsListSheets: ViewModifier {
-    @Binding var showingPaywall: Bool
-    @Binding var showingFilterSheet: Bool
-    @Binding var showingBulkEditSheet: Bool
-    @Binding var summaryToEdit: FlightSector?
-    @Binding var showingDeleteAlert: Bool
-    @Binding var showingBulkDeleteAlert: Bool
-    @Binding var showingDeleteSessionAlert: Bool
-    @Binding var flightToDelete: FlightSector?
-    let bulkDeleteAlertTitle: String
-    let deleteAlertTitle: String
-    @ObservedObject var filterViewModel: FlightsFilterViewModel
-    let filteredFlightSectors: [FlightSector]
-    let selectedFlightsForDeletion: Set<UUID>
-    let viewModel: FlightTimeExtractorViewModel
-    let onAppear: () -> Void
-    let onReviewImportSession: (UUID) -> Void
-    let onImportSessionIDChange: (UUID?) -> Void
-    let onFlightDataChanged: () -> Void
-    let onDeleteFlight: (FlightSector) -> Void
-    let onCancelDelete: () -> Void
-    let onBulkDelete: () -> Void
-    let onDeleteImportSession: () -> Void
-    let onFilterApply: () -> Void
-    let onFilterClear: () -> Void
-    let onBulkEditSave: ([UUID: FlightSector]) -> Void
-    let onSummarySave: (FlightSector) -> Void
-    let onSummaryDelete: (FlightSector) -> Void
-
-    func body(content: Content) -> some View {
-        content
-            .fullScreenCover(isPresented: $showingPaywall) { PaywallView(isDismissible: true) }
-            .sheet(isPresented: $showingFilterSheet) { filterSheet }
-            .sheet(isPresented: $showingBulkEditSheet) { bulkEditSheet }
-            .sheet(item: $summaryToEdit) { summary in
-                AircraftSummarySheet(
-                    editingSector: summary,
-                    onSave: onSummarySave,
-                    onDelete: onSummaryDelete
-                )
-            }
-            .onAppear(perform: onAppear)
-            .onReceive(NotificationCenter.default.publisher(for: .reviewImportSession)) { note in
-                if let id = note.userInfo?["sessionID"] as? UUID { onReviewImportSession(id) }
-            }
-            .onChange(of: filterViewModel.filterImportSessionID) { _, new in onImportSessionIDChange(new) }
-            .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in onFlightDataChanged() }
-            .alert(deleteAlertTitle, isPresented: $showingDeleteAlert, presenting: flightToDelete) { flight in
-                Button("Delete", role: .destructive) { onDeleteFlight(flight) }
-                Button("Cancel", role: .cancel) { onCancelDelete() }
-            }
-            .alert(bulkDeleteAlertTitle, isPresented: $showingBulkDeleteAlert) {
-                Button("Delete", role: .destructive) { onBulkDelete() }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("This action cannot be undone.")
-            }
-            .alert("Delete Import Batch?", isPresented: $showingDeleteSessionAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete All", role: .destructive) { onDeleteImportSession() }
-            } message: {
-                Text("This will permanently delete all flights from this import. This cannot be undone.")
-            }
-    }
-
-    @ViewBuilder private var filterSheet: some View {
-        FilterSheet(
-            filterStartDate: $filterViewModel.filterStartDate,
-            filterEndDate: $filterViewModel.filterEndDate,
-            filterAircraftType: $filterViewModel.filterAircraftType,
-            filterAircraftReg: $filterViewModel.filterAircraftReg,
-            filterCaptainName: $filterViewModel.filterCaptainName,
-            filterFOName: $filterViewModel.filterFOName,
-            filterSOName: $filterViewModel.filterSOName,
-            filterFromAirport: $filterViewModel.filterFromAirport,
-            filterToAirport: $filterViewModel.filterToAirport,
-            filterFlightNumber: $filterViewModel.filterFlightNumber,
-            filterPilotFlyingOnly: $filterViewModel.filterPilotFlyingOnly,
-            filterApproachType: $filterViewModel.filterApproachType,
-            filterContainsRemarks: $filterViewModel.filterContainsRemarks,
-            filterSimulator: $filterViewModel.filterSimulator,
-            filterPositioning: $filterViewModel.filterPositioning,
-            filterSpIns: $filterViewModel.filterSpIns,
-            filterNoBlockTime: $filterViewModel.filterNoBlockTime,
-            filterNoCrewNames: $filterViewModel.filterNoCrewNames,
-            filterNoFlightNumber: $filterViewModel.filterNoFlightNumber,
-            filterNoAircraftType: $filterViewModel.filterNoAircraftType,
-            filterNoAircraftReg: $filterViewModel.filterNoAircraftReg,
-            filterNoRoleAssigned: $filterViewModel.filterNoRoleAssigned,
-            filterMultipleRolesAssigned: $filterViewModel.filterMultipleRolesAssigned,
-            filterTypeSummary: $filterViewModel.filterTypeSummary,
-            filterKeywordSearch: $filterViewModel.filterKeywordSearch,
-            selectedDateRange: $filterViewModel.selectedDateRange,
-            filterImportSessionID: $filterViewModel.filterImportSessionID,
-            sortOrderReversed: $filterViewModel.sortOrderReversed,
-            onApply: onFilterApply,
-            onClear: onFilterClear
-        )
-    }
-
-    @ViewBuilder private var bulkEditSheet: some View {
-        let flights = filteredFlightSectors.filter { selectedFlightsForDeletion.contains($0.id) }
-        BulkEditSheet(selectedFlights: flights, onSave: onBulkEditSave)
-            .environmentObject(viewModel)
-    }
 }
 
 // MARK: - Empty Detail View
@@ -1310,7 +1336,7 @@ private struct EmptyDetailView: View {
                 .foregroundColor(.gray.opacity(0.5))
 
             Text("Select a Flight")
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
 
@@ -1333,7 +1359,7 @@ private struct EmptyDetailView: View {
                 }) {
                     HStack(spacing: 12) {
                         Image(systemName: "plus.circle.fill")
-                            .font(.title2)
+                            .font(.title)
                         Text("Add New Flight")
                             .font(.headline)
                     }
@@ -1362,7 +1388,7 @@ private struct EmptyFlightsView: View {
                 .foregroundColor(.gray)
 
             Text("No Flights Recorded")
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
 
@@ -1387,7 +1413,7 @@ private struct NoResultsView: View {
                 .foregroundColor(.gray)
 
             Text("No Flights Match Filters")
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
 

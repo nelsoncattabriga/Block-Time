@@ -1072,18 +1072,8 @@ struct RegistrationTypeMappingView: View {
     @Binding var mappings: [RegistrationTypeMapping]
     @Environment(\.dismiss) private var dismiss
 
-    @State private var availableTypes: [String]
+    @State private var availableTypes: [String] = []
     @State private var showingManageTypes = false
-
-    init(mappings: Binding<[RegistrationTypeMapping]>) {
-        self._mappings = mappings
-        var types = Set(AircraftFleetService.getAllAircraftTypes())
-        for mapping in mappings.wrappedValue {
-            if !mapping.simpleType.isEmpty { types.insert(mapping.simpleType) }
-            for rule in mapping.rules where !rule.aircraftType.isEmpty { types.insert(rule.aircraftType) }
-        }
-        self._availableTypes = State(initialValue: Array(types).sorted())
-    }
 
     var body: some View {
         NavigationStack {
@@ -1332,9 +1322,10 @@ private struct RegistrationPatternRow: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                     }
-                    Text(mapping.sampleRegistrations.joined(separator: "  "))
+                    Text(mapping.sampleRegistrations.prefix(6).joined(separator: "  ") + (mapping.sampleRegistrations.count > 6 ? "  …" : ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
                 }
                 Spacer()
                 // Resolved badge
