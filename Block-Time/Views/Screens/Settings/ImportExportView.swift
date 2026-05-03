@@ -802,13 +802,15 @@ struct WebCISMappingView: View {
                                 Text("Aircraft Type Mapping")
                                     .font(.headline)
                                 Spacer()
-                                Button(action: { showingRegistrationMapping = true }) {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "pencil")
-                                        Text("Edit")
+                                if allTypesResolved {
+                                    Button(action: { showingRegistrationMapping = true }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "pencil")
+                                            Text("Edit")
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundColor(.blue)
                                     }
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
                                 }
                             }
 
@@ -864,23 +866,26 @@ struct WebCISMappingView: View {
                 }
 
                 Divider()
+                let canImport = registrationMappings.isEmpty || allTypesResolved
                 Button(action: {
                     saveMappings()
                     dismiss()
                     onImport(registrationMappings)
                 }) {
                     HStack {
-                        Image(systemName: "arrow.down.circle.fill").foregroundColor(.green)
+                        Image(systemName: "arrow.down.circle.fill")
+                            .foregroundColor(canImport ? .green : .secondary)
                         Text("Import webCIS History")
                             .fontWeight(.semibold)
-                            .foregroundColor(.primary)
+                            .foregroundColor(canImport ? .primary : .secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.green.opacity(0.12))
+                    .background(canImport ? Color.green.opacity(0.12) : Color.secondary.opacity(0.08))
                     .cornerRadius(10)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.green.opacity(0.4), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(canImport ? Color.green.opacity(0.4) : Color.secondary.opacity(0.2), lineWidth: 1))
                 }
+                .disabled(!canImport)
                 .padding()
             }
             .navigationTitle("webCIS Import")
