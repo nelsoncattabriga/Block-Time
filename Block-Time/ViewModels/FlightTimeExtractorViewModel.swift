@@ -952,7 +952,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     private func updateFRMSFleetBasedOnSelectedFleet(_ fleetID: String) {
         // Determine FRMS fleet based on selected fleet
         let frmsFleet: FRMSFleet
-        if fleetID == "B737" || fleetID == "A321" {
+        if fleetID == "B737" || fleetID == "A320" {
             frmsFleet = .a320B737  // Shorthaul
         } else {
             frmsFleet = .a380A330B787  // Longhaul
@@ -1203,7 +1203,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         switch selectedFleetID {
         case "B787": fleetType = .b787
         case "A330": fleetType = .a330
-        case "A321": fleetType = .a321
+        case "A320": fleetType = .a321
         case "A380": fleetType = .a380
         default:     fleetType = .b737
         }
