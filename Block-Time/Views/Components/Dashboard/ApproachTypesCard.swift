@@ -127,17 +127,15 @@ struct ApproachTypesCard: View {
                 }
             }
             .frame(height: 16)
+            .layoutPriority(-1)
 
-            Text("\(item.count)")
-                .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold)
-            
-//            HStack(spacing: 4) {
-//                Text("\(item.count)")
-//                    .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold)
+            HStack(spacing: 4) {
+                Text("\(item.count)")
+                    .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold)
                 Text(String(format: "(%.0f%%)", item.percentage))
                     .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
-//            }
-            .frame(width: 48, alignment: .trailing)
+            }
+            .fixedSize()
         }
     }
 }
