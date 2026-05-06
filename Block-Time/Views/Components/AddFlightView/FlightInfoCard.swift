@@ -279,10 +279,12 @@ struct ModernCapturedDataCard: View {
                 HStack(spacing: 0) {
                     Button(action: {
                         if viewModel.isSimulator || viewModel.isPositioning || viewModel.isSpIns {
+                            let wasPositioning = viewModel.isPositioning
                             viewModel.isSimulator = false
                             viewModel.isPositioning = false
                             viewModel.isSpIns = false
                             viewModel.spInsTime = ""
+                            if wasPositioning { viewModel.restoreDefaultsAfterPositioning() }
                             HapticManager.shared.impact(.medium)
                         }
                     }) {

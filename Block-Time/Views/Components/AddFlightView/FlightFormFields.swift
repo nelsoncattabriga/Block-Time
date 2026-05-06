@@ -155,11 +155,11 @@ struct ModernAircraftRegField: View {
                         .foregroundColor(.secondary)
 
                     HStack(alignment: .bottom, spacing: 8) {
-                        Text(viewModel.aircraftReg.isEmpty ? "Select aircraft" : viewModel.aircraftReg)
+                        Text(isDisabled ? "" : (viewModel.aircraftReg.isEmpty ? "Select aircraft" : viewModel.aircraftReg))
                             .font(.subheadline.bold())
                             .foregroundColor(viewModel.aircraftReg.isEmpty ? .secondary : .primary)
 
-                        if !viewModel.aircraftReg.isEmpty && !viewModel.aircraftType.isEmpty {
+                        if !isDisabled && !viewModel.aircraftReg.isEmpty && !viewModel.aircraftType.isEmpty {
                             Text(viewModel.aircraftType)
                                 .font(.caption.bold())
                                 .foregroundColor(.secondary)
@@ -184,6 +184,7 @@ struct ModernAircraftRegField: View {
             .cornerRadius(8)
         }
         .buttonStyle(PlainButtonStyle())
+        .opacity(isDisabled ? 0.75 : 1.0)
         .disabled(isDisabled)
         .sheet(isPresented: $showingPicker) {
             AircraftRegPickerSheet(
@@ -313,7 +314,7 @@ struct ModernCrewField: View {
                     .font(.caption.bold())
                     .foregroundColor(.secondary)
 
-                Text(value.isEmpty ? "Select crew" : value)
+                Text(isDisabled ? "" : (value.isEmpty ? "Select crew" : value))
                     .font(.subheadline.bold())
                     .foregroundColor(value.isEmpty ? .secondary : .primary)
             }
@@ -333,6 +334,7 @@ struct ModernCrewField: View {
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
         .cornerRadius(8)
+        .opacity(isDisabled ? 0.75 : 1.0)
         .contentShape(Rectangle())
         .onTapGesture {
             if !isDisabled {

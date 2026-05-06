@@ -415,7 +415,19 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
     }
-    
+
+    func restoreDefaultsAfterPositioning() {
+        guard !isEditingMode else { return }
+        switch flightTimePosition {
+        case .captain:
+            if captainName.isEmpty { captainName = defaultCaptainName }
+        case .firstOfficer:
+            if coPilotName.isEmpty { coPilotName = defaultCoPilotName }
+        case .secondOfficer:
+            if so1Name.isEmpty { so1Name = defaultSOName }
+        }
+    }
+
     private func loadAllSettings() {
         let settings = userDefaultsService.loadSettings()
 

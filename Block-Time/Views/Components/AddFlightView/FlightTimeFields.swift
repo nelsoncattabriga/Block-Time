@@ -91,9 +91,8 @@ struct ModernTimeField: View {
 
                 if isReadOnly {
                     HStack {
-                        Text(value.isEmpty ? "--:--" : value)
+                        Text("")
                             .font(.subheadline.bold())
-                            .foregroundColor(value.isEmpty ? .secondary : .primary)
                         Spacer()
                         Image(systemName: "lock.fill")
                             .font(.caption)
@@ -134,6 +133,7 @@ struct ModernTimeField: View {
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
         .cornerRadius(8)
+        .opacity(isReadOnly ? 0.75 : 1.0)
         .contentShape(Rectangle())
         .onTapGesture {
             if !isReadOnly {
@@ -239,9 +239,8 @@ struct ModernDecimalTimeField: View {
 
                 if isReadOnly {
                     HStack {
-                        Text(displayValue)
+                        Text("")
                             .font(.subheadline.bold())
-                            .foregroundColor(value.isEmpty ? .secondary : .primary)
                         Spacer()
                         Image(systemName: "lock.fill")
                             .font(.caption)
@@ -282,6 +281,7 @@ struct ModernDecimalTimeField: View {
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
         .cornerRadius(8)
+        .opacity(isReadOnly ? 0.75 : 1.0)
         .contentShape(Rectangle())
         .onTapGesture {
             if !isReadOnly {
