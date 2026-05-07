@@ -116,6 +116,70 @@
 
 ## Traceability
 
-| Phase | Requirements |
-|-------|-------------|
-| TBD   | TBD — populated by roadmapper |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| FOUND-01 | Phase 1 — Foundation | Pending |
+| FOUND-02 | Phase 1 — Foundation | Pending |
+| FOUND-03 | Phase 1 — Foundation | Pending |
+| FOUND-04 | Phase 1 — Foundation | Pending |
+| FOUND-05 | Phase 1 — Foundation | Pending |
+| FOUND-06 | Phase 1 — Foundation | Pending |
+| FOUND-07 | Phase 1 — Foundation | Pending |
+| FOUND-08 | Phase 1 — Foundation | Pending |
+| FOUND-09 | Phase 1 — Foundation | Pending |
+| FOUND-10 | Phase 1 — Foundation | Pending |
+| FOUND-11 | Phase 1 — Foundation | Pending |
+| FOUND-12 | Phase 1 — Foundation | Pending |
+| CALC-01 | Phase 2 — Calculators & Tests | Pending |
+| CALC-02 | Phase 2 — Calculators & Tests | Pending |
+| CALC-03 | Phase 2 — Calculators & Tests | Pending |
+| CALC-04 | Phase 2 — Calculators & Tests | Pending |
+| CALC-05 | Phase 2 — Calculators & Tests | Pending |
+| CALC-06 | Phase 2 — Calculators & Tests | Pending |
+| CALC-07 | Phase 2 — Calculators & Tests | Pending |
+| CALC-08 | Phase 2 — Calculators & Tests | Pending |
+| CALC-09 | Phase 2 — Calculators & Tests | Pending |
+| CALC-10 | Phase 2 — Calculators & Tests | Pending |
+| CALC-11 | Phase 2 — Calculators & Tests | Pending |
+| CALC-12 | Phase 2 — Calculators & Tests | Pending |
+| UI-01 | Phase 3 — Core UI | Pending |
+| UI-02 | Phase 3 — Core UI | Pending |
+| UI-03 | Phase 3 — Core UI | Pending |
+| UI-04 | Phase 3 — Core UI | Pending |
+| UI-05 | Phase 3 — Core UI | Pending |
+| UI-06 | Phase 3 — Core UI | Pending |
+| UI-07 | Phase 3 — Core UI | Pending |
+| UI-08 | Phase 3 — Core UI | Pending |
+| UI-09 | Phase 3 — Core UI | Pending |
+| UI-10 | Phase 3 — Core UI | Pending |
+| UI-11 | Phase 3 — Core UI | Pending |
+| UI-12 | Phase 3 — Core UI | Pending |
+| UI-13 | Phase 3 — Core UI | Pending |
+| IMP-01 | Phase 4 — Import Pipeline | Pending |
+| IMP-02 | Phase 4 — Import Pipeline | Pending |
+| IMP-03 | Phase 4 — Import Pipeline | Pending |
+| IMP-04 | Phase 4 — Import Pipeline | Pending |
+| IMP-05 | Phase 4 — Import Pipeline | Pending |
+| IMP-06 | Phase 4 — Import Pipeline | Pending |
+| IMP-07 | Phase 4 — Import Pipeline | Pending |
+| WIDG-01 | Phase 5 — Widgets & Extensions | Pending |
+| WIDG-02 | Phase 5 — Widgets & Extensions | Pending |
+| WIDG-03 | Phase 5 — Widgets & Extensions | Pending |
+| WIDG-04 | Phase 5 — Widgets & Extensions | Pending |
+| WIDG-05 | Phase 5 — Widgets & Extensions | Pending |
+| EXP-01 | Phase 6 — Export & Settings | Pending |
+| EXP-02 | Phase 6 — Export & Settings | Pending |
+| EXP-03 | Phase 6 — Export & Settings | Pending |
+| EXP-04 | Phase 6 — Export & Settings | Pending |
+| EXP-05 | Phase 6 — Export & Settings | Pending |
+| SET-01 | Phase 6 — Export & Settings | Pending |
+| SET-02 | Phase 6 — Export & Settings | Pending |
+| SET-03 | Phase 6 — Export & Settings | Pending |
+| SET-04 | Phase 6 — Export & Settings | Pending |
+| SET-05 | Phase 6 — Export & Settings | Pending |
+| SET-06 | Phase 6 — Export & Settings | Pending |
+| MAC-01 | Phase 7 — Mac + Pre-release | Pending |
+| MAC-02 | Phase 7 — Mac + Pre-release | Pending |
+| MAC-03 | Phase 7 — Mac + Pre-release | Pending |
+| MAC-04 | Phase 7 — Mac + Pre-release | Pending |
+| MAC-05 | Phase 7 — Mac + Pre-release | Pending |
