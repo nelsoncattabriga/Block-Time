@@ -196,12 +196,15 @@ struct ModernCapturedDataCard: View {
     private var insButton: some View {
         Button {
             if !viewModel.isSpIns {
+                let targetIsAircraft = viewModel.defaultInstructionEnvironment == .aircraft
                 viewModel.isSpIns = true
                 viewModel.isSimulator = false
                 viewModel.isPositioning = false
-                viewModel.blockTime = ""
+                if !targetIsAircraft {
+                    viewModel.blockTime = ""
+                }
                 viewModel.nightTime = ""
-                viewModel.isInstructingInAircraft = viewModel.defaultInstructionEnvironment == .aircraft
+                viewModel.isInstructingInAircraft = targetIsAircraft
                 if viewModel.isInstructingInAircraft && viewModel.captainName.isEmpty {
                     viewModel.captainName = viewModel.defaultCaptainName
                 }
