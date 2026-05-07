@@ -61,9 +61,10 @@ struct FRMSFlightStripCard: View {
                     .rotationEffect(.degrees(-90))
                     .animation(.spring(response: 0.7, dampingFraction: 0.8), value: ratio)
 
-                VStack(spacing: 1) {
+                VStack(spacing: 2) {
                     Text(String(format: "%.1f", hours))
-                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .monospacedDigit()
                         .foregroundColor(.primary)
                     Text("hrs")
                         .font(.caption)
