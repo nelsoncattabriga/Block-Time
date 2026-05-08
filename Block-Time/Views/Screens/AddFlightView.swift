@@ -127,6 +127,10 @@ struct AddFlightView: View {
             }
             .onAppear {
                 viewModel.setupInitialData()
+                if AppState.shared.triggerCamera {
+                    AppState.shared.triggerCamera = false
+                    viewModel.showCamera()
+                }
             }
         }
     }

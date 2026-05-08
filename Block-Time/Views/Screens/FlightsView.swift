@@ -459,6 +459,13 @@ struct FlightsView: View {
                     loadSessionFilterIDs(sessionID)
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .openAddFlight)) { _ in
+                isAddingNewFlight = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openAddFlightCapture)) { _ in
+                AppState.shared.triggerCamera = true
+                isAddingNewFlight = true
+            }
             .onChange(of: filterViewModel.filterImportSessionID) { _, newSessionID in
                 if let sessionID = newSessionID {
                     loadSessionFilterIDs(sessionID)
