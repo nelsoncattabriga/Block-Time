@@ -110,14 +110,15 @@ class FRMSCalculationService {
     func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil, isSim: Bool = false) -> Date {
         let departureTime: Date = stdTime ?? outTime
 
-        // SIM sign-on is 45 minutes before start (FD12.1)
+        // SIM: 45 min before start (source: operational convention — not explicitly in FRMS PDFs)
         if isSim {
             return Calendar.current.date(byAdding: .minute, value: -45, to: departureTime) ?? departureTime
         }
 
         var minutesBefore = configuration.signOnMinutesBeforeSTD
 
-        // PAX domestic (both AU ports): LH = 45 min, SH = 30 min (FD3.2.3)
+        // SH FD3.1 / LH FD3.2.3: deadheading domestic (both AU ports) uses reduced sign-on.
+        // LH = 45 min, SH = 30 min. All other sectors use configured default (60 min).
         if isPositioning, let from = fromAirport, let to = toAirport,
            AirportService.shared.isAustralianAirport(from) && AirportService.shared.isAustralianAirport(to) {
             minutesBefore = configuration.fleet == .a380A330B787 ? 45 : 30
@@ -129,13 +130,15 @@ class FRMSCalculationService {
     /// Calculate sign-off time using configured minutes after actual IN
     /// - Parameters:
     ///   - inTime: Actual arrival time
-    ///   - isSim: Whether this is a simulator duty (uses 30 min sign-off per FD12.1)
+    ///   - toAirport: Arrival airport code (used for SH domestic/international split)
+    ///   - isSim: Whether this is a simulator duty
     /// - Returns: Sign-off time
     func calculateSignOff(inTime: Date, toAirport: String? = nil, isSim: Bool = false) -> Date {
-        // SIM sign-off is 30 minutes after end (FD12.1)
+        // SIM: 30 min after end (source: operational convention — not explicitly in FRMS PDFs)
         var minutesAfter = isSim ? 30 : configuration.signOffMinutesAfterIN
 
-        // SH fleet: international arrival uses 30 min instead of 15 min
+        // SH FD4.1: 30 min after international arrival, 15 min after domestic.
+        // LH FD7.1.1/FD7.2.1: 30 min after arrival (all sectors).
         if !isSim, configuration.fleet == .a320B737, let to = toAirport,
            !AirportService.shared.isAustralianAirport(to) {
             minutesAfter = 30
