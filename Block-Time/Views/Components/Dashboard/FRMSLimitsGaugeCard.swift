@@ -57,6 +57,7 @@ struct FRMSLimitGaugeItem: Identifiable {
 struct FRMSLimitsGaugeCard: View {
     var frmsViewModel: FRMSViewModel
     let strip: NDFRMSStripData
+    @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes = false
 
     // Projected hours for upcoming scheduled (non-completed) flights
     // These are passed in from a lightweight query on the dashboard ViewModel.
@@ -286,7 +287,7 @@ struct FRMSLimitsGaugeCard: View {
     // MARK: - Helpers
 
     private func formattedHours(_ h: Double) -> String {
-        String(format: "%.1f", h)
+        showTimesInHoursMinutes ? FlightSector.decimalToHHMM(h) : String(format: "%.1f", h)
     }
 
     @MainActor
