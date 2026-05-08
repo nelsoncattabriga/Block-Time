@@ -24,9 +24,9 @@ struct NewDashboardView: View {
 
     /// Loads dashboard data and FRMS cumulative totals concurrently.
     private func loadAll() async {
-        async let dashboardLoad: () = viewModel.load()
-        async let frmsLoad: () = triggerFRMSLoadIfNeeded()
-        _ = await (dashboardLoad, frmsLoad)
+        // FRMS loads first so its duties are available for the rolling chart
+        await triggerFRMSLoadIfNeeded()
+        await viewModel.load(duties: frmsViewModel.dutiesLast365Days)
     }
 
     @MainActor
@@ -34,7 +34,7 @@ struct NewDashboardView: View {
         guard frmsViewModel.cumulativeTotals == nil, !frmsViewModel.isLoading else { return }
         let raw      = UserDefaults.standard.string(forKey: "flightTimePosition") ?? ""
         let position = FlightTimePosition(rawValue: raw) ?? .captain
-        frmsViewModel.loadFlightData(crewPosition: position)
+        await frmsViewModel.refreshFlightData(crewPosition: position, ignoresCooldown: true)
     }
 
     var body: some View {
@@ -79,7 +79,7 @@ struct NewDashboardView: View {
                         detailCards
                             .padding(.horizontal, 16)
                     }
-                    .refreshable { await viewModel.load() }
+                    .refreshable { await loadAll() }
                 }
             }
             .toolbarVisibility(.hidden, for: .navigationBar)
@@ -92,7 +92,7 @@ struct NewDashboardView: View {
             Task { await loadAll() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            Task { await viewModel.load() }
+            Task { await viewModel.load(duties: frmsViewModel.dutiesLast365Days) }
         }
     }
 
@@ -115,7 +115,7 @@ struct NewDashboardView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                     }
-                    .refreshable { await viewModel.load() }
+                    .refreshable { await loadAll() }
                 }
             }
             .navigationTitle("Dashboard")
@@ -136,7 +136,7 @@ struct NewDashboardView: View {
             Task { await loadAll() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            Task { await viewModel.load() }
+            Task { await viewModel.load(duties: frmsViewModel.dutiesLast365Days) }
         }
     }
 

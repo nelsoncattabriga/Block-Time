@@ -35,7 +35,7 @@ extension FlightDatabaseService {
 
     /// Returns all analytics for the Insights dashboard on a background context.
     /// All Core Data fetching and computation runs off the main thread; only value types are returned.
-    func getInsightsData() async -> NDInsightsData {
+    func getInsightsData(duties: [FRMSDuty] = []) async -> NDInsightsData {
         await withCheckedContinuation { continuation in
             persistentContainer.performBackgroundTask { context in
                 context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
@@ -86,7 +86,7 @@ extension FlightDatabaseService {
                     careerStats: self.computeCareerStats(flights),
                     frmsStrip: self.computeFRMSStrip(flights),
                     projectedFRMS: self.computeProjectedFRMS(context: context),
-                    frmsRolling: self.computeFRMSRolling(context: context)
+                    frmsRolling: self.computeFRMSRolling(duties: duties, context: context)
                 )
                 continuation.resume(returning: result)
             }
@@ -287,7 +287,7 @@ extension FlightDatabaseService {
     ///
     /// Past points use actual completed flights; future points use STD/STA scheduled times.
     /// Each point's `total` is the rolling sum for its window (e.g. 28 days) ending on that day.
-    func computeFRMSRolling(context: NSManagedObjectContext? = nil) -> NDFRMSRollingData {
+    func computeFRMSRolling(duties: [FRMSDuty] = [], context: NSManagedObjectContext? = nil) -> NDFRMSRollingData {
         let ctx = context ?? viewContext
 
         // MARK: Config
@@ -322,9 +322,8 @@ extension FlightDatabaseService {
         let histEntities: [FlightEntity]
         do { histEntities = try ctx.fetch(histRequest) } catch { return .empty }
 
-        // Build [Date: (flightHours, dutyHours)] per calendar day from actual flights
+        // Build [Date: flightHours] per calendar day from actual flights
         var actualFlight: [Date: Double] = [:]
-        var actualDuty:   [Date: Double] = [:]
 
         for entity in histEntities {
             guard let entityDate = entity.date else { continue }
@@ -333,10 +332,15 @@ extension FlightDatabaseService {
             let st  = isSpInsOnly(entity) ? 0.0 : hrs(entity.simTime)
             let fh  = bt + st
             actualFlight[day, default: 0] += fh
-            // Duty per sector: flight time + margins (approximate; FRMSViewModel does exact grouping)
-            if fh > 0 {
-                actualDuty[day, default: 0] += fh + Double(signOnMins + signOffMins) / 60.0
-            }
+        }
+
+        // Build [Date: dutyHours] per calendar day from FRMSViewModel's grouped duties.
+        // Matches calculateCumulativeTotals exactly: simulator duties are factored 1.5× (FD12.1).
+        var actualDuty: [Date: Double] = [:]
+        for duty in duties {
+            let day = cal.startOfDay(for: duty.date)
+            let dt  = duty.dutyType == .simulator ? duty.dutyTime * 1.5 : duty.dutyTime
+            actualDuty[day, default: 0] += dt
         }
 
         // MARK: Fetch future rostered flights

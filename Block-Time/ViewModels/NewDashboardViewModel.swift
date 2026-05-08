@@ -236,9 +236,9 @@ final class NewDashboardViewModel {
     var isLoading = true
     private(set) var hasLoadedOnce = false
 
-    func load() async {
+    func load(duties: [FRMSDuty] = []) async {
         if !hasLoadedOnce { isLoading = true }
-        let data = await FlightDatabaseService.shared.getInsightsData()
+        let data = await FlightDatabaseService.shared.getInsightsData(duties: duties)
         monthlyActivity  = data.monthlyActivity
         dailyActivity    = data.dailyActivity
         fleetHours       = data.fleetHours
