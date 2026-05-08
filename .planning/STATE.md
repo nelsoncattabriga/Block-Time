@@ -46,7 +46,13 @@ Phases completed: 0 / 7
 ### Blockers
 - (none yet)
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260508-lvr | Add AddFlightWidget to the BlockTimeWidget extension | 2026-05-08 | f1aef95 | [260508-lvr-add-addflightwidget-to-the-blocktimewidg](./quick/260508-lvr-add-addflightwidget-to-the-blocktimewidg/) |
+
 ## Session Continuity
 
-Last session: 2026-05-07 — Roadmap created, files written, traceability populated
+Last activity: 2026-05-08 - Completed quick task 260508-lvr: Add AddFlightWidget to the BlockTimeWidget extension
 Next action: `/gsd:plan-phase 1` — plan Foundation phase
