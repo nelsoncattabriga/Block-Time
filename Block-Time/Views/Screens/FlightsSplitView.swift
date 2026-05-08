@@ -612,6 +612,17 @@ private struct FlightsListContent: View {
                 viewModel.exitEditingMode()
             }
             Task { await loadFlights() }
+            if AppState.shared.pendingAddFlight {
+                AppState.shared.pendingAddFlight = false
+                isAddingNewFlight = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openAddFlight)) { _ in
+            isAddingNewFlight = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openAddFlightCapture)) { _ in
+            AppState.shared.triggerCamera = true
+            isAddingNewFlight = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .reviewImportSession)) { notification in
             if let sessionID = notification.userInfo?["sessionID"] as? UUID {
