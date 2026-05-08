@@ -63,6 +63,37 @@ enum WidgetAppearanceOption: String, AppEnum {
     ]
 }
 
+// MARK: - Add Flight intent
+
+struct AddFlightIntent: AppIntents.WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Widget Settings"
+    static var description = IntentDescription("Customise the widget appearance.")
+
+    @Parameter(title: "Style", default: .gradient)
+    var style: WidgetStyleOption
+
+    /// Only shown when Style = Solid. Gradient always uses Automatic.
+    @Parameter(title: "Appearance", default: .automatic)
+    var appearance: WidgetAppearanceOption
+
+    static var parameterSummary: some ParameterSummary {
+        When(\AddFlightIntent.$style, .equalTo, .solid) {
+            Summary {
+                \AddFlightIntent.$style
+                \AddFlightIntent.$appearance
+            }
+        } otherwise: {
+            Summary {
+                \AddFlightIntent.$style
+            }
+        }
+    }
+
+    var resolvedAppearance: WidgetAppearanceOption {
+        style == .gradient ? .automatic : appearance
+    }
+}
+
 // MARK: - Configuration intent
 
 struct NextFlightIntent: AppIntents.WidgetConfigurationIntent {

@@ -44,8 +44,12 @@ private enum WT {
     }
 
     @ViewBuilder
-    static func background(dark: Bool) -> some View {
-        gradient(dark: dark).ignoresSafeArea()
+    static func background(style: WidgetStyleOption, dark: Bool) -> some View {
+        if style == .gradient {
+            gradient(dark: dark).ignoresSafeArea()
+        } else {
+            (dark ? darkBG : lightBGSolid).ignoresSafeArea()
+        }
     }
 }
 
@@ -58,23 +62,35 @@ private let captureSupportedFleets: Set<String> = ["B737", "A330", "B787", "A320
 struct AddFlightEntry: TimelineEntry {
     let date: Date
     let captureSupported: Bool
+    let style: WidgetStyleOption
+    let appearance: WidgetAppearanceOption
 }
 
-struct AddFlightProvider: TimelineProvider {
+struct AddFlightProvider: AppIntentTimelineProvider {
+    typealias Entry = AddFlightEntry
+    typealias Intent = AddFlightIntent
+
     func placeholder(in context: Context) -> AddFlightEntry {
-        AddFlightEntry(date: Date(), captureSupported: true)
+        AddFlightEntry(date: Date(), captureSupported: true, style: .gradient, appearance: .automatic)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (AddFlightEntry) -> Void) {
+    func snapshot(for configuration: AddFlightIntent, in context: Context) async -> AddFlightEntry {
+        makeEntry(for: configuration)
+    }
+
+    func timeline(for configuration: AddFlightIntent, in context: Context) async -> Timeline<AddFlightEntry> {
+        Timeline(entries: [makeEntry(for: configuration)], policy: .never)
+    }
+
+    private func makeEntry(for configuration: AddFlightIntent) -> AddFlightEntry {
         let fleetID = UserDefaults(suiteName: "group.com.thezoolab.blocktime")?.string(forKey: "selectedFleetID") ?? "B737"
         let supported = captureSupportedFleets.contains(fleetID)
-        completion(AddFlightEntry(date: Date(), captureSupported: supported))
-    }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<AddFlightEntry>) -> Void) {
-        getSnapshot(in: context) { entry in
-            completion(Timeline(entries: [entry], policy: .never))
-        }
+        return AddFlightEntry(
+            date: Date(),
+            captureSupported: supported,
+            style: configuration.style,
+            appearance: configuration.resolvedAppearance
+        )
     }
 }
 
@@ -84,7 +100,7 @@ struct AddFlightWidget: Widget {
     let kind = "AddFlightWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: AddFlightProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: AddFlightIntent.self, provider: AddFlightProvider()) { entry in
             AddFlightWidgetView(entry: entry)
                 .containerBackground(for: .widget) { Color.clear }
         }
@@ -103,20 +119,26 @@ struct AddFlightWidgetView: View {
 
     let entry: AddFlightEntry
 
-    private var isDark: Bool { systemScheme == .dark }
+    private var isDark: Bool {
+        switch entry.appearance {
+        case .dark:      return true
+        case .light:     return false
+        case .automatic: return systemScheme == .dark
+        }
+    }
     private var primary: Color { isDark ? WT.primaryDark : WT.primaryLight }
 
     var body: some View {
         ZStack {
-            WT.background(dark: isDark)
+            WT.background(style: entry.style, dark: isDark)
 
             switch widgetFamily {
             case .systemSmall:
-                SmallAddFlightView(isDark: isDark, primary: primary)
+                SmallAddFlightView(isDark: isDark, primary: primary, captureSupported: entry.captureSupported)
             case .systemMedium:
                 MediumAddFlightView(isDark: isDark, primary: primary, captureSupported: entry.captureSupported)
             default:
-                SmallAddFlightView(isDark: isDark, primary: primary)
+                SmallAddFlightView(isDark: isDark, primary: primary, captureSupported: entry.captureSupported)
             }
         }
     }
@@ -127,27 +149,43 @@ struct AddFlightWidgetView: View {
 private struct SmallAddFlightView: View {
     let isDark: Bool
     let primary: Color
+    let captureSupported: Bool
+
+    private var destination: URL {
+        captureSupported
+            ? URL(string: "blocktime://add-flight?capture=true")!
+            : URL(string: "blocktime://add-flight")!
+    }
 
     var body: some View {
-        Link(destination: URL(string: "blocktime://add-flight")!) {
-            VStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 36, weight: .semibold))
-                    .foregroundStyle(WT.orange)
+        Link(destination: destination) {
+            VStack(alignment: .leading, spacing: 0) {
+                // Header — top left, matches NextFlightWidgetView
+                HStack(spacing: 4) {
+                    Image(systemName: "airplane.departure")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(WT.orange)
+                    Text("BLOCK-TIME")
+                        .font(.system(size: 10, weight: .semibold))
+                        .kerning(0.6)
+                        .foregroundStyle(WT.secondary)
+                }
 
-                Text("Add Flight")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(primary)
+                Spacer()
 
-                Rectangle()
-                    .fill(WT.orange.opacity(0.25))
-                    .frame(height: 1)
-                    .padding(.horizontal, 20)
+                // Action
+                VStack(spacing: 6) {
+                    Image(systemName: captureSupported ? "camera.fill" : "plus.circle.fill")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundStyle(WT.orange)
+                    Text(captureSupported ? "Capture ACARS" : "Add Flight")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
 
-                Text("BLOCK-TIME")
-                    .font(.system(size: 9, weight: .semibold))
-                    .kerning(0.8)
-                    .foregroundStyle(WT.secondary)
+                Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(14)
@@ -258,17 +296,17 @@ private struct TileView: View {
 #Preview("Small — Add Flight", as: .systemSmall) {
     AddFlightWidget()
 } timeline: {
-    AddFlightEntry(date: Date(), captureSupported: true)
+    AddFlightEntry(date: Date(), captureSupported: true, style: .gradient, appearance: .automatic)
 }
 
 #Preview("Medium — Capture Supported", as: .systemMedium) {
     AddFlightWidget()
 } timeline: {
-    AddFlightEntry(date: Date(), captureSupported: true)
+    AddFlightEntry(date: Date(), captureSupported: true, style: .gradient, appearance: .automatic)
 }
 
 #Preview("Medium — Capture Not Supported", as: .systemMedium) {
     AddFlightWidget()
 } timeline: {
-    AddFlightEntry(date: Date(), captureSupported: false)
+    AddFlightEntry(date: Date(), captureSupported: false, style: .solid, appearance: .dark)
 }

@@ -102,10 +102,10 @@ struct Block_TimeApp: App {
                 let capture = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                     .queryItems?.contains(where: { $0.name == "capture" && $0.value == "true" }) ?? false
                 if capture {
-                    NotificationCenter.default.post(name: .openAddFlightCapture, object: nil)
-                } else {
-                    NotificationCenter.default.post(name: .openAddFlight, object: nil)
+                    AppState.shared.triggerCamera = true
                 }
+                AppState.shared.pendingAddFlight = true
+                NotificationCenter.default.post(name: capture ? .openAddFlightCapture : .openAddFlight, object: nil)
             }
             return
         }
