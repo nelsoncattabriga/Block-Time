@@ -369,6 +369,7 @@ class FlightDatabaseService: ObservableObject {
                 success = true
 
             } catch {
+                viewContext.rollback()
                 LogManager.shared.error("Database: Error updating flight - \(error.localizedDescription)")
             }
         }

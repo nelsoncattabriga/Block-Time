@@ -431,8 +431,12 @@ extension FlightDatabaseService {
             var runningTotal = 0.0
             // addTail: next index to be consumed into runningTotal (entries with date <= cursor)
             // evictHead: next index to be evicted when it falls outside the window floor
-            var addTail   = 0
-            var evictHead = 0
+            // countedAtAdd: parallel array tracking whether each entry was included in runningTotal
+            // when it was added — used at eviction time to subtract exactly what was added,
+            // regardless of whether the cursor has since crossed today.
+            var addTail      = 0
+            var evictHead    = 0
+            var countedAtAdd = [Bool](repeating: false, count: allDays.count)
             var cursor = seriesStart
 
             while cursor <= seriesEnd {
@@ -444,6 +448,7 @@ extension FlightDatabaseService {
                     // Past cursor: only count actual (non-projected) values.
                     // Future cursor: count everything (actual history + projected future).
                     let shouldCount = isFuture ? true : !entry.isFuture
+                    countedAtAdd[addTail] = shouldCount
                     if shouldCount { runningTotal += entry.value }
                     addTail += 1
                 }
@@ -454,9 +459,7 @@ extension FlightDatabaseService {
                     continue
                 }
                 while evictHead < addTail && allDays[evictHead].date < windowFloor {
-                    let entry = allDays[evictHead]
-                    let wasCounted = isFuture ? true : !entry.isFuture
-                    if wasCounted { runningTotal -= entry.value }
+                    if countedAtAdd[evictHead] { runningTotal -= allDays[evictHead].value }
                     evictHead += 1
                 }
 
