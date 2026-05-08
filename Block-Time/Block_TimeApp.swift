@@ -96,6 +96,20 @@ struct Block_TimeApp: App {
     }
 
     private func handleIncomingURL(_ url: URL) {
+        // Handle blocktime:// deep link scheme (widget deep links)
+        if url.scheme == "blocktime" {
+            if url.host == "add-flight" {
+                let capture = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?.contains(where: { $0.name == "capture" && $0.value == "true" }) ?? false
+                if capture {
+                    NotificationCenter.default.post(name: .openAddFlightCapture, object: nil)
+                } else {
+                    NotificationCenter.default.post(name: .openAddFlight, object: nil)
+                }
+            }
+            return
+        }
+
         let fileExtension = url.pathExtension.lowercased()
 
         // Check if it's a migration file

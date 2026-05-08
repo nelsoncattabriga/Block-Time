@@ -16,5 +16,8 @@ class AppState: ObservableObject {
     /// Tracks if a file is currently being opened/imported
     @Published var isHandlingFileImport = false
 
+    /// Set to true before opening AddFlightView via deep link to trigger ACARS camera on appear
+    @Published var triggerCamera: Bool = false
+
     private init() {}
 }

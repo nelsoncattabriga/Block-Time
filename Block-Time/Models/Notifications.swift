@@ -13,4 +13,6 @@ extension Notification.Name {
     static let reviewImportSession      = Notification.Name("reviewImportSession")
     static let navigateToBackupSettings = Notification.Name("navigateToBackupSettings")
     static let flightAdded              = Notification.Name("flightAdded")
+    static let openAddFlight            = Notification.Name("openAddFlight")
+    static let openAddFlightCapture     = Notification.Name("openAddFlightCapture")
 }
