@@ -1504,11 +1504,23 @@ class FlightTimeExtractorViewModel: ObservableObject {
     // MARK: - Add to internal Logbook
     
     func saveToLogbook() {
-        // For simulator flights, allow missing OUT/IN times if block time is present
-        if isSimulator {
+        let isSimInstruction = isSpIns && !isInstructingInAircraft
+        if isSimInstruction {
+            guard !spInsTime.isEmpty else {
+                statusMessage = "Sp/Ins time is required for simulator instruction"
+                statusColor = .red
+                return
+            }
+        } else if isSimulator {
             guard !blockTime.isEmpty else { return }
-        } else {
+        } else if !isPositioning {
             guard !outTime.isEmpty && !inTime.isEmpty else { return }
+            let computed = calculateFlightTime()
+            guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
+                statusMessage = "Block time cannot be zero"
+                statusColor = .red
+                return
+            }
         }
 
         HapticManager.shared.impact(.medium) // Haptic for save action
@@ -1789,6 +1801,21 @@ class FlightTimeExtractorViewModel: ObservableObject {
     func updateExistingFlight() -> Bool {
         guard let sectorID = editingSectorID else { return false }
 
+        let isSimInstruction = isSpIns && !isInstructingInAircraft
+        if isSimInstruction {
+            guard !spInsTime.isEmpty else {
+                statusMessage = "Sp/Ins time is required for simulator instruction"
+                statusColor = .red
+                return false
+            }
+        } else if !isSimulator && !isPositioning {
+            guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
+                statusMessage = "Block time cannot be zero"
+                statusColor = .red
+                return false
+            }
+        }
+
         HapticManager.shared.impact(.medium)
 
         // Calculate time credits based on selected time credit type
@@ -1797,7 +1824,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let p2TimeValue: String
 
         // Positioning and sim-instruction flights don't log any time credits
-        let isSimInstruction = isSpIns && !isInstructingInAircraft
         if isPositioning || isSimInstruction {
             p1TimeValue = "0.0"
             p1usTimeValue = "0.0"

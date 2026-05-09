@@ -127,7 +127,7 @@ struct FlightsSplitView: View {
                             .alert("Save Failed", isPresented: $showingSaveFailedAlert) {
                                 Button("OK", role: .cancel) { }
                             } message: {
-                                Text("Your changes could not be saved. Please try again.")
+                                Text("Check BLOCK time not empty.")
                             }
                             .onAppear {
 //                                        LogManager.shared.debug("Detail view appeared for flight: \(flight.flightNumberFormatted)")

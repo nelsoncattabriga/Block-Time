@@ -147,8 +147,12 @@ struct ModernCapturedDataCard: View {
             Button {
                 withAnimation(.spring(response: 0.2, dampingFraction: 0.75)) {
                     viewModel.isInstructingInAircraft = true
+                    // Carry spInsTime → blockTime when switching to aircraft INS
+                    if (viewModel.blockTime.isEmpty || viewModel.blockTime == "0.0"),
+                       !viewModel.spInsTime.isEmpty {
+                        viewModel.blockTime = viewModel.spInsTime
+                    }
                     viewModel.spInsTime = ""
-                    viewModel.blockTime = ""
                     if viewModel.captainName.isEmpty {
                         viewModel.captainName = viewModel.defaultCaptainName
                     }
@@ -168,7 +172,11 @@ struct ModernCapturedDataCard: View {
             Button {
                 withAnimation(.spring(response: 0.2, dampingFraction: 0.75)) {
                     viewModel.isInstructingInAircraft = false
-                    viewModel.spInsTime = ""
+                    // Carry blockTime → spInsTime when switching to simulator INS
+                    if viewModel.spInsTime.isEmpty,
+                       !viewModel.blockTime.isEmpty, viewModel.blockTime != "0.0" {
+                        viewModel.spInsTime = viewModel.blockTime
+                    }
                     viewModel.blockTime = ""
                 }
                 HapticManager.shared.impact(.light)
@@ -201,6 +209,10 @@ struct ModernCapturedDataCard: View {
                 viewModel.isSimulator = false
                 viewModel.isPositioning = false
                 if !targetIsAircraft {
+                    // Carry blockTime → spInsTime before clearing it
+                    if !viewModel.blockTime.isEmpty && viewModel.blockTime != "0.0" {
+                        viewModel.spInsTime = viewModel.blockTime
+                    }
                     viewModel.blockTime = ""
                 }
                 viewModel.nightTime = ""
