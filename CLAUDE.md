@@ -17,6 +17,11 @@ When something fails repeatedly, when Nelson has to re-explain, add a one-line b
 - Use `guard` for early exits
 - Prefer value types (structs) over reference types (classes)
 
+### @AppStorage Safety
+- Never store display names or labels as `@AppStorage` selection keys — store stable IDs (enum raw values, fixed string constants) only
+- When reading a stored selection, always validate it against the current valid set and fall back to a safe default if missing/invalid
+- Enum raw values stored in `@AppStorage` must have a `?? .default` fallback at every read site
+
 ### SwiftUI Patterns
 - Extract views when they exceed 500 lines
 - Use `@State` for local view state only
