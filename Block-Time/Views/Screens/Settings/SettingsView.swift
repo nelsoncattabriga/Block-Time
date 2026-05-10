@@ -1684,7 +1684,6 @@ struct ShareSheetWrapper: UIViewControllerRepresentable {
 // MARK: - Fleet Selector Row
 private struct ModernFleetSelectorRow: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
-    @StateObject private var fleetService = AircraftFleetService.shared
     @State private var availableFleets: [Fleet] = []
     @State private var selectedFleet: Fleet?
 
@@ -1726,9 +1725,16 @@ private struct ModernFleetSelectorRow: View {
     }
 
     private func loadFleets() {
-        availableFleets = fleetService.getAvailableFleetsWithCustom()
+        availableFleets = AircraftFleetService.availableFleets.filter { !$0.aircraft.isEmpty }
         if selectedFleet == nil {
-            selectedFleet = availableFleets.first(where: { $0.id == viewModel.selectedFleetID }) ?? availableFleets.first
+            if let match = availableFleets.first(where: { $0.id == viewModel.selectedFleetID }) {
+                selectedFleet = match
+            } else {
+                selectedFleet = availableFleets.first
+                if let fallback = availableFleets.first {
+                    viewModel.updateSelectedFleetID(fallback.id)
+                }
+            }
         }
     }
 }
