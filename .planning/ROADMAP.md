@@ -79,12 +79,13 @@
 **Goal:** PDF, CSV, and calendar exports work against the SwiftData repository, and all app settings have one consolidated source of truth.
 **UI hint:** yes
 **Depends on:** Phase 3
-**Requirements:** EXP-01, EXP-02, EXP-03, EXP-04, EXP-05, SET-01, SET-02, SET-03, SET-04, SET-05, SET-06
+**Requirements:** EXP-01, EXP-02, EXP-03, EXP-04, EXP-05, SET-01, SET-02, SET-03, SET-04, SET-05, SET-06, CUST-01, CUST-02, CUST-03
 **Success criteria:**
 1. A user exports their logbook as PDF — the output is visually identical to v1 with correct role columns, totals rows, and ICAO types.
 2. CSV export produces a file that re-imports cleanly into the same app without data loss or field misalignment.
 3. Changing a setting on one device appears on a second device within 60 seconds via CloudKit settings sync.
 4. No service or ViewModel reads `@AppStorage` directly — all preference reads go through `AppSettings`.
+5. A user can add a custom airport (CUST-01), it appears immediately in the FROM/TO picker and overrides any bundled entry with the same ICAO (CUST-02), and custom airports sync to all devices via CloudKit alongside flights (CUST-03).
 **Plans:** TBD
 
 ### Phase 7: Mac + Pre-release
@@ -111,9 +112,9 @@ All 65 v1 requirements mapped to exactly one phase. No orphans.
 | 3 — Core UI | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07, UI-08, UI-09, UI-10, UI-11, UI-12, UI-13 | 13 |
 | 4 — Import Pipeline | IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07 | 7 |
 | 5 — Widgets & Extensions | WIDG-01, WIDG-02, WIDG-03, WIDG-04, WIDG-05 | 5 |
-| 6 — Export & Settings | EXP-01, EXP-02, EXP-03, EXP-04, EXP-05, SET-01, SET-02, SET-03, SET-04, SET-05, SET-06 | 11 |
+| 6 — Export & Settings | EXP-01, EXP-02, EXP-03, EXP-04, EXP-05, SET-01, SET-02, SET-03, SET-04, SET-05, SET-06, CUST-01, CUST-02, CUST-03 | 14 |
 | 7 — Mac + Pre-release | MAC-01, MAC-02, MAC-03, MAC-04, MAC-05 | 5 |
-| **Total** | | **65/65** |
+| **Total** | | **68/68** |
 
 ---
 
