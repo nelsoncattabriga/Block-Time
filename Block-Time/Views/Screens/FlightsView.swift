@@ -57,6 +57,18 @@ struct FlightsView: View {
     @State private var reloadTask: Task<Void, Never>?
     @State private var cachedTotalHours: Double = 0.0
     @State private var isAddingNewFlight: Bool = false
+
+    private var bulkDeleteAlertTitle: String {
+        let word = selectedFlights.count == 1 ? "Entry" : "Entries"
+        return "Delete \(selectedFlights.count) \(word)?"
+    }
+
+    private var deleteFlightAlertTitle: String {
+        if let flight = flightToDelete {
+            return "Delete flight \(flight.flightNumberFormatted)?"
+        }
+        return "Delete Flight?"
+    }
     @State private var hasScrolledOnLaunch = false
     @State private var showingMap = false
     @State private var showingSpreadsheet = false
@@ -449,6 +461,10 @@ struct FlightsView: View {
                     viewModel.exitEditingMode()
                 }
                 Task { await loadFlights() }
+                if AppState.shared.pendingAddFlight {
+                    AppState.shared.pendingAddFlight = false
+                    isAddingNewFlight = true
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
                 debouncedLoadFlights()
@@ -458,6 +474,13 @@ struct FlightsView: View {
                     filterViewModel.filterImportSessionID = sessionID
                     loadSessionFilterIDs(sessionID)
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openAddFlight)) { _ in
+                isAddingNewFlight = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openAddFlightCapture)) { _ in
+                AppState.shared.triggerCamera = true
+                isAddingNewFlight = true
             }
             .onChange(of: filterViewModel.filterImportSessionID) { _, newSessionID in
                 if let sessionID = newSessionID {
@@ -479,7 +502,7 @@ struct FlightsView: View {
             } message: {
                 Text("This will permanently delete all flights from this import. This cannot be undone.")
             }
-            .alert(flightToDelete.map { "Delete flight \($0.flightNumberFormatted)?" } ?? "Delete Flight?",
+            .alert(deleteFlightAlertTitle,
                    isPresented: $showingDeleteAlert,
                    presenting: flightToDelete) { flight in
                 Button("Delete", role: .destructive) {
@@ -490,7 +513,7 @@ struct FlightsView: View {
                     flightToDelete = nil
                 }
             }
-            .alert("Delete \(selectedFlights.count) \(selectedFlights.count == 1 ? "Entry" : "Entries")?",
+            .alert(bulkDeleteAlertTitle,
                    isPresented: $showingBulkDeleteAlert) {
                 Button("Delete", role: .destructive) {
                     HapticManager.shared.notification(.warning)

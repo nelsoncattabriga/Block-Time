@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct SupportView: View {
     @Environment(ThemeService.self) private var themeService
@@ -19,6 +20,8 @@ struct SupportView: View {
     @State private var recalculateResult: String?
     @State private var showingUUIDRegenerationAlert = false
     @State private var uuidRegenerationMessage = ""
+    @State private var showingGhostFlightAlert = false
+    @State private var ghostFlightMessage = ""
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
@@ -255,6 +258,62 @@ struct SupportView: View {
                                 .cornerRadius(8)
                             }
                             .buttonStyle(PlainButtonStyle())
+
+                            // Recover Ghost Flights Button
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                let context = FlightDatabaseService.shared.persistentContainer.viewContext
+                                var recovered = 0
+                                context.performAndWait {
+                                    let request = NSFetchRequest<FlightEntity>(entityName: "FlightEntity")
+                                    request.predicate = NSPredicate(
+                                        format: "(blockTime == %@ OR blockTime == %@ OR blockTime == %@ OR blockTime == nil) AND (simTime == %@ OR simTime == %@ OR simTime == %@ OR simTime == nil) AND isPositioning == NO AND (scheduledDeparture == nil OR scheduledDeparture == %@) AND (scheduledArrival == nil OR scheduledArrival == %@)",
+                                        "0", "0.0", "0.00", "0", "0.0", "0.00", "", ""
+                                    )
+                                    if let ghosts = try? context.fetch(request) {
+                                        recovered = ghosts.count
+                                        for ghost in ghosts {
+                                            ghost.isPositioning = true
+                                        }
+                                        try? context.save()
+                                    }
+                                }
+                                if recovered > 0 {
+                                    NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                                    ghostFlightMessage = "Found and surfaced \(recovered) hidden flight(s).\n\nThey are now visible as PAX flights. Review and correct their type and times."
+                                } else {
+                                    ghostFlightMessage = "No hidden flights found."
+                                }
+                                showingGhostFlightAlert = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "eye.fill")
+                                        .foregroundColor(.purple)
+                                        .frame(width: 20)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Recover Hidden Flights")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+
+                                        Text("Surface zero-time ghost records")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
+                                }
+                                .padding(12)
+                                .background(Color.purple.opacity(0.3))
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .alert("Ghost Flight Recovery", isPresented: $showingGhostFlightAlert) {
+                                Button("OK", role: .cancel) { }
+                            } message: {
+                                Text(ghostFlightMessage)
+                            }
                         }
                         .padding(.top, 8)
                         .alert("UUID Regeneration Complete", isPresented: $showingUUIDRegenerationAlert) {

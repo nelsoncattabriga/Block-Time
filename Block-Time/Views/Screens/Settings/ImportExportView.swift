@@ -802,13 +802,15 @@ struct WebCISMappingView: View {
                                 Text("Aircraft Type Mapping")
                                     .font(.headline)
                                 Spacer()
-                                Button(action: { showingRegistrationMapping = true }) {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "pencil")
-                                        Text("Edit")
+                                if !registrationMappings.isEmpty {
+                                    Button(action: { showingRegistrationMapping = true }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "pencil")
+                                            Text("Edit")
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundColor(.blue)
                                     }
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
                                 }
                             }
 
@@ -838,24 +840,32 @@ struct WebCISMappingView: View {
                                 .cornerRadius(8)
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.green.opacity(0.3), lineWidth: 1))
                             } else {
-                                Text("\(registrationMappings.filter { m in m.useAdvancedRules ? m.rules.isEmpty : m.simpleType.isEmpty }.count) pattern(s) need a type assigned")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                                Button(action: { showingRegistrationMapping = true }) {
-                                    HStack {
-                                        Image(systemName: "airplane").foregroundColor(.blue)
-                                        Text(registrationMappings.isEmpty ? "Setup Aircraft Types" : "Edit Aircraft Types")
-                                            .foregroundColor(.primary)
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .foregroundColor(Color.blue.opacity(0.7))
+                                VStack(spacing: 8) {
+                                    ForEach(registrationMappings) { mapping in
+                                        let resolved = mapping.useAdvancedRules
+                                            ? (!mapping.rules.isEmpty && mapping.rules.allSatisfy { !$0.aircraftType.isEmpty })
+                                            : !mapping.simpleType.isEmpty
+                                        HStack {
+                                            Image(systemName: resolved ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                                                .foregroundColor(resolved ? .green : .orange)
+                                            Text(mapping.pattern)
+                                                .foregroundColor(.secondary)
+                                            Text("→")
+                                                .foregroundColor(.secondary)
+                                            Text(resolved
+                                                ? (mapping.useAdvancedRules ? "\(mapping.rules.count) rule\(mapping.rules.count == 1 ? "" : "s")" : mapping.simpleType)
+                                                : "Not set")
+                                                .fontWeight(.medium)
+                                                .foregroundColor(resolved ? .primary : .orange)
+                                            Spacer()
+                                        }
+                                        .font(.subheadline)
                                     }
-                                    .padding()
-                                    .background(Color.blue.opacity(0.12))
-                                    .cornerRadius(8)
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue.opacity(0.4), lineWidth: 1))
                                 }
+                                .padding()
+                                .background(Color.orange.opacity(0.06))
+                                .cornerRadius(8)
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.orange.opacity(0.25), lineWidth: 1))
                             }
                         }
                         .padding(.horizontal)

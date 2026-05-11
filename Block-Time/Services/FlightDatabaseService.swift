@@ -369,6 +369,7 @@ class FlightDatabaseService: ObservableObject {
                 success = true
 
             } catch {
+                viewContext.rollback()
                 LogManager.shared.error("Database: Error updating flight - \(error.localizedDescription)")
             }
         }
@@ -1209,7 +1210,11 @@ class FlightDatabaseService: ObservableObject {
                         let existingReg  = (existing.aircraftReg  ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                         let displayDate = sector.date
                         let displayRoute = "\(sector.fromAirport) → \(sector.toAirport)"
-                        if !incomingType.isEmpty && incomingType != existingType {
+                        // Auto-fill blank aircraftType — no conflict, no user review needed
+                        if !incomingType.isEmpty && existingType.isEmpty {
+                            existing.aircraftType = incomingType
+                            LogManager.shared.info("✏️ Auto-filled blank aircraftType: \(displayDate) \(displayRoute) → \(incomingType)")
+                        } else if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
                                 route: displayRoute,
@@ -1270,7 +1275,11 @@ class FlightDatabaseService: ObservableObject {
                                 newValue: incomingReg
                             ))
                         }
-                        if !incomingType.isEmpty && incomingType != existingType {
+                        // Auto-fill blank aircraftType — no conflict, no user review needed
+                        if !incomingType.isEmpty && existingType.isEmpty {
+                            existing.aircraftType = incomingType
+                            LogManager.shared.info("✏️ Auto-filled blank aircraftType (fuzzy): \(displayDate) \(displayRoute) → \(incomingType)")
+                        } else if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
                                 route: displayRoute,
@@ -1675,6 +1684,44 @@ class FlightDatabaseService: ObservableObject {
         """
 
         return (migratedCount, summary)
+    }
+
+    /// One-time migration: zero out p1Time/p1usTime/p2Time/nightTime/instrumentTime on SIM flights (simTime > 0).
+    /// These fields were incorrectly populated before the save-logic fix.
+    func migrateSimP1Times() -> Int {
+        var migratedCount = 0
+        viewContext.performAndWait {
+            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            // Find SIM flights with a non-zero value in any field that should be zero
+            request.predicate = NSPredicate(
+                format: "(simTime != %@ AND simTime != %@ AND simTime != %@) AND (flightNumber != %@) AND ((p1Time != %@ AND p1Time != %@ AND p1Time != %@) OR (p1usTime != %@ AND p1usTime != %@ AND p1usTime != %@) OR (p2Time != %@ AND p2Time != %@ AND p2Time != %@) OR (nightTime != %@ AND nightTime != %@ AND nightTime != %@) OR (instrumentTime != %@ AND instrumentTime != %@ AND instrumentTime != %@))",
+                "0", "0.0", "0.00", "SUMMARY",
+                "0", "0.0", "0.00",
+                "0", "0.0", "0.00",
+                "0", "0.0", "0.00",
+                "0", "0.0", "0.00",
+                "0", "0.0", "0.00"
+            )
+            do {
+                let flights = try viewContext.fetch(request)
+                for flight in flights {
+                    guard let simTime = flight.simTime, let sv = Double(simTime), sv > 0 else { continue }
+                    flight.p1Time = "0.0"
+                    flight.p1usTime = "0.0"
+                    flight.p2Time = "0.0"
+                    flight.nightTime = "0.0"
+                    flight.instrumentTime = "0.0"
+                    flight.modifiedAt = Date()
+                    migratedCount += 1
+                }
+                if viewContext.hasChanges { try viewContext.save() }
+            } catch {
+                LogManager.shared.error("migrateSimP1Times error: \(error.localizedDescription)")
+                viewContext.rollback()
+            }
+        }
+        LogManager.shared.info("migrateSimP1Times: zeroed p1/p1us/p2/night/instrument on \(migratedCount) SIM flights")
+        return migratedCount
     }
 
     /// One-time migration: update aircraftType from "A321" to "A21N" for the Qantas XLR fleet.

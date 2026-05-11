@@ -26,11 +26,11 @@ struct Block_TimeApp: App {
         DispatchQueue.global(qos: .userInitiated).async { _ = AirportService.shared }
 
     #if DEBUG
-//            PurchaseService.shared.resetToFreshInstall() // fresh trial
-
+          PurchaseService.shared.grantProForTesting()
+//          PurchaseService.shared.resetToFreshInstall()             // fresh trial
 //          PurchaseService.shared.resetTrialForTesting()            // expired — shows paywall
 //          PurchaseService.shared.resetTrialForTesting(daysRemaining: 3)  // red badge, warning icon
-          PurchaseService.shared.resetTrialForTesting(daysRemaining: 7)  // orange badge
+//          PurchaseService.shared.resetTrialForTesting(daysRemaining: 7)  // orange badge
 //          PurchaseService.shared.resetTrialForTesting(daysRemaining: 15) // blue badge, normal state
 
     #endif
@@ -96,6 +96,20 @@ struct Block_TimeApp: App {
     }
 
     private func handleIncomingURL(_ url: URL) {
+        // Handle blocktime:// deep link scheme (widget deep links)
+        if url.scheme == "blocktime" {
+            if url.host == "add-flight" {
+                let capture = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?.contains(where: { $0.name == "capture" && $0.value == "true" }) ?? false
+                if capture {
+                    AppState.shared.triggerCamera = true
+                }
+                AppState.shared.pendingAddFlight = true
+                NotificationCenter.default.post(name: capture ? .openAddFlightCapture : .openAddFlight, object: nil)
+            }
+            return
+        }
+
         let fileExtension = url.pathExtension.lowercased()
 
         // Check if it's a migration file

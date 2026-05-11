@@ -10,6 +10,7 @@ import SwiftUI
 struct BlockTimeWidgetBundle: WidgetBundle {
     var body: some Widget {
         BlockTimeWidget()
+        AddFlightWidget()
     }
 }
 

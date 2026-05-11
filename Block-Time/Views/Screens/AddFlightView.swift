@@ -127,6 +127,10 @@ struct AddFlightView: View {
             }
             .onAppear {
                 viewModel.setupInitialData()
+                if AppState.shared.triggerCamera {
+                    AppState.shared.triggerCamera = false
+                    viewModel.showCamera()
+                }
             }
         }
     }
@@ -152,7 +156,7 @@ private struct CompactLayoutView: View {
     var body: some View {
             LazyVStack(spacing: 16) {
                 // Photo Capture Card - show for supported fleets in both add and edit mode
-                if !hidePhotoCapture && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A321" || selectedFleetID == "A380") {
+                if !hidePhotoCapture && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A320" || selectedFleetID == "A380") {
                     ModernPhotoCaptureCard(viewModel: viewModel, fleetType: selectedFleetID)
                 }
 
@@ -246,7 +250,7 @@ private struct WideLayoutView: View {
                     VStack(spacing: 16) {
 
                         // Photo Capture Card - show for supported fleets in both add and edit mode
-                        if !hidePhotoCapture && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A321" || selectedFleetID == "A380") {
+                        if !hidePhotoCapture && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A320" || selectedFleetID == "A380") {
                             ModernPhotoCaptureCard(viewModel: viewModel, fleetType: selectedFleetID)
                         }
 

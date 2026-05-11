@@ -108,28 +108,20 @@ class FRMSCalculationService {
     ///   - toAirport: Arrival airport code (ICAO or IATA)
     /// - Returns: Sign-on time
     func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil, isSim: Bool = false) -> Date {
-        // Use STD (Scheduled Time of Departure) for sign-on calculation when available
-        // Only fall back to OUT (actual departure) if STD is not available
-        let departureTime: Date
-        if let std = stdTime {
-            departureTime = std  // Always use STD when available
-        } else {
-            departureTime = outTime  // No STD available, use OUT
-        }
+        let departureTime: Date = stdTime ?? outTime
 
-        // SIM sign-on is 45 minutes before start (FD12.1)
+        // SIM: 45 min before start (source: operational convention — not explicitly in FRMS PDFs)
         if isSim {
             return Calendar.current.date(byAdding: .minute, value: -45, to: departureTime) ?? departureTime
         }
 
         var minutesBefore = configuration.signOnMinutesBeforeSTD
 
-        // Special case: First flight of the day that is a positioning flight between two Australian ports
-        // uses 30 minutes instead of 60 minutes (e.g., YSSY-YBBN = 30 min, but YSSY-NZAA = 60 min)
-        if isFirstFlightOfDay && isPositioning, let from = fromAirport, let to = toAirport {
-            if AirportService.shared.isAustralianAirport(from) && AirportService.shared.isAustralianAirport(to) {
-                minutesBefore = 30
-            }
+        // SH FD3.1 / LH FD3.2.3: deadheading domestic (both AU ports) uses reduced sign-on.
+        // LH = 45 min, SH = 30 min. All other sectors use configured default (60 min).
+        if isPositioning, let from = fromAirport, let to = toAirport,
+           AirportService.shared.isAustralianAirport(from) && AirportService.shared.isAustralianAirport(to) {
+            minutesBefore = configuration.fleet == .a380A330B787 ? 45 : 30
         }
 
         return Calendar.current.date(byAdding: .minute, value: -minutesBefore, to: departureTime) ?? departureTime
@@ -138,13 +130,21 @@ class FRMSCalculationService {
     /// Calculate sign-off time using configured minutes after actual IN
     /// - Parameters:
     ///   - inTime: Actual arrival time
-    ///   - isSim: Whether this is a simulator duty (uses 30 min sign-off per FD12.1)
+    ///   - toAirport: Arrival airport code (used for SH domestic/international split)
+    ///   - isSim: Whether this is a simulator duty
     /// - Returns: Sign-off time
-    func calculateSignOff(inTime: Date, isSim: Bool = false) -> Date {
-        // SIM sign-off is 30 minutes after end (FD12.1)
-        let minutesAfter = isSim ? 30 : configuration.signOffMinutesAfterIN
-        let signOffTime = Calendar.current.date(byAdding: .minute, value: minutesAfter, to: inTime) ?? inTime
-        return signOffTime
+    func calculateSignOff(inTime: Date, toAirport: String? = nil, isSim: Bool = false) -> Date {
+        // SIM: 30 min after end (source: operational convention — not explicitly in FRMS PDFs)
+        var minutesAfter = isSim ? 30 : configuration.signOffMinutesAfterIN
+
+        // SH FD4.1: 30 min after international arrival, 15 min after domestic.
+        // LH FD7.1.1/FD7.2.1: 30 min after arrival (all sectors).
+        if !isSim, configuration.fleet == .a320B737, let to = toAirport,
+           !AirportService.shared.isAustralianAirport(to) {
+            minutesAfter = 30
+        }
+
+        return Calendar.current.date(byAdding: .minute, value: minutesAfter, to: inTime) ?? inTime
     }
 
     // MARK: - Cumulative Totals Calculation
@@ -1719,7 +1719,7 @@ class FRMSCalculationService {
                 toAirport: flightSector.toAirport,
                 isSim: isSim
             )
-            signOff = calculateSignOff(inTime: inDate, isSim: isSim)
+            signOff = calculateSignOff(inTime: inDate, toAirport: flightSector.toAirport, isSim: isSim)
         } else {
             // For flights without OUT/IN times:
             // - Try to use scheduled departure/arrival times
@@ -1757,7 +1757,7 @@ class FRMSCalculationService {
                     toAirport: flightSector.toAirport,
                     isSim: isSim
                 )
-                signOff = calculateSignOff(inTime: adjustedSta, isSim: isSim)
+                signOff = calculateSignOff(inTime: adjustedSta, toAirport: flightSector.toAirport, isSim: isSim)
             } else if let std = stdDate {
                 // Only have STD, estimate from flight time
                 signOn = calculateSignOn(
@@ -1769,7 +1769,16 @@ class FRMSCalculationService {
                     toAirport: flightSector.toAirport,
                     isSim: isSim
                 )
-                let signOffMinutes = isSim ? 30 : configuration.signOffMinutesAfterIN
+                let signOffMinutes: Int
+                if isSim {
+                    signOffMinutes = 30
+                } else if configuration.fleet == .a320B737,
+                          let to = flightSector.toAirport.isEmpty ? nil : flightSector.toAirport,
+                          !AirportService.shared.isAustralianAirport(to) {
+                    signOffMinutes = 30
+                } else {
+                    signOffMinutes = configuration.signOffMinutesAfterIN
+                }
                 let estimatedDutyMinutes = Int(flightTime * 60) + signOffMinutes
                 signOff = Calendar.current.date(byAdding: .minute, value: estimatedDutyMinutes, to: signOn) ?? signOn
             } else {
@@ -1784,7 +1793,15 @@ class FRMSCalculationService {
 
                 // SIM duty = simTime + 01:15 (45 min sign-on + 30 min sign-off) per FD12.1
                 // Other flights: use fleet-configured sign-on + sign-off margins
-                let overheadMinutes: Int = isSim ? 75 : (configuration.signOnMinutesBeforeSTD + configuration.signOffMinutesAfterIN)
+                let effectiveSignOffMinutes: Int
+                if configuration.fleet == .a320B737,
+                   let to = flightSector.toAirport.isEmpty ? nil : flightSector.toAirport,
+                   !AirportService.shared.isAustralianAirport(to) {
+                    effectiveSignOffMinutes = 30
+                } else {
+                    effectiveSignOffMinutes = configuration.signOffMinutesAfterIN
+                }
+                let overheadMinutes: Int = isSim ? 75 : (configuration.signOnMinutesBeforeSTD + effectiveSignOffMinutes)
                 let dutyMinutes = Int(flightTime * 60) + overheadMinutes
                 signOff = Calendar.current.date(byAdding: .minute, value: dutyMinutes, to: signOn) ?? signOn
             }

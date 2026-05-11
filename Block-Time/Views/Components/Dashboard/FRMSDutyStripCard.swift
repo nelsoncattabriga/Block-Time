@@ -12,6 +12,7 @@ import SwiftUI
 struct FRMSDutyStripCard: View {
     let flightStrip: NDFRMSStripData
     var frmsViewModel: FRMSViewModel
+    @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes = false
 
     private var totals: FRMSCumulativeTotals? { frmsViewModel.cumulativeTotals }
     private var fleet: FRMSFleet { flightStrip.fleet }
@@ -48,6 +49,7 @@ struct FRMSDutyStripCard: View {
                             Text("100 hrs with agreement")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
+                                .padding(.top, 2)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -83,13 +85,16 @@ struct FRMSDutyStripCard: View {
                     .rotationEffect(.degrees(-90))
                     .animation(.spring(response: 0.7, dampingFraction: 0.8), value: ratio)
 
-                VStack(spacing: 1) {
-                    Text(String(format: "%.1f", hours))
-                        .font(.system(.headline, design: .rounded, weight: .bold))
+                VStack(spacing: 2) {
+                    Text(showTimesInHoursMinutes ? FlightSector.decimalToHHMM(hours) : String(format: "%.1f", hours))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .monospacedDigit()
                         .foregroundColor(.primary)
-                    Text("hrs")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    if !showTimesInHoursMinutes {
+                        Text("hrs")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             .frame(width: 74, height: 74)

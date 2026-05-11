@@ -218,8 +218,6 @@ struct LogbookPDFPageDrawer {
             return CGRect(x: x + inset, y: y, width: col.width - inset * 2, height: L.dataRowHeight)
         }
 
-        let isSim = flight.simTimeValue > 0
-
         // Date (col 0)
         if let r = cellRect(0) {
             let dateStr = effectiveDateString(for: flight)
@@ -229,11 +227,11 @@ struct LogbookPDFPageDrawer {
 
         // Aircraft Type (col 1)
         if let r = cellRect(1) {
-            drawTextVCentred(isSim ? "SIM" : flight.aircraftType, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
+            drawTextVCentred(flight.aircraftType, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
         }
 
-        // Aircraft Reg (col 2) — blank for sim
-        if let r = cellRect(2), !isSim {
+        // Aircraft Reg (col 2)
+        if let r = cellRect(2) {
             drawTextVCentred(flight.aircraftReg, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
         }
 
@@ -251,14 +249,12 @@ struct LogbookPDFPageDrawer {
             drawTextVCentred(fltNum, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
         }
 
-        // Route (cols 6, 7) — blank for sim
-        if !isSim {
-            if let r = cellRect(6) {
-                drawTextVCentred(flight.fromAirport, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
-            }
-            if let r = cellRect(7) {
-                drawTextVCentred(flight.toAirport, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
-            }
+        // Route (cols 6, 7)
+        if let r = cellRect(6) {
+            drawTextVCentred(flight.fromAirport, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
+        }
+        if let r = cellRect(7) {
+            drawTextVCentred(flight.toAirport, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
         }
 
         // Remarks (col 8)

@@ -41,7 +41,7 @@ class FRMSViewModel {
 
     private var calculationService: FRMSCalculationService
     private let userDefaultsKey = "FRMSConfiguration"
-    private var dutiesLast365Days: [FRMSDuty] = []  // Store last 365 days of duties for FRMS calculations
+    var dutiesLast365Days: [FRMSDuty] = []  // Store last 365 days of duties for FRMS calculations
     private var flightsLast365Days: [FlightSector] = []  // Store last 365 days of individual flights for flight time calculations
     private var hasLoadedData = false  // Track if we've loaded data to prevent redundant loads
     private var lastRefreshDate: Date?  // Cooldown — prevents redundant recalculations from rapid CloudKit events

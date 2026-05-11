@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FRMSFlightStripCard: View {
     let data: NDFRMSStripData
+    @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -61,13 +62,16 @@ struct FRMSFlightStripCard: View {
                     .rotationEffect(.degrees(-90))
                     .animation(.spring(response: 0.7, dampingFraction: 0.8), value: ratio)
 
-                VStack(spacing: 1) {
-                    Text(String(format: "%.1f", hours))
-                        .font(.system(.headline, design: .rounded, weight: .bold))
+                VStack(spacing: 2) {
+                    Text(showTimesInHoursMinutes ? FlightSector.decimalToHHMM(hours) : String(format: "%.1f", hours))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .monospacedDigit()
                         .foregroundColor(.primary)
-                    Text("hrs")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    if !showTimesInHoursMinutes {
+                        Text("hrs")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             .frame(width: 74, height: 74)

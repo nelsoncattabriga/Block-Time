@@ -32,6 +32,7 @@ struct FRMSRollingLineCard: View {
     let data: NDFRMSRollingData
 
     @AppStorage("frmsRollingLine_limit") private var selectedLimit: FRMSRollingLimit = .flight28
+    @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes = false
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     private var series: NDFRMSRollingSeries {
@@ -248,25 +249,29 @@ struct FRMSRollingLineCard: View {
 
     // MARK: - Summary Row
 
+    private func formatHours(_ h: Double) -> String {
+        showTimesInHoursMinutes ? FlightSector.decimalToHHMM(h) : String(format: "%.1f hrs", h)
+    }
+
     private var summaryRow: some View {
         HStack {
             summaryChip(
                 label: "Now",
-                value: String(format: "%.1f hrs", currentTotal),
+                value: formatHours(currentTotal),
                 color: statusColor
             )
             Spacer()
             if hasProjected && peakProjected > currentTotal {
                 summaryChip(
                     label: "Peak (rostered)",
-                    value: String(format: "%.1f hrs", peakProjected),
+                    value: formatHours(peakProjected),
                     color: projectedColor
                 )
                 Spacer()
             }
             summaryChip(
                 label: "Limit",
-                value: String(format: "%.0f hrs", series.limit),
+                value: formatHours(series.limit),
                 color: .secondary
             )
         }

@@ -24,6 +24,7 @@ struct FlyingActivityChartCard: View {
 
     @AppStorage("flyingActivityCard_selectedMonths") private var selectedMonths = 12
     @AppStorage("flyingActivityCard_displayMode") private var displayMode: DisplayMode = .hours
+    @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes = false
 
     private var filtered: [NDMonthlyActivity] {
         guard selectedMonths > 0 else { return data }
@@ -100,9 +101,9 @@ struct FlyingActivityChartCard: View {
                     let totalBlock = filtered.reduce(0) { $0 + $1.blockHours }
                     let avg = totalBlock / Double(filtered.count)
                     HStack {
-                        summaryChip(label: "Monthly Avg", value: String(format: "%.1f hrs", avg), color: .blue)
+                        summaryChip(label: "Monthly Avg", value: formatHours(avg), color: .blue)
                         Spacer()
-                        summaryChip(label: "Period Total", value: String(format: "%.1f hrs", totalBlock), color: .blue)
+                        summaryChip(label: "Period Total", value: formatHours(totalBlock), color: .blue)
                     }
                 } else {
                     let totalSectors = filtered.reduce(0) { $0 + $1.sectorCount }
@@ -117,6 +118,10 @@ struct FlyingActivityChartCard: View {
         }
         .padding(16)
         .appCardStyle()
+    }
+
+    private func formatHours(_ h: Double) -> String {
+        showTimesInHoursMinutes ? FlightSector.decimalToHHMM(h) : String(format: "%.1f hrs", h)
     }
 
     @ViewBuilder

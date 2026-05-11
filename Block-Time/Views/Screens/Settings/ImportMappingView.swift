@@ -51,12 +51,14 @@ struct RegistrationRule: Identifiable, Codable {
         guard !aircraftType.isEmpty else { return false }
         let regUpper = reg.uppercased()
         let fromUpper = regFrom.uppercased()
-        // Registration range check
-        if regTo.isEmpty {
-            guard regUpper == fromUpper else { return false }
-        } else {
-            let toUpper = regTo.uppercased()
-            guard regUpper >= fromUpper && regUpper <= toUpper else { return false }
+        // Registration range check — empty regFrom means "all regs in group", skip check
+        if !fromUpper.isEmpty {
+            if regTo.isEmpty {
+                guard regUpper == fromUpper else { return false }
+            } else {
+                let toUpper = regTo.uppercased()
+                guard regUpper >= fromUpper && regUpper <= toUpper else { return false }
+            }
         }
         // Date bounds — dd/MM/yyyy string comparison works correctly when zero-padded
         if let after = afterDate, !after.isEmpty {
@@ -1574,7 +1576,7 @@ private struct RegistrationRuleRow: View {
 
                 VStack(alignment: .leading, spacing: 14) {
                     // Registration range
-                    fieldGroup(label: "Rego range", systemImage: "airplane") {
+                    fieldGroup(label: "Rego range within group  (blank = all regos in group)", systemImage: "airplane") {
                         HStack(spacing: 8) {
                             TextField("From  e.g. EBA", text: $rule.regFrom)
                                 .textInputAutocapitalization(.characters)
@@ -1583,7 +1585,7 @@ private struct RegistrationRuleRow: View {
                             Text("to")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
-                            TextField("To  e.g. EBV  (blank = exact)", text: $rule.regTo)
+                            TextField("To  e.g. EBV", text: $rule.regTo)
                                 .textInputAutocapitalization(.characters)
                                 .autocorrectionDisabled()
                                 .textFieldStyle(InlineTextFieldStyle())
@@ -1591,13 +1593,54 @@ private struct RegistrationRuleRow: View {
                     }
 
                     // Date range
-                    fieldGroup(label: "Date range  (optional)", systemImage: "calendar") {
-                        HStack(spacing: 8) {
-                            dateChip(label: "From date", value: $rule.afterDate, onTap: onPickAfterDate)
-                            Text("to")
-                                .font(.footnote)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "calendar")
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
-                            dateChip(label: "To date", value: $rule.beforeDate, onTap: onPickBeforeDate)
+                            Text("Date range  (optional — set either, both, or neither)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        HStack(alignment: .center, spacing: 10) {
+                            // Timeline rail
+                            VStack(spacing: 0) {
+                                Circle()
+                                    .fill(rule.afterDate != nil ? AppColors.accentBlue : Color.secondary.opacity(0.3))
+                                    .frame(width: 7, height: 7)
+                                Rectangle()
+                                    .fill(
+                                        rule.afterDate != nil && rule.beforeDate != nil
+                                            ? AppColors.accentBlue.opacity(0.4)
+                                            : Color.secondary.opacity(0.15)
+                                    )
+                                    .frame(width: 1.5)
+                                    .frame(minHeight: 20)
+                                Circle()
+                                    .fill(rule.beforeDate != nil ? AppColors.accentBlue : Color.secondary.opacity(0.3))
+                                    .frame(width: 7, height: 7)
+                            }
+
+                            // Chips
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 8) {
+                                    Text("After")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 42, alignment: .trailing)
+                                    dateChip(label: "any date", value: $rule.afterDate, onTap: onPickAfterDate)
+                                    Spacer()
+                                }
+                                HStack(spacing: 8) {
+                                    Text("Before")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 42, alignment: .trailing)
+                                    dateChip(label: "any date", value: $rule.beforeDate, onTap: onPickBeforeDate)
+                                    Spacer()
+                                }
+                            }
                         }
                     }
 
@@ -1664,7 +1707,7 @@ private struct RegistrationRuleRow: View {
         let regPart: String = {
             let f = rule.regFrom.trimmingCharacters(in: .whitespaces)
             let t = rule.regTo.trimmingCharacters(in: .whitespaces)
-            if f.isEmpty { return "Any rego" }
+            if f.isEmpty { return "All regos in group" }
             return t.isEmpty ? f : "\(f) – \(t)"
         }()
         let datePart: String = {
@@ -1697,25 +1740,29 @@ private struct RegistrationRuleRow: View {
 
     @ViewBuilder
     private func dateChip(label: String, value: Binding<String?>, onTap: @escaping () -> Void) -> some View {
+        let isSet = value.wrappedValue != nil
         Button(action: onTap) {
             HStack(spacing: 4) {
                 Text(value.wrappedValue ?? label)
                     .font(.footnote)
-                    .foregroundStyle(value.wrappedValue == nil ? .secondary : .primary)
-                if value.wrappedValue != nil {
+                    .foregroundStyle(isSet ? AppColors.accentBlue : .secondary)
+                if isSet {
                     Button { value.wrappedValue = nil } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppColors.accentBlue.opacity(0.6))
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color(.systemBackground))
+            .background(isSet ? AppColors.accentBlue.opacity(0.08) : Color(.systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 7))
-            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 7).stroke(
+                isSet ? AppColors.accentBlue.opacity(0.35) : Color.primary.opacity(0.1),
+                lineWidth: isSet ? 1.5 : 1
+            ))
         }
         .buttonStyle(.plain)
     }
