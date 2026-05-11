@@ -84,6 +84,7 @@ struct Fleet: Identifiable, Hashable {
 }
 
 // MARK: - Aircraft Fleet Service
+@MainActor
 class AircraftFleetService: ObservableObject {
 
     // MARK: - Singleton
@@ -373,8 +374,10 @@ class AircraftFleetService: ObservableObject {
 
     /// Check if an aircraft is a custom (deletable) aircraft
     func isCustomAircraft(_ aircraft: Aircraft) -> Bool {
-        let customAircraft = fetchCustomAircraft()
-        return customAircraft.contains(where: { $0.id == aircraft.id })
+        let request: NSFetchRequest<AircraftEntity> = AircraftEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", aircraft.id)
+        request.fetchLimit = 1
+        return (try? viewContext.count(for: request)) ?? 0 > 0
     }
 
     /// Returns the fleet/family name for a given aircraft type code, or nil if unknown.
