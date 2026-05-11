@@ -1534,8 +1534,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let p1usTimeValue: String
         let p2TimeValue: String
 
-        // Positioning flights don't log any time credits
-        if isPositioning {
+        // Positioning and simulator flights don't log any time credits
+        if isPositioning || isSimulator {
             p1TimeValue = "0.0"
             p1usTimeValue = "0.0"
             p2TimeValue = "0.0"
@@ -1557,7 +1557,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
 
-        let instrumentTimeValue = isPilotFlying ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
+        let instrumentTimeValue = (isPilotFlying && !isSimulator) ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
+        let nightTimeValue = isSimulator ? "0.0" : nightTime
         let simTimeValue = isSimulator ? blockTimeCalculated : "0.0"
                     LogManager.shared.debug("DEBUG: saveToLogbook PF=\(isPilotFlying), isSimulator=\(isSimulator), simTime=\(simTimeValue), block=\(isSimulator ? "0.0" : blockTimeCalculated), p1=\(p1TimeValue)")
 
@@ -1576,7 +1577,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             so1Name: so1Name.isEmpty ? nil : so1Name,  // Add SO1
             so2Name: so2Name.isEmpty ? nil : so2Name,  // Add SO2
             blockTime: isSimulator ? "0.0" : blockTimeCalculated,
-            nightTime: nightTime,
+            nightTime: nightTimeValue,
             p1Time: p1TimeValue,
             p1usTime: p1usTimeValue,
             p2Time: p2TimeValue,
@@ -1823,8 +1824,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let p1usTimeValue: String
         let p2TimeValue: String
 
-        // Positioning and sim-instruction flights don't log any time credits
-        if isPositioning || isSimInstruction {
+        // Positioning, simulator, and sim-instruction flights don't log any time credits
+        if isPositioning || isSimulator || isSimInstruction {
             p1TimeValue = "0.0"
             p1usTimeValue = "0.0"
             p2TimeValue = "0.0"
@@ -1846,7 +1847,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
 
-        let instrumentTimeValue = isPilotFlying ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
+        let instrumentTimeValue = (isPilotFlying && !isSimulator) ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
+        let nightTimeValue = isSimulator ? "0.0" : nightTime
         // For sim Sp/Ins: simTime must equal spInsTime so isSpInsOnly is true (simTime==spInsTime>0)
         let simTimeValue = isSimulator ? blockTime : (isSimInstruction ? spInsTime : "0.0")
         // For aircraft instruction: store blockTime in spInsTime so it can be identified and badged
@@ -1867,7 +1869,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             so1Name: so1Name.isEmpty ? nil : so1Name,
             so2Name: so2Name.isEmpty ? nil : so2Name,
             blockTime: (isSimulator || isSimInstruction) ? "0.0" : blockTime,
-            nightTime: nightTime,
+            nightTime: nightTimeValue,
             p1Time: p1TimeValue,
             p1usTime: p1usTimeValue,
             p2Time: p2TimeValue,
@@ -2678,9 +2680,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let p1usTimeValue: String
         let p2TimeValue: String
 
-        // Positioning and sim-instruction flights don't log any time credits
+        // Positioning, simulator, and sim-instruction flights don't log any time credits
         let isSimInstruction = isSpIns && !isInstructingInAircraft
-        if isPositioning || isSimInstruction {
+        if isPositioning || isSimulator || isSimInstruction {
             p1TimeValue = "0.0"
             p1usTimeValue = "0.0"
             p2TimeValue = "0.0"
@@ -2702,7 +2704,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
 
-        let instrumentTimeValue = isPilotFlying ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
+        let instrumentTimeValue = (isPilotFlying && !isSimulator) ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
+        let nightTimeValue = isSimulator ? "0.0" : nightTime
         // For sim Sp/Ins: simTime must equal spInsTime so isSpInsOnly is true (simTime==spInsTime>0)
         let simTimeValue = isSimulator ? blockTimeCalculated : (isSimInstruction ? spInsTime : "0.0")
         // For aircraft instruction: store blockTime in spInsTime so it can be identified and badged
@@ -2737,7 +2740,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 so1Name: so1Name.isEmpty ? nil : so1Name,
                 so2Name: so2Name.isEmpty ? nil : so2Name,
                 blockTime: (isSimulator || isSimInstruction) ? "0.0" : blockTimeCalculated,
-                nightTime: nightTime,
+                nightTime: nightTimeValue,
                 p1Time: p1TimeValue,
                 p1usTime: p1usTimeValue,
                 p2Time: p2TimeValue,
@@ -2792,7 +2795,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 so1Name: so1Name.isEmpty ? nil : so1Name,
                 so2Name: so2Name.isEmpty ? nil : so2Name,
                 blockTime: (isSimulator || isSimInstruction) ? "0.0" : blockTimeCalculated,
-                nightTime: nightTime,
+                nightTime: nightTimeValue,
                 p1Time: p1TimeValue,
                 p1usTime: p1usTimeValue,
                 p2Time: p2TimeValue,
