@@ -13,6 +13,7 @@ struct SupportView: View {
     @Environment(PurchaseService.self) private var purchaseService
     @AppStorage("debugModeEnabled") private var debugModeEnabled = false
     @State private var showingLogViewer = false
+    @State private var showingRawDatabase = false
     @State private var devToolsExpanded = false
     @State private var versionTapCount = 0
     @State private var showingRecalculateConfirm = false
@@ -124,6 +125,39 @@ struct SupportView: View {
                                             .foregroundColor(.primary)
 
                                         Text("View, filter, and share diagnostic logs")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(12)
+                                .background(Color(.systemGray6).opacity(0.5))
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            // Raw Database Viewer
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                showingRawDatabase = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "tablecells")
+                                        .foregroundColor(.orange)
+                                        .frame(width: 20)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Raw Database")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+
+                                        Text("Browse and delete raw Core Data records")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -369,6 +403,10 @@ struct SupportView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showingLogViewer) {
             LogViewerView()
+        }
+        .navigationDestination(isPresented: $showingRawDatabase) {
+            RawDatabaseView()
+                .environment(\.managedObjectContext, FlightDatabaseService.shared.persistentContainer.viewContext)
         }
     }
 
