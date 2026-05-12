@@ -128,11 +128,14 @@ struct LogbookSpreadsheetView: View {
 
     private func legendPill(_ label: String, color: Color) -> some View {
         Text(label)
-            .font(.caption2)
+            .font(.footnote)
             .foregroundStyle(.white)
             .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.85), in: Capsule())
+            .padding(.vertical, 4)
+            .background(
+                color.opacity(0.85),
+                in: RoundedRectangle(cornerRadius: 5)
+            )
     }
 
     // MARK: - Spreadsheet
