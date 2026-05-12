@@ -13,7 +13,7 @@ struct FlightSegmentSelectionSheet: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Header
                 VStack(spacing: 8) {
@@ -55,7 +55,7 @@ struct FlightSegmentSelectionSheet: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         onDismiss()
                     }

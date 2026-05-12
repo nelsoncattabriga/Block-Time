@@ -34,7 +34,7 @@ struct BulkEditSheet: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 themeService.getGradient()
                     .ignoresSafeArea()
@@ -287,7 +287,7 @@ struct BulkEditSheet: View {
             .navigationTitle("Edit \(selectedFlights.count) Flight\(selectedFlights.count == 1 ? "" : "s")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         if bulkEditViewModel.hasModifications {
@@ -298,7 +298,7 @@ struct BulkEditSheet: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         saveChanges()
                     }

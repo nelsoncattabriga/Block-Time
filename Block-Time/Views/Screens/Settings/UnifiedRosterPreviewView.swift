@@ -29,7 +29,7 @@ struct UnifiedRosterPreviewView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Header with summary
                 headerSection
@@ -62,13 +62,13 @@ struct UnifiedRosterPreviewView: View {
             .navigationTitle("Review Flights")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         toggleSelectAll()
                     } label: {

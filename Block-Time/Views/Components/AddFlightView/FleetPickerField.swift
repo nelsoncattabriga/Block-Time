@@ -85,7 +85,7 @@ struct FleetPickerSheet: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Fleet Selector
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -189,14 +189,14 @@ struct FleetPickerSheet: View {
             .navigationTitle("Select Fleet & Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     if selectedAircraft != nil {
                         Button("Done") {
                             onDismiss()

@@ -174,7 +174,7 @@ struct AircraftRegPickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Search Bar
                 HStack {
@@ -358,7 +358,7 @@ struct AircraftRegPickerSheet: View {
             .navigationTitle("Select Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedReg.isEmpty {
                         Button("Clear Rego") {
                             HapticManager.shared.impact(.medium)
@@ -370,7 +370,7 @@ struct AircraftRegPickerSheet: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()
@@ -417,7 +417,7 @@ private struct AddAircraftSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("Aircraft Details")) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -464,7 +464,7 @@ private struct AddAircraftSheet: View {
             .navigationTitle("Add New Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
