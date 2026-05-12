@@ -366,6 +366,17 @@ struct ImportExportView: View {
 
                 Divider()
 
+                // PDF Logbook
+                ActionButton(
+                    title: "Print Logbook",
+                    subtitle: "Formatted paper logbook layout",
+                    icon: "books.vertical.fill",
+                    color: .brown.opacity(0.8),
+                    isLoading: false
+                ) {
+                    showingPDFExport = true
+                }
+
                 // Export flights to calendar
                 ActionButton(
                     title: "Export to Calendar",
@@ -376,8 +387,7 @@ struct ImportExportView: View {
                 ) {
                     showingCalendarExport = true
                 }
-                
-            
+
                 // Export Data
                 ActionButton(
                     title: "Export Logbook",
@@ -387,17 +397,6 @@ struct ImportExportView: View {
                     isLoading: false
                 ) {
                     showingExportView = true
-                }
-
-                // PDF Logbook
-                ActionButton(
-                    title: "Print Logbook",
-                    subtitle: "Formatted paper logbook layout",
-                    icon: "books.vertical.fill",
-                    color: .brown.opacity(0.8),
-                    isLoading: false
-                ) {
-                    showingPDFExport = true
                 }
 
 //                Divider()
