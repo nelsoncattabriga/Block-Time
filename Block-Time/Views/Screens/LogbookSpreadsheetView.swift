@@ -119,7 +119,7 @@ struct LogbookSpreadsheetView: View {
             Spacer()
             legendPill("PAX",     color: .orange)
             legendPill("SIM",     color: .purple)
-            legendPill("Sp/Ins",  color: .red)
+            legendPill("Instructor",  color: .red)
             Spacer()
         }
         .padding(.vertical, 5)
