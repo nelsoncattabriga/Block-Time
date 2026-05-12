@@ -216,6 +216,7 @@ struct LogbookPDFExportView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 130)
                 }
+
             }
             .padding()
             .background(Color.brown.opacity(0.06))
