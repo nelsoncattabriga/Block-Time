@@ -328,9 +328,10 @@ extension FlightDatabaseService {
         for entity in histEntities {
             guard let entityDate = entity.date else { continue }
             let day = cal.startOfDay(for: entityDate)
-            let bt  = hrs(entity.blockTime)
-            let st  = isSpInsOnly(entity) ? 0.0 : hrs(entity.simTime)
-            let fh  = bt + st
+            // Only operating block time counts as flight time; SIM, positioning, and Sp/Ins contribute duty only
+            guard !entity.isPositioning, hrs(entity.simTime) == 0, !isSpInsOnly(entity) else { continue }
+            let fh = hrs(entity.blockTime)
+            guard fh > 0 else { continue }
             actualFlight[day, default: 0] += fh
         }
 
@@ -378,7 +379,8 @@ extension FlightDatabaseService {
             guard let entityDate = entity.date,
                   let std = entity.scheduledDeparture, !std.isEmpty,
                   let sta = entity.scheduledArrival, !sta.isEmpty,
-                  let stdMins = hhmm(std), let staMins = hhmm(sta)
+                  let stdMins = hhmm(std), let staMins = hhmm(sta),
+                  !entity.isPositioning
             else { continue }
 
             let day = cal.startOfDay(for: entityDate)
@@ -827,7 +829,10 @@ extension FlightDatabaseService {
         var h7 = 0.0, h28 = 0.0, h365 = 0.0
         for f in flights {
             guard let date = f.date, f.flightNumber != "SUMMARY" else { continue }
-            let total = hrs(f.blockTime) + (isSpInsOnly(f) ? 0 : hrs(f.simTime))
+            // Only operating block time counts as flight time; SIM, positioning, and Sp/Ins contribute duty only
+            guard !f.isPositioning, hrs(f.simTime) == 0, !isSpInsOnly(f) else { continue }
+            let total = hrs(f.blockTime)
+            guard total > 0 else { continue }
             if date >= ago7      { h7   += total }
             if date >= agoPeriod { h28  += total }
             if date >= ago365    { h365 += total }
