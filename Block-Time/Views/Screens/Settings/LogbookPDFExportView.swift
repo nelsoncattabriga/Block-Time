@@ -58,27 +58,34 @@ struct LogbookPDFExportView: View {
     ]
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 16) {
-                    setupView
+        NavigationStack {
+            ZStack {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        setupView
+                    }
+                    .padding()
                 }
-                .padding()
+
+                if isGenerating {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                    ProgressView("Generating…")
+                        .progressViewStyle(.circular)
+                        .padding(24)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                }
             }
+            .allowsHitTesting(!isGenerating)
             .navigationTitle("Print Logbook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if isGenerating {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .brown))
-                    } else {
-                        Button("Print") { Task { await generatePDF() } }
-                            .disabled(flightCount == 0)
-                    }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Print") { Task { await generatePDF() } }
+                        .disabled(flightCount == 0 || isGenerating)
                 }
             }
             .alert("Export Error", isPresented: Binding(
@@ -333,7 +340,7 @@ struct LogbookPDFExportView: View {
     @MainActor
     private func generatePDF() async {
         isGenerating = true
-        await Task.yield()  // let SwiftUI render the spinner before blocking work begins
+        try? await Task.sleep(nanoseconds: 32_000_000) // two frames — guarantees overlay renders before main-thread work
         let name      = logbookName.trimmingCharacters(in: .whitespacesAndNewlines)
         let arnNumber = arn.trimmingCharacters(in: .whitespacesAndNewlines)
         let format    = dateFormat
@@ -409,16 +416,16 @@ struct PDFPreviewView: View {
     @State private var showShareSheet = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             PDFKitView(url: url)
                 .ignoresSafeArea(edges: .bottom)
                 .navigationTitle("Logbook Preview")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Close") { dismiss() }
                     }
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             showShareSheet = true
                         } label: {
@@ -430,7 +437,6 @@ struct PDFPreviewView: View {
                     PDFShareSheet(items: [url])
                 }
         }
-        .navigationViewStyle(.stack)
     }
 }
 
