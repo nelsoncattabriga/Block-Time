@@ -617,7 +617,8 @@ extension FlightDatabaseService {
         for entity in historicalEntities {
             guard let entityDate = entity.date else { continue }
             let day = cal.startOfDay(for: entityDate)
-            actualFlightByDay[day, default: 0] += hrs(entity.blockTime)
+            let simHours = isSpInsOnly(entity) ? 0.0 : hrs(entity.simTime)
+            actualFlightByDay[day, default: 0] += hrs(entity.blockTime) + simHours
 
             // Duty start: STD (always used as sign-on anchor per FRMS rules)
             // Duty end: actual IN time; fall back to STA if IN not recorded
@@ -809,18 +810,6 @@ extension FlightDatabaseService {
     private func computeFRMSStrip(_ flights: [FlightEntity]) -> NDFRMSStripData {
         let cal = Calendar.current
         let now = Date()
-        guard let ago7   = cal.date(byAdding: .day, value: -7,   to: now),
-              let ago28  = cal.date(byAdding: .day, value: -28,  to: now),
-              let ago365 = cal.date(byAdding: .day, value: -365, to: now) else { return .empty }
-
-        var h7 = 0.0, h28 = 0.0, h365 = 0.0
-        for f in flights {
-            guard let date = f.date, f.flightNumber != "SUMMARY" else { continue }
-            let total = hrs(f.blockTime) + (isSpInsOnly(f) ? 0 : hrs(f.simTime))
-            if date >= ago7   { h7   += total }
-            if date >= ago28  { h28  += total }
-            if date >= ago365 { h365 += total }
-        }
 
         let fleet: FRMSFleet
         if let data   = UserDefaults.standard.data(forKey: "FRMSConfiguration"),
@@ -828,6 +817,20 @@ extension FlightDatabaseService {
             fleet = config.fleet
         } else {
             fleet = .a320B737
+        }
+
+        let periodDays = fleet.flightTimePeriodDays
+        guard let ago7      = cal.date(byAdding: .day, value: -7,          to: now),
+              let agoPeriod = cal.date(byAdding: .day, value: -periodDays, to: now),
+              let ago365    = cal.date(byAdding: .day, value: -365,        to: now) else { return .empty }
+
+        var h7 = 0.0, h28 = 0.0, h365 = 0.0
+        for f in flights {
+            guard let date = f.date, f.flightNumber != "SUMMARY" else { continue }
+            let total = hrs(f.blockTime) + (isSpInsOnly(f) ? 0 : hrs(f.simTime))
+            if date >= ago7      { h7   += total }
+            if date >= agoPeriod { h28  += total }
+            if date >= ago365    { h365 += total }
         }
 
         return NDFRMSStripData(hours7d: h7, hours28d: h28, hours365d: h365, fleet: fleet)

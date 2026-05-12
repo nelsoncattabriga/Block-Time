@@ -20,6 +20,7 @@ import Charts
 // MARK: - Limit selector (shared with FRMSRollingBarsCard)
 
 enum FRMSRollingLimit: String, CaseIterable {
+    case flight7   = "7 Days Flt"
     case flight28  = "28 Days Flt"
     case flight365 = "365 Days Flt"
     case duty7     = "7 Days Duty"
@@ -37,6 +38,7 @@ struct FRMSRollingLineCard: View {
 
     private var series: NDFRMSRollingSeries {
         switch selectedLimit {
+        case .flight7:   return data.flight7d ?? data.flight28d
         case .flight28:  return data.flight28d
         case .flight365: return data.flight365d
         case .duty7:     return data.duty7d
@@ -56,7 +58,7 @@ struct FRMSRollingLineCard: View {
         return future
     }
 
-    private var hasProjected: Bool { !projectedPoints.isEmpty }
+    private var hasProjected: Bool { series.points.contains { $0.isProjected } }
 
     private var currentTotal: Double { actualPoints.last?.total ?? 0 }
     private var peakProjected: Double { projectedPoints.map(\.total).max() ?? 0 }
@@ -104,14 +106,30 @@ struct FRMSRollingLineCard: View {
 
     // MARK: - Limit Picker
 
+    private func label(for limit: FRMSRollingLimit) -> String {
+        if limit == .flight28 {
+            return "\(data.flight28d.fleet.flightTimePeriodDays) Days Flt"
+        }
+        return limit.rawValue
+    }
+
+    private var availableLimits: [FRMSRollingLimit] {
+        FRMSRollingLimit.allCases.filter { $0 != .flight7 || data.flight7d != nil }
+    }
+
     private var limitPicker: some View {
         Picker("", selection: $selectedLimit) {
-            ForEach(FRMSRollingLimit.allCases, id: \.self) {
-                Text($0.rawValue).tag($0)
+            ForEach(availableLimits, id: \.self) {
+                Text(label(for: $0)).tag($0)
             }
         }
         .pickerStyle(.menu)
         .labelsHidden()
+        .onChange(of: data.flight7d == nil) { _, isNil in
+            if isNil && selectedLimit == .flight7 {
+                selectedLimit = .flight28
+            }
+        }
     }
 
     // MARK: - Chart
@@ -121,6 +139,7 @@ struct FRMSRollingLineCard: View {
     // x-axis stride adapts to both the selected limit and available width
     private var xAxisStride: Calendar.Component {
         switch selectedLimit {
+        case .flight7:   return .day
         case .duty7:     return .day
         case .duty14:    return .day
         case .flight28:  return .weekOfYear
@@ -130,6 +149,7 @@ struct FRMSRollingLineCard: View {
 
     private var xAxisStrideCount: Int {
         switch selectedLimit {
+        case .flight7:   return isCompact ? 2 : 1
         case .duty7:     return isCompact ? 2 : 1   // compact: every 2 days; wide: every day
         case .duty14:    return isCompact ? 4 : 2   // compact: every 4 days; wide: every 2 days
         case .flight28:  return 1                   // weekly ticks work fine at all widths
@@ -139,6 +159,7 @@ struct FRMSRollingLineCard: View {
 
     private var xAxisLabelFormat: Date.FormatStyle {
         switch selectedLimit {
+        case .flight7:            return .dateTime.day().month(.abbreviated)
         case .duty7:              return .dateTime.day().month(.abbreviated)
         case .duty14:             return .dateTime.day()   // month shown separately in custom label
         case .flight28:           return .dateTime.day().month(.abbreviated)
