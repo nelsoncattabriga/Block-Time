@@ -71,6 +71,15 @@ struct LogbookPDFExportView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if isGenerating {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .brown))
+                    } else {
+                        Button("Print") { Task { await generatePDF() } }
+                            .disabled(flightCount == 0)
+                    }
+                }
             }
             .alert("Export Error", isPresented: Binding(
                 get: { errorMessage != nil },
@@ -222,27 +231,6 @@ struct LogbookPDFExportView: View {
             .background(Color.brown.opacity(0.06))
             .cornerRadius(12)
 
-            // Generate button
-            Button { Task { await generatePDF() } } label: {
-                HStack {
-                    if isGenerating {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .brown))
-                    } else {
-                        Image(systemName: "books.vertical.fill")
-                            .foregroundColor(.brown)
-                    }
-                    Text(isGenerating ? "Generating…" : "Generate PDF")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.brown.opacity(0.12))
-                .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.brown.opacity(0.4), lineWidth: 1))
-            }
-            .disabled(isGenerating || flightCount == 0)
         }
     }
 
