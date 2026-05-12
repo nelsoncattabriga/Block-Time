@@ -170,6 +170,7 @@ struct LogbookSpreadsheetView: View {
     private func reload() {
         Task { @MainActor in
             await Task.yield()
+            highlightedFlight = nil
             var loaded = initialFlights ?? databaseService.fetchAllFlights()
             let cal = Calendar.current
             let df = DateFormatter()
