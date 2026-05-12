@@ -379,11 +379,21 @@ struct LogbookPDFExportView: View {
             let sorted = filtered.sorted { effectiveSortDate(for: $0) < effectiveSortDate(for: $1) }
             let resolvedDates = sorted.map { effectiveDateString(for: $0) }
 
+            // Compute totals for flights before the selected range (career BF for partial exports)
+            var priorTotals = PageTotals()
+            if preset != .all {
+                let filteredSet = Set(filtered)
+                for f in all where !filteredSet.contains(f) {
+                    priorTotals.accumulate(f)
+                }
+            }
+
             // Render off-thread
             let pdfData = await Task.detached(priority: .userInitiated) {
                 LogbookPDFRenderer.render(
                     flights: sorted, resolvedDates: resolvedDates,
-                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm)
+                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm,
+                    priorTotals: priorTotals)
             }.value
 
             let timestamp = DateFormatter()

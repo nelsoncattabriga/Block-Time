@@ -20,11 +20,12 @@ struct LogbookPDFRenderer {
         pilotName: String,
         arn: String = "",
         dateFormat: String = "dd MMM yyyy",
-        useHHMM: Bool = false
+        useHHMM: Bool = false,
+        priorTotals: PageTotals = PageTotals()
     ) -> Data {
         let slots = LogbookPDFPaginator.buildSlots(from: flights)
         let pages = LogbookPDFPaginator.paginate(slots)
-        let totals = LogbookPDFPaginator.computeTotals(pages: pages)
+        let totals = LogbookPDFPaginator.computeTotals(pages: pages, seed: priorTotals)
         let totalPages = pages.count
         let dateRange = makeDateRange(resolvedDates: resolvedDates, dateFormat: dateFormat)
 

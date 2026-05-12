@@ -133,9 +133,10 @@ enum LogbookPDFPaginator {
     }
 
     // Computes per-page totals and the running brought-forward for each page.
-    static nonisolated func computeTotals(pages: [[RowSlot]]) -> [(page: PageTotals, broughtForward: PageTotals)] {
+    // seed: career totals for flights prior to the rendered range (zero for full logbook).
+    static nonisolated func computeTotals(pages: [[RowSlot]], seed: PageTotals = PageTotals()) -> [(page: PageTotals, broughtForward: PageTotals)] {
         var result: [(page: PageTotals, broughtForward: PageTotals)] = []
-        var runningTotal = PageTotals()
+        var runningTotal = seed
 
         for page in pages {
             let bf = runningTotal
