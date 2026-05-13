@@ -196,6 +196,7 @@ private struct FlightsListContent: View {
     @State private var showingBulkDuplicateAlert = false
     @State private var showingBulkEditSheet = false
     @State private var summaryToEdit: FlightSector?
+    @State private var showingNewSummarySheet = false
     @State private var sessionFilterIDs: Set<UUID> = []
     @State private var showingDeleteSessionAlert = false
     @State private var cachedTotalHours: Double = 0.0
@@ -450,15 +451,25 @@ private struct FlightsListContent: View {
                 }
             } else {
                 // Add + Select buttons on the left
-                Button(action: {
-                    HapticManager.shared.impact(.light)
-                    if purchaseService.canAddFlight {
-                        selectedFlight = nil
-                        isAddingNewFlight = true
-                    } else {
-                        showingPaywall = true
+                Menu {
+                    Button {
+                        HapticManager.shared.impact(.light)
+                        if purchaseService.canAddFlight {
+                            selectedFlight = nil
+                            isAddingNewFlight = true
+                        } else {
+                            showingPaywall = true
+                        }
+                    } label: {
+                        Label("New Flight", systemImage: "airplane")
                     }
-                }) {
+                    Button {
+                        HapticManager.shared.impact(.light)
+                        showingNewSummarySheet = true
+                    } label: {
+                        Label("Add Aircraft Summary", systemImage: "list.bullet.rectangle")
+                    }
+                } label: {
                     Image(systemName: "plus.circle")
                         .font(.title)
                 }
@@ -711,6 +722,14 @@ private struct FlightsListContent: View {
                 },
                 onDelete: { summaryToDelete in
                     deleteSummary(summaryToDelete)
+                }
+            )
+        }
+        .sheet(isPresented: $showingNewSummarySheet) {
+            AircraftSummarySheet(
+                editingSector: nil,
+                onSave: { newSummary in
+                    saveSummary(newSummary)
                 }
             )
         }
