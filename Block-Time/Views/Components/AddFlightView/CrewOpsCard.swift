@@ -22,7 +22,7 @@ struct CustomCountField: View {
                     .foregroundColor(.secondary)
             }
             TextField("0", text: $text)
-                .keyboardType(.numberPad)
+                .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad)
                 .font(.subheadline)
                 .focused($isFocused)
                 .onChange(of: text) { _, newValue in
