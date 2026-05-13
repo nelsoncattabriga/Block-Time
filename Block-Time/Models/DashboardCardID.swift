@@ -27,6 +27,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
     case workRateHeatmap      // Work Rate calendar heatmap
     case careerMilestones  // Career overview & milestone progress
     case customCount       // User-defined counter totals (e.g. PAX carried)
+    case punctuality       // Departure punctuality (STD vs ATD)
+    case crewFrequency     // Most-flown crew members
 
     // ── Original Dashboard stat cards ────────────────────────────────────────────────
     case totalTime
@@ -68,6 +70,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .workRateHeatmap:   return "Work Rate"
         case .careerMilestones:  return "Career Overview"
         case .customCount:       return UserDefaults.standard.string(forKey: "customCountLabel") ?? "Passengers"
+        case .punctuality:       return "On Time Performance"
+        case .crewFrequency:     return "Crew Frequency"
         case .totalTime:         return "Total Time"
         case .picTime:           return "PIC Time"
         case .icusTime:          return "ICUS Time"
@@ -107,6 +111,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .workRateHeatmap:      return "chart.bar.xaxis"
         case .careerMilestones:  return "trophy.fill"
         case .customCount:       return "person.2.fill"
+        case .punctuality:       return "clock.badge.checkmark.fill"
+        case .crewFrequency:     return "person.2.fill"
         case .totalTime:         return "clock.fill"
         case .picTime:           return "person.badge.shield.checkmark.fill"
         case .icusTime:          return "person.2.fill"
@@ -146,6 +152,8 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .workRateHeatmap:      return .indigo
         case .careerMilestones:  return .yellow
         case .customCount:       return .teal
+        case .punctuality:       return .teal
+        case .crewFrequency:     return .purple
         case .totalTime:         return .blue
         case .picTime:           return .green
         case .icusTime:          return .orange
