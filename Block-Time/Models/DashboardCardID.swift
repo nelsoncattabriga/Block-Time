@@ -71,7 +71,7 @@ enum DashboardCardID: String, Codable, CaseIterable, Hashable {
         case .careerMilestones:  return "Career Overview"
         case .customCount:       return UserDefaults.standard.string(forKey: "customCountLabel") ?? "Passengers"
         case .punctuality:       return "On Time Performance"
-        case .crewFrequency:     return "Crew Frequency"
+        case .crewFrequency:     return "Top Crew"
         case .totalTime:         return "Total Time"
         case .picTime:           return "PIC Time"
         case .icusTime:          return "ICUS Time"

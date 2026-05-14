@@ -98,7 +98,7 @@ struct DashboardCardView: View {
         case .punctuality:
             PunctualityCard()
         case .crewFrequency:
-            CrewFrequencyCard()
+            TopCrewCard()
         default:
             EmptyView()
         }
