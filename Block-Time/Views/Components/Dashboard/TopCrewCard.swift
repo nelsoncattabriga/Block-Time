@@ -235,7 +235,6 @@ struct TopCrewCard: View {
             }
         }
 
-        nameColumnWidth = 0
         crew = counts.values
             .sorted { $0.n > $1.n }
             .map { CrewFrequency(name: $0.name, sectors: $0.n) }
@@ -413,7 +412,6 @@ private struct CrewSheetView: View {
             }
         }
 
-        nameColumnWidth = 0
         crew = counts.values
             .sorted { $0.n > $1.n }
             .map { CrewFrequency(name: $0.name, sectors: $0.n) }
