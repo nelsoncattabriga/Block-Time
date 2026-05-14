@@ -1514,12 +1514,15 @@ class FlightTimeExtractorViewModel: ObservableObject {
         } else if isSimulator {
             guard !blockTime.isEmpty else { return }
         } else if !isPositioning {
-            guard !outTime.isEmpty && !inTime.isEmpty else { return }
-            let computed = calculateFlightTime()
-            guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
-                statusMessage = "Block time cannot be zero"
-                statusColor = .red
-                return
+            let isFutureFlight = !scheduledDeparture.isEmpty || !scheduledArrival.isEmpty
+            if !isFutureFlight {
+                guard !outTime.isEmpty && !inTime.isEmpty else { return }
+                let computed = calculateFlightTime()
+                guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
+                    statusMessage = "Block time cannot be zero"
+                    statusColor = .red
+                    return
+                }
             }
         }
 
@@ -1559,7 +1562,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         let instrumentTimeValue = (isPilotFlying && !isSimulator) ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
         let nightTimeValue = isSimulator ? "0.0" : nightTime
-        let simTimeValue = isSimulator ? blockTimeCalculated : "0.0"
+        let simTimeValue = isSimulator ? blockTimeCalculated : (isSimInstruction ? spInsTime : "0.0")
+        let spInsTimeValue = isSpIns && isInstructingInAircraft ? blockTimeCalculated : spInsTime
                     LogManager.shared.debug("DEBUG: saveToLogbook PF=\(isPilotFlying), isSimulator=\(isSimulator), simTime=\(simTimeValue), block=\(isSimulator ? "0.0" : blockTimeCalculated), p1=\(p1TimeValue)")
 
         // Create database service instance or inject it
@@ -1576,14 +1580,14 @@ class FlightTimeExtractorViewModel: ObservableObject {
             foName: coPilotName,
             so1Name: so1Name.isEmpty ? nil : so1Name,  // Add SO1
             so2Name: so2Name.isEmpty ? nil : so2Name,  // Add SO2
-            blockTime: isSimulator ? "0.0" : blockTimeCalculated,
+            blockTime: (isSimulator || isSimInstruction) ? "0.0" : blockTimeCalculated,
             nightTime: nightTimeValue,
             p1Time: p1TimeValue,
             p1usTime: p1usTimeValue,
             p2Time: p2TimeValue,
             instrumentTime: instrumentTimeValue,
             simTime: simTimeValue,
-            spInsTime: spInsTime,
+            spInsTime: spInsTimeValue,
             isPilotFlying: isPilotFlying,
             isPositioning: isPositioning,
             isAIII: isPilotFlying && isAIII,
