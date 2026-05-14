@@ -1810,10 +1810,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 return false
             }
         } else if !isSimulator && !isPositioning {
-            guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
-                statusMessage = "Block time cannot be zero"
-                statusColor = .red
-                return false
+            let isFutureFlight = (Double(blockTime) ?? 0) == 0 && (!scheduledDeparture.isEmpty || !scheduledArrival.isEmpty)
+            if !isFutureFlight {
+                guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
+                    statusMessage = "Block time cannot be zero"
+                    statusColor = .red
+                    return false
+                }
             }
         }
 
