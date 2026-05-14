@@ -215,11 +215,11 @@ struct ModernCapturedDataCard: View {
                     }
                     viewModel.blockTime = ""
                 }
-                viewModel.nightTime = ""
                 viewModel.isInstructingInAircraft = targetIsAircraft
                 if viewModel.isInstructingInAircraft && viewModel.captainName.isEmpty {
                     viewModel.captainName = viewModel.defaultCaptainName
                 }
+                if !viewModel.isEditingMode { viewModel.nightTime = "" }
                 HapticManager.shared.impact(.medium)
             }
         } label: {

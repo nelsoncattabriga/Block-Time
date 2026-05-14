@@ -1910,6 +1910,15 @@ class FlightTimeExtractorViewModel: ObservableObject {
             statusColor = .green
             HapticManager.shared.notification(.success)
 
+            // Sync VM fields to what was actually persisted so hasUnsavedChanges
+            // matches on the next render. For aircraft instruction the persisted
+            // spInsTime mirrors blockTime; the VM's own spInsTime field is unused
+            // in that mode and left stale, which would otherwise re-trigger the
+            // change-detection alert in iPad split view.
+            if isSpIns && isInstructingInAircraft {
+                spInsTime = blockTime
+            }
+
             // Update originalFlightData so hasUnsavedChanges returns false
             // This is important for iPad split view where we stay in edit mode after save
             originalFlightData = updatedFlight
@@ -1933,12 +1942,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
     var hasUnsavedChanges: Bool {
         guard let original = originalFlightData else { return false }
 
-        // Helper to compare time values numerically (ignoring precision differences like "4.5" vs "4.50")
+        // Helper to compare time values numerically (ignoring precision differences like "4.5" vs "4.50").
+        // Empty string is treated as zero so "" == "0.0" == "0.00" (FlightSector normalises empty → "0.00").
         func timeValuesEqual(_ a: String, _ b: String) -> Bool {
-            guard let aVal = Double(a), let bVal = Double(b) else {
-                return a == b // Fall back to string comparison if not numeric
-            }
-            return abs(aVal - bVal) < 0.01 // Consider equal if within 0.01 hours (~36 seconds)
+            let aVal = Double(a) ?? 0.0
+            let bVal = Double(b) ?? 0.0
+            return abs(aVal - bVal) < 0.01
         }
 
         // Check if original flight was a simulator flight (INS flights have simTime==spInsTime, exclude them)
@@ -1965,6 +1974,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                selectedTimeCredit != originalTimeCreditType(original) ||
                isSimulator != originalWasSimulator ||
                isPositioning != original.isPositioning ||
+               isSpIns != (original.isSpInsOnly || original.isAircraftInstruction) ||
+               isInstructingInAircraft != original.isAircraftInstruction ||
                remarks != original.remarks ||
                customCount != original.customCount ||
                dayTakeoffs != original.dayTakeoffs ||
