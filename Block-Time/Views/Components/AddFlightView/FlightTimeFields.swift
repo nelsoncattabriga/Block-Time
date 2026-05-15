@@ -161,6 +161,11 @@ struct ModernDecimalTimeField: View {
 
     private func sanitize(_ input: String) -> String {
         if showAsHHMM {
+            // If the incoming value is a decimal (e.g. "1.58" stored while mode was decimal),
+            // convert it to HH:MM first so the dot isn't stripped, leaving "158".
+            if input.contains("."), let d = Double(input) {
+                return FlightSector.decimalToHHMM(d)
+            }
             // Allow digits and colon for HH:MM format
             return input.filter { $0.isNumber || $0 == ":" }
         } else {
@@ -249,13 +254,13 @@ struct ModernDecimalTimeField: View {
                 } else {
                     TextField(showAsHHMM ? "0:00" : "0.0", text: Binding(
                         get: {
-                            // When field is focused or empty, show raw value
-                            // When not focused, show formatted value
-                            if decimalFieldFocused || value.isEmpty {
-                                return value
-                            } else {
+                            if value.isEmpty { return value }
+                            if showAsHHMM {
+                                // Always show HH:MM regardless of focus — displayValue converts decimal→HH:MM
                                 return displayValue
                             }
+                            // Decimal mode: raw while focused, rounded when not
+                            return decimalFieldFocused ? value : displayValue
                         },
                         set: { newValue in
                             value = sanitize(newValue)
@@ -266,6 +271,9 @@ struct ModernDecimalTimeField: View {
                         .focused($decimalFieldFocused)
                         .onChange(of: decimalFieldFocused) { _, isFocused in
                             if isFocused {
+                                if showAsHHMM, !value.contains(":"), let d = Double(value), d > 0 {
+                                    value = FlightSector.decimalToHHMM(d)
+                                }
                                 keyboardToolbar?.fieldDidFocus(clear: { value = "" })
                             } else {
                                 // Convert to decimal for storage, then format for display
@@ -292,17 +300,15 @@ struct ModernDecimalTimeField: View {
     }
 
     private var displayValue: String {
-        guard !value.isEmpty, let decimalValue = Double(value) else {
-            return showAsHHMM ? "0:00" : "0.0"
-        }
-
+        guard !value.isEmpty else { return showAsHHMM ? "0:00" : "0.0" }
         if showAsHHMM {
-            return FlightSector.decimalToHHMM(decimalValue)
-        } else {
-            // Apply the user's rounding mode for consistent display
-            let rounded = viewModel.decimalRoundingMode.apply(to: decimalValue, decimalPlaces: 1)
-            return String(format: "%.1f", rounded)
+            if value.contains(":") { return value }
+            guard let d = Double(value) else { return "0:00" }
+            return FlightSector.decimalToHHMM(d)
         }
+        guard let d = Double(value) else { return "0.0" }
+        let rounded = viewModel.decimalRoundingMode.apply(to: d, decimalPlaces: 1)
+        return String(format: "%.1f", rounded)
     }
 }
 
