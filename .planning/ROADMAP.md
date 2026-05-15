@@ -26,7 +26,7 @@
 2. A simulated mid-migration crash on relaunch retries successfully and does not duplicate or corrupt records.
 3. A SwiftUI preview opens on a screen backed by `InMemoryFlightRepository` with no CloudKit connection required.
 4. The App Group store URL is pinned; adding/removing the widget extension does not produce an empty store on relaunch.
-**Plans:** 2/5 plans executed
+**Plans:** 3/5 plans executed
 Plans:
 - [x] 01-01-PLAN.md — BlockTimeKit Swift Package scaffold (3 modules), Flight struct, FlightRepository protocol, InMemoryFlightRepository
 - [x] 01-02-PLAN.md — TimeStringConverter (TDD) — all 13 v1 time-string format variants
