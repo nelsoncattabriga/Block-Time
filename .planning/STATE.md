@@ -68,7 +68,7 @@ Phases completed: 0 / 7
 
 ### Blockers
 
-- Plan 01-01 Task 3: Requires manual Xcode step — add BlockTimeKit local package to Block-Time.xcodeproj
+- (none)
 
 ### Quick Tasks Completed
 
@@ -78,5 +78,5 @@ Phases completed: 0 / 7
 
 ## Session Continuity
 
-Last activity: 2026-05-15 - Completed 01-02 (TimeStringConverter TDD); 01-01 Tasks 1-2 done, blocked at Task 3 (Xcode package linking)
-Next action: Complete 01-01 Task 3 manually in Xcode (add BlockTimeKit local package), then resume Phase 01
+Last activity: 2026-05-15 - Plan 01-01 fully complete (all 3 tasks); BlockTimeKit linked to Block-Time iOS target; iOS build verified
+Next action: Execute plan 01-02 (TimeStringConverter TDD — all 13 v1 time-string format variants)

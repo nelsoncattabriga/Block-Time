@@ -2,7 +2,7 @@
 phase: 01-foundation
 plan: 01
 subsystem: BlockTimeKit Swift Package
-status: checkpoint-reached
+status: complete
 tags: [swift-package, domain-model, repository-pattern, tdd]
 dependency_graph:
   requires: []
@@ -31,7 +31,8 @@ key_files:
     - BlockTimeKit/Sources/BlockTimeData/InMemoryFlightRepository.swift
     - BlockTimeKit/Tests/BlockTimeDomainTests/FlightTests.swift
     - BlockTimeKit/Tests/BlockTimeDataTests/FlightRepositoryTests.swift
-  modified: []
+  modified:
+    - Block-Time.xcodeproj/project.pbxproj
 decisions:
   - swift-tools-version 6.0 required for iOS 18 / macOS 15 CLI platform constants
   - 31 fields in Flight struct (plan said 26 but interface spec requires 31)
@@ -39,7 +40,7 @@ decisions:
 metrics:
   duration_minutes: 4
   completed_date: "2026-05-15"
-  tasks_completed: 2
+  tasks_completed: 3
   tasks_total: 3
   tests_added: 12
   files_created: 7
@@ -51,7 +52,7 @@ metrics:
 
 ## Status
 
-Tasks 1 and 2 complete. Stopped at Task 3 (checkpoint:human-action) — requires manual Xcode step to add the local package to the Xcode project.
+All 3 tasks complete. BlockTimeKit is compiled, tested, and linked to the Block-Time iOS target.
 
 ## What Was Built
 
@@ -154,6 +155,8 @@ Executed 12 tests, with 0 failures (0 unexpected) in 0.002 seconds
 |------|--------|---------|
 | Task 1 (RED) | 98b0d44 | test(01-01): add failing tests for Flight struct and FlightRepository protocol |
 | Task 2 (GREEN) | 0a71ac7 | feat(01-01): scaffold BlockTimeKit package with Flight struct and InMemoryFlightRepository |
+| Checkpoint docs | a2b8474 | docs(01-01): complete Tasks 1-2, checkpoint at Task 3 (Xcode package linking) |
+| Task 3 (Xcode) | (human commit) | feat(01-01): add BlockTimeKit local package to Xcode project and link to Block-Time target |
 
 ## Deviations from Plan
 
@@ -180,9 +183,20 @@ Executed 12 tests, with 0 failures (0 unexpected) in 0.002 seconds
 - **Fix:** Implemented all 31 fields as specified in the `<interfaces>` block — the authoritative source.
 - **Impact:** None — the test sample uses all 31 and all tests pass.
 
-## Task 3 Checkpoint
+## Task 3: Xcode Package Linking — Outcome
 
-Task 3 requires human Xcode action — cannot be automated. See checkpoint details below.
+Performed manually in Xcode UI (cannot be automated safely — pbxproj edits risk corruption):
+
+1. File → Add Package Dependencies… → Add Local… → selected `BlockTimeKit/` at repo root
+2. All 3 libraries linked to `Block-Time` iOS target: `BlockTimeDomain`, `BlockTimeCalculators`, `BlockTimeData`
+3. `Block-TimeWidget` extension target NOT linked (deferred to Phase 5 per plan)
+4. `Block-Time` iOS scheme built successfully (Cmd+B — zero errors)
+5. `grep -c "BlockTimeKit" Block-Time.xcodeproj/project.pbxproj` returned 33 (requirement: >= 4)
+
+**Verification:**
+- project.pbxproj contains 33 references to BlockTimeKit/BlockTimeDomain/BlockTimeData/BlockTimeCalculators
+- iOS build succeeded post-linking
+- swift-tools-version deviation (5.10 → 6.0) had no negative impact on Xcode integration
 
 ## Stubs
 
