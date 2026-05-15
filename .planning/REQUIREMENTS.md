@@ -13,7 +13,7 @@
 - [ ] **FOUND-07**: All dates stored as UTC `Date` — local-time conversion happens only at the display/binding layer
 - [ ] **FOUND-08**: CloudKit sync configured via `ModelConfiguration(cloudKitDatabase: .automatic)` with the existing iCloud container — user data continuity preserved
 - [ ] **FOUND-09**: One-time Core Data → SwiftData migration service runs on first launch, guarded by a `UserDefaults` completion flag, handles app crash mid-migration safely
-- [ ] **FOUND-10**: Migration service converts all 8 String time fields (blockTime, simTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, spInsTime) to `TimeInterval`, handling nil, empty, "HH:MM", decimal-hours, malformed, and legacy placeholder strings without crashing
+- [x] **FOUND-10**: Migration service converts all 8 String time fields (blockTime, simTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, spInsTime) to `TimeInterval`, handling nil, empty, "HH:MM", decimal-hours, malformed, and legacy placeholder strings without crashing
 - [ ] **FOUND-11**: Migration service runs via `@ModelActor` on a background thread; main thread is never blocked during migration
 - [ ] **FOUND-12**: SwiftUI previews work without a real CloudKit connection (in-memory repository injected via environment)
 
@@ -127,7 +127,7 @@
 | FOUND-07 | Phase 1 — Foundation | Pending |
 | FOUND-08 | Phase 1 — Foundation | Pending |
 | FOUND-09 | Phase 1 — Foundation | Pending |
-| FOUND-10 | Phase 1 — Foundation | Pending |
+| FOUND-10 | Phase 1 — Foundation | Complete |
 | FOUND-11 | Phase 1 — Foundation | Pending |
 | FOUND-12 | Phase 1 — Foundation | Pending |
 | CALC-01 | Phase 2 — Calculators & Tests | Pending |
