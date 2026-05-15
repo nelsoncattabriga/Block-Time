@@ -70,11 +70,14 @@ final class FlightRepositoryTests: XCTestCase {
 
     func test_count_freshRepo_isZero_afterInsert_isOne_afterDeleteAll_isZero() async throws {
         let sut = makeSUT()
-        XCTAssertEqual(try await sut.count(), 0)
+        let countEmpty = try await sut.count()
+        XCTAssertEqual(countEmpty, 0)
         try await sut.insert(makeFlight())
-        XCTAssertEqual(try await sut.count(), 1)
+        let countOne = try await sut.count()
+        XCTAssertEqual(countOne, 1)
         try await sut.deleteAll()
-        XCTAssertEqual(try await sut.count(), 0)
+        let countAfterDelete = try await sut.count()
+        XCTAssertEqual(countAfterDelete, 0)
     }
 
     func test_update_replacesExistingFlightWithSameID() async throws {
