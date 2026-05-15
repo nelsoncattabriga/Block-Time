@@ -732,16 +732,7 @@ class FlightDatabaseService: ObservableObject {
            viewContext.performAndWait {
                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
 
-               // Include flights that have ANY of:
-               // 1. Non-zero block time (completed operating flights)
-               // 2. Non-zero sim time (simulator flights)
-               // 3. isPositioning = true (PAX flights, even if blockTime=0)
-               // 4. Has scheduled times (rostered/future flights with scheduledDeparture or scheduledArrival)
-               // This approach includes all real flights (past and future) while excluding only empty placeholders
-               request.predicate = NSPredicate(
-                   format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (isPositioning == YES) OR (scheduledDeparture != nil AND scheduledDeparture != %@) OR (scheduledArrival != nil AND scheduledArrival != %@)",
-                   "0", "0.0", "0.00", "0", "0.0", "0.00", "", ""
-               )
+               request.predicate = NSPredicate(format: "date != nil")
 
                request.sortDescriptors = [
                    NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)
@@ -782,10 +773,7 @@ class FlightDatabaseService: ObservableObject {
         return await withCheckedContinuation { continuation in
             context.perform {
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-                request.predicate = NSPredicate(
-                    format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (isPositioning == YES) OR (scheduledDeparture != nil AND scheduledDeparture != %@) OR (scheduledArrival != nil AND scheduledArrival != %@)",
-                    "0", "0.0", "0.00", "0", "0.0", "0.00", "", ""
-                )
+                request.predicate = NSPredicate(format: "date != nil")
                 request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
                 request.fetchBatchSize = 100
                 request.returnsObjectsAsFaults = false
