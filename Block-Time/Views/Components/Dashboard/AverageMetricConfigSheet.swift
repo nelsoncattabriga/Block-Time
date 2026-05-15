@@ -26,7 +26,7 @@ struct AverageMetricConfigSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section {
                     Picker("Aircraft", selection: $selectedAircraftType) {
@@ -68,12 +68,12 @@ struct AverageMetricConfigSheet: View {
             .navigationTitle("Average Stats Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         onSave()
                         dismiss()

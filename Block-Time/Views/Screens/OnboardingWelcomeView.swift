@@ -14,7 +14,7 @@ struct OnboardingWelcomeView: View {
     var onSetupManually: () -> Void
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 32) {
                     // Header Section

@@ -58,18 +58,34 @@ struct LogbookPDFExportView: View {
     ]
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 16) {
-                    setupView
+        NavigationStack {
+            ZStack {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        setupView
+                    }
+                    .padding()
                 }
-                .padding()
+
+                if isGenerating {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                    ProgressView("Generating…")
+                        .progressViewStyle(.circular)
+                        .padding(24)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                }
             }
+            .allowsHitTesting(!isGenerating)
             .navigationTitle("Print Logbook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Print") { Task { await generatePDF() } }
+                        .disabled(flightCount == 0 || isGenerating)
                 }
             }
             .alert("Export Error", isPresented: Binding(
@@ -216,32 +232,12 @@ struct LogbookPDFExportView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 130)
                 }
+
             }
             .padding()
             .background(Color.brown.opacity(0.06))
             .cornerRadius(12)
 
-            // Generate button
-            Button { Task { await generatePDF() } } label: {
-                HStack {
-                    if isGenerating {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .brown))
-                    } else {
-                        Image(systemName: "books.vertical.fill")
-                            .foregroundColor(.brown)
-                    }
-                    Text(isGenerating ? "Generating…" : "Generate PDF")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.brown.opacity(0.12))
-                .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.brown.opacity(0.4), lineWidth: 1))
-            }
-            .disabled(isGenerating || flightCount == 0)
         }
     }
 
@@ -344,7 +340,7 @@ struct LogbookPDFExportView: View {
     @MainActor
     private func generatePDF() async {
         isGenerating = true
-        await Task.yield()  // let SwiftUI render the spinner before blocking work begins
+        try? await Task.sleep(nanoseconds: 32_000_000) // two frames — guarantees overlay renders before main-thread work
         let name      = logbookName.trimmingCharacters(in: .whitespacesAndNewlines)
         let arnNumber = arn.trimmingCharacters(in: .whitespacesAndNewlines)
         let format    = dateFormat
@@ -378,11 +374,21 @@ struct LogbookPDFExportView: View {
             let sorted = filtered.sorted { effectiveSortDate(for: $0) < effectiveSortDate(for: $1) }
             let resolvedDates = sorted.map { effectiveDateString(for: $0) }
 
+            // Compute totals for flights before the selected range (career BF for partial exports)
+            var priorTotals = PageTotals()
+            if preset != .all {
+                let filteredSet = Set(filtered)
+                for f in all where !filteredSet.contains(f) {
+                    priorTotals.accumulate(f)
+                }
+            }
+
             // Render off-thread
             let pdfData = await Task.detached(priority: .userInitiated) {
                 LogbookPDFRenderer.render(
                     flights: sorted, resolvedDates: resolvedDates,
-                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm)
+                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm,
+                    priorTotals: priorTotals)
             }.value
 
             let timestamp = DateFormatter()
@@ -410,16 +416,16 @@ struct PDFPreviewView: View {
     @State private var showShareSheet = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             PDFKitView(url: url)
                 .ignoresSafeArea(edges: .bottom)
                 .navigationTitle("Logbook Preview")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Close") { dismiss() }
                     }
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             showShareSheet = true
                         } label: {
@@ -431,7 +437,6 @@ struct PDFPreviewView: View {
                     PDFShareSheet(items: [url])
                 }
         }
-        .navigationViewStyle(.stack)
     }
 }
 

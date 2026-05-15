@@ -19,7 +19,7 @@ struct LogbookSettingsView: View {
     ]
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
@@ -94,7 +94,7 @@ struct LogbookSettingsView: View {
             .navigationTitle("Dashboard Layout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if isEditMode {
                         Button("Done") {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -105,7 +105,7 @@ struct LogbookSettingsView: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
@@ -210,7 +210,7 @@ struct AddCardSheet: View {
     ]
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(availableCards) { cardType in
@@ -270,7 +270,7 @@ struct AddCardSheet: View {
             .navigationTitle("Add Card")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }

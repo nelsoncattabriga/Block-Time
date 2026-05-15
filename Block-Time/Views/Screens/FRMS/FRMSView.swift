@@ -536,20 +536,38 @@ struct FRMSView: View {
                 // Daily totals
                 HStack(spacing: 16) {
                     Label {
-                        Text("Duty: ").foregroundStyle(.secondary) + Text("\(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalDutyTime) : String(format: "%.1f", dailySummary.totalDutyTime)) hrs").foregroundStyle(AppColors.accentOrange)
+                        let dutyStr = appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.factoredDutyTime) : String(format: "%.1f", dailySummary.factoredDutyTime)
+                        if dailySummary.hasSimulatorDuty {
+                            return Text("Duty: ").foregroundStyle(.secondary)
+                                + Text("\(dutyStr) hrs").foregroundStyle(AppColors.accentOrange)
+                                + Text(" (1.5×)").foregroundStyle(.secondary).font(.footnote)
+                        } else {
+                            return Text("Duty: ").foregroundStyle(.secondary)
+                                + Text("\(dutyStr) hrs").foregroundStyle(AppColors.accentOrange)
+                        }
                     } icon: {
-                        Image(systemName: "clock")//.foregroundStyle(AppColors.accentOrange)
+                        Image(systemName: "clock")
                     }
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    
-                    Label {
-                        Text("Flight: ").foregroundStyle(.secondary) + Text("\(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalFlightTime) : String(format: "%.1f", dailySummary.totalFlightTime)) hrs").foregroundStyle(AppColors.accentBlue)
-                    } icon: {
-                        Image(systemName: "clock.badge.airplane")//.foregroundStyle(AppColors.accentBlue)
+
+                    if dailySummary.totalFlightTime > 0 {
+                        Label {
+                            Text("Flight: ").foregroundStyle(.secondary) + Text("\(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalFlightTime) : String(format: "%.1f", dailySummary.totalFlightTime)) hrs").foregroundStyle(AppColors.accentBlue)
+                        } icon: {
+                            Image(systemName: "clock.badge.airplane")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    } else if dailySummary.hasSimulatorDuty {
+                        Label {
+                            Text("Sim: ").foregroundStyle(.secondary) + Text("\(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(dailySummary.totalSimDutyTime) : String(format: "%.1f", dailySummary.totalSimDutyTime)) hrs").foregroundStyle(AppColors.accentBlue)
+                        } icon: {
+                            Image(systemName: "clock.badge.airplane")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                     }
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
                 }
             }
             .padding(12)

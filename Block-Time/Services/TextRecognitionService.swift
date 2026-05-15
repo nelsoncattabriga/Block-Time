@@ -64,7 +64,7 @@ class TextRecognitionService: ObservableObject {
     /// Cleans an ACARS screen photo before passing it to Vision OCR.
     /// Pipeline: greyscale → contrast boost → unsharp mask → binarise.
     /// Returns the original CGImage unchanged if any step fails.
-    private func preprocessForOCR(_ cgImage: CGImage) -> CGImage {
+    private func preprocessForOCR(_ cgImage: CGImage, orientation: UIImage.Orientation = .up) -> CGImage {
         var image = CIImage(cgImage: cgImage)
 
         // 1. Strip colour — Vision reads monochrome text more reliably
@@ -105,15 +105,15 @@ class TextRecognitionService: ObservableObject {
         LogManager.shared.debug("Image pre-processing complete")
 
         // To inspect pre-processing output, uncomment the block below (DEBUG builds only):
-         #if DEBUG
-         let debugImage = UIImage(cgImage: output)
-         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
-             guard status == .authorized || status == .limited else { return }
-             PHPhotoLibrary.shared().performChanges({
-                 PHAssetChangeRequest.creationRequestForAsset(from: debugImage)
-             }, completionHandler: nil)
-         }
-         #endif
+//         #if DEBUG
+//         let debugImage = UIImage(cgImage: output, scale: 1.0, orientation: orientation)
+//         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+//             guard status == .authorized || status == .limited else { return }
+//             PHPhotoLibrary.shared().performChanges({
+//                 PHAssetChangeRequest.creationRequestForAsset(from: debugImage)
+//             }, completionHandler: nil)
+//         }
+//         #endif
 
         return output
     }
@@ -132,7 +132,7 @@ class TextRecognitionService: ObservableObject {
     ///
     /// Result: only the green data values survive as white text on black, and Vision
     /// reads them top-to-bottom without having to untangle the two-column label layout.
-    private func preprocessForA380OCR(_ cgImage: CGImage) -> CGImage {
+    private func preprocessForA380OCR(_ cgImage: CGImage, orientation: UIImage.Orientation = .up) -> CGImage {
         var image = CIImage(cgImage: cgImage)
 
         // 1. Green isolation — output = G − max(R, B), all channels equal (greyscale-ish).
@@ -198,7 +198,7 @@ class TextRecognitionService: ObservableObject {
         LogManager.shared.debug("A380 green-channel image pre-processing complete")
 
         #if DEBUG
-        let debugImage = UIImage(cgImage: output)
+        let debugImage = UIImage(cgImage: output, scale: 1.0, orientation: orientation)
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             guard status == .authorized || status == .limited else { return }
             PHPhotoLibrary.shared().performChanges({
@@ -231,7 +231,7 @@ class TextRecognitionService: ObservableObject {
             LogManager.shared.error("Failed to convert UIImage to CGImage for text recognition")
             throw TextRecognitionError(message: "Failed to process image")
         }
-        let cgImage = fleetType == .a380 ? preprocessForA380OCR(rawCGImage) : preprocessForOCR(rawCGImage)
+        let cgImage = fleetType == .a380 ? preprocessForA380OCR(rawCGImage, orientation: image.imageOrientation) : preprocessForOCR(rawCGImage, orientation: image.imageOrientation)
 
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in

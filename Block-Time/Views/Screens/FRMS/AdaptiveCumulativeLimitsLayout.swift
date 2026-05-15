@@ -188,7 +188,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                         .foregroundColor(.primary)
 
                     Text("/ \(Int(limit)) \(unit)")
-                        .iPadScaledFont(.caption)
+                        .iPadScaledFont(.subheadline)
                         .foregroundColor(.secondary)
                 }
 
@@ -197,7 +197,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
 
                 if let note {
                     Text(note)
-                        .iPadScaledFont(.caption2)
+                        .iPadScaledFont(.footnote)
                         .foregroundColor(.secondary)
                 }
             }

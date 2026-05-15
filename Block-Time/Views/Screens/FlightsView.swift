@@ -52,6 +52,7 @@ struct FlightsView: View {
     @State private var showingBulkDuplicateAlert = false
     @State private var showingBulkEditSheet = false
     @State private var summaryToEdit: FlightSector?
+    @State private var showingNewSummarySheet = false
     @State private var sessionFilterIDs: Set<UUID> = []
     @State private var showingDeleteSessionAlert = false
     @State private var reloadTask: Task<Void, Never>?
@@ -305,14 +306,24 @@ struct FlightsView: View {
                     HStack(spacing: 16) {
                         // Add new flight button - hide in select mode
                         if !isSelectMode {
-                            Button(action: {
-                                HapticManager.shared.impact(.light)
-                                if purchaseService.canAddFlight {
-                                    isAddingNewFlight = true
-                                } else {
-                                    showingPaywall = true
+                            Menu {
+                                Button {
+                                    HapticManager.shared.impact(.light)
+                                    if purchaseService.canAddFlight {
+                                        isAddingNewFlight = true
+                                    } else {
+                                        showingPaywall = true
+                                    }
+                                } label: {
+                                    Label("New Flight", systemImage: "airplane")
                                 }
-                            }) {
+                                Button {
+                                    HapticManager.shared.impact(.light)
+                                    showingNewSummarySheet = true
+                                } label: {
+                                    Label("Add Aircraft Summary", systemImage: "list.bullet.rectangle")
+                                }
+                            } label: {
                                 Image(systemName: "plus.circle")
                                     .font(.title2)
                             }
@@ -550,6 +561,14 @@ struct FlightsView: View {
                     },
                     onDelete: { summaryToDelete in
                         deleteSummary(summaryToDelete)
+                    }
+                )
+            }
+            .sheet(isPresented: $showingNewSummarySheet) {
+                AircraftSummarySheet(
+                    editingSector: nil,
+                    onSave: { newSummary in
+                        saveSummary(newSummary)
                     }
                 )
             }

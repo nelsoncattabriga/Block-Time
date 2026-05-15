@@ -259,7 +259,7 @@ struct LogbookPDFPageDrawer {
 
         // Remarks (col 8)
         if let r = cellRect(8), !flight.remarks.isEmpty {
-            drawTextVCentred(flight.remarks, in: r, font: L.fontDataRemarks, color: L.bodyText, alignment: .left, truncate: true)
+            drawTextVCentred(flight.remarks, in: r, font: L.fontDataRemarks, color: L.bodyText, alignment: .center, wrap: true)
         }
 
         // Time columns (cols 9-16) — zero-suppress
@@ -418,7 +418,11 @@ struct LogbookPDFPageDrawer {
 
     // MARK: - Text Helpers
 
-    // Draws text vertically centred within rect, shrinking font to fit width if needed.
+    // Draws text vertically centred within rect.
+    // truncate=true: single line, tail-truncated.
+    // truncate=false, wrap=false: single line, shrink font to fit width.
+    // truncate=false, wrap=true: try single line at full size; if too wide, try 2-line wrap;
+    //   if 2-line wrap is too tall, shrink font until it fits within rect.height.
     private func drawTextVCentred(
         _ text: String,
         in rect: CGRect,
@@ -426,32 +430,80 @@ struct LogbookPDFPageDrawer {
         color: UIColor,
         alignment: NSTextAlignment = .center,
         truncate: Bool = false,
+        wrap: Bool = false,
         minFontSize: CGFloat = 4
     ) {
-        let style = NSMutableParagraphStyle()
-        style.alignment = alignment
-        style.lineBreakMode = truncate ? .byTruncatingTail : .byClipping
-
-        // Step font size down until text fits, stopping at minFontSize
-        var drawFont = font
-        if !truncate {
-            var size = font.pointSize
-            while size > minFontSize {
-                let testAttrs: [NSAttributedString.Key: Any] = [.font: drawFont]
-                let w = (text as NSString).size(withAttributes: testAttrs).width
-                if w <= rect.width { break }
-                size -= 0.5
-                drawFont = font.withSize(size)
-            }
+        let makeStyle: (NSLineBreakMode) -> NSMutableParagraphStyle = { mode in
+            let s = NSMutableParagraphStyle()
+            s.alignment = alignment
+            s.lineBreakMode = mode
+            return s
         }
 
+        if truncate {
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: font, .foregroundColor: color,
+                .paragraphStyle: makeStyle(.byTruncatingTail),
+            ]
+            let h = (text as NSString).size(withAttributes: attrs).height
+            let vOffset = max(0, (rect.height - h) / 2)
+            (text as NSString).draw(
+                in: CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: h),
+                withAttributes: attrs)
+            return
+        }
+
+        if wrap {
+            // Measure wrapped height for a given font size
+            func wrappedHeight(size: CGFloat) -> CGFloat {
+                let f = font.withSize(size)
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: f, .foregroundColor: color,
+                    .paragraphStyle: makeStyle(.byWordWrapping),
+                ]
+                let bound = CGSize(width: rect.width, height: .greatestFiniteMagnitude)
+                return (text as NSString).boundingRect(
+                    with: bound, options: .usesLineFragmentOrigin,
+                    attributes: attrs, context: nil).height
+            }
+
+            // Find smallest font size that fits within rect.height, stepping down if needed
+            var size = font.pointSize
+            while size > minFontSize && wrappedHeight(size: size) > rect.height {
+                size -= 0.5
+            }
+
+            let drawFont = font.withSize(size)
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: drawFont, .foregroundColor: color,
+                .paragraphStyle: makeStyle(.byWordWrapping),
+            ]
+            let h = wrappedHeight(size: size)
+            let vOffset = max(0, (rect.height - h) / 2)
+            (text as NSString).draw(
+                in: CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: h),
+                withAttributes: attrs)
+            return
+        }
+
+        // Single-line shrink-to-fit
+        var drawFont = font
+        var size = font.pointSize
+        while size > minFontSize {
+            let w = (text as NSString).size(withAttributes: [.font: drawFont]).width
+            if w <= rect.width { break }
+            size -= 0.5
+            drawFont = font.withSize(size)
+        }
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: drawFont, .foregroundColor: color, .paragraphStyle: style,
+            .font: drawFont, .foregroundColor: color,
+            .paragraphStyle: makeStyle(.byClipping),
         ]
-        let textSize = (text as NSString).size(withAttributes: attrs)
-        let vOffset = max(0, (rect.height - textSize.height) / 2)
-        let drawRect = CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: textSize.height)
-        (text as NSString).draw(in: drawRect, withAttributes: attrs)
+        let h = (text as NSString).size(withAttributes: attrs).height
+        let vOffset = max(0, (rect.height - h) / 2)
+        (text as NSString).draw(
+            in: CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: h),
+            withAttributes: attrs)
     }
 
     private static func decimalToHHMM(_ v: Double) -> String {

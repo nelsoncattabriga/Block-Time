@@ -18,7 +18,7 @@ struct OnboardingFlowView: View {
     private let steps = ["Crew Settings", "Flight Information", "FRMS"]
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 switch currentStep {
                 case 0:
@@ -34,7 +34,7 @@ struct OnboardingFlowView: View {
             .navigationTitle("Step \(currentStep + 1) of \(steps.count)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Back") {
                         withAnimation {
                             if currentStep > 0 {
@@ -45,7 +45,7 @@ struct OnboardingFlowView: View {
                     .disabled(currentStep == 0)
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(currentStep == steps.count - 1 ? "Complete Setup" : "Next") {
                         withAnimation {
                             if currentStep < steps.count - 1 {
@@ -64,15 +64,10 @@ struct OnboardingFlowView: View {
     }
 }
 
-// MARK: - Preview
-
-#if DEBUG
-struct OnboardingFlowView_Previews: PreviewProvider {
-    static var previews: some View {
-        OnboardingFlowView(
-            viewModel: FlightTimeExtractorViewModel(),
-            frmsViewModel: FRMSViewModel()
-        )
-    }
+#Preview {
+    OnboardingFlowView(
+        viewModel: FlightTimeExtractorViewModel(),
+        frmsViewModel: FRMSViewModel()
+    )
+    .environment(ThemeService.shared)
 }
-#endif

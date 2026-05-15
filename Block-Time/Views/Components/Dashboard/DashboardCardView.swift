@@ -47,7 +47,8 @@ struct DashboardCardView: View {
         case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .frmsLimitsGauge,
              .frmsRollingLine, .activityChart, .timeByType,
              .pfRatioChart, .takeoffLanding, .approachTypes, .topRoutes,
-             .topRegistrations, .airportStats, .workRateHeatmap, .careerMilestones, .customCount:
+             .topRegistrations, .airportStats, .workRateHeatmap, .careerMilestones, .customCount,
+             .punctuality, .crewFrequency:
             return true
         default:
             return false
@@ -68,12 +69,7 @@ struct DashboardCardView: View {
         case .frmsLimitsGauge:
             FRMSLimitsGaugeCard(
                 frmsViewModel: frmsViewModel,
-                strip: viewModel.frmsStrip,
-                projectedFlightHours7d:   viewModel.projectedFRMS.flightHours7d,
-                projectedFlightHours28d:  viewModel.projectedFRMS.flightHours28d,
-                projectedFlightHours365d: viewModel.projectedFRMS.flightHours365d,
-                projectedDutyHours7d:     viewModel.projectedFRMS.dutyHours7d,
-                projectedDutyHours14d:    viewModel.projectedFRMS.dutyHours14d
+                strip: viewModel.frmsStrip
             )
         case .frmsRollingLine:
             FRMSRollingLineCard(data: viewModel.frmsRolling)
@@ -99,6 +95,10 @@ struct DashboardCardView: View {
             CareerMilestonesCard(stats: viewModel.careerStats)
         case .customCount:
             if logCustomCount { CustomCountCard() }
+        case .punctuality:
+            PunctualityCard()
+        case .crewFrequency:
+            TopCrewCard()
         default:
             EmptyView()
         }

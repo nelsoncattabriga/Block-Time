@@ -13,7 +13,7 @@ struct ImportSessionReviewSheet: View {
     // This is posted as a notification that FlightsView/FlightsSplitView listens for
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 // Icon
                 Image(systemName: "checkmark.circle.fill")
@@ -80,7 +80,7 @@ struct ImportSessionReviewSheet: View {
             .navigationTitle("Import Summary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
             }

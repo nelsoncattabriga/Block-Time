@@ -381,7 +381,7 @@ private struct BackupDetailSheet: View {
     @State private var selectedRestoreMode: ImportMode = .merge
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
 
@@ -531,7 +531,7 @@ private struct BackupDetailSheet: View {
             .navigationTitle("Backup Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }

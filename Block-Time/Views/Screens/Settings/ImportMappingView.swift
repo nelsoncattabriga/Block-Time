@@ -596,7 +596,6 @@ struct ImportMappingView: View {
             "p2time":         "flight_sic",
             "instrumenttime": "flight_actualInstrument",
             "simtime":        "flight_simulator",
-            "pilotflying":    "flight_pilotFlyingCapacity",
             "daytakeoffs":    "flight_dayTakeoffs",
             "daylandings":    "flight_dayLandings",
             "nighttakeoffs":  "flight_nightTakeoffs",

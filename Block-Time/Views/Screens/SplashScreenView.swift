@@ -118,6 +118,20 @@ struct SplashScreenView: View {
                     }
                 }
             }
+
+            // One-time migration: zero out p1/p1us/p2 on SIM flights where they were incorrectly populated.
+            let simP1MigrationKey = "simFlightP1TimesMigrationCompleted"
+            if !UserDefaults.standard.bool(forKey: simP1MigrationKey) {
+                DispatchQueue.global(qos: .utility).async {
+                    let count = FlightDatabaseService.shared.migrateSimP1Times()
+                    DispatchQueue.main.async {
+                        UserDefaults.standard.set(true, forKey: simP1MigrationKey)
+                        if count > 0 {
+                            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                        }
+                    }
+                }
+            }
         }
     }
 }

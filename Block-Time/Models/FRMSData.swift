@@ -117,7 +117,8 @@ enum DutyType: String, Codable, Sendable {
     case operating      // Flying as operating crew
     case deadheading    // Positioning flight
     case standby        // On standby duty
-    case simulator      // Simulator training
+    case simulator      // Simulator training (1.5× duty factor applies)
+    case instructor     // Sp/Ins instructor in simulator (no 1.5× factor, no flight time)
     case ground         // Ground duties/admin
 
     var icon: String {
@@ -126,6 +127,7 @@ enum DutyType: String, Codable, Sendable {
         case .deadheading: return "airplane.departure"
         case .standby: return "clock"
         case .simulator: return "gamecontroller"
+        case .instructor: return "person.fill.checkmark"
         case .ground: return "building.2"
         }
     }
@@ -262,7 +264,8 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
     let restFacility: RestFacilityClass
     let signOn: Date
     let signOff: Date
-    let flightTime: Double          // Hours
+    let flightTime: Double          // Hours (operating block time only)
+    let simSessionTime: Double      // Hours (raw SIM session time, 0 for non-SIM duties)
     let dutyTime: Double            // Hours
     let nightTime: Double           // Hours of flight time in darkness
     let sectors: Int
@@ -279,6 +282,7 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
          signOn: Date,
          signOff: Date,
          flightTime: Double,
+         simSessionTime: Double = 0,
          nightTime: Double = 0,
          sectors: Int,
          isInternational: Bool = false,
@@ -294,6 +298,7 @@ struct FRMSDuty: Codable, Identifiable, Sendable {
         self.signOn = signOn
         self.signOff = signOff
         self.flightTime = flightTime
+        self.simSessionTime = simSessionTime
         self.nightTime = nightTime
         self.sectors = sectors
         self.isInternational = isInternational
@@ -601,6 +606,23 @@ struct DailyDutySummary: Identifiable, Codable, Sendable {
     let totalSectors: Int           // Total number of sectors
     let earliestSignOn: Date?       // Earliest sign-on time
     let latestSignOff: Date?        // Latest sign-off time
+
+    /// True when the day contains at least one simulator duty (affects duty time factoring display)
+    var hasSimulatorDuty: Bool {
+        duties.contains { $0.dutyType == .simulator }
+    }
+
+    /// Sum of raw sim session time (not duty time) for display purposes
+    var totalSimDutyTime: Double {
+        duties.reduce(0.0) { $0 + $1.simSessionTime }
+    }
+
+    /// Duty time with 1.5× applied to simulator portions, matching the cumulative FRMS calculation
+    var factoredDutyTime: Double {
+        guard hasSimulatorDuty else { return totalDutyTime }
+        // Apply 1.5× to each simulator duty's contribution, raw time for others
+        return duties.reduce(0.0) { $0 + ($1.dutyType == .simulator ? $1.dutyTime * 1.5 : $1.dutyTime) }
+    }
 
     init(date: Date, duties: [FRMSDuty]) {
         self.id = UUID()
