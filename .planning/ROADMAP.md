@@ -30,7 +30,7 @@
 Plans:
 - [x] 01-01-PLAN.md — BlockTimeKit Swift Package scaffold (3 modules), Flight struct, FlightRepository protocol, InMemoryFlightRepository
 - [x] 01-02-PLAN.md — TimeStringConverter (TDD) — all 13 v1 time-string format variants
-- [ ] 01-03-PLAN.md — SchemaV1 (FlightModel + AircraftModel), ModelContainerFactory (3 modes), SwiftDataFlightRepository
+- [x] 01-03-PLAN.md — SchemaV1 (FlightModel + AircraftModel), ModelContainerFactory (3 modes), SwiftDataFlightRepository
 - [ ] 01-04-PLAN.md — CoreDataMigrationService + @ModelActor + crash-safety + row-count verification
 - [ ] 01-05-PLAN.md — App entry wiring: SplashScreen trigger, production ModelContainer injection, preview environment
 

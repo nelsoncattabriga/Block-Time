@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: "## Phases"
 current_phase: 01
 status: in_progress
-last_updated: "2026-05-15T12:30:00.000Z"
-last_activity: 2026-05-15
+last_updated: "2026-05-15T23:14:47.052Z"
+last_activity: 2026-05-15 - Plan 01-01 fully complete (all 3 tasks); BlockTimeKit linked to Block-Time iOS target; iOS build verified
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # Block-Time v2.0 — Project State
@@ -52,6 +52,9 @@ Phases completed: 0 / 7
 - Phase 01-01: Flight struct has 31 stored properties (plan said 26; interface spec requires 31)
 - [01-foundation P02] TimeStringConverter lives in app target (D-03) — migration code is one-shot app concern, not BlockTimeKit
 - [01-foundation P02] clockStringToSecondsFromMidnight returns nil for malformed clock strings, not 0 — caller handles absence vs. midnight
+- [01-foundation P03] migrationPlan omitted from production CloudKit container — Apple bug causes fatal error (Pitfall 3)
+- [01-foundation P03] @MainActor on all SwiftDataFlightRepository methods — simpler than ModelActor for Phase 1; revisit in Phase 3
+- [01-foundation P03] FlightModel has 41 properties; toDomain/apply map all 31 Flight fields
 
 ### Critical Reminders
 
@@ -75,8 +78,9 @@ Phases completed: 0 / 7
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260508-lvr | Add AddFlightWidget to the BlockTimeWidget extension | 2026-05-08 | f1aef95 | [260508-lvr-add-addflightwidget-to-the-blocktimewidg](./quick/260508-lvr-add-addflightwidget-to-the-blocktimewidg/) |
+| Phase 01-foundation P03 | 5 | 4 tasks | 8 files |
 
 ## Session Continuity
 
-Last activity: 2026-05-15 - Plan 01-01 fully complete (all 3 tasks); BlockTimeKit linked to Block-Time iOS target; iOS build verified
-Next action: Execute plan 01-02 (TimeStringConverter TDD — all 13 v1 time-string format variants)
+Last activity: 2026-05-15 - Plan 01-03 complete (4 tasks); SchemaV1, FlightModel, AircraftModel, ModelContainerFactory, SwiftDataFlightRepository
+Next action: Execute plan 01-04 (CoreDataMigrationService — one-time v1 Core Data → SwiftData migration)
