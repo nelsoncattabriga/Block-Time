@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: "## Phases"
 current_phase: 01
-status: unknown
-last_updated: "2026-05-15T12:16:58.398Z"
+status: in_progress
+last_updated: "2026-05-15T12:30:00.000Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Block-Time v2.0 — Project State
 
 ## Status
 
-Phase: Not started
+Phase: In Progress
 Current phase: 01
-Last updated: 2026-05-07
+Last updated: 2026-05-15
 
 ## Project Reference
 
@@ -40,8 +40,8 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 
 ## Performance Metrics
 
-Plans completed: 0
-Plans total: TBD (populated after phase planning)
+Plans completed: 1
+Plans total: 5
 Phases completed: 0 / 7
 
 ## Accumulated Context
@@ -50,6 +50,8 @@ Phases completed: 0 / 7
 
 - Phase 01-01: swift-tools-version 6.0 required (CLI needs 6.0 for iOS 18/macOS 15 platform constants; 5.10 fails)
 - Phase 01-01: Flight struct has 31 stored properties (plan said 26; interface spec requires 31)
+- [01-foundation P02] TimeStringConverter lives in app target (D-03) — migration code is one-shot app concern, not BlockTimeKit
+- [01-foundation P02] clockStringToSecondsFromMidnight returns nil for malformed clock strings, not 0 — caller handles absence vs. midnight
 
 ### Critical Reminders
 
@@ -66,7 +68,7 @@ Phases completed: 0 / 7
 
 ### Blockers
 
-- (none yet)
+- Plan 01-01 Task 3: Requires manual Xcode step — add BlockTimeKit local package to Block-Time.xcodeproj
 
 ### Quick Tasks Completed
 
@@ -76,6 +78,5 @@ Phases completed: 0 / 7
 
 ## Session Continuity
 
-Last activity: 2026-05-15
-Last session stopped at: Checkpoint — Phase 01 Plan 01 Task 3 (add BlockTimeKit local package to Xcode)
-Next action: Complete Task 3 manually in Xcode, then resume Phase 01 Plan 01
+Last activity: 2026-05-15 - Completed 01-02 (TimeStringConverter TDD); 01-01 Tasks 1-2 done, blocked at Task 3 (Xcode package linking)
+Next action: Complete 01-01 Task 3 manually in Xcode (add BlockTimeKit local package), then resume Phase 01
