@@ -26,7 +26,13 @@
 2. A simulated mid-migration crash on relaunch retries successfully and does not duplicate or corrupt records.
 3. A SwiftUI preview opens on a screen backed by `InMemoryFlightRepository` with no CloudKit connection required.
 4. The App Group store URL is pinned; adding/removing the widget extension does not produce an empty store on relaunch.
-**Plans:** TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 01-01-PLAN.md — BlockTimeKit Swift Package scaffold (3 modules), Flight struct, FlightRepository protocol, InMemoryFlightRepository
+- [ ] 01-02-PLAN.md — TimeStringConverter (TDD) — all 13 v1 time-string format variants
+- [ ] 01-03-PLAN.md — SchemaV1 (FlightModel + AircraftModel), ModelContainerFactory (3 modes), SwiftDataFlightRepository
+- [ ] 01-04-PLAN.md — CoreDataMigrationService + @ModelActor + crash-safety + row-count verification
+- [ ] 01-05-PLAN.md — App entry wiring: SplashScreen trigger, production ModelContainer injection, preview environment
 
 ### Phase 2: Calculators & Tests
 **Goal:** Every business rule and parser is a pure function with 100% test coverage before any UI wires against it.
@@ -122,7 +128,7 @@ All 65 v1 requirements mapped to exactly one phase. No orphans.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/? | Not started | - |
+| 1. Foundation | 0/5 | Not started | - |
 | 2. Calculators & Tests | 0/? | Not started | - |
 | 3. Core UI | 0/? | Not started | - |
 | 4. Import Pipeline | 0/? | Not started | - |
