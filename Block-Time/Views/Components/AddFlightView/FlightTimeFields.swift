@@ -255,12 +255,7 @@ struct ModernDecimalTimeField: View {
                     TextField(showAsHHMM ? "0:00" : "0.0", text: Binding(
                         get: {
                             if value.isEmpty { return value }
-                            if showAsHHMM {
-                                // Always show HH:MM regardless of focus — displayValue converts decimal→HH:MM
-                                return displayValue
-                            }
-                            // Decimal mode: raw while focused, rounded when not
-                            return decimalFieldFocused ? value : displayValue
+                            return displayValue
                         },
                         set: { newValue in
                             value = sanitize(newValue)
