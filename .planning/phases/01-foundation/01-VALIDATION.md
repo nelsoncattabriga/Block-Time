@@ -2,8 +2,8 @@
 phase: 1
 slug: foundation
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-15
 ---
 
@@ -44,17 +44,17 @@ Migration service tests require a simulator (they instantiate `ModelContainer`).
 | 1-01-01 | 01 | 1 | FOUND-03 | Build | `swift build --package-path BlockTimeKit` | ⬜ pending |
 | 1-01-02 | 01 | 1 | FOUND-04 | Unit | `xcodebuild test -scheme BlockTimeKit` (Sendable/Hashable check) | ⬜ pending |
 | 1-01-03 | 01 | 1 | FOUND-05 | Unit | `xcodebuild test -scheme BlockTimeKit -only-testing:BlockTimeDataTests` | ⬜ pending |
-| 1-02-01 | 02 | 1 | FOUND-10 | Unit | `xcodebuild test -scheme BlockTimeKit -only-testing:BlockTimeDataTests/TimeStringConverterTests` | ⬜ pending |
+| 1-02-01 | 02 | 1 | FOUND-10 | Unit | `xcodebuild test -scheme "Block-Time" -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:Block-TimeTests/TimeStringConverterTests` | ⬜ pending |
 | 1-03-01 | 03 | 2 | FOUND-01 | Integration | `xcodebuild test -scheme Block-Time -only-testing:Block-TimeTests/SchemaVersionTests` | ⬜ pending |
 | 1-03-02 | 03 | 2 | FOUND-02 | Integration | `xcodebuild test -scheme Block-Time -only-testing:Block-TimeTests/ModelContainerFactoryTests` | ⬜ pending |
 | 1-03-03 | 03 | 2 | FOUND-06 | Integration | TimeInterval round-trip test | ⬜ pending |
 | 1-03-04 | 03 | 2 | FOUND-07 | Integration | UTC Date round-trip test | ⬜ pending |
 | 1-03-05 | 03 | 2 | FOUND-08 | Integration | CloudKit container init test | ⬜ pending |
-| 1-04-01 | 04 | 2 | FOUND-09 | Integration | `xcodebuild test -scheme Block-Time -only-testing:Block-TimeTests/MigrationServiceTests` | ⬜ pending |
-| 1-04-02 | 04 | 2 | FOUND-09 | Integration | Crash recovery test | ⬜ pending |
-| 1-04-03 | 04 | 2 | FOUND-10 | Integration | Real .sqlite fixture migration test | ⬜ pending |
-| 1-04-04 | 04 | 2 | FOUND-11 | Integration | Background thread assertion | ⬜ pending |
-| 1-05-01 | 05 | 3 | FOUND-12 | Manual | Xcode preview renders with InMemoryFlightRepository | ⬜ pending |
+| 1-04-01 | 04 | 3 | FOUND-09 | Integration | `xcodebuild test -scheme "Block-Time" -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:Block-TimeTests/CoreDataMigrationServiceTests` | ⬜ pending |
+| 1-04-02 | 04 | 3 | FOUND-09 | Integration | `xcodebuild test -scheme "Block-Time" -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:Block-TimeTests/CrashRecoveryTests` | ⬜ pending |
+| 1-04-03 | 04 | 3 | FOUND-10 | Integration | Real .sqlite fixture migration test | ⬜ pending |
+| 1-04-04 | 04 | 3 | FOUND-11 | Integration | `xcodebuild test -scheme "Block-Time" -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:Block-TimeTests/MigrationBackgroundThreadTests` | ⬜ pending |
+| 1-05-01 | 05 | 4 | FOUND-12 | Manual | Xcode preview renders with InMemoryFlightRepository | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -65,8 +65,10 @@ Migration service tests require a simulator (they instantiate `ModelContainer`).
 All test stubs must be created before implementation begins:
 
 - [ ] `BlockTimeKit/Tests/BlockTimeDataTests/FlightRepositoryTests.swift` — InMemoryFlightRepository protocol conformance (FOUND-05)
-- [ ] `BlockTimeKit/Tests/BlockTimeDataTests/TimeStringConverterTests.swift` — all 13 format variants (FOUND-10)
-- [ ] `Block-Time/Block-TimeTests/MigrationServiceTests.swift` — row-count, crash recovery, field mapping (FOUND-09/10/11)
+- [ ] `Block-Time/Block-TimeTests/Migration/TimeStringConverterTests.swift` — all 13 format variants (FOUND-10)
+- [ ] `Block-Time/Block-TimeTests/Migration/CoreDataMigrationServiceTests.swift` — row-count verification and field mapping (FOUND-09/10)
+- [ ] `Block-Time/Block-TimeTests/Migration/CrashRecoveryTests.swift` — crash recovery simulation (FOUND-09)
+- [ ] `Block-Time/Block-TimeTests/Migration/MigrationBackgroundThreadTests.swift` — background thread assertion (FOUND-11)
 - [ ] `Block-Time/Block-TimeTests/SchemaVersionTests.swift` — VersionedSchema container init (FOUND-01)
 - [ ] `Block-Time/Block-TimeTests/ModelContainerFactoryTests.swift` — App Group URL resolution (FOUND-02)
 - [ ] `Block-Time/Block-TimeTests/Fixtures/` — directory for real production `.sqlite` fixture file

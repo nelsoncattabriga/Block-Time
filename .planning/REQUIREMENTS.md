@@ -6,12 +6,12 @@
 
 - [ ] **FOUND-01**: SwiftData schema wrapped in `VersionedSchema` / `SchemaV1` from the very first build — no unversioned schema ever shipped
 - [ ] **FOUND-02**: `ModelConfiguration` URL and App Group container identifier pinned before any TestFlight distribution
-- [ ] **FOUND-03**: `BlockTimeKit` local Swift Package created with four modules: `BlockTimeDomain`, `BlockTimeCalculators`, `BlockTimeData`, shared between iOS and Mac targets
+- [ ] **FOUND-03**: `BlockTimeKit` local Swift Package created with three modules: `BlockTimeDomain`, `BlockTimeCalculators`, `BlockTimeData`, shared between iOS and Mac targets
 - [ ] **FOUND-04**: `Flight` domain struct (value type, zero persistence coupling) is the authoritative model used by all calculators and ViewModels
 - [ ] **FOUND-05**: `FlightRepository` protocol with two implementations: `SwiftDataFlightRepository` (production) and `InMemoryFlightRepository` (tests and SwiftUI previews)
 - [ ] **FOUND-06**: All time values stored as `TimeInterval` (seconds) in `@Model` — no `String` time fields anywhere in v2.0
 - [ ] **FOUND-07**: All dates stored as UTC `Date` — local-time conversion happens only at the display/binding layer
-- [ ] **FOUND-08**: CloudKit sync configured via `ModelConfiguration(cloudKitDatabase: .automatic)` with the existing iCloud container — user data continuity preserved
+- [ ] **FOUND-08**: CloudKit sync configured via `ModelConfiguration(cloudKitDatabase: .private("iCloud.com.thezoolab.blocktime"))` with the existing iCloud container — user data continuity preserved
 - [ ] **FOUND-09**: One-time Core Data → SwiftData migration service runs on first launch, guarded by a `UserDefaults` completion flag, handles app crash mid-migration safely
 - [ ] **FOUND-10**: Migration service converts all 8 String time fields (blockTime, simTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, spInsTime) to `TimeInterval`, handling nil, empty, "HH:MM", decimal-hours, malformed, and legacy placeholder strings without crashing
 - [ ] **FOUND-11**: Migration service runs via `@ModelActor` on a background thread; main thread is never blocked during migration
