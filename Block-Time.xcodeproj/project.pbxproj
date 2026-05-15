@@ -10,6 +10,9 @@
 		52206F892FB7497400FE25E4 /* BlockTimeCalculators in Frameworks */ = {isa = PBXBuildFile; productRef = 52206F882FB7497400FE25E4 /* BlockTimeCalculators */; };
 		52206F8B2FB7497400FE25E4 /* BlockTimeData in Frameworks */ = {isa = PBXBuildFile; productRef = 52206F8A2FB7497400FE25E4 /* BlockTimeData */; };
 		52206F8D2FB7497400FE25E4 /* BlockTimeDomain in Frameworks */ = {isa = PBXBuildFile; productRef = 52206F8C2FB7497400FE25E4 /* BlockTimeDomain */; };
+		52206FCA2FB7513900FE25E4 /* BlockTimeCalculators in Frameworks */ = {isa = PBXBuildFile; productRef = 52206FC92FB7513900FE25E4 /* BlockTimeCalculators */; };
+		52206FCC2FB7513900FE25E4 /* BlockTimeData in Frameworks */ = {isa = PBXBuildFile; productRef = 52206FCB2FB7513900FE25E4 /* BlockTimeData */; };
+		52206FCE2FB7513900FE25E4 /* BlockTimeDomain in Frameworks */ = {isa = PBXBuildFile; productRef = 52206FCD2FB7513900FE25E4 /* BlockTimeDomain */; };
 		52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52E6FD222F51217D008DD58E /* StoreKit.framework */; };
 		52EFA29A2F7B69EB0027B37B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52EFA2992F7B69EB0027B37B /* WidgetKit.framework */; };
 		52EFA29C2F7B69EB0027B37B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52EFA29B2F7B69EB0027B37B /* SwiftUI.framework */; };
@@ -58,13 +61,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		52206FC72FB74FB600FE25E4 /* Exceptions for "Block-TimeTests" folder in "Block-TimeTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Migration/TimeStringConverterTests.swift,
-			);
-			target = 52206FB32FB74EEC00FE25E4 /* Block-TimeTests */;
-		};
 		522DB4FF2F26FA7F00739A35 /* Exceptions for "Block-Time" folder in "Block-Time" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -92,9 +88,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		52206FC42FB74FB500FE25E4 /* Block-TimeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				52206FC72FB74FB600FE25E4 /* Exceptions for "Block-TimeTests" folder in "Block-TimeTests" target */,
-			);
 			path = "Block-TimeTests";
 			sourceTree = "<group>";
 		};
@@ -129,9 +122,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				52206FCA2FB7513900FE25E4 /* BlockTimeCalculators in Frameworks */,
 				52206F8B2FB7497400FE25E4 /* BlockTimeData in Frameworks */,
 				52206F8D2FB7497400FE25E4 /* BlockTimeDomain in Frameworks */,
+				52206FCC2FB7513900FE25E4 /* BlockTimeData in Frameworks */,
 				52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */,
+				52206FCE2FB7513900FE25E4 /* BlockTimeDomain in Frameworks */,
 				52206F892FB7497400FE25E4 /* BlockTimeCalculators in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -196,6 +192,9 @@
 			dependencies = (
 				52206FB92FB74EEC00FE25E4 /* PBXTargetDependency */,
 			);
+			fileSystemSynchronizedGroups = (
+				52206FC42FB74FB500FE25E4 /* Block-TimeTests */,
+			);
 			name = "Block-TimeTests";
 			packageProductDependencies = (
 			);
@@ -218,7 +217,6 @@
 				52EFA2AA2F7B69EC0027B37B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				52206FC42FB74FB500FE25E4 /* Block-TimeTests */,
 				522DB4F02F26FA7E00739A34 /* Block-Time */,
 			);
 			name = "Block-Time";
@@ -226,6 +224,9 @@
 				52206F882FB7497400FE25E4 /* BlockTimeCalculators */,
 				52206F8A2FB7497400FE25E4 /* BlockTimeData */,
 				52206F8C2FB7497400FE25E4 /* BlockTimeDomain */,
+				52206FC92FB7513900FE25E4 /* BlockTimeCalculators */,
+				52206FCB2FB7513900FE25E4 /* BlockTimeData */,
+				52206FCD2FB7513900FE25E4 /* BlockTimeDomain */,
 			);
 			productName = "Block-Time";
 			productReference = 522DB4EE2F26FA7E00739A34 /* Block-Time.app */;
@@ -285,7 +286,7 @@
 			mainGroup = 522DB4E52F26FA7E00739A34;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				52206F872FB7497400FE25E4 /* XCLocalSwiftPackageReference "BlockTimeKit" */,
+				52206FC82FB7513900FE25E4 /* XCLocalSwiftPackageReference "BlockTimeKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 522DB4EF2F26FA7E00739A34 /* Products */;
@@ -724,7 +725,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		52206F872FB7497400FE25E4 /* XCLocalSwiftPackageReference "BlockTimeKit" */ = {
+		52206FC82FB7513900FE25E4 /* XCLocalSwiftPackageReference "BlockTimeKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = BlockTimeKit;
 		};
@@ -740,6 +741,18 @@
 			productName = BlockTimeData;
 		};
 		52206F8C2FB7497400FE25E4 /* BlockTimeDomain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BlockTimeDomain;
+		};
+		52206FC92FB7513900FE25E4 /* BlockTimeCalculators */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BlockTimeCalculators;
+		};
+		52206FCB2FB7513900FE25E4 /* BlockTimeData */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BlockTimeData;
+		};
+		52206FCD2FB7513900FE25E4 /* BlockTimeDomain */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BlockTimeDomain;
 		};
