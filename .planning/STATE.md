@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Hybrid Architecture Rewrite
 status: Executing Phase 02
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-05-16T11:49:31.827Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-05-16T12:29:20.134Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Block-Time v2.0 — Project State
@@ -48,6 +48,7 @@ Phases completed: 1 / 8
 | Phase | Plan | Duration (min) | Tasks | Files |
 |-------|------|----------------|-------|-------|
 | 02    | 01   | 8              | 3     | 4     |
+| 02    | 03   | 12             | 2     | 2     |
 
 ## Accumulated Context
 
@@ -64,6 +65,9 @@ Phases completed: 1 / 8
 - Phase 02-01: Flight struct uses Int minutes (not TimeInterval seconds) — self-documenting, no sub-minute precision needed
 - Phase 02-01: InMemoryFlightRepository required no changes — stores Flight by UUID, no internal construction
 - Phase 02-01: stringToMinutes/stringToDate test copies use Int return; production policy uses Int16 — clamp is identical
+- Phase 02-03: CoreDataFlightRepository takes NSPersistentCloudKitContainer directly — does not delegate to FlightDatabaseService singleton (D-15)
+- Phase 02-03: shouldInferMappingModelAutomatically = false is required — CoreData inference cannot handle String→Int16 conversion
+- Phase 02-03: deleteAll uses per-entity delete (not NSBatchDeleteRequest) — NSBatchDeleteRequest bypasses CloudKit persistent history
 
 ### Critical Reminders
 
@@ -78,6 +82,6 @@ Phases completed: 1 / 8
 
 ## Session Continuity
 
-Last session: 2026-05-16T11:49:31.825Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-05-16T12:29:20.132Z
+Stopped at: Completed 02-03-PLAN.md
 Next action: `/gsd:plan-phase 2`
