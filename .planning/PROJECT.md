@@ -12,7 +12,13 @@ A pilot's logbook must be accurate and never lose data — every architectural d
 
 ### Validated
 
-(None yet — ship to validate)
+**Data Layer**
+- ✓ Clean `Flight` domain struct (no persistence concerns) acts as the authoritative model — Phase 1
+- ✓ `FlightRepository` protocol with SwiftData and in-memory implementations — Phase 1
+- ✓ All time values stored as `TimeInterval` (seconds) — no string representation in the model — Phase 1
+- ✓ All dates/times stored as UTC `Date` — Phase 1
+- ✓ Migration path from existing Core Data store to SwiftData on first launch — Phase 1 (real-device fixture test deferred to pre-TestFlight)
+- ✓ SwiftData replaces Core Data as the persistence backend (schema + repository layer) — Phase 1
 
 ### Active
 
@@ -97,13 +103,15 @@ A pilot's logbook must be accurate and never lose data — every architectural d
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| SwiftData over Core Data | Eliminates boilerplate, native CloudKit sync, `@Query` in views, proper typed storage | — Pending |
-| Protocol-based repositories | Makes data layer swappable for tests; `FlightRepository` protocol with real + in-memory impl | — Pending |
-| Pure function FRMS calculator | Eliminates ObservableObject state from rule engine, enables exhaustive unit testing | — Pending |
-| `TimeInterval` for all time values | Eliminates string parsing layer throughout the app | — Pending |
-| Shared Swift Package for iOS + Mac | Single source of truth for business logic, UI split at target boundary | — Pending |
-| `Flight` domain struct (not NSManagedObject) | Views and calculators work against a clean type, not persistence objects | — Pending |
+| SwiftData over Core Data | Eliminates boilerplate, native CloudKit sync, `@Query` in views, proper typed storage | Schema shipped as `SchemaV1: VersionedSchema` from day one (Phase 1) |
+| Protocol-based repositories | Makes data layer swappable for tests; `FlightRepository` protocol with real + in-memory impl | `SwiftDataFlightRepository` + `InMemoryFlightRepository` both shipped (Phase 1) |
+| Pure function FRMS calculator | Eliminates ObservableObject state from rule engine, enables exhaustive unit testing | — Phase 2 |
+| `TimeInterval` for all time values | Eliminates string parsing layer throughout the app | All `@Model` fields use `TimeInterval`; `TimeStringConverter` handles v1 string→seconds conversion (Phase 1) |
+| Shared Swift Package for iOS + Mac | Single source of truth for business logic, UI split at target boundary | `BlockTimeKit` with 3 modules shipped and linked (Phase 1) |
+| `Flight` domain struct (not NSManagedObject) | Views and calculators work against a clean type, not persistence objects | `Flight: Sendable, Identifiable, Hashable` in `BlockTimeDomain` (Phase 1) |
 | iOS/Mac same update — not new app | Preserve existing user base and reviews | — Pending |
+| swift-tools-version 6.0 (not 5.10) | CLI toolchain requires 6.0 for iOS 18/macOS 15 platform constants | No negative impact on Xcode integration (Phase 1) |
+| Migration guard in App Group container | Core Data store is in App Group, not app sandbox — real-device fixture test requires export step | Deferred to pre-TestFlight; Simulator fresh-install path verified (Phase 1) |
 
 ## Evolution
 
@@ -123,4 +131,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 after initialization*
+*Last updated: 2026-05-16 after Phase 1 (Foundation)*
