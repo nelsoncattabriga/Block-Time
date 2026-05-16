@@ -150,28 +150,28 @@
 | GODOBJ-03 | Phase 4 — God Object Breakup | Pending |
 | GODOBJ-04 | Phase 4 — God Object Breakup | Pending |
 | GODOBJ-05 | Phase 4 — God Object Breakup | Pending |
-| UI-01 | Phase 5 — Core UI | Pending |
-| UI-02 | Phase 5 — Core UI | Pending |
-| UI-03 | Phase 5 — Core UI | Pending |
-| UI-04 | Phase 5 — Core UI | Pending |
-| UI-05 | Phase 5 — Core UI | Pending |
-| UI-06 | Phase 5 — Core UI | Pending |
-| UI-07 | Phase 5 — Core UI | Pending |
-| UI-08 | Phase 5 — Core UI | Pending |
-| UI-09 | Phase 5 — Core UI | Pending |
-| UI-10 | Phase 5 — Core UI | Pending |
-| UI-11 | Phase 5 — Core UI | Pending |
-| UI-12 | Phase 5 — Core UI | Pending |
+| UI-01 | Phase 5 — Core UI + Widgets | Pending |
+| UI-02 | Phase 5 — Core UI + Widgets | Pending |
+| UI-03 | Phase 5 — Core UI + Widgets | Pending |
+| UI-04 | Phase 5 — Core UI + Widgets | Pending |
+| UI-05 | Phase 5 — Core UI + Widgets | Pending |
+| UI-06 | Phase 5 — Core UI + Widgets | Pending |
+| UI-07 | Phase 5 — Core UI + Widgets | Pending |
+| UI-08 | Phase 5 — Core UI + Widgets | Pending |
+| UI-09 | Phase 5 — Core UI + Widgets | Pending |
+| UI-10 | Phase 5 — Core UI + Widgets | Pending |
+| UI-11 | Phase 5 — Core UI + Widgets | Pending |
+| UI-12 | Phase 5 — Core UI + Widgets | Pending |
+| WIDG-01 | Phase 5 — Core UI + Widgets | Pending |
+| WIDG-02 | Phase 5 — Core UI + Widgets | Pending |
+| WIDG-03 | Phase 5 — Core UI + Widgets | Pending |
+| WIDG-04 | Phase 5 — Core UI + Widgets | Pending |
 | IMP-01 | Phase 6 — Import Pipeline | Pending |
 | IMP-02 | Phase 6 — Import Pipeline | Pending |
 | IMP-03 | Phase 6 — Import Pipeline | Pending |
 | IMP-04 | Phase 6 — Import Pipeline | Pending |
 | IMP-05 | Phase 6 — Import Pipeline | Pending |
 | IMP-06 | Phase 6 — Import Pipeline | Pending |
-| WIDG-01 | Phase 5 — Core UI | Pending |
-| WIDG-02 | Phase 5 — Core UI | Pending |
-| WIDG-03 | Phase 5 — Core UI | Pending |
-| WIDG-04 | Phase 5 — Core UI | Pending |
 | EXP-01 | Phase 7 — Export & Settings | Pending |
 | EXP-02 | Phase 7 — Export & Settings | Pending |
 | EXP-03 | Phase 7 — Export & Settings | Pending |
@@ -187,8 +187,8 @@
 **Coverage:**
 - v1 requirements: 57 total
 - Mapped to phases: 57
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-16 — rewritten for hybrid Core Data approach*
+*Last updated: 2026-05-16 — rewritten for hybrid Core Data approach; traceability aligned to 8-phase roadmap*
