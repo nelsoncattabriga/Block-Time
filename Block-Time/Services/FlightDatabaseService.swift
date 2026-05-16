@@ -133,6 +133,11 @@ class FlightDatabaseService: ObservableObject {
             description.cloudKitContainerOptions = nil
         }
 
+        // Phase 2: V1→V2 migration using custom FlightDataModelV1toV2.xcmappingmodel + FlightEntityMigrationPolicy.
+        // shouldInferMappingModelAutomatically MUST be false — inference cannot perform String→Int16 conversion.
+        description.shouldMigrateStoreAutomatically = true
+        description.shouldInferMappingModelAutomatically = false
+
         container.loadPersistentStores { _, error in
             if let error = error as NSError? {
                 LogManager.shared.error("Core Data: Failed to load - \(error.localizedDescription)")
