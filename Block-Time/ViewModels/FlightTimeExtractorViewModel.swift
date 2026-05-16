@@ -1396,15 +1396,17 @@ class FlightTimeExtractorViewModel: ObservableObject {
             LogManager.shared.debug("   Pre-filled Aircraft Type: \(scheduledType)")
         }
 
-        // Pre-fill scheduled times if available
-        if scheduledDeparture.isEmpty, let scheduledSTD = scheduledFlight.scheduledDeparture, !scheduledSTD.isEmpty {
-            scheduledDeparture = scheduledSTD
-            LogManager.shared.debug("   Pre-filled STD: \(scheduledSTD)")
+        // Pre-fill scheduled times if available (V2: scheduledDeparture/Arrival are Date? — format as HH:mm UTC)
+        if scheduledDeparture.isEmpty, let scheduledSTD = scheduledFlight.scheduledDeparture {
+            let formatted = Self.utcHHmm(from: scheduledSTD)
+            scheduledDeparture = formatted
+            LogManager.shared.debug("   Pre-filled STD: \(formatted)")
         }
 
-        if scheduledArrival.isEmpty, let scheduledSTA = scheduledFlight.scheduledArrival, !scheduledSTA.isEmpty {
-            scheduledArrival = scheduledSTA
-            LogManager.shared.debug("   Pre-filled STA: \(scheduledSTA)")
+        if scheduledArrival.isEmpty, let scheduledSTA = scheduledFlight.scheduledArrival {
+            let formatted = Self.utcHHmm(from: scheduledSTA)
+            scheduledArrival = formatted
+            LogManager.shared.debug("   Pre-filled STA: \(formatted)")
         }
 
         // If we pre-filled airports, update night time calculation
@@ -1413,6 +1415,16 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
     }
     
+    /// Formats a UTC Date as "HH:mm" string for use in the ViewModel's String time fields.
+    /// V2 schema stores scheduledDeparture/Arrival as full UTC Date? instead of "HH:mm" strings.
+    private static func utcHHmm(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: date)
+    }
+
     private func formatFlightNumber(_ flightNumber: String) -> String {
         guard !flightNumber.isEmpty else { return flightNumber }
 

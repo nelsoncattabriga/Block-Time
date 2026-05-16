@@ -60,11 +60,12 @@ final class WidgetDataWriter {
 
         for entity in flights {
             guard let flightDate = entity.date else { continue }
-            let depDatetime = buildDatetime(flightDate: flightDate, timeString: entity.scheduledDeparture)
+            // scheduledDeparture/Arrival are now full UTC Date? (V2 schema) — use directly.
+            let depDatetime: Date? = entity.scheduledDeparture
             let effectiveTime = depDatetime ?? flightDate
             guard effectiveTime >= now else { continue }
 
-            let arrDatetime = buildDatetime(flightDate: flightDate, timeString: entity.scheduledArrival)
+            let arrDatetime: Date? = entity.scheduledArrival
             results.append(WidgetFlightEntry(
                 flightNumber:      (entity.flightNumber ?? "").trimmingCharacters(in: .whitespaces),
                 fromAirport:       (entity.fromAirport ?? "").uppercased(),

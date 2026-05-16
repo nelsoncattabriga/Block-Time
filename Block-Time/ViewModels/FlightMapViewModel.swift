@@ -77,7 +77,7 @@ final class FlightMapViewModel {
         useIATA: Bool,
         airportService: AirportService
     ) async -> ([AirportPin], [RouteSegment]) {
-        let pairs: [(from: String, to: String, blockTime: String)] = await withCheckedContinuation { continuation in
+        let pairs: [(from: String, to: String, blockTime: Int16)] = await withCheckedContinuation { continuation in
             let bgContext = container.newBackgroundContext()
             bgContext.perform {
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
@@ -90,7 +90,7 @@ final class FlightMapViewModel {
                     (
                         from:      entity.fromAirport ?? "",
                         to:        entity.toAirport   ?? "",
-                        blockTime: entity.blockTime   ?? ""
+                        blockTime: entity.blockTime  // Int16 in V2 schema
                     )
                 }
                 continuation.resume(returning: extracted)
@@ -104,7 +104,7 @@ final class FlightMapViewModel {
         for pair in pairs {
             guard !pair.from.isEmpty, !pair.to.isEmpty else { continue }
 
-            guard let btValue = Double(pair.blockTime), btValue > 0 else { continue }
+            guard pair.blockTime > 0 else { continue }
 
             let fromICAO = airportService.convertToICAO(pair.from)
             let toICAO   = airportService.convertToICAO(pair.to)
