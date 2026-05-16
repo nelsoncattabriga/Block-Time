@@ -674,14 +674,14 @@ class FlightDatabaseService: ObservableObject {
             // Preserve original STD/STA if ACARS data doesn't include them (empty strings)
             // This prevents roster-imported scheduled times from being overwritten
             if !actualData.scheduledDeparture.isEmpty {
-                scheduledFlight.scheduledDeparture = actualData.scheduledDeparture
-            } else if let existingSTD = scheduledFlight.scheduledDeparture, !existingSTD.isEmpty {
+                scheduledFlight.scheduledDeparture = Self.timeStringToDate(actualData.scheduledDeparture, on: actualUTCMidnight)
+            } else if let existingSTD = scheduledFlight.scheduledDeparture {
                 LogManager.shared.info("ℹ️ Preserving original STD: \(existingSTD)")
             }
 
             if !actualData.scheduledArrival.isEmpty {
-                scheduledFlight.scheduledArrival = actualData.scheduledArrival
-            } else if let existingSTA = scheduledFlight.scheduledArrival, !existingSTA.isEmpty {
+                scheduledFlight.scheduledArrival = Self.timeStringToDate(actualData.scheduledArrival, on: actualUTCMidnight)
+            } else if let existingSTA = scheduledFlight.scheduledArrival {
                 LogManager.shared.info("ℹ️ Preserving original STA: \(existingSTA)")
             }
 
@@ -3362,24 +3362,26 @@ class FlightDatabaseService: ObservableObject {
             let timeCalculationManager = TimeCalculationManager()
 
             for flight in flights {
-                guard let outTime = flight.outTime,
-                      let inTime = flight.inTime,
-                      !outTime.isEmpty,
-                      !inTime.isEmpty else {
+                guard let outDate = flight.outTime,
+                      let inDate = flight.inTime else {
                     skippedCount += 1
                     continue
                 }
 
+                let outTimeStr = Self.dateToTimeString(outDate)
+                let inTimeStr = Self.dateToTimeString(inDate)
+
                 // Calculate block time with 2 decimal precision (e.g., "4.53")
                 // Rounding is NOT applied here - it's applied at display time based on user preference
-                let newBlockTime = timeCalculationManager.calculateFlightTime(
-                    outTime: outTime,
-                    inTime: inTime
+                let newBlockTimeStr = timeCalculationManager.calculateFlightTime(
+                    outTime: outTimeStr,
+                    inTime: inTimeStr
                 )
+                let newBlockTime = Self.decimalToMinutes(newBlockTimeStr)
 
                 // Only update if the calculation was successful
-                if newBlockTime != "0.0" {
-                    let oldBlockTime = flight.blockTime ?? "0.0"
+                if newBlockTime > 0 {
+                    let oldBlockTime = flight.blockTime
                     flight.blockTime = newBlockTime
 
                     // Log if value changed
