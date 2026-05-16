@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: "## Phases"
 current_phase: 01
 status: in_progress
-last_updated: "2026-05-15T23:14:47.052Z"
-last_activity: 2026-05-15 - Plan 01-01 fully complete (all 3 tasks); BlockTimeKit linked to Block-Time iOS target; iOS build verified
+last_updated: "2026-05-16T00:00:00.000Z"
+last_activity: 2026-05-16 - Plan 01-04 complete; CoreDataMigrationService, @ModelActor, crash-safe state machine, row-count verification; fixture test deferred (App Group container not accessible via Xcode Download Container)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Block-Time v2.0 — Project State
@@ -40,7 +40,7 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 
 ## Performance Metrics
 
-Plans completed: 1
+Plans completed: 4
 Plans total: 5
 Phases completed: 0 / 7
 
@@ -82,5 +82,5 @@ Phases completed: 0 / 7
 
 ## Session Continuity
 
-Last activity: 2026-05-15 - Plan 01-03 complete (4 tasks); SchemaV1, FlightModel, AircraftModel, ModelContainerFactory, SwiftDataFlightRepository
-Next action: Execute plan 01-04 (CoreDataMigrationService — one-time v1 Core Data → SwiftData migration)
+Last activity: 2026-05-16 - Plan 01-04 complete (3/4 tasks); CoreDataMigrationService, CoreDataMigrationActor, crash-safe state machine, row-count verification; real .sqlite fixture test deferred (App Group container not accessible via Xcode Download Container — requires in-app export or device-side tooling)
+Next action: Execute plan 01-05 (App entry wiring: SplashScreen trigger, production ModelContainer injection, preview environment)
