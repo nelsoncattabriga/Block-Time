@@ -84,7 +84,7 @@ final class CoreDataMigrationService {
 
     // MARK: - Init
 
-    init(dependencies: Dependencies = Dependencies()) {
+    nonisolated init(dependencies: Dependencies = Dependencies()) {
         self.deps = dependencies
     }
 
@@ -180,11 +180,7 @@ final class CoreDataMigrationService {
         }.value
 
         guard writtenCount == sourceCount, destCount == sourceCount else {
-            logger.error(
-                "Row count mismatch: expected \(sourceCount, privacy: .public), " +
-                "wrote \(writtenCount, privacy: .public), verified \(destCount, privacy: .public). " +
-                "NOT setting migrationComplete (D-08)."
-            )
+            logger.error("Row count mismatch: expected \(sourceCount, privacy: .public) wrote \(writtenCount, privacy: .public) verified \(destCount, privacy: .public) — NOT setting migrationComplete (D-08).")
             throw MigrationError.rowCountMismatch(expected: sourceCount, actual: destCount)
         }
 
@@ -214,10 +210,7 @@ final class CoreDataMigrationService {
                 try fm.removeItem(at: candidate)
                 logger.info("Crash recovery: deleted \(candidate.lastPathComponent, privacy: .public)")
             } catch {
-                logger.error(
-                    "Crash recovery: failed to delete \(candidate.lastPathComponent, privacy: .public): " +
-                    "\(error.localizedDescription, privacy: .public)"
-                )
+                logger.error("Crash recovery: failed to delete \(candidate.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
     }
