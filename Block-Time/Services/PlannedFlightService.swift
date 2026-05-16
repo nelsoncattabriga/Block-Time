@@ -414,21 +414,23 @@ class PlannedFlightService {
                 flight.so2Name = nil
 
                 // Set scheduled departure and arrival times in UTC (roster times)
-                flight.scheduledDeparture = utcOutTime
-                flight.scheduledArrival = utcInTime
+                // V2 schema: scheduledDeparture/Arrival are Date? — parse "HH:mm" string against UTC midnight
+                flight.scheduledDeparture = Self.parseTimeString(utcOutTime, on: utcDate)
+                flight.scheduledArrival = Self.parseTimeString(utcInTime, on: utcDate)
 
-                // Set actual departure and arrival times to empty (will be filled when flight is actually flown)
-                flight.outTime = ""
-                flight.inTime = ""
+                // Set actual departure and arrival times to nil (will be filled when flight is actually flown)
+                // V2 schema: outTime/inTime are Date?
+                flight.outTime = nil
+                flight.inTime = nil
 
-                // Set all time fields to "0.0" (required fields - will be filled when flight is actually flown)
-                flight.blockTime = "0.0"
-                flight.nightTime = "0.0"
-                flight.p1Time = "0.0"
-                flight.p2Time = "0.0"
-                flight.p1usTime = "0.0"
-                flight.instrumentTime = "0.0"
-                flight.simTime = "0.0"
+                // Set all time fields to 0 (V2 schema: Int16 minutes)
+                flight.blockTime = 0
+                flight.nightTime = 0
+                flight.p1Time = 0
+                flight.p2Time = 0
+                flight.p1usTime = 0
+                flight.instrumentTime = 0
+                flight.simTime = 0
 
                 // Set takeoffs and landings to 0
                 flight.dayTakeoffs = 0
@@ -536,6 +538,17 @@ class PlannedFlightService {
     }
 
     /// Format time from HHmm to HH:mm
+    /// Parse "HH:mm" or "HHmm" UTC time string into a Date using the given UTC-midnight Date as base.
+    private static func parseTimeString(_ raw: String, on utcMidnight: Date) -> Date? {
+        let clean = raw.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ":", with: "")
+        guard clean.count == 4,
+              let hours = Int(clean.prefix(2)),
+              let minutes = Int(clean.suffix(2)),
+              hours >= 0, hours < 24,
+              minutes >= 0, minutes < 60 else { return nil }
+        return utcMidnight.addingTimeInterval(TimeInterval(hours * 3600 + minutes * 60))
+    }
+
     private func formatTime(_ time: String) -> String {
         guard time.count == 4 else { return time }
         let hours = time.prefix(2)
@@ -599,17 +612,8 @@ class PlannedFlightService {
 
     /// Check if a flight has been flown (has block time or flight time logged)
     func isFlown(_ flight: FlightEntity) -> Bool {
-        // A flight is considered "flown" if it has block time or any flight time logged
-        if let blockTime = flight.blockTime, !blockTime.isEmpty, blockTime != "00:00" {
-            return true
-        }
-        if let p1Time = flight.p1Time, !p1Time.isEmpty, p1Time != "00:00" {
-            return true
-        }
-        if let p2Time = flight.p2Time, !p2Time.isEmpty, p2Time != "00:00" {
-            return true
-        }
-        return false
+        // V2 schema: time fields are Int16 minutes — non-zero means logged
+        return flight.blockTime > 0 || flight.p1Time > 0 || flight.p2Time > 0
     }
 
     /// Get count of future flights

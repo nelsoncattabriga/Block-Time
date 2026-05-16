@@ -13,6 +13,7 @@
 		52206FCA2FB7513900FE25E4 /* BlockTimeCalculators in Frameworks */ = {isa = PBXBuildFile; productRef = 52206FC92FB7513900FE25E4 /* BlockTimeCalculators */; };
 		52206FCC2FB7513900FE25E4 /* BlockTimeData in Frameworks */ = {isa = PBXBuildFile; productRef = 52206FCB2FB7513900FE25E4 /* BlockTimeData */; };
 		52206FCE2FB7513900FE25E4 /* BlockTimeDomain in Frameworks */ = {isa = PBXBuildFile; productRef = 52206FCD2FB7513900FE25E4 /* BlockTimeDomain */; };
+		522079D02FB8975F00FE25E4 /* FlightDataModelV1toV2.xcmappingmodel in Sources */ = {isa = PBXBuildFile; fileRef = 522079CF2FB8975F00FE25E4 /* FlightDataModelV1toV2.xcmappingmodel */; };
 		52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52E6FD222F51217D008DD58E /* StoreKit.framework */; };
 		52EFA29A2F7B69EB0027B37B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52EFA2992F7B69EB0027B37B /* WidgetKit.framework */; };
 		52EFA29C2F7B69EB0027B37B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52EFA29B2F7B69EB0027B37B /* SwiftUI.framework */; };
@@ -52,6 +53,7 @@
 
 /* Begin PBXFileReference section */
 		52206FB42FB74EEC00FE25E4 /* Block-TimeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Block-TimeTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		522079CF2FB8975F00FE25E4 /* FlightDataModelV1toV2.xcmappingmodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcmappingmodel; path = FlightDataModelV1toV2.xcmappingmodel; sourceTree = "<group>"; };
 		522DB4EE2F26FA7E00739A34 /* Block-Time.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Block-Time.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		52E6FD222F51217D008DD58E /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlockTimeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -147,6 +149,7 @@
 		522DB4E52F26FA7E00739A34 = {
 			isa = PBXGroup;
 			children = (
+				522079CF2FB8975F00FE25E4 /* FlightDataModelV1toV2.xcmappingmodel */,
 				52EFA2B72F7B6A3E0027B37B /* BlockTimeWidgetExtension.entitlements */,
 				522DB4F02F26FA7E00739A34 /* Block-Time */,
 				52EFA29D2F7B69EB0027B37B /* BlockTimeWidget */,
@@ -336,6 +339,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				522079D02FB8975F00FE25E4 /* FlightDataModelV1toV2.xcmappingmodel in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

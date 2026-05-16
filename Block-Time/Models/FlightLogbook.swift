@@ -66,6 +66,17 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return formatter
     }
 
+    private static var cachedUTCTimeFormatter: DateFormatter {
+        let key = "FlightSector.utcTimeFormatter"
+        if let existing = Thread.current.threadDictionary[key] as? DateFormatter { return existing }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        Thread.current.threadDictionary[key] = formatter
+        return formatter
+    }
+
     let id: UUID
     var date: String
     var flightNumber: String
@@ -273,19 +284,24 @@ struct FlightSector: Identifiable, Codable, Hashable {
               let fromAirport = entity.fromAirport,
               let toAirport = entity.toAirport,
               let captainName = entity.captainName,
-              let foName = entity.foName,
-              let blockTime = entity.blockTime,
-              let nightTime = entity.nightTime,
-              let p1Time = entity.p1Time,
-              let p1usTime = entity.p1usTime,
-              let instrumentTime = entity.instrumentTime,
-              let simTime = entity.simTime else {
+              let foName = entity.foName else {
             return nil
         }
 
         // Convert Date object to string format for FlightSector
         // IMPORTANT: Database stores dates in UTC, so we must use UTC timezone when formatting
         let dateString = Self.cachedUTCDateFormatter.string(from: date)
+
+        // V2 schema: time fields are Int16 minutes — convert to decimal-hour strings for FlightSector
+        func minutesToDecimal(_ minutes: Int16) -> String {
+            let hours = Double(minutes) / 60.0
+            return hours == 0 ? "0.0" : String(format: "%g", hours)
+        }
+        // V2 schema: gate fields are Date? — convert to "HH:mm" UTC strings for FlightSector
+        func dateToTimeString(_ d: Date?) -> String {
+            guard let d else { return "" }
+            return Self.cachedUTCTimeFormatter.string(from: d)
+        }
 
         return FlightSector(
             id: id,
@@ -299,14 +315,14 @@ struct FlightSector: Identifiable, Codable, Hashable {
             foName: foName,
             so1Name: entity.so1Name,
             so2Name: entity.so2Name,
-            blockTime: blockTime,
-            nightTime: nightTime,
-            p1Time: p1Time,
-            p1usTime: p1usTime,
-            p2Time: entity.p2Time ?? "0.0",
-            instrumentTime: instrumentTime,
-            simTime: simTime,
-            spInsTime: entity.spInsTime ?? "",
+            blockTime: minutesToDecimal(entity.blockTime),
+            nightTime: minutesToDecimal(entity.nightTime),
+            p1Time: minutesToDecimal(entity.p1Time),
+            p1usTime: minutesToDecimal(entity.p1usTime),
+            p2Time: minutesToDecimal(entity.p2Time),
+            instrumentTime: minutesToDecimal(entity.instrumentTime),
+            simTime: minutesToDecimal(entity.simTime),
+            spInsTime: minutesToDecimal(entity.spInsTime),
             isPilotFlying: entity.isPilotFlying,
             isPositioning: entity.isPositioning,
             isAIII: entity.isAIII,
@@ -319,10 +335,10 @@ struct FlightSector: Identifiable, Codable, Hashable {
             dayLandings: Int(entity.dayLandings),
             nightTakeoffs: Int(entity.nightTakeoffs),
             nightLandings: Int(entity.nightLandings),
-            outTime: entity.outTime ?? "",
-            inTime: entity.inTime ?? "",
-            scheduledDeparture: entity.scheduledDeparture ?? "",
-            scheduledArrival: entity.scheduledArrival ?? ""
+            outTime: dateToTimeString(entity.outTime),
+            inTime: dateToTimeString(entity.inTime),
+            scheduledDeparture: dateToTimeString(entity.scheduledDeparture),
+            scheduledArrival: dateToTimeString(entity.scheduledArrival)
         )
     }
     
