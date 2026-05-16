@@ -221,10 +221,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
         if isSpIns && !isInstructingInAircraft {
             return !spInsTime.isEmpty && !flightDate.isEmpty
         }
-        // For regular flights, require date and airports, plus either OUT/IN times or STD/STA (for future flights)
+        // For regular flights, require date and airports, plus either OUT/IN times, STD/STA, or a manual block time
         let hasActualTimes = !outTime.isEmpty && !inTime.isEmpty
         let hasScheduledTimes = !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty
-        return !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty && (hasActualTimes || hasScheduledTimes)
+        let hasManualBlockTime = !blockTime.isEmpty && blockTime != "0.0"
+        return !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty && (hasActualTimes || hasScheduledTimes || hasManualBlockTime)
     }
 
     /// Named requirement checks used to drive the dot indicators on the Save button and field labels.
@@ -275,11 +276,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 needsBlockOrInsTime: true
             )
         }
+        let hasManualBlockTime = !blockTime.isEmpty && blockTime != "0.0"
         return SaveRequirements(
             date: !flightDate.isEmpty,
             airports: !fromAirport.isEmpty && !toAirport.isEmpty,
-            out: timesOut,
-            in: timesIn,
+            out: timesOut || hasManualBlockTime,
+            in: timesIn || hasManualBlockTime,
             blockOrInsTime: false,
             blockOrInsTimeLabel: "",
             needsAirports: true,
@@ -2675,8 +2677,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 return
             }
         } else {
-            guard !outTime.isEmpty && !inTime.isEmpty || !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty else {
-                showError("No times extracted yet")
+            let hasActualTimes = !outTime.isEmpty && !inTime.isEmpty
+            let hasScheduledTimes = !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty
+            let hasManualBlockTime = !blockTime.isEmpty && blockTime != "0.0"
+            guard hasActualTimes || hasScheduledTimes || hasManualBlockTime else {
+                showError("Enter OUT/IN times or a manual block time")
                 return
             }
         }
