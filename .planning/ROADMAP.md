@@ -45,7 +45,13 @@ Plans:
   3. A lightweight Core Data migration runs on first launch: time strings convert to Int16 minutes, "HH:MM" gate times convert to Date?, dualTime column defaults to 0
   4. All existing BlockTimeKit tests (InMemoryFlightRepository, Flight struct) still pass after the persistence swap
   5. CloudKit sync continues — NSPersistentCloudKitContainer is unchanged and iCloud-synced data survives the migration
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Flight struct update (Int minutes, Date? gates, new fields) + InMemoryFlightRepository + test fixtures (atomic)
+- [ ] 02-02-PLAN.md — Core Data V2 model version + FlightDataModelV1toV2.xcmappingmodel + FlightEntityMigrationPolicy
+- [ ] 02-03-PLAN.md — CoreDataFlightRepository implementation + FlightDatabaseService migration options
+- [ ] 02-04-PLAN.md — SwiftData deletion sweep + Block_TimeApp wiring + orphan cleanup + simulator verification
 
 ### Phase 3: Calculators & Tests
 **Goal**: Every business rule is a pure function with unit tests that run without a simulator — regressions in FRMS rules are caught by the test suite before they reach users.
@@ -143,7 +149,7 @@ Note: 57 active requirements + 4 complete (FOUND-01–04) = 61 total mapped.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete | 2026-05-16 |
-| 2. CoreData Repository | 0/? | Not started | - |
+| 2. CoreData Repository | 0/4 | Not started | - |
 | 3. Calculators & Tests | 0/? | Not started | - |
 | 4. God Object Breakup | 0/? | Not started | - |
 | 5. Core UI + Widgets | 0/? | Not started | - |
