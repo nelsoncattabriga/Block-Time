@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Hybrid Architecture Rewrite
 status: Executing Phase 02
-stopped_at: "02-02: Task 1 complete, checkpoint at Task 2 (Xcode UI)"
-last_updated: "2026-05-16T11:47:52.559Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-05-16T11:49:31.827Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Block-Time v2.0 — Project State
@@ -41,9 +41,13 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Performance Metrics
 
-Plans completed: 5
-Plans total: 5 (Phase 1 only; Phases 2-8 TBD)
+Plans completed: 6 (Phase 1: 5, Phase 2: 1 so far)
+Plans total: 9
 Phases completed: 1 / 8
+
+| Phase | Plan | Duration (min) | Tasks | Files |
+|-------|------|----------------|-------|-------|
+| 02    | 01   | 8              | 3     | 4     |
 
 ## Accumulated Context
 
@@ -57,6 +61,9 @@ Phases completed: 1 / 8
 - Phase 01: CoreDataMigrationService uses Dependencies struct for injection (simpler than protocol)
 - Phase 01: Real .sqlite fixture test deferred — MUST be completed before TestFlight (hard requirement)
 - Pivot (2026-05-16): Core Data retained as persistence backend — SwiftData deleted in Phase 2. CoreDataFlightRepository replaces SwiftDataFlightRepository under same FlightRepository protocol.
+- Phase 02-01: Flight struct uses Int minutes (not TimeInterval seconds) — self-documenting, no sub-minute precision needed
+- Phase 02-01: InMemoryFlightRepository required no changes — stores Flight by UUID, no internal construction
+- Phase 02-01: stringToMinutes/stringToDate test copies use Int return; production policy uses Int16 — clamp is identical
 
 ### Critical Reminders
 
@@ -71,6 +78,6 @@ Phases completed: 1 / 8
 
 ## Session Continuity
 
-Last session: 2026-05-16T11:47:52.556Z
-Stopped at: 02-02: Task 1 complete, checkpoint at Task 2 (Xcode UI)
+Last session: 2026-05-16T11:49:31.825Z
+Stopped at: Completed 02-01-PLAN.md
 Next action: `/gsd:plan-phase 2`

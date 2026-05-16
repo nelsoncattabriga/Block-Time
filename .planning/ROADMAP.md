@@ -48,7 +48,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Flight struct update (Int minutes, Date? gates, new fields) + InMemoryFlightRepository + test fixtures (atomic)
+- [x] 02-01-PLAN.md — Flight struct update (Int minutes, Date? gates, new fields) + InMemoryFlightRepository + test fixtures (atomic)
 - [x] 02-02-PLAN.md — Core Data V2 model version + FlightDataModelV1toV2.xcmappingmodel + FlightEntityMigrationPolicy
 - [ ] 02-03-PLAN.md — CoreDataFlightRepository implementation + FlightDatabaseService migration options
 - [ ] 02-04-PLAN.md — SwiftData deletion sweep + Block_TimeApp wiring + orphan cleanup + simulator verification

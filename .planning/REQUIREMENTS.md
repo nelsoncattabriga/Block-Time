@@ -15,14 +15,14 @@
 ### Core Data Repository (REPO)
 
 - [ ] **REPO-01**: `CoreDataFlightRepository` conforms to `FlightRepository`, backed by the existing `NSPersistentCloudKitContainer` — no store format change for users
-- [ ] **REPO-02**: Core Data lightweight migration adds `Int16` minute columns for all 8 time fields (blockTime, simTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, spInsTime) — existing decimal-hour strings converted via migration policy
+- [x] **REPO-02**: Core Data lightweight migration adds `Int16` minute columns for all 8 time fields (blockTime, simTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, spInsTime) — existing decimal-hour strings converted via migration policy
 - [ ] **REPO-03**: Core Data lightweight migration adds `dualTime: Int16` column (subset of P2, defaults 0 for all existing flights)
-- [ ] **REPO-04**: Core Data lightweight migration replaces `outTime`, `inTime`, `STD`, `STA` string fields with `Date?` columns — existing "HH:MM" strings combined with flight date and converted to UTC timestamps
-- [ ] **REPO-05**: `Flight` domain struct uses `Int` (minutes) for all time fields — `TimeInterval` (seconds) removed throughout `BlockTimeKit`
+- [x] **REPO-04**: Core Data lightweight migration replaces `outTime`, `inTime`, `STD`, `STA` string fields with `Date?` columns — existing "HH:MM" strings combined with flight date and converted to UTC timestamps
+- [x] **REPO-05**: `Flight` domain struct uses `Int` (minutes) for all time fields — `TimeInterval` (seconds) removed throughout `BlockTimeKit`
 - [ ] **REPO-06**: `blockTime` stored independently in Core Data — not derived from `outTime`/`inTime`; handles simulator and positioning flights with no gate times
 - [ ] **REPO-07**: SwiftData infrastructure deleted — `SchemaV1`, `FlightModel`, `AircraftModel`, `ModelContainerFactory`, `CoreDataMigrationService`, `CoreDataMigrationActor`, `SwiftDataFlightRepository` all removed
 - [ ] **REPO-08**: App entry point injects `CoreDataFlightRepository` via `.environment` — SwiftData container setup removed
-- [ ] **REPO-09**: All existing `BlockTimeKit` tests still pass — `InMemoryFlightRepository` and `Flight` struct tests unaffected by persistence swap
+- [x] **REPO-09**: All existing `BlockTimeKit` tests still pass — `InMemoryFlightRepository` and `Flight` struct tests unaffected by persistence swap
 - [ ] **REPO-10**: CloudKit sync continues working — `NSPersistentCloudKitContainer` unchanged; lightweight migration does not break existing iCloud-synced data
 
 ### Calculators & Testing (CALC)
@@ -127,14 +127,14 @@
 | FOUND-03 | Phase 1 — Foundation | Complete |
 | FOUND-04 | Phase 1 — Foundation | Complete |
 | REPO-01 | Phase 2 — CoreData Repository | Pending |
-| REPO-02 | Phase 2 — CoreData Repository | Pending |
+| REPO-02 | Phase 2 — CoreData Repository | Complete |
 | REPO-03 | Phase 2 — CoreData Repository | Pending |
-| REPO-04 | Phase 2 — CoreData Repository | Pending |
-| REPO-05 | Phase 2 — CoreData Repository | Pending |
+| REPO-04 | Phase 2 — CoreData Repository | Complete |
+| REPO-05 | Phase 2 — CoreData Repository | Complete |
 | REPO-06 | Phase 2 — CoreData Repository | Pending |
 | REPO-07 | Phase 2 — CoreData Repository | Pending |
 | REPO-08 | Phase 2 — CoreData Repository | Pending |
-| REPO-09 | Phase 2 — CoreData Repository | Pending |
+| REPO-09 | Phase 2 — CoreData Repository | Complete |
 | REPO-10 | Phase 2 — CoreData Repository | Pending |
 | CALC-01 | Phase 3 — Calculators & Tests | Pending |
 | CALC-02 | Phase 3 — Calculators & Tests | Pending |
