@@ -1,107 +1,63 @@
 ---
+plan: 02-02
 phase: 02-coredata-repository
-plan: "02"
-subsystem: database
-tags: [core-data, migration, nsentitymigrationpolicy, swift]
-
-# Dependency graph
-requires:
-  - phase: 02-coredata-repository
-    provides: Research and context for Core Data V2 migration approach
-provides:
-  - FlightEntityMigrationPolicy.swift with inline string→Int16 and string→Date? conversion
-  - V2 Core Data model (pending Xcode UI checkpoint — Task 2 not yet done)
-  - FlightDataModelV1toV2.xcmappingmodel (pending Xcode UI checkpoint)
-affects:
-  - 02-coredata-repository (Task 2 Xcode UI work)
-  - CoreDataFlightRepository implementation (reads Int16 scalars and Date? gates)
-
-# Tech tracking
-tech-stack:
-  added: []
-  patterns:
-    - "NSEntityMigrationPolicy inline conversion: no external dependencies, self-contained"
-    - "D-01: migration policy does NOT reuse TimeStringConverter"
-
+status: complete
+completed: 2026-05-16
+commits:
+  - 9f1b49a (Task 1 — FlightEntityMigrationPolicy)
+  - d389d79 (Task 2 checkpoint — V2 model, mapping model, compilation fixes)
 key-files:
   created:
     - Block-Time/Migration/FlightEntityMigrationPolicy.swift
-  modified: []
-
-key-decisions:
-  - "Inline stringToMinutes/stringToDate in migration policy — no reuse of TimeStringConverter (D-01)"
-  - "Malformed time strings → 0 (Int16 fields) or nil (Date? fields) per D-06"
-
-patterns-established:
-  - "NSEntityMigrationPolicy pattern: super.createDestinationInstances first, then setValue loops for batch field conversion"
-
-requirements-completed: [REPO-02, REPO-03, REPO-04, REPO-06]
-
-# Metrics
-duration: ~5min (Task 1 only; Task 2 pending human checkpoint)
-completed: 2026-05-16
+    - Block-Time/FlightDataModel.xcdatamodeld/FlightDataModelV2.xcdatamodel/contents
+    - FlightDataModelV1toV2.xcmappingmodel/xcmapping.xml
+    - Block-Time/FlightDataModel.xcdatamodeld/.xccurrentversion
+  modified:
+    - Block-Time/Models/FlightLogbook.swift
+    - Block-Time/Services/PlannedFlightService.swift
 ---
 
-# Phase 02 Plan 02: Core Data V2 Model and Migration Policy Summary
+## What Was Built
 
-**NSEntityMigrationPolicy subclass with inline decimal-hour and HH:MM string conversion to Int16 minutes and UTC Date? — Task 1 complete; Task 2 awaiting Xcode UI operations at checkpoint**
+### Task 1: FlightEntityMigrationPolicy (automated)
+- `Block-Time/Migration/FlightEntityMigrationPolicy.swift` created with inline `stringToMinutes` (→ Int16) and `stringToDate` (→ Date?) conversion
+- No import SwiftData, no reference to TimeStringConverter (D-01)
+- Algorithm character-identical to the copy verified by Plan 02-01's FlightMigrationConversionTests
 
-## Performance
+### Task 2: Xcode UI checkpoint (human-completed)
+- `FlightDataModelV1.xcdatamodel` — V1 renamed inside bundle
+- `FlightDataModelV2.xcdatamodel` — V2 added, set as current version (.xccurrentversion points to V2)
+- V2 FlightEntity: 12 String? attributes renamed to *Legacy; 9 new Int16 scalar attributes (Use Scalar Type checked); 4 new Date? gate attributes
+- `FlightDataModelV1toV2.xcmappingmodel` — mapping model saved at project root, target membership: Block-Time
+- FlightEntityMigrationPolicy attached to FlightEntityToFlightEntity entity mapping (no module prefix)
 
-- **Duration:** ~5 min (Task 1)
-- **Started:** 2026-05-16T11:45:59Z
-- **Completed:** 2026-05-16T11:47:XX Z (partial — checkpoint hit at Task 2)
-- **Tasks:** 1/2 complete
-- **Files modified:** 1
+### Compilation fixes (schema migration fallout)
+- `FlightLogbook.swift` `from(entity:)`: removed `if let` on Int16 scalars; added `minutesToDecimal()` (Int16→decimal-hour String) and `dateToTimeString()` (Date?→"HH:mm" UTC String); added `cachedUTCTimeFormatter`
+- `PlannedFlightService.swift`: fixed write sites (String→Int16 literals, String→Date? via `parseTimeString`); fixed `isFlown()` to compare Int16 > 0; added `parseTimeString(_:on:)` static helper
 
-## Accomplishments
-- `FlightEntityMigrationPolicy.swift` created with inline `stringToMinutes` and `stringToDate` helpers
-- All 8 time fields (blockTime, simTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, spInsTime) handled
-- All 4 gate fields (outTime, inTime, scheduledDeparture, scheduledArrival) handled
-- No `import SwiftData`, no `TimeStringConverter` reference (D-01 satisfied)
-- dualTime left to model default (0) — no action needed in policy
+## V2 FlightEntity Final Attribute List
 
-## Task Commits
+**Carried over unchanged (straight-mapped):**
+id (UUID), date (Date), createdAt (Date), modifiedAt (Date?), importedAt (Date?), importSessionID (String?),
+fromAirport, toAirport, flightNumber, aircraftType, aircraftReg, captainName, foName, so1Name, so2Name, remarks (String?),
+dayTakeoffs, nightTakeoffs, dayLandings, nightLandings, customCount (Int16 scalar),
+isILS, isGLS, isRNP, isNPA, isAIII, isPilotFlying, isPositioning (Bool scalar)
 
-1. **Task 1: Write FlightEntityMigrationPolicy class with inline string conversion** - `9f1b49a` (feat)
-2. **Task 2: Add FlightDataModelV2 in Xcode (UI-only)** - PENDING CHECKPOINT
+**Renamed *Legacy (kept as Optional String):**
+blockTimeLegacy, simTimeLegacy, nightTimeLegacy, p1TimeLegacy, p1usTimeLegacy, p2TimeLegacy, instrumentTimeLegacy, spInsTimeLegacy,
+outTimeLegacy, inTimeLegacy, scheduledDepartureLegacy, scheduledArrivalLegacy
 
-## Files Created/Modified
-- `Block-Time/Migration/FlightEntityMigrationPolicy.swift` — NSEntityMigrationPolicy subclass for V1→V2 migration; inline stringToMinutes (decimal-hour and HH:MM → Int16 minutes) and stringToDate (HH:MM UTC + flight date → Date?); no external dependencies
+**New Int16 scalar (default 0, Use Scalar Type checked):**
+blockTime, simTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, spInsTime, dualTime
 
-## Decisions Made
-- Inline conversion logic (no TimeStringConverter reuse) per D-01 — migration policy is one-shot, self-contained
-- Malformed/nil inputs: time fields → 0, gate fields → nil per D-06
-- dualTime: no action in policy, V2 model default of 0 handles it
+**New Date? (optional, no scalar):**
+outTime, inTime, scheduledDeparture, scheduledArrival
 
-## Deviations from Plan
+## Entity Mapping
+- Mapping model name: `FlightDataModelV1toV2`
+- Entity mapping name: `FlightEntityToFlightEntity`
+- Custom Policy: `FlightEntityMigrationPolicy` (no module prefix — D-15)
 
-None — Task 1 executed exactly as specified. Comment text adjusted to remove `TimeStringConverter` mention (acceptance criterion: grep count = 0).
-
-## Issues Encountered
-
-None.
-
-## CHECKPOINT STATUS
-
-**Task 2 is a `checkpoint:human-action` gate.** The following Xcode UI operations are required and cannot be scripted:
-
-- Add Model Version V2 inside `FlightDataModel.xcdatamodeld` (Editor > Add Model Version)
-- Rename V1 model to `FlightDataModelV1.xcdatamodel`
-- Set V2 as current version (green checkmark)
-- Modify V2 FlightEntity: rename 12 String? fields to *Legacy variants, add 8 new Int16 scalar columns + dualTime + 4 Date? gate columns
-- Create `FlightDataModelV1toV2.xcmappingmodel` (File > New > Mapping Model)
-- Attach `FlightEntityMigrationPolicy` as Custom Policy in the entity mapping
-- Verify build succeeds and generated `FlightEntity+CoreDataProperties.swift` has `blockTime: Int16`
-
-See `.planning/phases/02-coredata-repository/02-02-PLAN.md` Task 2 `<how-to-verify>` for full step-by-step instructions.
-
-## Next Phase Readiness
-
-- `FlightEntityMigrationPolicy.swift` is ready for Xcode to pick up automatically (folder-based inclusion)
-- After Xcode UI checkpoint completes, the V2 model and mapping model will be in place
-- CoreDataFlightRepository (Plan 03) requires V2 entity codegen (`Int16` scalar properties) — depends on Task 2 being done
-
----
-*Phase: 02-coredata-repository*
-*Completed: 2026-05-16 (partial — Task 2 checkpoint pending)*
+## Deviations
+- Mapping model saved at project root (`FlightDataModelV1toV2.xcmappingmodel/`) rather than `Block-Time/` — functionally identical, Xcode includes it in the bundle via project.pbxproj target membership
+- 118 build errors remain from `SwiftDataFlightRepository.swift` — this file is deleted in Plan 02-04 (Wave 3); errors are expected at this stage
