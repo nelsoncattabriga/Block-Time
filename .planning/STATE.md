@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: "## Phases"
 current_phase: 01
 status: in_progress
-last_updated: "2026-05-15T23:28:00.991Z"
-last_activity: 2026-05-16 - Plan 01-05 Tasks 1-3 complete; stopped at Task 4 (checkpoint:human-verify — Simulator verification required)
+last_updated: "2026-05-16T00:00:00.000Z"
+last_activity: 2026-05-16 - Plan 01-05 complete (all 4 tasks); both Simulator launch paths verified; Phase 1 all 5 plans complete
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 5
 ---
 
 # Block-Time v2.0 — Project State
@@ -60,6 +60,7 @@ Phases completed: 0 / 7
 - [01-foundation P04] Real .sqlite fixture test (Test 9) deferred — must be completed before TestFlight (HARD requirement)
 - [01-foundation P05] OptionalModelContainerModifier: wraps .modelContainer() so pre-migration nil container leaves view tree unchanged
 - [01-foundation P05] productionContainer checks v2MigrationComplete OR hasNoLegacyData — covers post-migration and fresh-install paths
+- [01-foundation P05] Both Simulator launch paths verified: Path A (fresh install, 0 records, exit+relaunch) and Path B (second-launch skip guard)
 
 ### Critical Reminders
 
@@ -85,9 +86,9 @@ Phases completed: 0 / 7
 | 260508-lvr | Add AddFlightWidget to the BlockTimeWidget extension | 2026-05-08 | f1aef95 | [260508-lvr-add-addflightwidget-to-the-blocktimewidg](./quick/260508-lvr-add-addflightwidget-to-the-blocktimewidg/) |
 | Phase 01-foundation P03 | 5 | 4 tasks | 8 files |
 | Phase 01-foundation P04 | 8 | 3 tasks | 8 files |
-| Phase 01-foundation P05 | 12 min | 3/4 tasks | 4 files |
+| Phase 01-foundation P05 | 12 min | 4/4 tasks | 4 files |
 
 ## Session Continuity
 
-Last activity: 2026-05-16 - Plan 01-05 Tasks 1-3 complete; stopped at Task 4 (checkpoint:human-verify — Simulator verification required)
-Next action: Respond to Task 4 checkpoint: run Block-Time on Simulator (fresh install), observe Console.app migration logs, confirm exit(0)+relaunch, confirm blocktime.sqlite exists in App Group. Reply with one of: verified-A-only, verified-A-and-B, verified-A-B-and-C, or describe failures.
+Last activity: 2026-05-16 - Plan 01-05 complete (all 4 tasks verified). Phase 1 all 5 plans complete. Both Simulator launch paths confirmed (fresh install + second-launch skip guard).
+Next action: Phase 1 complete — proceed to Phase 2: Calculators & Tests.

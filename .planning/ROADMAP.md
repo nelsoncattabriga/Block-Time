@@ -128,7 +128,7 @@ All 65 v1 requirements mapped to exactly one phase. No orphans.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/5 | In progress | 01-01 complete (2026-05-15) |
+| 1. Foundation | 5/5 | Complete | 01-05 complete (2026-05-16) |
 | 2. Calculators & Tests | 0/? | Not started | - |
 | 3. Core UI | 0/? | Not started | - |
 | 4. Import Pipeline | 0/? | Not started | - |
