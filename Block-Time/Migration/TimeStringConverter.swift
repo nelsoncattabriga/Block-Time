@@ -29,7 +29,7 @@ import os
 /// - Out-of-range / malformed → `nil`
 enum TimeStringConverter {
 
-    private static let logger = Logger(
+    nonisolated(unsafe) private static let logger = Logger(
         subsystem: "com.thezoolab.blocktime",
         category: "Migration.TimeStringConverter"
     )
@@ -44,7 +44,7 @@ enum TimeStringConverter {
     ///
     /// - Parameter raw: The raw string from a v1 Core Data time field.
     /// - Returns: Duration in seconds, or `0` if input is absent or malformed.
-    static func toSeconds(_ raw: String?) -> TimeInterval {
+    nonisolated static func toSeconds(_ raw: String?) -> TimeInterval {
         guard let raw else { return 0 }
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -83,7 +83,7 @@ enum TimeStringConverter {
     ///
     /// - Parameter raw: The raw string from a v1 outTime / inTime / scheduledDeparture / scheduledArrival field.
     /// - Returns: Seconds from midnight UTC, or `nil` if input is absent or invalid.
-    static func clockStringToSecondsFromMidnight(_ raw: String?) -> TimeInterval? {
+    nonisolated static func clockStringToSecondsFromMidnight(_ raw: String?) -> TimeInterval? {
         guard let raw else { return nil }
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
