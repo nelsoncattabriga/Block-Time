@@ -7,6 +7,7 @@
 import CoreData
 import Foundation
 
+@objc(FlightEntityMigrationPolicy)
 final class FlightEntityMigrationPolicy: NSEntityMigrationPolicy {
 
     override func createDestinationInstances(
