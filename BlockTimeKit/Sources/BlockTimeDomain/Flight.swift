@@ -21,21 +21,27 @@ public struct Flight: Sendable, Identifiable, Hashable {
     public var aircraftType: String
     public var aircraftReg: String
 
-    // MARK: - Times (stored as seconds; converted from v1 String fields)
+    // MARK: - Times (stored as Int minutes; converted from v1 String fields at migration)
 
-    public var blockTime: TimeInterval      // v1: blockTime String?
-    public var simTime: TimeInterval        // v1: simTime String?
-    public var nightTime: TimeInterval      // v1: nightTime String?
-    public var p1Time: TimeInterval         // v1: p1Time String?
-    public var p1usTime: TimeInterval       // v1: p1usTime String?
-    public var p2Time: TimeInterval         // v1: p2Time String?
-    public var instrumentTime: TimeInterval // v1: instrumentTime String?
-    public var spInsTime: TimeInterval      // v1: spInsTime String?
+    public var blockTime: Int       // v1: blockTime String?
+    public var simTime: Int         // v1: simTime String?
+    public var nightTime: Int       // v1: nightTime String?
+    public var p1Time: Int          // v1: p1Time String?
+    public var p1usTime: Int        // v1: p1usTime String?
+    public var p2Time: Int          // v1: p2Time String?
+    public var instrumentTime: Int  // v1: instrumentTime String?
+    public var spInsTime: Int       // v1: spInsTime String?
 
-    // MARK: - Gate / slot times (seconds from midnight UTC on date)
+    // MARK: - Additional time fields (D-13)
 
-    public var outTimeSeconds: TimeInterval?  // v1: outTime String? e.g. "09:15" → 33300
-    public var inTimeSeconds: TimeInterval?   // v1: inTime String?
+    public var dualTime: Int        // Sub-classification of P2 time
+
+    // MARK: - Gate / slot times (UTC Date; converted from v1 "HH:MM" String fields)
+
+    public var outTime: Date?       // v1: outTime String? e.g. "09:15"
+    public var inTime: Date?        // v1: inTime String?
+    public var scheduledDeparture: Date?  // v1: std String? (D-12)
+    public var scheduledArrival: Date?    // v1: sta String?  (D-12)
 
     // MARK: - Movements
 
@@ -43,6 +49,7 @@ public struct Flight: Sendable, Identifiable, Hashable {
     public var nightTakeoffs: Int
     public var dayLandings: Int
     public var nightLandings: Int
+    public var customCount: Int     // NEW D-13
 
     // MARK: - Role
 
@@ -61,6 +68,8 @@ public struct Flight: Sendable, Identifiable, Hashable {
 
     public var captainName: String
     public var foName: String
+    public var so1Name: String      // NEW D-13
+    public var so2Name: String      // NEW D-13
     public var remarks: String
 
     // MARK: - Init
@@ -73,20 +82,24 @@ public struct Flight: Sendable, Identifiable, Hashable {
         flightNumber: String,
         aircraftType: String,
         aircraftReg: String,
-        blockTime: TimeInterval,
-        simTime: TimeInterval,
-        nightTime: TimeInterval,
-        p1Time: TimeInterval,
-        p1usTime: TimeInterval,
-        p2Time: TimeInterval,
-        instrumentTime: TimeInterval,
-        spInsTime: TimeInterval,
-        outTimeSeconds: TimeInterval?,
-        inTimeSeconds: TimeInterval?,
+        blockTime: Int,
+        simTime: Int,
+        nightTime: Int,
+        p1Time: Int,
+        p1usTime: Int,
+        p2Time: Int,
+        instrumentTime: Int,
+        spInsTime: Int,
+        dualTime: Int,
+        outTime: Date?,
+        inTime: Date?,
+        scheduledDeparture: Date?,
+        scheduledArrival: Date?,
         dayTakeoffs: Int,
         nightTakeoffs: Int,
         dayLandings: Int,
         nightLandings: Int,
+        customCount: Int,
         isPilotFlying: Bool,
         isPositioning: Bool,
         isILS: Bool,
@@ -96,6 +109,8 @@ public struct Flight: Sendable, Identifiable, Hashable {
         isAIII: Bool,
         captainName: String,
         foName: String,
+        so1Name: String,
+        so2Name: String,
         remarks: String
     ) {
         self.id = id
@@ -113,12 +128,16 @@ public struct Flight: Sendable, Identifiable, Hashable {
         self.p2Time = p2Time
         self.instrumentTime = instrumentTime
         self.spInsTime = spInsTime
-        self.outTimeSeconds = outTimeSeconds
-        self.inTimeSeconds = inTimeSeconds
+        self.dualTime = dualTime
+        self.outTime = outTime
+        self.inTime = inTime
+        self.scheduledDeparture = scheduledDeparture
+        self.scheduledArrival = scheduledArrival
         self.dayTakeoffs = dayTakeoffs
         self.nightTakeoffs = nightTakeoffs
         self.dayLandings = dayLandings
         self.nightLandings = nightLandings
+        self.customCount = customCount
         self.isPilotFlying = isPilotFlying
         self.isPositioning = isPositioning
         self.isILS = isILS
@@ -128,6 +147,8 @@ public struct Flight: Sendable, Identifiable, Hashable {
         self.isAIII = isAIII
         self.captainName = captainName
         self.foName = foName
+        self.so1Name = so1Name
+        self.so2Name = so2Name
         self.remarks = remarks
     }
 }
