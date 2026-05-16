@@ -25,7 +25,7 @@ final class FlightTests: XCTestCase {
         let f = Self.sample()
         XCTAssertEqual(f.fromAirport, "YSSY")
         XCTAssertEqual(f.toAirport, "YMML")
-        XCTAssertEqual(f.blockTime, 7200)
+        XCTAssertEqual(f.blockTime, 120)  // 2h = 120 min (was 7200s)
         XCTAssertEqual(f.isPilotFlying, true)
     }
 
@@ -38,20 +38,24 @@ final class FlightTests: XCTestCase {
             flightNumber: "QF400",
             aircraftType: "B738",
             aircraftReg: "VH-ABC",
-            blockTime: 7200,
+            blockTime: 120,           // 2h (was 7200s)
             simTime: 0,
             nightTime: 0,
-            p1Time: 7200,
+            p1Time: 120,              // 2h (was 7200s)
             p1usTime: 0,
             p2Time: 0,
             instrumentTime: 0,
             spInsTime: 0,
-            outTimeSeconds: 32400,
-            inTimeSeconds: 39600,
+            dualTime: 0,
+            outTime: Date(timeIntervalSince1970: 32400), // 09:00 UTC
+            inTime: Date(timeIntervalSince1970: 39600),  // 11:00 UTC
+            scheduledDeparture: nil,
+            scheduledArrival: nil,
             dayTakeoffs: 1,
             nightTakeoffs: 0,
             dayLandings: 1,
             nightLandings: 0,
+            customCount: 0,
             isPilotFlying: true,
             isPositioning: false,
             isILS: true,
@@ -61,6 +65,8 @@ final class FlightTests: XCTestCase {
             isAIII: false,
             captainName: "JONES",
             foName: "SMITH",
+            so1Name: "",
+            so2Name: "",
             remarks: ""
         )
     }

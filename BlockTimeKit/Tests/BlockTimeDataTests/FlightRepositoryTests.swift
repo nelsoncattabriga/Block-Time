@@ -25,20 +25,24 @@ final class FlightRepositoryTests: XCTestCase {
             flightNumber: flightNumber,
             aircraftType: "B738",
             aircraftReg: "VH-ABC",
-            blockTime: 7200,
+            blockTime: 120,           // 2h (was 7200s)
             simTime: 0,
             nightTime: 0,
-            p1Time: 7200,
+            p1Time: 120,              // 2h (was 7200s)
             p1usTime: 0,
             p2Time: 0,
             instrumentTime: 0,
             spInsTime: 0,
-            outTimeSeconds: 32400,
-            inTimeSeconds: 39600,
+            dualTime: 0,
+            outTime: Date(timeIntervalSince1970: 32400), // 09:00 UTC
+            inTime: Date(timeIntervalSince1970: 39600),  // 11:00 UTC
+            scheduledDeparture: nil,
+            scheduledArrival: nil,
             dayTakeoffs: 1,
             nightTakeoffs: 0,
             dayLandings: 1,
             nightLandings: 0,
+            customCount: 0,
             isPilotFlying: true,
             isPositioning: false,
             isILS: false,
@@ -48,6 +52,8 @@ final class FlightRepositoryTests: XCTestCase {
             isAIII: false,
             captainName: "JONES",
             foName: "SMITH",
+            so1Name: "",
+            so2Name: "",
             remarks: ""
         )
     }
@@ -86,8 +92,7 @@ final class FlightRepositoryTests: XCTestCase {
         let original = makeFlight(id: id, fromAirport: "YSSY")
         try await sut.insert(original)
 
-        var updated = original
-        updated = Flight(
+        let updated = Flight(
             id: id,
             date: original.date,
             fromAirport: "YMML",  // Changed field
@@ -103,12 +108,16 @@ final class FlightRepositoryTests: XCTestCase {
             p2Time: original.p2Time,
             instrumentTime: original.instrumentTime,
             spInsTime: original.spInsTime,
-            outTimeSeconds: original.outTimeSeconds,
-            inTimeSeconds: original.inTimeSeconds,
+            dualTime: original.dualTime,
+            outTime: original.outTime,
+            inTime: original.inTime,
+            scheduledDeparture: original.scheduledDeparture,
+            scheduledArrival: original.scheduledArrival,
             dayTakeoffs: original.dayTakeoffs,
             nightTakeoffs: original.nightTakeoffs,
             dayLandings: original.dayLandings,
             nightLandings: original.nightLandings,
+            customCount: original.customCount,
             isPilotFlying: original.isPilotFlying,
             isPositioning: original.isPositioning,
             isILS: original.isILS,
@@ -118,6 +127,8 @@ final class FlightRepositoryTests: XCTestCase {
             isAIII: original.isAIII,
             captainName: original.captainName,
             foName: original.foName,
+            so1Name: original.so1Name,
+            so2Name: original.so2Name,
             remarks: original.remarks
         )
         try await sut.update(updated)
