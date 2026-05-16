@@ -84,10 +84,10 @@ private struct RawFlightRow: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text(flight.blockTime ?? "—")
+                Text(flight.blockTime > 0 ? String(format: "%.1f", Double(flight.blockTime) / 60.0) : "—")
                     .font(.subheadline.monospacedDigit())
                     .fontWeight(.medium)
-                if let sim = flight.simTime, sim != "0.0", sim != "0.00", sim != "0", !sim.isEmpty {
+                if flight.simTime > 0 {
                     Text("SIM")
                         .font(.footnote)
                         .foregroundColor(.purple)
@@ -118,6 +118,22 @@ struct RawFlightDetailSheet: View {
         return f
     }()
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        return f
+    }()
+
+    private static func fmtTime(_ d: Date?) -> String? {
+        d.map { Self.timeFormatter.string(from: $0) }
+    }
+
+    private static func fmtMinutes(_ m: Int16) -> String? {
+        m > 0 ? String(format: "%.2f", Double(m) / 60.0) : nil
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -136,23 +152,23 @@ struct RawFlightDetailSheet: View {
                     rawRow("toAirport", flight.toAirport)
                     rawRow("aircraftType", flight.aircraftType)
                     rawRow("aircraftReg", flight.aircraftReg)
-                    rawRow("outTime", flight.outTime)
-                    rawRow("inTime", flight.inTime)
-                    rawRow("scheduledDeparture", flight.scheduledDeparture)
-                    rawRow("scheduledArrival", flight.scheduledArrival)
+                    rawRow("outTime", Self.fmtTime(flight.outTime))
+                    rawRow("inTime", Self.fmtTime(flight.inTime))
+                    rawRow("scheduledDeparture", Self.fmtTime(flight.scheduledDeparture))
+                    rawRow("scheduledArrival", Self.fmtTime(flight.scheduledArrival))
                     rawRow("isPositioning", String(flight.isPositioning))
                     rawRow("isPilotFlying", String(flight.isPilotFlying))
                 }
 
                 rawSection("Times") {
-                    rawRow("blockTime", flight.blockTime)
-                    rawRow("simTime", flight.simTime)
-                    rawRow("nightTime", flight.nightTime)
-                    rawRow("instrumentTime", flight.instrumentTime)
-                    rawRow("p1Time", flight.p1Time)
-                    rawRow("p1usTime", flight.p1usTime)
-                    rawRow("p2Time", flight.p2Time)
-                    rawRow("spInsTime", flight.spInsTime)
+                    rawRow("blockTime", Self.fmtMinutes(flight.blockTime))
+                    rawRow("simTime", Self.fmtMinutes(flight.simTime))
+                    rawRow("nightTime", Self.fmtMinutes(flight.nightTime))
+                    rawRow("instrumentTime", Self.fmtMinutes(flight.instrumentTime))
+                    rawRow("p1Time", Self.fmtMinutes(flight.p1Time))
+                    rawRow("p1usTime", Self.fmtMinutes(flight.p1usTime))
+                    rawRow("p2Time", Self.fmtMinutes(flight.p2Time))
+                    rawRow("spInsTime", Self.fmtMinutes(flight.spInsTime))
                 }
 
                 rawSection("T/O & Ldg") {
