@@ -5,7 +5,7 @@ milestone_name: "## Phases"
 current_phase: 01
 status: in_progress
 last_updated: "2026-05-15T23:28:00.991Z"
-last_activity: 2026-05-16 - Plan 01-04 Tasks 1-3 complete; checkpoint at Task 4 (real .sqlite fixture verification — awaiting user response)
+last_activity: 2026-05-16 - Plan 01-05 Tasks 1-3 complete; stopped at Task 4 (checkpoint:human-verify — Simulator verification required)
 progress:
   total_phases: 7
   completed_phases: 0
@@ -58,6 +58,8 @@ Phases completed: 0 / 7
 - [01-foundation P04] CoreDataMigrationService uses Dependencies struct for injection — simpler than a protocol
 - [01-foundation P04] Crash recovery resets v2MigrationStarted=false before retry — re-enters .notStarted cleanly (D-06 + D-07 compatible)
 - [01-foundation P04] Real .sqlite fixture test (Test 9) deferred — must be completed before TestFlight (HARD requirement)
+- [01-foundation P05] OptionalModelContainerModifier: wraps .modelContainer() so pre-migration nil container leaves view tree unchanged
+- [01-foundation P05] productionContainer checks v2MigrationComplete OR hasNoLegacyData — covers post-migration and fresh-install paths
 
 ### Critical Reminders
 
@@ -83,8 +85,9 @@ Phases completed: 0 / 7
 | 260508-lvr | Add AddFlightWidget to the BlockTimeWidget extension | 2026-05-08 | f1aef95 | [260508-lvr-add-addflightwidget-to-the-blocktimewidg](./quick/260508-lvr-add-addflightwidget-to-the-blocktimewidg/) |
 | Phase 01-foundation P03 | 5 | 4 tasks | 8 files |
 | Phase 01-foundation P04 | 8 | 3 tasks | 8 files |
+| Phase 01-foundation P05 | 12 min | 3/4 tasks | 4 files |
 
 ## Session Continuity
 
-Last activity: 2026-05-16 - Plan 01-04 Tasks 1-3 complete; stopped at Task 4 (checkpoint:human-verify — real .sqlite fixture)
-Next action: Respond to Task 4 checkpoint: either "fixture-confirmed" (place FlightDataModel.sqlite in Block-TimeTests/Fixtures/ and confirm Test 9 passes) OR "fixture-deferred-to-pre-testflight" (explicit deferral acknowledgement)
+Last activity: 2026-05-16 - Plan 01-05 Tasks 1-3 complete; stopped at Task 4 (checkpoint:human-verify — Simulator verification required)
+Next action: Respond to Task 4 checkpoint: run Block-Time on Simulator (fresh install), observe Console.app migration logs, confirm exit(0)+relaunch, confirm blocktime.sqlite exists in App Group. Reply with one of: verified-A-only, verified-A-and-B, verified-A-B-and-C, or describe failures.
