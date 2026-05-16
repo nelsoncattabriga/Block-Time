@@ -45,7 +45,7 @@ extension FlightDatabaseService {
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
                 request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
                     NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
-                    NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+                    NSPredicate(format: "blockTime > 0 OR simTime > 0")
                 ])
                 request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
@@ -95,13 +95,13 @@ extension FlightDatabaseService {
 
     // MARK: - Private helpers
 
-    private func hrs(_ s: String?) -> Double { Double(s ?? "0") ?? 0 }
+    // V2 schema: time fields are Int16 minutes
+    private func hrs(_ minutes: Int16) -> Double { Double(minutes) / 60.0 }
 
     /// True when the entity is a Sp/Ins-only flight (simTime == spInsTime > 0)
     private func isSpInsOnly(_ f: FlightEntity) -> Bool {
-        let spVal = hrs(f.spInsTime)
-        guard spVal > 0 else { return false }
-        return abs(hrs(f.simTime) - spVal) < 0.01
+        guard f.spInsTime > 0 else { return false }
+        return f.spInsTime == f.simTime
     }
 
     private func monthStart(for date: Date) -> Date {
@@ -347,23 +347,25 @@ extension FlightDatabaseService {
         // MARK: Fetch future rostered flights
         let futureRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         futureRequest.predicate = NSPredicate(
-            format: "date > %@ AND scheduledDeparture != %@ AND scheduledDeparture != nil AND (outTime == %@ OR outTime == nil)",
-            today as NSDate, "", ""
+            format: "date > %@ AND scheduledDeparture != nil AND (outTime == nil)",
+            today as NSDate
         )
         futureRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
         let futureEntities: [FlightEntity]
         do { futureEntities = try ctx.fetch(futureRequest) } catch { return .empty }
 
-        // Parse "HH:MM" or "HHMM" → minutes from midnight
-        func hhmm(_ s: String?) -> Int? {
-            guard let s = s else { return nil }
-            let clean = s.replacingOccurrences(of: ":", with: "")
-            guard clean.count == 4, let v = Int(clean) else { return nil }
-            return (v / 100) * 60 + (v % 100)
+        // Parse Date? → minutes from UTC midnight
+        var utcCal = Calendar(identifier: .gregorian)
+        utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
+        func hhmm(_ d: Date?) -> Int? {
+            guard let d else { return nil }
+            let comps = utcCal.dateComponents([.hour, .minute], from: d)
+            guard let h = comps.hour, let m = comps.minute else { return nil }
+            return h * 60 + m
         }
 
-        func blockFromSTDSTA(std: String, sta: String) -> Double {
+        func blockFromSTDSTA(std: Date?, sta: Date?) -> Double {
             guard let d = hhmm(std), let a = hhmm(sta) else { return 0 }
             let diff = a >= d ? a - d : (1440 - d) + a
             return Double(diff) / 60.0
@@ -377,14 +379,13 @@ extension FlightDatabaseService {
 
         for entity in futureEntities {
             guard let entityDate = entity.date,
-                  let std = entity.scheduledDeparture, !std.isEmpty,
-                  let sta = entity.scheduledArrival, !sta.isEmpty,
-                  let stdMins = hhmm(std), let staMins = hhmm(sta),
+                  let stdMins = hhmm(entity.scheduledDeparture),
+                  let staMins = hhmm(entity.scheduledArrival),
                   !entity.isPositioning
             else { continue }
 
             let day = cal.startOfDay(for: entityDate)
-            let bh  = blockFromSTDSTA(std: std, sta: sta)
+            let bh  = blockFromSTDSTA(std: entity.scheduledDeparture, sta: entity.scheduledArrival)
             guard bh > 0 else { continue }
 
             futureFlight[day, default: 0] += bh
@@ -575,15 +576,17 @@ extension FlightDatabaseService {
 
         // MARK: Helpers
 
-        // Parse "HH:MM" or "HHMM" → minutes from midnight
-        func hhmm(_ s: String?) -> Int? {
-            guard let s = s else { return nil }
-            let clean = s.replacingOccurrences(of: ":", with: "")
-            guard clean.count == 4, let v = Int(clean) else { return nil }
-            return (v / 100) * 60 + (v % 100)
+        // Parse Date? → minutes from UTC midnight (V2 schema: gate times are Date?)
+        var utcCal2 = Calendar(identifier: .gregorian)
+        utcCal2.timeZone = TimeZone(secondsFromGMT: 0)!
+        func hhmm(_ d: Date?) -> Int? {
+            guard let d else { return nil }
+            let comps = utcCal2.dateComponents([.hour, .minute], from: d)
+            guard let h = comps.hour, let m = comps.minute else { return nil }
+            return h * 60 + m
         }
 
-        func blockHours(std: String, sta: String) -> Double {
+        func blockHours(std: Date?, sta: Date?) -> Double {
             guard let d = hhmm(std), let a = hhmm(sta) else { return 0 }
             let diff = a >= d ? a - d : (1440 - d) + a
             return Double(diff) / 60.0
@@ -597,8 +600,8 @@ extension FlightDatabaseService {
         let historicalRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         guard let lookbackStart = cal.date(byAdding: .day, value: -365, to: today) else { return .empty }
         historicalRequest.predicate = NSPredicate(
-            format: "date >= %@ AND date <= %@ AND (blockTime != %@ OR outTime != %@)",
-            lookbackStart as NSDate, today as NSDate, "", ""
+            format: "date >= %@ AND date <= %@ AND (blockTime > 0 OR outTime != nil)",
+            lookbackStart as NSDate, today as NSDate
         )
         historicalRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
@@ -624,8 +627,8 @@ extension FlightDatabaseService {
 
             // Duty start: STD (always used as sign-on anchor per FRMS rules)
             // Duty end: actual IN time; fall back to STA if IN not recorded
-            let inStr  = (entity.inTime?.isEmpty  == false) ? entity.inTime  : entity.scheduledArrival
-            guard let stdMins = hhmm(entity.scheduledDeparture), let inMins = hhmm(inStr) else { continue }
+            let effectiveIn = entity.inTime ?? entity.scheduledArrival
+            guard let stdMins = hhmm(entity.scheduledDeparture), let inMins = hhmm(effectiveIn) else { continue }
 
             if var span = actualDutySpanByDay[day] {
                 span.firstSTD = min(span.firstSTD, stdMins)
@@ -648,8 +651,8 @@ extension FlightDatabaseService {
         // MARK: Fetch future rostered flights (no OUT time, STD set, date > today)
         let futureRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         futureRequest.predicate = NSPredicate(
-            format: "date > %@ AND scheduledDeparture != %@ AND scheduledDeparture != nil AND (outTime == %@ OR outTime == nil)",
-            today as NSDate, "", ""
+            format: "date > %@ AND scheduledDeparture != nil AND (outTime == nil)",
+            today as NSDate
         )
         futureRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: true)]
 
@@ -680,14 +683,12 @@ extension FlightDatabaseService {
 
         for entity in futureEntities {
             guard let entityDate = entity.date,
-                  let std = entity.scheduledDeparture, !std.isEmpty,
-                  let sta = entity.scheduledArrival, !sta.isEmpty,
-                  let stdMins = hhmm(std),
-                  let staMins = hhmm(sta)
+                  let stdMins = hhmm(entity.scheduledDeparture),
+                  let staMins = hhmm(entity.scheduledArrival)
             else { continue }
 
             let day = cal.startOfDay(for: entityDate)
-            let bh  = blockHours(std: std, sta: sta)
+            let bh  = blockHours(std: entity.scheduledDeparture, sta: entity.scheduledArrival)
             guard bh > 0 else { continue }
 
 
