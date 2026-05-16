@@ -129,15 +129,15 @@ The test creates the actor with `Task.detached { CoreDataMigrationActor(modelCon
 
 ## Pre-TestFlight Blockers
 
-Task 4 (real `.sqlite` fixture test) is deferred. Test 9 in `CoreDataMigrationServiceTests` currently SKIPS.
+Task 4 is a `checkpoint:human-verify` that requires either:
 
-**Why deferred:** The v1 Core Data store lives in the App Group container (`group.com.thezoolab.blocktime`), not the app's private sandbox. Xcode's "Download Container" only downloads the app sandbox — it does not reach App Group containers. The fixture cannot be obtained via standard Xcode tooling without either (a) adding a temporary in-app export button that copies the store out of the App Group to the sandbox/Files app, or (b) using a jailbroken device or private-entitlement tooling.
+**Option A — Fixture confirmed:** Place `FlightDataModel.sqlite` (+ sidecar files) in `Block-TimeTests/Fixtures/` per instructions in `Block-TimeTests/Fixtures/README.md`. Run `CoreDataMigrationServiceTests` and confirm Test 9 executes (not skipped) and passes.
 
-**STATUS: DEFERRED — will be resolved before the first TestFlight build**
+**Option B — Fixture deferred:** Acknowledge that Test 9 currently SKIPS because no real fixture is present.
 
-Resolution path: before the first TestFlight build, add a temporary debug export action that copies `FlightDataModel.sqlite` (+ `-shm`, `-wal`) from the App Group container to the app's Documents folder, then export via Files app. Place the exported files in `Block-TimeTests/Fixtures/` and remove the skip guard from Test 9.
+**STATUS: AWAITING USER RESPONSE (checkpoint gate)**
 
-This remains a HARD prerequisite before any TestFlight build:
+Regardless of which option the user selects, this is a HARD prerequisite before any TestFlight build:
 - Without a real `.sqlite` fixture, the migration path is only validated against synthetic in-memory data
 - A real fixture test is the only way to detect format variants or schema discrepancies not anticipated in the synthetic tests
 - This requirement is documented in STATE.md Critical Reminders: "Migration (FOUND-09/10/11) must be proven against a real production .sqlite file"
