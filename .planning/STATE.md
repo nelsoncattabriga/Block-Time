@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: "## Phases"
+milestone_name: "Hybrid Architecture Rewrite"
 current_phase: 2
-status: Ready to plan
-last_updated: "2026-05-16T06:15:39.951Z"
+status: Defining requirements
+last_updated: "2026-05-16"
 last_activity: 2026-05-16
 progress:
   total_phases: 7
@@ -17,26 +17,26 @@ progress:
 
 ## Status
 
-Phase: In Progress
-Current phase: 2
-Last updated: 2026-05-15
+Phase: Not started (defining requirements)
+Plan: —
+Last activity: 2026-05-16 — Milestone v2.0 Hybrid Architecture Rewrite started
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** A pilot's logbook must be accurate and never lose data
-**Current focus:** Phase 02 — Calculators & Tests
+**Current focus:** Defining Phase 2 — CoreData Repository
 
 ## Phase Progress
 
 - ☑ Phase 1 — Foundation (complete)
-- ☐ Phase 2 — Calculators & Tests
-- ☐ Phase 3 — Core UI
-- ☐ Phase 4 — Import Pipeline
-- ☐ Phase 5 — Widgets & Extensions
-- ☐ Phase 6 — Export & Settings
-- ☐ Phase 7 — Mac + Pre-release
+- ☐ Phase 2 — CoreData Repository (replaces SwiftData infrastructure)
+- ☐ Phase 3 — Calculators & Tests
+- ☐ Phase 4 — God Object Breakup
+- ☐ Phase 5 — UI Rewire
+- ☐ Phase 6 — Import Pipeline
+- ☐ Phase 7 — Export, Settings & Pre-release
 
 ## Performance Metrics
 

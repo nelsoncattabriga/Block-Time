@@ -1,8 +1,22 @@
 # Block-Time v2.0
 
+## Current Milestone: v2.0 Hybrid Architecture Rewrite
+
+**Goal:** Rewrite Block-Time's architecture for maintainability and testability — keeping Core Data for user safety, replacing SwiftData with a CoreDataFlightRepository under the existing BlockTimeKit protocol boundary, fixing time/date storage, and extracting all business logic to pure tested functions.
+
+**Target features:**
+- CoreDataFlightRepository replacing SwiftData under FlightRepository protocol
+- Core Data schema migration: times as Int16 minutes, dates as Date?, dualTime field added
+- Pure function FRMS, night time, and UTC conversion calculators with full test coverage
+- FlightDatabaseService god object broken into focused @Observable services
+- All screens rewired to @Observable services via @Environment
+- Import pipeline (CSV, ACARS, roster) as pure functions in BlockTimeKit with fixture tests
+- PDF, CSV, .ics export and AppSettings consolidation
+- Mac target and pre-release migration rehearsal on real device
+
 ## What This Is
 
-Block-Time is an iOS (and Mac) pilot logbook app for professional airline pilots. It records flight sectors, calculates FRMS fatigue limits, tracks time totals, and exports logbook PDFs. v2.0 is a full architectural rewrite of the existing app, replacing Core Data with SwiftData, moving to a clean domain model, and making FRMS and time calculations fully unit-testable — while preserving every feature the current app has and migrating existing user data.
+Block-Time is an iOS (and Mac) pilot logbook app for professional airline pilots. It records flight sectors, calculates FRMS fatigue limits, tracks time totals, and exports logbook PDFs. v2.0 is a hybrid architectural rewrite — keeping Core Data as the persistence backend (preserving existing user data safety) while introducing a clean domain model via BlockTimeKit, making FRMS and time calculations fully unit-testable, and eliminating the god object architecture.
 
 ## Core Value
 
@@ -103,15 +117,18 @@ A pilot's logbook must be accurate and never lose data — every architectural d
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| SwiftData over Core Data | Eliminates boilerplate, native CloudKit sync, `@Query` in views, proper typed storage | Schema shipped as `SchemaV1: VersionedSchema` from day one (Phase 1) |
-| Protocol-based repositories | Makes data layer swappable for tests; `FlightRepository` protocol with real + in-memory impl | `SwiftDataFlightRepository` + `InMemoryFlightRepository` both shipped (Phase 1) |
-| Pure function FRMS calculator | Eliminates ObservableObject state from rule engine, enables exhaustive unit testing | — Phase 2 |
-| `TimeInterval` for all time values | Eliminates string parsing layer throughout the app | All `@Model` fields use `TimeInterval`; `TimeStringConverter` handles v1 string→seconds conversion (Phase 1) |
+| Core Data retained (not SwiftData) | SwiftData migration is high-risk for existing users — one-way store swap, CloudKit schema changes, known bugs. Core Data + FlightRepository protocol achieves identical architecture goals with zero user risk | Decided after Phase 1 — SwiftData infrastructure deleted in Phase 2 |
+| Protocol-based repositories | Makes data layer swappable for tests; `FlightRepository` protocol with real + in-memory impl | `InMemoryFlightRepository` shipped (Phase 1); `CoreDataFlightRepository` replaces `SwiftDataFlightRepository` (Phase 2) |
+| Pure function FRMS calculator | Eliminates ObservableObject state from rule engine, enables exhaustive unit testing | — Phase 3 |
+| `Int` minutes for all time values | Minutes is the right unit for logbook times — no sub-minute precision needed, self-documenting, no conversion factor. Replaces `TimeInterval` (seconds) from v2-dev Phase 1 | `Flight` domain struct uses `Int`; Core Data stores `Int16`; decimal hour strings converted at migration |
+| OUT/IN/STD/STA as `Date?` | Eliminates fragile string-combining logic (date + "HH:MM" string) and the `flightDateForStorage` computed property. Full UTC timestamp stored directly | Phase 2 migration |
+| `dualTime` as explicit `Int16` column | Sub-classification of P2 time — same FRMS weight, but pilots want separate visibility. Defaults 0 for all existing flights | Phase 2 migration |
+| SE/ME time derived, not stored | SE/ME is derivable from aircraft type classification — no schema column needed. Deferred until aircraft type database exists | Deferred to later phase |
+| `blockTime` stored independently | blockTime is the authoritative logged value, not derived from OUT/IN. Handles simulator/positioning flights with no gate times | Phase 2 mapping |
 | Shared Swift Package for iOS + Mac | Single source of truth for business logic, UI split at target boundary | `BlockTimeKit` with 3 modules shipped and linked (Phase 1) |
 | `Flight` domain struct (not NSManagedObject) | Views and calculators work against a clean type, not persistence objects | `Flight: Sendable, Identifiable, Hashable` in `BlockTimeDomain` (Phase 1) |
-| iOS/Mac same update — not new app | Preserve existing user base and reviews | — Pending |
+| iOS/Mac same update — not new app | Preserve existing user base and reviews | — Phase 7 |
 | swift-tools-version 6.0 (not 5.10) | CLI toolchain requires 6.0 for iOS 18/macOS 15 platform constants | No negative impact on Xcode integration (Phase 1) |
-| Migration guard in App Group container | Core Data store is in App Group, not app sandbox — real-device fixture test requires export step | Deferred to pre-TestFlight; Simulator fresh-install path verified (Phase 1) |
 
 ## Evolution
 
@@ -131,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 after Phase 1 (Foundation)*
+*Last updated: 2026-05-16 — pivoted from SwiftData to Core Data hybrid approach; milestone goals reset*
