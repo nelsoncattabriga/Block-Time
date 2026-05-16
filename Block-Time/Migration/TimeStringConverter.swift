@@ -29,7 +29,7 @@ import os
 /// - Out-of-range / malformed → `nil`
 enum TimeStringConverter {
 
-    private static let logger = Logger(
+    nonisolated(unsafe) private static let logger = Logger(
         subsystem: "com.thezoolab.blocktime",
         category: "Migration.TimeStringConverter"
     )
