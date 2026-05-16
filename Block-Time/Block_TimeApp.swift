@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+import SwiftData
 import WidgetKit
+import os
 
 @main
 struct Block_TimeApp: App {
@@ -36,6 +38,29 @@ struct Block_TimeApp: App {
     #endif
     }
 
+    /// Production SwiftData container. Created lazily so a v1-only launch (before migration has completed)
+    /// does NOT try to open a SwiftData store that has not yet been written. After migrationComplete=true,
+    /// exit(0) forces a relaunch and this property is then initialised cleanly.
+    /// On a fresh install (no v1 data), this initialises on first access too — there's nothing to migrate.
+    private static let productionContainer: ModelContainer? = {
+        let migrationComplete = UserDefaults.standard.bool(forKey: "v2MigrationComplete")
+        let hasNoLegacyData = !FileManager.default.fileExists(
+            atPath: FlightDatabaseService.shared.persistentContainer.persistentStoreCoordinator
+                .persistentStores.first?.url?.path ?? ""
+        )
+        // Create the production (CloudKit) container if migration is complete, OR if there is no v1 data
+        // to migrate (fresh install). If neither, we are pre-migration on a v1-data device and the
+        // SplashScreenView will run migration + exit(0) before this is ever consumed.
+        guard migrationComplete || hasNoLegacyData else { return nil }
+        do {
+            return try ModelContainerFactory.makeProductionContainer()
+        } catch {
+            Logger(subsystem: "com.thezoolab.blocktime", category: "App.Container")
+                .error("Failed to create production ModelContainer: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }()
+
     var body: some Scene {
         WindowGroup {
             SplashScreenView()
@@ -54,6 +79,7 @@ struct Block_TimeApp: App {
                 .environment(cloudKitService)
                 .environment(purchaseService)
                 .environment(\.managedObjectContext, FlightDatabaseService.shared.viewContext)
+                .modifier(OptionalModelContainerModifier(container: Self.productionContainer))
                 .onOpenURL { url in
                     handleIncomingURL(url)
                 }
@@ -123,6 +149,20 @@ struct Block_TimeApp: App {
         // Check if the file is a text file (roster)
         if fileExtension == "txt" || url.pathExtension.isEmpty {
             incomingRosterURL = url
+        }
+    }
+}
+
+/// Conditionally applies `.modelContainer()` only when a container is available.
+/// When `container` is `nil` (pre-migration, v1-data device), the view is returned unchanged —
+/// the UI continues to use Core Data via the existing `.managedObjectContext` environment key.
+private struct OptionalModelContainerModifier: ViewModifier {
+    let container: ModelContainer?
+    func body(content: Content) -> some View {
+        if let container {
+            content.modelContainer(container)
+        } else {
+            content
         }
     }
 }
