@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Hybrid Architecture Rewrite
 status: Executing Phase 02
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-05-16T12:29:20.134Z"
+stopped_at: Checkpoint 02-04-PLAN.md Task 5 (human-verify)
+last_updated: "2026-05-16T12:43:00.000Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 8
@@ -41,7 +41,7 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Performance Metrics
 
-Plans completed: 6 (Phase 1: 5, Phase 2: 1 so far)
+Plans completed: 6 (Phase 1: 5, Phase 2: 1 so far; 02-04 partial)
 Plans total: 9
 Phases completed: 1 / 8
 
@@ -49,6 +49,7 @@ Phases completed: 1 / 8
 |-------|------|----------------|-------|-------|
 | 02    | 01   | 8              | 3     | 4     |
 | 02    | 03   | 12             | 2     | 2     |
+| 02    | 04   | 45             | 4/5   | 14    |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Phases completed: 1 / 8
 - Phase 02-03: CoreDataFlightRepository takes NSPersistentCloudKitContainer directly — does not delegate to FlightDatabaseService singleton (D-15)
 - Phase 02-03: shouldInferMappingModelAutomatically = false is required — CoreData inference cannot handle String→Int16 conversion
 - Phase 02-03: deleteAll uses per-entity delete (not NSBatchDeleteRequest) — NSBatchDeleteRequest bypasses CloudKit persistent history
+- Phase 02-04: App Group ID confirmed group.com.thezoolab.blocktime — matches Block-Time.entitlements
+- Phase 02-04: FlightDatabaseService.swift has 98 pre-existing V2 schema type errors — deferred to Phase 4 god object breakup
+- Phase 02-04: Plan assumption "118 errors disappear after SwiftData deletion" was wrong — errors were always in FlightDatabaseService, hidden by early compile failure
 
 ### Critical Reminders
 
@@ -78,10 +82,11 @@ Phases completed: 1 / 8
 
 ### Blockers
 
-- (none)
+- FlightDatabaseService.swift (3686 lines): 60+ V2 schema type errors — blockTime (Int16) and scheduledDeparture/Arrival (Date?) used as String throughout. Requires Phase 4 god object breakup before build is green.
+- FlightDatabaseService+InsightsQueries.swift: 38+ V2 schema errors of same type.
 
 ## Session Continuity
 
-Last session: 2026-05-16T12:29:20.132Z
-Stopped at: Completed 02-03-PLAN.md
-Next action: `/gsd:plan-phase 2`
+Last session: 2026-05-16T12:43:00.000Z
+Stopped at: Checkpoint 02-04-PLAN.md Task 5 (human-verify simulator)
+Next action: After Nelson verifies simulator launch, continue 02-04 checkpoint
