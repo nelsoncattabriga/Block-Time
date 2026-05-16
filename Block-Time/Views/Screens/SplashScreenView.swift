@@ -134,25 +134,6 @@ struct SplashScreenView: View {
                 }
             }
         }
-        .task(priority: .userInitiated) {
-            // v2 Core Data → SwiftData migration (Plan 01-05).
-            // Runs asynchronously alongside the splash animation.
-            // - If migration is already complete: returns immediately (no-op).
-            // - If migration runs successfully: CoreDataMigrationService calls exit(0).
-            //   Execution does NOT return here in that case — the app relaunches cleanly.
-            // - On failure: logs to Console.app and leaves the splash screen visible
-            //   (D-08: do NOT advance to main UI on migration failure in Phase 1).
-            let service = CoreDataMigrationService()
-            do {
-                try await service.runIfNeeded()
-            } catch {
-                Logger(subsystem: "com.thezoolab.blocktime", category: "Migration.SplashScreen")
-                    .error("v2 migration failed: \(error.localizedDescription, privacy: .public)")
-                // Per D-08: do NOT set isActive = true here.
-                // Phase 3 will surface this to the user via a UI alert.
-                // For now, the splash screen remains visible so the user knows something is wrong.
-            }
-        }
     }
 }
 
