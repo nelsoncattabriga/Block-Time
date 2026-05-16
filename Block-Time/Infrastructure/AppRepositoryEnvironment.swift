@@ -4,7 +4,7 @@
 //
 //  SwiftUI EnvironmentKey for injecting a FlightRepository (FOUND-12).
 //  Default value is an empty InMemoryFlightRepository so previews don't need any setup.
-//  Production sets this to a SwiftDataFlightRepository in Phase 3 when the UI is wired.
+//  Production sets this to a CoreDataFlightRepository in Block_TimeApp (Phase 2).
 //
 //  Plan 01-05
 //
@@ -25,7 +25,7 @@ extension EnvironmentValues {
 
 extension View {
     /// Injects a FlightRepository into the SwiftUI environment.
-    /// Production: `.flightRepository(SwiftDataFlightRepository(container: ...))` (Phase 3)
+    /// Production: `.flightRepository(CoreDataFlightRepository(container: ...))` (Block_TimeApp)
     /// Previews:   `.flightRepository(InMemoryFlightRepository(seed: [...]))`
     func flightRepository(_ repo: any FlightRepository) -> some View {
         environment(\.flightRepository, repo)
