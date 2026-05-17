@@ -160,7 +160,7 @@ struct FlightSectorRow: View, Equatable {
                             .opacity(cachedIsFutureFlight ? 0.5 : 1.0)
                     } else {
                         // Show "Sim" for simulator flights, "Flt" for regular flights
-                        Text(sector.simTimeValue > 0 ? "Sim" : "Flt")
+                        Text((sector.simTimeValue > 0 || sector.isSpInsOnly) ? "Sim" : "Flt")
                             .font(.headline)
                             .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
                     }
