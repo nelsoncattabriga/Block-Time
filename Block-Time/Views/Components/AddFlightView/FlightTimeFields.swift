@@ -274,8 +274,11 @@ struct ModernDecimalTimeField: View {
                         }
                         .onChange(of: decimalFieldFocused) { _, isFocused in
                             if isFocused {
-                                // Populate editingText from the stored value on focus, always formatted
-                                if showAsHHMM, !value.contains(":"), let d = Double(value), d > 0 {
+                                // Clear to empty when value is zero so placeholder shows and user can type immediately
+                                let numericValue = Double(value) ?? 0
+                                if numericValue == 0 {
+                                    editingText = ""
+                                } else if showAsHHMM, !value.contains(":"), let d = Double(value) {
                                     editingText = FlightSector.decimalToHHMM(d)
                                 } else {
                                     editingText = formattedDisplayValue()
