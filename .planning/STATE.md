@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Hybrid Architecture Rewrite
-status: Phase 02 Complete — Ready for Phase 03
-stopped_at: Phase 3 context gathered
-last_updated: "2026-05-17T01:27:43.899Z"
+status: Executing Phase 03
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-05-17T02:21:18.177Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 14
+  completed_plans: 10
 ---
 
 # Block-Time v2.0 — Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md
 See: .planning/ROADMAP.md
 
 **Core value:** A pilot's logbook must be accurate and never lose data
-**Current focus:** Phase 03 — calculators-tests (next)
+**Current focus:** Phase 03 — calculators-tests
 
 ## Phase Progress
 
@@ -41,7 +41,7 @@ See: .planning/ROADMAP.md
 
 ## Performance Metrics
 
-Plans completed: 9 / 9
+Plans completed: 10 / 14
 Phases completed: 2 / 8
 
 | Phase | Plan | Duration (min) | Tasks | Files |
@@ -50,6 +50,7 @@ Phases completed: 2 / 8
 | 02    | 02   | ~60            | 3     | 3     |
 | 02    | 03   | 12             | 2     | 2     |
 | 02    | 04   | ~90            | 5     | 14+   |
+| 03    | 01   | 6              | 3     | 30    |
 
 ## Accumulated Context
 
@@ -79,6 +80,12 @@ Phases completed: 2 / 8
 - Phase 02-04: FlightDatabaseService.swift V2 type errors (safeDoubleFromString→minutesToHours, string NSPredicates→numeric) — all fixed inline during Phase 2, not deferred
 - Phase 02-04: RawDatabaseView, WidgetDataWriter, FlightMapViewModel all updated for V2 Int16/Date? field types
 
+### Key Decisions (from Phase 3)
+
+- Phase 03-01: CrewRestFacility moved to BlockTimeDomain — SignOnTimeRange is in BlockTimeDomain, preventing a circular dep with BlockTimeCalculators
+- Phase 03-01: OperationTimeClass.classify uses Calendar(identifier: .gregorian) not Calendar.current — deterministic unit tests
+- Phase 03-01: Public memberwise init required on all moved structs — auto-synthesized init is internal, cross-module calls fail without explicit public init
+
 ### Critical Reminders
 
 - Real .sqlite fixture test (deferred from 01-04) MUST be done before any TestFlight build
@@ -93,6 +100,6 @@ None — build is green, simulator verified with 2697 flights.
 
 ## Session Continuity
 
-Last session: 2026-05-17T01:27:43.897Z
-Stopped at: Phase 3 context gathered
+Last session: 2026-05-17T02:21:18.174Z
+Stopped at: Completed 03-01-PLAN.md
 Next action: /gsd:plan-phase 3 (Calculators & Tests)
