@@ -52,8 +52,9 @@ Phases completed: 0 / 7
 |---|-------------|------|--------|-----------|
 | 260508-lvr | Add AddFlightWidget to the BlockTimeWidget extension | 2026-05-08 | f1aef95 | [260508-lvr-add-addflightwidget-to-the-blocktimewidg](./quick/260508-lvr-add-addflightwidget-to-the-blocktimewidg/) |
 | 260517-ins | Variable SIM time field for INS Simulator flights | 2026-05-17 | e05a73a | [260517-ins-sim-variable-time](./quick/260517-ins-sim-variable-time/) |
+| 260517-dim | Fix INS Sim 0-SIM flights showing dimmed as future flights | 2026-05-17 | eb2f9b3 | — |
 
 ## Session Continuity
 
-Last activity: 2026-05-17 - Completed quick task 260517-ins: Variable SIM time field for INS Simulator flights
+Last activity: 2026-05-17 - Fixed INS Sim 0-SIM dimming bug
 Next action: `/gsd:plan-phase 1` — plan Foundation phase
