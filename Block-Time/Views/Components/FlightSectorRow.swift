@@ -57,7 +57,7 @@ struct FlightSectorRow: View, Equatable {
         // Future flight flag (depends on displayDate computed above)
         let blockTime = sector.blockTimeValue
         let simTime = sector.simTimeValue
-        if blockTime != 0 || simTime != 0 {
+        if blockTime != 0 || simTime != 0 || sector.spInsTimeValue != 0 {
             cachedIsFutureFlight = false
         } else if sector.isPositioning {
             let hasOutTime = !sector.outTime.isEmpty
