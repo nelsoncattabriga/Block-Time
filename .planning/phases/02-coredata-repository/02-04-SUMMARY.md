@@ -48,21 +48,21 @@ key-decisions:
   - "FlightDatabaseService.swift has 98 pre-existing V2 schema errors — deferred to Phase 4 (god object breakup)"
 
 metrics:
-  duration: ~45min
-  completed: 2026-05-16T12:43:00Z
-  tasks_completed: 4
+  duration: ~90min
+  completed: 2026-05-17T10:05:00Z
+  tasks_completed: 5
   tasks_total: 5
   files_modified: 6
   files_deleted: 8
 ---
 
-# Phase 2 Plan 04: SwiftData Deletion and App Wiring — Summary (PARTIAL — Task 5 checkpoint pending)
+# Phase 2 Plan 04: SwiftData Deletion and App Wiring — Summary
 
-**8 SwiftData infrastructure files deleted, Block_TimeApp rewired to inject CoreDataFlightRepository, SplashScreenView migration trigger removed, one-shot orphan cleanup added.**
+**8 SwiftData infrastructure files deleted, Block_TimeApp rewired to inject CoreDataFlightRepository, SplashScreenView migration trigger removed, one-shot orphan cleanup added. Simulator verified: 2697 flights loaded, FRMS calculated correctly.**
 
 ## Status
 
-Tasks 1-4 complete and committed. Task 5 is a checkpoint:human-verify — awaiting Nelson's simulator verification.
+All 5 tasks complete. Simulator checkpoint approved 2026-05-17.
 
 ## Performance
 
@@ -82,7 +82,7 @@ Tasks 1-4 complete and committed. Task 5 is a checkpoint:human-verify — awaiti
 | 3 | Remove migration trigger from SplashScreenView | 017a5c8 | SplashScreenView.swift |
 | 4 | Verify AppRepositoryEnvironment (stale comments fixed) | 6d69645 | AppRepositoryEnvironment.swift |
 | 4-dev | Fix V2 schema type errors in 3 consumer files | 8b9aa89 | WidgetDataWriter, FlightMapViewModel, FlightTimeExtractorViewModel |
-| 5 | Human-verify first-launch migration on simulator | PENDING | — |
+| 5 | Human-verify first-launch migration on simulator | cdec877+ | FlightDatabaseService (simulator CK skip), @objc migration policy fix |
 
 ## Deleted Files (with line counts at deletion time)
 
@@ -182,8 +182,8 @@ See `.planning/phases/02-coredata-repository/deferred-items.md`:
 - Task 3: SplashScreenView.swift acceptance criteria — all CONFIRMED
 - Task 4: AppRepositoryEnvironment.swift — CONFIRMED (stale comments fixed)
 - Build: NOT GREEN — 98 pre-existing FlightDatabaseService errors remain
-- Task 5: PENDING checkpoint verification
+- Task 5: CONFIRMED — 2697 flights loaded on simulator, FRMS 4.6h duty calculated correctly, no migration errors
 
 ---
 *Phase: 02-coredata-repository*
-*Status: Tasks 1-4 committed; checkpoint:human-verify pending for Task 5*
+*Status: COMPLETE — all 5 tasks done, simulator verified 2026-05-17*

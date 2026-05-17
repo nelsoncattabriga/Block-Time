@@ -5,7 +5,7 @@
 ## Phases
 
 - [x] **Phase 1: Foundation** — BlockTimeKit package, Flight domain struct, FlightRepository protocol, InMemoryFlightRepository (completed 2026-05-16)
-- [ ] **Phase 2: CoreData Repository** — CoreDataFlightRepository, lightweight Core Data migration, SwiftData infrastructure deleted
+- [x] **Phase 2: CoreData Repository** — CoreDataFlightRepository, lightweight Core Data migration, SwiftData infrastructure deleted (completed 2026-05-17)
 - [ ] **Phase 3: Calculators & Tests** — Pure function FRMS, night time, UTC conversion, time formatter with exhaustive unit tests
 - [ ] **Phase 4: God Object Breakup** — FlightDatabaseService split into focused @Observable services, ACARS parsing extracted to BlockTimeKit
 - [ ] **Phase 5: Core UI + Widgets** — All screens at feature parity wired to new services, WidgetKit updated to Core Data App Group
@@ -51,7 +51,7 @@ Plans:
 - [x] 02-01-PLAN.md — Flight struct update (Int minutes, Date? gates, new fields) + InMemoryFlightRepository + test fixtures (atomic)
 - [x] 02-02-PLAN.md — Core Data V2 model version + FlightDataModelV1toV2.xcmappingmodel + FlightEntityMigrationPolicy
 - [x] 02-03-PLAN.md — CoreDataFlightRepository implementation + FlightDatabaseService migration options
-- [ ] 02-04-PLAN.md — SwiftData deletion sweep + Block_TimeApp wiring + orphan cleanup + simulator verification
+- [x] 02-04-PLAN.md — SwiftData deletion sweep + Block_TimeApp wiring + orphan cleanup + simulator verification
 
 ### Phase 3: Calculators & Tests
 **Goal**: Every business rule is a pure function with unit tests that run without a simulator — regressions in FRMS rules are caught by the test suite before they reach users.
@@ -149,7 +149,7 @@ Note: 57 active requirements + 4 complete (FOUND-01–04) = 61 total mapped.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete | 2026-05-16 |
-| 2. CoreData Repository | 0/4 | Not started | - |
+| 2. CoreData Repository | 4/4 | Complete | 2026-05-17 |
 | 3. Calculators & Tests | 0/? | Not started | - |
 | 4. God Object Breakup | 0/? | Not started | - |
 | 5. Core UI + Widgets | 0/? | Not started | - |
