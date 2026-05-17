@@ -33,5 +33,10 @@ let package = Package(
             dependencies: ["BlockTimeData"],
             path: "Tests/BlockTimeDataTests"
         ),
+        .testTarget(
+            name: "BlockTimeCalculatorsTests",
+            dependencies: ["BlockTimeCalculators", "BlockTimeDomain"],
+            path: "Tests/BlockTimeCalculatorsTests"
+        ),
     ]
 )
