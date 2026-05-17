@@ -10,6 +10,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case backups = "Backup & Sync"
     case importExport = "Import & Export"
     case appearance = "Appearance"
+    case customCounters = "Custom Counters"
     case about = "Support"
 
     var id: String { rawValue }
@@ -22,6 +23,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .frms: return "clock.badge.exclamationmark"
         case .backups: return "arrow.clockwise.icloud"
         case .importExport: return "arrow.up.arrow.down.circle"
+        case .customCounters: return "slider.horizontal.3"
         case .about: return "info.circle.fill"
         }
     }
@@ -34,6 +36,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .frms: return .green
         case .backups: return .blue
         case .importExport: return .indigo
+        case .customCounters: return .indigo
         case .about: return .orange
         }
     }
@@ -46,6 +49,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .frms: return "Fatigue Risk Management System"
         case .backups: return "iCloud Sync & Backups"
         case .importExport: return "Import & Export Data"
+        case .customCounters: return "Define per-flight tracking fields"
         case .about: return "App Version & Support Links"
         }
     }
@@ -140,6 +144,8 @@ struct SettingsView: View {
             BackupsView(viewModel: viewModel)
         case .importExport:
             ImportExportView(viewModel: viewModel)
+        case .customCounters:
+            CustomCountersSettingsView()
         case .about:
             SupportView()
         }
@@ -2437,5 +2443,184 @@ private struct ICloudSyncHelpSheet: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - Custom Counters Settings View
+
+struct CustomCountersSettingsView: View {
+    @Environment(ThemeService.self) private var themeService
+    @State private var showingAddSheet = false
+    @State private var newLabel = ""
+    @State private var newType: CounterType = .integer
+
+    private var service: CustomCounterService { CustomCounterService.shared }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                VStack(spacing: 16) {
+                    HStack {
+                        Image(systemName: "slider.horizontal.3")
+                            .foregroundColor(.indigo)
+                            .font(.title3)
+
+                        Text("Custom Counters")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+
+                        Spacer()
+                    }
+
+                    if service.definitions.isEmpty {
+                        Text("No counters defined. Tap \"Add Counter\" to create one.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 8)
+                    } else {
+                        ForEach(service.definitions) { definition in
+                            HStack(spacing: 12) {
+                                Image(systemName: iconFor(definition.type))
+                                    .foregroundColor(colorFor(definition.type))
+                                    .frame(width: 20)
+
+                                Text(definition.label)
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+
+                                Spacer()
+
+                                Text(definition.type.displayName)
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(colorFor(definition.type).opacity(0.15))
+                                    .foregroundColor(colorFor(definition.type))
+                                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                            }
+                            .padding(12)
+                            .background(Color(.systemGray6).opacity(0.75))
+                            .cornerRadius(8)
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    service.remove(id: definition.id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                        .onMove { from, to in
+                            service.move(fromOffsets: from, toOffset: to)
+                        }
+                    }
+
+                    Button(action: {
+                        newLabel = ""
+                        newType = .integer
+                        showingAddSheet = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.indigo)
+                            Text("Add Counter")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.indigo)
+                        }
+                        .padding(.top, 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(16)
+                .background(.thinMaterial)
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.indigo.opacity(0.2), lineWidth: 1)
+                )
+
+                Text("Counters appear in the Add/Edit flight form and as selectable Dashboard cards.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+
+                Spacer(minLength: 20)
+            }
+            .frame(maxWidth: 800)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+        }
+        .background(
+            ZStack {
+                themeService.getGradient()
+                    .ignoresSafeArea()
+            }
+        )
+        .navigationTitle("Custom Counters")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingAddSheet) {
+            AddCounterSheet(label: $newLabel, type: $newType) {
+                service.add(label: newLabel.trimmingCharacters(in: .whitespacesAndNewlines), type: newType)
+            }
+        }
+    }
+
+    private func iconFor(_ type: CounterType) -> String {
+        switch type {
+        case .time:    return "clock.fill"
+        case .decimal: return "number.circle.fill"
+        case .integer: return "number.square.fill"
+        }
+    }
+
+    private func colorFor(_ type: CounterType) -> Color {
+        switch type {
+        case .time:    return .blue
+        case .decimal: return .orange
+        case .integer: return .teal
+        }
+    }
+}
+
+// MARK: - Add Counter Sheet
+
+private struct AddCounterSheet: View {
+    @Binding var label: String
+    @Binding var type: CounterType
+    var onSave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Counter Details") {
+                    TextField("Label", text: $label)
+
+                    Picker("Type", selection: $type) {
+                        ForEach(CounterType.allCases) { counterType in
+                            Text(counterType.displayName).tag(counterType)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add Counter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        onSave()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
     }
 }
