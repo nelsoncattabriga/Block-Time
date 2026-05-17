@@ -166,11 +166,6 @@ private struct CompactLayoutView: View {
                 // Manual Entry Card
                 ModernManualEntryDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
-                // Custom Counters Card (only when counters are defined)
-                if !CustomCounterService.shared.definitions.isEmpty {
-                    CustomCountersCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
-                }
-
                 // Action Buttons Card
                 ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
 
@@ -268,11 +263,6 @@ private struct WideLayoutView: View {
 
                         // Manual Entry Card
                         ModernManualEntryDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
-
-                        // Custom Counters Card (only when counters are defined)
-                        if !CustomCounterService.shared.definitions.isEmpty {
-                            CustomCountersCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
-                        }
 
                         // Action Buttons Card
                         ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)

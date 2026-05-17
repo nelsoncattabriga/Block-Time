@@ -2066,7 +2066,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                scheduledDeparture != original.scheduledDeparture ||
                scheduledArrival != original.scheduledArrival ||
                !timeValuesEqual(spInsTime, original.spInsTime) ||
-               (isSpIns && !isInstructingInAircraft && !timeValuesEqual(simInsTime, original.simTime))
+               (isSpIns && !isInstructingInAircraft && !timeValuesEqual(simInsTime, original.simTime)) ||
+               currentCounterEntriesDict() != original.counterEntries
     }
 
     var changesSummary: String {
@@ -2185,6 +2186,22 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         if remarks != original.remarks {
             changes.append("Remarks updated")
+        }
+
+        if customCount != original.customCount {
+            changes.append("\(customCountLabel): \(original.customCount) → \(customCount)")
+        }
+
+        let newEntries = currentCounterEntriesDict()
+        let allKeys = Set(newEntries.keys).union(original.counterEntries.keys)
+        for uuidString in allKeys {
+            let oldVal = original.counterEntries[uuidString] ?? ""
+            let newVal = newEntries[uuidString] ?? ""
+            if oldVal != newVal {
+                let label = CustomCounterService.shared.definitions
+                    .first { $0.id.uuidString == uuidString }?.label ?? "Counter"
+                changes.append("\(label): \(oldVal.isEmpty ? "—" : oldVal) → \(newVal.isEmpty ? "—" : newVal)")
+            }
         }
 
         return changes.isEmpty ? "No changes detected" : changes.joined(separator: "\n")
@@ -2591,6 +2608,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         isPositioning = false
         remarks = ""
         customCount = 0
+        counterValues = [:]
         dayTakeoffs = 0
         dayLandings = 0
         nightTakeoffs = 0

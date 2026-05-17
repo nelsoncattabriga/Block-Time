@@ -762,6 +762,7 @@ class FlightDatabaseService: ObservableObject {
                ]
                request.fetchBatchSize = 100 // Optimize for large datasets
                request.returnsObjectsAsFaults = false // Eager loading
+               request.relationshipKeyPathsForPrefetching = ["counterEntries"]
 
                do {
                    let flights = try viewContext.fetch(request)
@@ -800,6 +801,7 @@ class FlightDatabaseService: ObservableObject {
                 request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
                 request.fetchBatchSize = 100
                 request.returnsObjectsAsFaults = false
+                request.relationshipKeyPathsForPrefetching = ["counterEntries"]
 
                 do {
                     let flights = try context.fetch(request)
@@ -931,6 +933,7 @@ class FlightDatabaseService: ObservableObject {
             request.sortDescriptors = [
                 NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)
             ]
+            request.relationshipKeyPathsForPrefetching = ["counterEntries"]
 
             do {
                 let flights = try viewContext.fetch(request)
@@ -966,6 +969,7 @@ class FlightDatabaseService: ObservableObject {
             request.sortDescriptors = [
                 NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)
             ]
+            request.relationshipKeyPathsForPrefetching = ["counterEntries"]
 
             do {
                 let flights = try viewContext.fetch(request)
@@ -2176,8 +2180,21 @@ class FlightDatabaseService: ObservableObject {
             scheduledDeparture: entity.scheduledDeparture ?? "",
             scheduledArrival: entity.scheduledArrival ?? "",
             customCount: Int(entity.customCount),
+            counterEntries: counterEntriesDict(from: entity),
             createdAt: entity.createdAt
         )
+    }
+
+    private func counterEntriesDict(from entity: FlightEntity) -> [String: String] {
+        guard let entries = entity.counterEntries as? Set<CustomCounterEntry> else { return [:] }
+        var result: [String: String] = [:]
+        for entry in entries {
+            guard let counterID = entry.counterID,
+                  let value = entry.value,
+                  !value.isEmpty else { continue }
+            result[counterID.uuidString] = value
+        }
+        return result
     }
 
     /// Safely convert string to double with validation

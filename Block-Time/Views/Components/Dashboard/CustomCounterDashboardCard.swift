@@ -24,6 +24,7 @@ struct CustomCounterDashboardCard: View {
         get { CCIPeriod(rawValue: periodRaw) ?? .twelveMonths }
     }
 
+    @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes: Bool = false
     @State private var displayValue: String = "—"
     @State private var flightCount: Int = 0
 
@@ -92,6 +93,7 @@ struct CustomCounterDashboardCard: View {
         .appCardStyle()
         .onAppear { loadStats() }
         .onChange(of: periodRaw) { loadStats() }
+        .onChange(of: showTimesInHoursMinutes) { loadStats() }
     }
 
     // MARK: - Data loading
@@ -127,12 +129,15 @@ struct CustomCounterDashboardCard: View {
 
         switch definition.type {
         case .time:
-            // Sum HH:MM strings (stored as decimal hours from ModernDecimalTimeField)
             let total = eligible.reduce(0.0) { sum, sector in
                 let raw = sector.counterEntries[uuidString] ?? ""
                 return sum + parseTimeValue(raw)
             }
-            displayValue = formatMinutes(Int(round(total * 60)))
+            if showTimesInHoursMinutes {
+                displayValue = formatMinutes(Int(round(total * 60)))
+            } else {
+                displayValue = String(format: "%.1f", total)
+            }
 
         case .decimal:
             let total = eligible.reduce(0.0) { sum, sector in

@@ -7,6 +7,7 @@
 
 import Foundation
 import Observation
+import SwiftUI
 
 @Observable @MainActor
 final class CustomCounterService {
@@ -25,6 +26,12 @@ final class CustomCounterService {
         }
     }
 
+    func migrateFromLegacyIfNeeded(legacyLabel: String) {
+        let trimmed = legacyLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, definitions.isEmpty else { return }
+        add(label: trimmed, type: .integer)
+    }
+
     func add(label: String, type: CounterType) {
         let definition = CustomCounterDefinition(id: UUID(), label: label, type: type)
         definitions.append(definition)
@@ -33,6 +40,13 @@ final class CustomCounterService {
 
     func remove(id: UUID) {
         definitions.removeAll { $0.id == id }
+        persist()
+    }
+
+    func update(id: UUID, label: String, type: CounterType) {
+        guard let index = definitions.firstIndex(where: { $0.id == id }) else { return }
+        definitions[index].label = label
+        definitions[index].type = type
         persist()
     }
 
