@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeDomain
 
 struct AdaptiveLimitLayout: View {
     let range: SignOnTimeRange

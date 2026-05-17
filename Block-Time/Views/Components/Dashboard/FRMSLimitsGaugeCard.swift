@@ -10,6 +10,7 @@
 //     actual         limit
 
 import SwiftUI
+import BlockTimeDomain
 
 // MARK: - Data Model
 

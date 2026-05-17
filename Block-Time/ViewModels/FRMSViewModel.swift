@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BlockTimeDomain
 
 @Observable @MainActor
 class FRMSViewModel {

@@ -8,6 +8,7 @@
 //
 
 import Foundation
+import BlockTimeDomain
 
 // MARK: - SH Operational Flight & Duty Limits (FD23)
 

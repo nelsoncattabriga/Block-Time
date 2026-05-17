@@ -8,6 +8,7 @@
 //  Source: Qantas Airways Limited Fatigue Risk Management System Ruleset A380/A330/B787
 
 import Foundation
+import BlockTimeDomain
 
 // MARK: - Enums
 
@@ -18,16 +19,7 @@ enum LH_CrewComplement: String, Codable, CaseIterable {
     case fourPilot  = "4 Pilot"
 }
 
-/// Class of onboard crew rest facility.
-enum CrewRestFacility: String, Codable, CaseIterable {
-    case seatInPassengerCompartment = "Seat in Passenger Compartment"
-    case class2                    = "Class 2 Rest"
-    case class1                    = "Class 1 Rest"
-    case twoClass2                 = "2 × Class 2 Rest"
-    case oneClass1OneClass2        = "1 × Class 1 & 1 × Class 2 Rest"
-    case twoClass1                 = "2 × Class 1 Rest"
-    case twoClass1FD34             = "2 × Class 1 Rest (>18 hrs per FD3.4)"
-}
+// CrewRestFacility moved to BlockTimeKit/Sources/BlockTimeDomain/FRMSTypes.swift (D-03)
 
 /// Role context for Relevant Sector disruption rest.
 enum RelevantSectorRole: String, Codable {

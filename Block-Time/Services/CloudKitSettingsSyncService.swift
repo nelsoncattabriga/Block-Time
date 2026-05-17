@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import BlockTimeDomain
 import Network
 
 /// Service for syncing app settings across devices using NSUbiquitousKeyValueStore

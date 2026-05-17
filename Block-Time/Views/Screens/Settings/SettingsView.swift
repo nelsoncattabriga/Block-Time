@@ -1,5 +1,6 @@
 // Views/Screens/SettingsView.swift - Master-Detail Settings Design
 import SwiftUI
+import BlockTimeDomain
 import UniformTypeIdentifiers
 
 // MARK: - Settings Category Enum

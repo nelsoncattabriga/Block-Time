@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeDomain
 import WebKit
 
 // MARK: - HTMLReferenceView

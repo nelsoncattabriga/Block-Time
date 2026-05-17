@@ -15,6 +15,7 @@
 //
 
 import SwiftUI
+import BlockTimeDomain
 import Charts
 
 // MARK: - Limit selector (shared with FRMSRollingBarsCard)

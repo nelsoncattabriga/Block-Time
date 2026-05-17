@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BlockTimeDomain
 import SwiftUI
 
 // MARK: - Data Models

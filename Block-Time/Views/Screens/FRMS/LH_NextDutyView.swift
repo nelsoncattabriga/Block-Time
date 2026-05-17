@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeDomain
 
 struct LH_NextDutyView: View {
 

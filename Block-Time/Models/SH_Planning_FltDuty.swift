@@ -1,4 +1,5 @@
 import Foundation
+import BlockTimeDomain
 
 // MARK: - SH Planning Flight & Duty Limits
 // Source: FRMS Ruleset A320/B737, Revision 4.1, 1 October 2024

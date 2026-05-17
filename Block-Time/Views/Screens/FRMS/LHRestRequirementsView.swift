@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeDomain
 
 // MARK: - Shared LH Helpers
 

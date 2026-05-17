@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeDomain
 
 struct SHRestWindowCard: View {
     var frmsViewModel: FRMSViewModel

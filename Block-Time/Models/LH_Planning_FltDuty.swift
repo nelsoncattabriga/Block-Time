@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import BlockTimeDomain
 
 // MARK: - Planning-Specific Enums
 
