@@ -49,6 +49,19 @@ Extract pure function calculators into `BlockTimeCalculators` and write exhausti
 - Test fixture structure (inline values vs. external JSON fixtures)
 - Test target naming conventions
 
+### Swift 6 Strict Concurrency Requirements (NON-NEGOTIABLE)
+- **D-14:** ALL extracted code MUST use Swift 6 strict concurrency - NO force unwraps (`!`), NO implicitly unwrapped optionals
+- **D-15:** ALL `TimeZone` and `Calendar` creation MUST use safe patterns: `guard let timeZone = TimeZone(identifier: "UTC") else { return default }`
+- **D-16:** ALL test helpers MUST use `XCTUnwrap` instead of force unwraps for better failure messages
+- **D-17:** NO `@MainActor` annotations in pure calculator functions - they must be safely callable from any context
+- **D-18:** ALL types moved to `BlockTimeDomain` MUST conform to `Sendable` - verify before moving
+
+### Modern Swift API Requirements (NON-NEGOTIABLE)
+- **D-19:** NO `String(format:)` usage - use `.formatted(.number.precision(.fractionLength(N)))` instead
+- **D-20:** NO `replacingOccurrences(of:with:)` usage - use `.replacing(_:with:)` instead
+- **D-21:** NO `Calendar.current` or `TimeZone.current` usage - use explicit `Calendar(identifier: .gregorian)` with specific TimeZone
+- **D-22:** NO `Date()` instantiation - use `Date.now` for clarity when appropriate
+
 </decisions>
 
 <canonical_refs>
