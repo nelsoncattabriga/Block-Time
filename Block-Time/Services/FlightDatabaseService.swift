@@ -1855,10 +1855,11 @@ class FlightDatabaseService: ObservableObject {
     /// Get comprehensive flight statistics (excludes rostered/future flights with blockTime == 0 and simTime == 0)
     func getFlightStatistics() -> FlightStatistics {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        // Exclude rostered and positioning flights; include completed block or sim time
+        // Exclude rostered and positioning flights; include completed block, sim, or instructor time.
+        // spInsTime check is needed so INS Sim sessions with 0 SIM (observer role) are not excluded.
         request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
-            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (spInsTime != %@ AND spInsTime != %@ AND spInsTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00", "0", "0.0", "0.00")
         ])
 
         do {
@@ -1939,7 +1940,7 @@ class FlightDatabaseService: ObservableObject {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
-            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (spInsTime != %@ AND spInsTime != %@ AND spInsTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00", "0", "0.0", "0.00")
         ])
 
         do {
