@@ -43,6 +43,8 @@ struct DashboardCardView: View {
     }
 
     private func isInsightsCard(_ id: DashboardCardID) -> Bool {
+        // Custom counter cards are always rendered as insights cards
+        if id.customCounterID != nil { return true }
         switch id {
         case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .frmsLimitsGauge,
              .frmsRollingLine, .activityChart, .timeByType,
@@ -59,6 +61,10 @@ struct DashboardCardView: View {
 
     @ViewBuilder
     private var insightsContent: some View {
+        // Custom counter cards: dispatch before the main switch
+        if let counterID = cardID.customCounterID {
+            CustomCounterDashboardCard(counterID: counterID)
+        } else {
         switch cardID {
         case .frmsFlightTime:
             FRMSFlightStripCard(data: viewModel.frmsStrip)
@@ -102,6 +108,7 @@ struct DashboardCardView: View {
         default:
             EmptyView()
         }
+        } // end else (non-custom-counter)
     }
 
     // MARK: - Dashboard stat cards
