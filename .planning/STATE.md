@@ -87,6 +87,8 @@ Phases completed: 2 / 8
 - Phase 03-01: CrewRestFacility moved to BlockTimeDomain — SignOnTimeRange is in BlockTimeDomain, preventing a circular dep with BlockTimeCalculators
 - Phase 03-01: OperationTimeClass.classify uses Calendar(identifier: .gregorian) not Calendar.current — deterministic unit tests
 - Phase 03-01: Public memberwise init required on all moved structs — auto-synthesized init is internal, cross-module calls fail without explicit public init
+- Phase 03-02: parseHHMM requires 2-digit minutes (parts[1].count==2) — rejects "9:3" per plan truths, while single-digit hours like "1:30" are still accepted
+- Phase 03-02: localToUTC maps wall-clock components from source tz onto UTC clock (not a timezone offset subtraction) — test expectation corrected during RED→GREEN
 - Phase 03-03: acos argument clamped to max(-1.0, min(1.0, ...)) — belt-and-suspenders against floating-point values outside [-1,1] causing NaN in julianDay math
 - Phase 03-03: NightTimeCalculator returns 0 (not nil) for same-airport — nil reserved for non-finite intermediate results per D-07
 

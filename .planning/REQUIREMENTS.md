@@ -33,8 +33,8 @@
 - [ ] **CALC-04**: SH Planning FRMS rules covered by unit tests
 - [ ] **CALC-05**: SH Operational FRMS rules covered by unit tests
 - [x] **CALC-06**: Night time calculator is a pure function, tested for midnight crossing, DST transitions, and polar twilight edge cases
-- [ ] **CALC-07**: `localDateToUTC(localDate:localTime:airportICAO:) -> Date` is a pure function in `BlockTimeCalculators`, tested for DST transitions, midnight crossing, and missing airport fallback
-- [ ] **CALC-08**: Time display formatter (minutes → "HH:MM" and "H.hh" decimal) is a pure function, replaces all scattered `safeDoubleFromString` / `DateFormatter` string parsing
+- [x] **CALC-07**: `localDateToUTC(localDate:localTime:airportICAO:) -> Date` is a pure function in `BlockTimeCalculators`, tested for DST transitions, midnight crossing, and missing airport fallback
+- [x] **CALC-08**: Time display formatter (minutes → "HH:MM" and "H.hh" decimal) is a pure function, replaces all scattered `safeDoubleFromString` / `DateFormatter` string parsing
 - [x] **CALC-09**: All calculator tests run without a simulator (pure Swift, no UIKit or Core Data dependency)
 
 ### God Object Breakup (GODOBJ)
@@ -142,8 +142,8 @@
 | CALC-04 | Phase 3 — Calculators & Tests | Pending |
 | CALC-05 | Phase 3 — Calculators & Tests | Pending |
 | CALC-06 | Phase 3 — Calculators & Tests | Complete |
-| CALC-07 | Phase 3 — Calculators & Tests | Pending |
-| CALC-08 | Phase 3 — Calculators & Tests | Pending |
+| CALC-07 | Phase 3 — Calculators & Tests | Complete |
+| CALC-08 | Phase 3 — Calculators & Tests | Complete |
 | CALC-09 | Phase 3 — Calculators & Tests | Complete |
 | GODOBJ-01 | Phase 4 — God Object Breakup | Pending |
 | GODOBJ-02 | Phase 4 — God Object Breakup | Pending |
