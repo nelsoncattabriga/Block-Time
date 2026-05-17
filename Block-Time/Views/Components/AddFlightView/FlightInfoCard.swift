@@ -153,6 +153,7 @@ struct ModernCapturedDataCard: View {
                         viewModel.blockTime = viewModel.spInsTime
                     }
                     viewModel.spInsTime = ""
+                    viewModel.resetSimInsTime()
                     if viewModel.captainName.isEmpty {
                         viewModel.captainName = viewModel.defaultCaptainName
                     }
@@ -299,6 +300,7 @@ struct ModernCapturedDataCard: View {
                             viewModel.isPositioning = false
                             viewModel.isSpIns = false
                             viewModel.spInsTime = ""
+                            viewModel.resetSimInsTime()
                             if wasPositioning { viewModel.restoreDefaultsAfterPositioning() }
                             HapticManager.shared.impact(.medium)
                         }
@@ -320,6 +322,7 @@ struct ModernCapturedDataCard: View {
                             viewModel.blockTime = ""  // Clear block time for positioning flights
                             viewModel.nightTime = ""  // Clear night time for positioning flights
                             viewModel.spInsTime = ""  // Clear Sp/Ins time for positioning flights
+                            viewModel.resetSimInsTime()
                             viewModel.aircraftReg = ""  // Clear aircraft reg for positioning flights
                             viewModel.aircraftType = ""  // Clear aircraft type for positioning flights
                             viewModel.captainName = ""  // Clear captain name for positioning flights
@@ -345,6 +348,7 @@ struct ModernCapturedDataCard: View {
                             viewModel.isPositioning = false
                             viewModel.isSpIns = false
                             viewModel.spInsTime = ""
+                            viewModel.resetSimInsTime()
                             HapticManager.shared.impact(.medium)
                         }
                     }) {
@@ -531,16 +535,29 @@ struct ModernCapturedDataCard: View {
                     }
 
                     if viewModel.isSpIns && !viewModel.isInstructingInAircraft {
-                        // SIM instruction: SP/INS Time field only (no time credit)
-                        ModernDecimalTimeField(
-                            label: "INS Time",
-                            value: $viewModel.spInsTime,
-                            icon: "person.fill.badge.plus",
-                            isReadOnly: false,
-                            showAsHHMM: viewModel.showTimesInHoursMinutes,
-                            isRequired: viewModel.saveRequirements.needsBlockOrInsTime,
-                            keyboardToolbar: keyboardToolbar
-                        )
+                        // SIM instruction: INS time (full session) + editable SIM time (seat time only)
+                        HStack {
+                            ModernDecimalTimeField(
+                                label: "INS Time",
+                                value: $viewModel.spInsTime,
+                                icon: "person.fill.badge.plus",
+                                isReadOnly: false,
+                                showAsHHMM: viewModel.showTimesInHoursMinutes,
+                                isRequired: viewModel.saveRequirements.needsBlockOrInsTime,
+                                keyboardToolbar: keyboardToolbar
+                            )
+                            ModernDecimalTimeField(
+                                label: "SIM Time",
+                                value: Binding(
+                                    get: { viewModel.simInsTime },
+                                    set: { viewModel.userEditedSimInsTime($0) }
+                                ),
+                                icon: "desktopcomputer",
+                                isReadOnly: false,
+                                showAsHHMM: viewModel.showTimesInHoursMinutes,
+                                keyboardToolbar: keyboardToolbar
+                            )
+                        }
                     } else {
                         HStack {
                             ModernDecimalTimeField(

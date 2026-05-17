@@ -869,7 +869,7 @@ class FlightDatabaseService: ObservableObject {
                     var totalHours: Double = 0, p1Time: Double = 0, p1usTime: Double = 0, p2Time: Double = 0, simTime: Double = 0
                     for flight in flights {
                         let blockTime = self.safeDoubleFromString(flight.blockTime)
-                        let flightSimTime = self.entityIsSpInsOnly(flight) ? 0 : self.safeDoubleFromString(flight.simTime)
+                        let flightSimTime = self.safeDoubleFromString(flight.simTime)
                         let isSimFlight = blockTime == 0 && flightSimTime > 0
                         totalHours += blockTime > 0 ? blockTime : (countSimInTotal ? flightSimTime : 0)
                         if !isSimFlight {
@@ -1883,7 +1883,7 @@ class FlightDatabaseService: ObservableObject {
 
             for flight in flights {
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let flightSimTime = safeDoubleFromString(flight.simTime)
                 let isSimFlight = blockTime == 0 && flightSimTime > 0
                 totalBlock += blockTime
                 if !isSimFlight {
@@ -1964,7 +1964,7 @@ class FlightDatabaseService: ObservableObject {
 
             for flight in flights {
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let flightSimTime = safeDoubleFromString(flight.simTime)
                 let isSimFlight = blockTime == 0 && flightSimTime > 0
                 totalBlock      += blockTime
                 if !isSimFlight {
@@ -2045,7 +2045,7 @@ class FlightDatabaseService: ObservableObject {
 
         for flight in flights {
             guard !flight.isPositioning else { continue }
-            let isSimFlight = flight.blockTimeValue == 0 && (flight.isSpInsOnly ? 0 : flight.simTimeValue) > 0
+            let isSimFlight = flight.blockTimeValue == 0 && flight.simTimeValue > 0
             totalBlock += flight.blockTimeValue
             if !isSimFlight {
                 totalP1 += flight.p1TimeValue
@@ -2054,7 +2054,7 @@ class FlightDatabaseService: ObservableObject {
             }
             totalNight += flight.nightTimeValue
             totalInstrument += flight.instrumentTimeValue
-            totalSIM += flight.isSpInsOnly ? 0 : flight.simTimeValue
+            totalSIM += flight.simTimeValue
             let spVal = flight.spInsTimeValue
             totalSpIns += spVal
             if flight.isSpInsOnly {
@@ -2158,9 +2158,7 @@ class FlightDatabaseService: ObservableObject {
 
     /// Safely convert string to double with validation
     private func entityIsSpInsOnly(_ flight: FlightEntity) -> Bool {
-        let spVal = safeDoubleFromString(flight.spInsTime)
-        guard spVal > 0 else { return false }
-        return abs(safeDoubleFromString(flight.simTime) - spVal) < 0.01
+        safeDoubleFromString(flight.spInsTime) > 0 && safeDoubleFromString(flight.blockTime) < 0.01
     }
 
     private func safeDoubleFromString(_ string: String?) -> Double {
@@ -2407,8 +2405,7 @@ class FlightDatabaseService: ObservableObject {
             let flights = try viewContext.fetch(request)
             let totalHours = flights.reduce(0.0) { sum, flight in
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let simTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
-                // Use block time if available, otherwise use sim time (SpIns excluded)
+                let simTime = safeDoubleFromString(flight.simTime)
                 return sum + (blockTime > 0 ? blockTime : simTime)
             }
             return totalHours
@@ -2628,8 +2625,7 @@ class FlightDatabaseService: ObservableObject {
             let flights = try viewContext.fetch(request)
             let totalHours = flights.reduce(0.0) { sum, flight in
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let simTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
-                // Use block time if available, otherwise use sim time (SpIns excluded)
+                let simTime = safeDoubleFromString(flight.simTime)
                 return sum + (blockTime > 0 ? blockTime : simTime)
             }
             return (totalHours, flights.count)
@@ -2661,7 +2657,7 @@ class FlightDatabaseService: ObservableObject {
             let countSimInTotal = UserDefaults.standard.object(forKey: "countSimInTotal") as? Bool ?? true
             for flight in flights {
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let flightSimTime = safeDoubleFromString(flight.simTime)
                 let isSimFlight = blockTime == 0 && flightSimTime > 0
                 totalHours += blockTime > 0 ? blockTime : (countSimInTotal ? flightSimTime : 0)
                 if !isSimFlight {

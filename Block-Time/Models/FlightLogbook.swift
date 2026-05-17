@@ -252,9 +252,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     nonisolated var spInsTimeValue: Double { safeDoubleValue(spInsTime) }
 
     nonisolated var isSpInsOnly: Bool {
-        let spVal = spInsTimeValue
-        guard spVal > 0 else { return false }
-        return abs(simTimeValue - spVal) < 0.01
+        spInsTimeValue > 0 && blockTimeValue < 0.01
     }
 
     nonisolated var isAircraftInstruction: Bool {
