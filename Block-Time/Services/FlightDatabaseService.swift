@@ -154,7 +154,7 @@ class FlightDatabaseService: ObservableObject {
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
 
-        #if DEBUG
+        #if DEBUG && !targetEnvironment(simulator)
         LogManager.shared.debug("CloudKit Schema: Auto-initialization ENABLED (Development)")
         DispatchQueue.global(qos: .utility).async {
             do {
@@ -166,6 +166,8 @@ class FlightDatabaseService: ObservableObject {
                 LogManager.shared.debug("  Technical: \(error.localizedDescription)")
             }
         }
+        #elseif DEBUG
+        LogManager.shared.debug("CloudKit Schema: Auto-initialization SKIPPED (Simulator — V1 schema preserved)")
         #else
         LogManager.shared.info("CloudKit Schema: Auto-initialization DISABLED (Production)")
         LogManager.shared.info("IMPORTANT: Schema must be manually deployed to Production via CloudKit Console")
