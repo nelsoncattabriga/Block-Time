@@ -51,8 +51,9 @@ Phases completed: 0 / 7
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260508-lvr | Add AddFlightWidget to the BlockTimeWidget extension | 2026-05-08 | f1aef95 | [260508-lvr-add-addflightwidget-to-the-blocktimewidg](./quick/260508-lvr-add-addflightwidget-to-the-blocktimewidg/) |
+| 260517-ins | Variable SIM time field for INS Simulator flights | 2026-05-17 | e05a73a | [260517-ins-sim-variable-time](./quick/260517-ins-sim-variable-time/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-08 - Completed quick task 260508-lvr: Add AddFlightWidget to the BlockTimeWidget extension
+Last activity: 2026-05-17 - Completed quick task 260517-ins: Variable SIM time field for INS Simulator flights
 Next action: `/gsd:plan-phase 1` — plan Foundation phase
