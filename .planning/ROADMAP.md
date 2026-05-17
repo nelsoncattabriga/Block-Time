@@ -62,7 +62,14 @@ Plans:
   2. All four FRMS rule sets (LH planning, LH operational, SH planning, SH operational) have at least one test that catches a known edge case before the fix is applied
   3. Night time calculator tests cover midnight crossing, DST transition, and polar twilight edge cases
   4. Time formatter pure function correctly handles all v1 string formats and produces correct "HH:MM" and "H.hh" decimal output
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Move FRMS domain types into BlockTimeDomain, add FRMSResult, add BlockTimeCalculatorsTests target
+- [ ] 03-02-PLAN.md — TimeFormatter + UTCConverter pure functions + XCTest suites
+- [ ] 03-03-PLAN.md — NightTimeCalculator extraction with same-airport guard + XCTest edge cases
+- [ ] 03-04-PLAN.md — Move 4 FRMS rule-set files + extract FRMSCalculator + LH Planning/Operational XCTest suites
+- [ ] 03-05-PLAN.md — SH Planning + SH Operational XCTest suites
 
 ### Phase 4: God Object Breakup
 **Goal**: FlightDatabaseService and FlightTimeExtractorViewModel are split into focused, independently-testable services — no single file owns query, write, statistics, CloudKit notification, and parsing logic at the same time.
@@ -150,7 +157,7 @@ Note: 57 active requirements + 4 complete (FOUND-01–04) = 61 total mapped.
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete | 2026-05-16 |
 | 2. CoreData Repository | 4/4 | Complete | 2026-05-17 |
-| 3. Calculators & Tests | 0/? | Not started | - |
+| 3. Calculators & Tests | 0/5 | Planned | - |
 | 4. God Object Breakup | 0/? | Not started | - |
 | 5. Core UI + Widgets | 0/? | Not started | - |
 | 6. Import Pipeline | 0/? | Not started | - |
