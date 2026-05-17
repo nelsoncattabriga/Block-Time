@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Hybrid Architecture Rewrite
 status: Executing Phase 03
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-05-17T02:21:18.177Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-05-17T02:26:33.447Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 14
-  completed_plans: 10
+  completed_plans: 12
 ---
 
 # Block-Time v2.0 — Project State
@@ -51,6 +51,8 @@ Phases completed: 2 / 8
 | 02    | 03   | 12             | 2     | 2     |
 | 02    | 04   | ~90            | 5     | 14+   |
 | 03    | 01   | 6              | 3     | 30    |
+| Phase 03 P03 | 3 | 1 tasks | 2 files |
+| Phase 03 P02 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -85,6 +87,8 @@ Phases completed: 2 / 8
 - Phase 03-01: CrewRestFacility moved to BlockTimeDomain — SignOnTimeRange is in BlockTimeDomain, preventing a circular dep with BlockTimeCalculators
 - Phase 03-01: OperationTimeClass.classify uses Calendar(identifier: .gregorian) not Calendar.current — deterministic unit tests
 - Phase 03-01: Public memberwise init required on all moved structs — auto-synthesized init is internal, cross-module calls fail without explicit public init
+- Phase 03-03: acos argument clamped to max(-1.0, min(1.0, ...)) — belt-and-suspenders against floating-point values outside [-1,1] causing NaN in julianDay math
+- Phase 03-03: NightTimeCalculator returns 0 (not nil) for same-airport — nil reserved for non-finite intermediate results per D-07
 
 ### Critical Reminders
 
@@ -100,6 +104,6 @@ None — build is green, simulator verified with 2697 flights.
 
 ## Session Continuity
 
-Last session: 2026-05-17T02:21:18.174Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-05-17T02:26:33.445Z
+Stopped at: Completed 03-02-PLAN.md
 Next action: /gsd:plan-phase 3 (Calculators & Tests)

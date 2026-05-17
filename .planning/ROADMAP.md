@@ -66,8 +66,8 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — Move FRMS domain types into BlockTimeDomain, add FRMSResult, add BlockTimeCalculatorsTests target
-- [ ] 03-02-PLAN.md — TimeFormatter + UTCConverter pure functions + XCTest suites
-- [ ] 03-03-PLAN.md — NightTimeCalculator extraction with same-airport guard + XCTest edge cases
+- [x] 03-02-PLAN.md — TimeFormatter + UTCConverter pure functions + XCTest suites
+- [x] 03-03-PLAN.md — NightTimeCalculator extraction with same-airport guard + XCTest edge cases
 - [ ] 03-04-PLAN.md — Move 4 FRMS rule-set files + extract FRMSCalculator + LH Planning/Operational XCTest suites
 - [ ] 03-05-PLAN.md — SH Planning + SH Operational XCTest suites
 
