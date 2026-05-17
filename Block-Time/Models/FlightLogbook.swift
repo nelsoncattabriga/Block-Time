@@ -288,6 +288,16 @@ struct FlightSector: Identifiable, Codable, Hashable {
         // IMPORTANT: Database stores dates in UTC, so we must use UTC timezone when formatting
         let dateString = Self.cachedUTCDateFormatter.string(from: date)
 
+        // Load custom counter entries from the Core Data relationship
+        var loadedCounterEntries: [String: String] = [:]
+        if let entries = entity.counterEntries as? Set<CustomCounterEntry> {
+            for entry in entries {
+                if let counterID = entry.counterID, let value = entry.value, !value.isEmpty {
+                    loadedCounterEntries[counterID.uuidString] = value
+                }
+            }
+        }
+
         return FlightSector(
             id: id,
             date: dateString,
@@ -323,7 +333,9 @@ struct FlightSector: Identifiable, Codable, Hashable {
             outTime: entity.outTime ?? "",
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
-            scheduledArrival: entity.scheduledArrival ?? ""
+            scheduledArrival: entity.scheduledArrival ?? "",
+            customCount: Int(entity.customCount),
+            counterEntries: loadedCounterEntries
         )
     }
     

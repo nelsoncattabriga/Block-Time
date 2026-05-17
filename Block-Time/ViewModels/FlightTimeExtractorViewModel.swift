@@ -166,6 +166,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     }
     @Published var remarks = ""
     @Published var customCount = 0
+    @Published var counterValues: [UUID: String] = [:]
     @Published var dayTakeoffs = 0
     @Published var dayLandings = 0
     @Published var nightTakeoffs = 0
@@ -1635,7 +1636,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             inTime: inTime,
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
-            customCount: isPositioning ? 0 : customCount
+            customCount: isPositioning ? 0 : customCount,
+            counterEntries: currentCounterEntriesDict()
         )
                     LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), p2Time=\(newFlight.p2Time)")
 
@@ -1839,6 +1841,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // Store original ICUS value (inferred from time credits)
         originalIsICUS = isICUS
 
+        // Load custom counter entries
+        loadCounterEntries(from: sector)
+
 //        print("DEBUG: Loaded flight for editing: \(sector.flightNumber)")
     }
 
@@ -1946,7 +1951,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             inTime: inTime,
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
-            customCount: isPositioning ? 0 : customCount
+            customCount: isPositioning ? 0 : customCount,
+            counterEntries: currentCounterEntriesDict()
         )
 
         let databaseService = FlightDatabaseService.shared
@@ -1984,6 +1990,33 @@ class FlightTimeExtractorViewModel: ObservableObject {
         if (Double(sector.p1usTime) ?? 0) > 0 { return .p1us }
         if (Double(sector.p2Time) ?? 0) > 0 { return .p2 }
         return .p1
+    }
+
+    // MARK: - Custom Counter Helpers
+
+    /// Populate counterValues from a sector's counterEntries dict (loaded from Core Data).
+    func loadCounterEntries(from sector: FlightSector) {
+        counterValues = [:]
+        for (uuidString, value) in sector.counterEntries {
+            if let uuid = UUID(uuidString: uuidString) {
+                counterValues[uuid] = value
+            }
+        }
+    }
+
+    /// Return counterValues as a [uuidString: rawValue] dict, skipping empty / zero entries.
+    func currentCounterEntriesDict() -> [String: String] {
+        var result: [String: String] = [:]
+        for (uuid, value) in counterValues {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  trimmed != "0",
+                  trimmed != "0.0",
+                  trimmed != "00:00",
+                  trimmed != "0:00" else { continue }
+            result[uuid.uuidString] = trimmed
+        }
+        return result
     }
 
     var hasUnsavedChanges: Bool {

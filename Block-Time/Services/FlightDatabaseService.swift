@@ -299,6 +299,15 @@ class FlightDatabaseService: ObservableObject {
             flight.createdAt = Date()
             flight.modifiedAt = Date()
 
+            // Save custom counter entries
+            for (uuidString, value) in sector.counterEntries {
+                guard let counterID = UUID(uuidString: uuidString), !value.isEmpty else { continue }
+                let entry = CustomCounterEntry(context: viewContext)
+                entry.counterID = counterID
+                entry.value = value
+                entry.flight = flight
+            }
+
             do {
                 try viewContext.save()
                 success = true
@@ -311,7 +320,7 @@ class FlightDatabaseService: ObservableObject {
 
         return success
     }
-    
+
     /// Update an existing flight sector
     func updateFlight(_ sector: FlightSector) -> Bool {
         var success = false
@@ -364,6 +373,20 @@ class FlightDatabaseService: ObservableObject {
                 flight.scheduledArrival = sector.scheduledArrival
                 flight.customCount = Int16(sector.customCount)
                 flight.modifiedAt = Date()
+
+                // Replace custom counter entries: delete all existing, re-insert from sector
+                if let existingEntries = flight.counterEntries as? Set<CustomCounterEntry> {
+                    for entry in existingEntries {
+                        viewContext.delete(entry)
+                    }
+                }
+                for (uuidString, value) in sector.counterEntries {
+                    guard let counterID = UUID(uuidString: uuidString), !value.isEmpty else { continue }
+                    let entry = CustomCounterEntry(context: viewContext)
+                    entry.counterID = counterID
+                    entry.value = value
+                    entry.flight = flight
+                }
 
                 try viewContext.save()
                 success = true

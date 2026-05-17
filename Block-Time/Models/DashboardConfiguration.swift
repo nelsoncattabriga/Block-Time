@@ -25,17 +25,23 @@ final class DashboardConfiguration {
 
     // MARK: - Computed
 
+    /// All known cards: standard cards + one entry per user-defined counter definition.
+    private var allKnownCards: [DashboardCardID] {
+        let counterCards = CustomCounterService.shared.definitions.map { DashboardCardID.customCounter($0.id) }
+        return DashboardCardID.allStandardCases + counterCards
+    }
+
     /// Cards not yet assigned to sidebar or detail (iPad).
     var availableCards: [DashboardCardID] {
         let used = Set(sidebarCards + detailCards)
-        return DashboardCardID.allCases.filter { !used.contains($0) }
+        return allKnownCards.filter { !used.contains($0) }
     }
 
     /// Cards not in the detail list — used on iPhone where there is no sidebar.
     /// Sidebar-only cards appear here so iPhone users can still add them.
     var availableForPhone: [DashboardCardID] {
         let used = Set(detailCards)
-        return DashboardCardID.allCases.filter { !used.contains($0) }
+        return allKnownCards.filter { !used.contains($0) }
     }
 
     // MARK: - Add
@@ -109,7 +115,7 @@ final class DashboardConfiguration {
         } else {
             let isIPad = UIDevice.current.userInterfaceIdiom == .pad
             let sidebarDefaults: Set<DashboardCardID> = [.totalTime, .frmsFlightTime, .frmsDutyTime]
-            let remaining = DashboardCardID.allCases.filter { !sidebarDefaults.contains($0) }
+            let remaining = DashboardCardID.allStandardCases.filter { !sidebarDefaults.contains($0) }
             detailCards = isIPad
                 ? remaining
                 : [.totalTime, .frmsFlightTime, .frmsDutyTime] + remaining
