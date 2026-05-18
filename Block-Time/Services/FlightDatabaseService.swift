@@ -754,7 +754,10 @@ class FlightDatabaseService: ObservableObject {
                        if a.1 != b.1 { return a.1 > b.1 }
                        let aTime = a.0.outTime.isEmpty ? a.0.scheduledDeparture : a.0.outTime
                        let bTime = b.0.outTime.isEmpty ? b.0.scheduledDeparture : b.0.outTime
-                       if aTime.isEmpty && bTime.isEmpty { return false }
+                       if aTime.isEmpty && bTime.isEmpty {
+                           guard let ac = a.0.createdAt, let bc = b.0.createdAt else { return false }
+                           return ac > bc
+                       }
                        if aTime.isEmpty { return false }
                        if bTime.isEmpty { return true }
                        return aTime > bTime
@@ -789,7 +792,10 @@ class FlightDatabaseService: ObservableObject {
                         if a.1 != b.1 { return a.1 > b.1 }
                         let aTime = a.0.outTime.isEmpty ? a.0.scheduledDeparture : a.0.outTime
                         let bTime = b.0.outTime.isEmpty ? b.0.scheduledDeparture : b.0.outTime
-                        if aTime.isEmpty && bTime.isEmpty { return false }
+                        if aTime.isEmpty && bTime.isEmpty {
+                            guard let ac = a.0.createdAt, let bc = b.0.createdAt else { return false }
+                            return ac > bc
+                        }
                         if aTime.isEmpty { return false }
                         if bTime.isEmpty { return true }
                         return aTime > bTime
