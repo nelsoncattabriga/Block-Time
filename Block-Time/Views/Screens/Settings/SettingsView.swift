@@ -2480,7 +2480,7 @@ struct InlineCustomFieldsView: View {
                 .scrollContentBackground(.hidden)
                 .scrollDisabled(true)
                 .environment(\.editMode, .constant(.active))
-                .frame(height: CGFloat(service.definitions.count) * 44)
+                .fixedSize(horizontal: false, vertical: true)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .background(Color(.secondarySystemBackground).clipShape(RoundedRectangle(cornerRadius: 8)))
             }
