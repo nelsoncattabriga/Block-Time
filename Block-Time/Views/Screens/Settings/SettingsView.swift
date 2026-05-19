@@ -2446,60 +2446,12 @@ struct InlineCustomFieldsView: View {
     private var service: CustomCounterService { CustomCounterService.shared }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button("Add Field", systemImage: "plus.circle.fill", action: { showingAddSheet = true })
-                .font(.subheadline)
-                .foregroundStyle(.blue)
-                .buttonStyle(.plain)
-
-            if service.definitions.isEmpty {
-                Text("No fields added yet.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 4)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(service.definitions) { definition in
-                        HStack(spacing: 10) {
-                            Button {
-                                editingDefinition = definition
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: iconFor(definition.type))
-                                        .foregroundStyle(colorFor(definition.type))
-                                        .frame(width: 18)
-                                    Text(definition.label)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-
-                            Image(systemName: "line.3.horizontal")
-                                .foregroundStyle(.tertiary)
-                                .font(.subheadline)
-                        }
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 10)
-                        .opacity(draggingID == definition.columnIndex ? 0.4 : 1)
-                        .onDrag {
-                            draggingID = definition.columnIndex
-                            return NSItemProvider(object: "\(definition.columnIndex)" as NSString)
-                        }
-                        .onDrop(of: [.text], delegate: FieldDropDelegate(
-                            targetID: definition.columnIndex,
-                            service: service,
-                            draggingID: $draggingID
-                        ))
-
-                        if definition.columnIndex != service.definitions.last?.columnIndex {
-                            Divider().padding(.leading, 28)
-                        }
-                    }
-                }
+        VStack(spacing: 8) {
+            ForEach(service.definitions) { definition in
+                fieldRow(definition)
             }
+
+            addFieldRow
         }
         .sheet(isPresented: $showingAddSheet) {
             FieldEditSheet(mode: .add) { label, type, showTotal in
@@ -2513,6 +2465,71 @@ struct InlineCustomFieldsView: View {
                 service.remove(columnIndex: definition.columnIndex)
             }
         }
+    }
+
+    private func fieldRow(_ definition: CustomCounterDefinition) -> some View {
+        Button {
+            editingDefinition = definition
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: iconFor(definition.type))
+                    .foregroundStyle(colorFor(definition.type))
+                    .frame(width: 20)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(definition.label)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    Text(definition.type.displayName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "line.3.horizontal")
+                    .foregroundStyle(.tertiary)
+                    .font(.subheadline)
+            }
+            .padding(12)
+            .background(Color(.systemGray6).opacity(0.5))
+            .clipShape(.rect(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .opacity(draggingID == definition.columnIndex ? 0.4 : 1)
+        .onDrag {
+            draggingID = definition.columnIndex
+            return NSItemProvider(object: "\(definition.columnIndex)" as NSString)
+        }
+        .onDrop(of: [.text], delegate: FieldDropDelegate(
+            targetID: definition.columnIndex,
+            service: service,
+            draggingID: $draggingID
+        ))
+    }
+
+    private var addFieldRow: some View {
+        Button(action: { showingAddSheet = true }) {
+            HStack(spacing: 12) {
+                Image(systemName: "plus.circle.fill")
+                    .foregroundStyle(.blue)
+                    .frame(width: 20)
+                Text("Add Field")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.blue)
+                Spacer()
+            }
+            .padding(12)
+            .background(Color.blue.opacity(0.06))
+            .clipShape(.rect(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func iconFor(_ type: CounterType) -> String {
