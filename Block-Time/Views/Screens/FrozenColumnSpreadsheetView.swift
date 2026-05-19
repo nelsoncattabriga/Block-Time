@@ -165,7 +165,7 @@ enum Col {
         p1 + p1us + p2 + instr + sim + spIns +
         pax + pf + aiii + rnp + ils + gls + npa +
         dayTO + dayLdg + nightTO + nightLdg +
-        counter * CGFloat(max(counterCount, 1)) + remarks
+        counter * CGFloat(counterCount) + remarks
     }
 }
 
@@ -270,18 +270,12 @@ final class SpreadsheetContainerView: UIView {
 
     // MARK: Counter column helpers
 
-    private var useLegacyColumn: Bool {
-        !UserDefaults.standard.bool(forKey: "legacyCounterMigratedToColumn1") &&
-        CustomCounterService.shared.definitions.isEmpty
-    }
-
     private var counterDefinitions: [CustomCounterDefinition] {
-        useLegacyColumn ? [] : CustomCounterService.shared.definitions
+        let useCustomFields = UserDefaults.standard.bool(forKey: "useCustomCount")
+        return useCustomFields ? CustomCounterService.shared.definitions : []
     }
 
-    private var counterCount: Int {
-        useLegacyColumn ? 1 : max(CustomCounterService.shared.definitions.count, 1)
-    }
+    private var counterCount: Int { counterDefinitions.count }
 
     // MARK: Wire delegate after coordinator is set
 
@@ -438,15 +432,8 @@ final class SpreadsheetContainerView: UIView {
         addHeaderLabel("Day Ldg",      width: Col.dayLdg,   to: headerRow, x: &x)
         addHeaderLabel("Night T/O",    width: Col.nightTO,  to: headerRow, x: &x)
         addHeaderLabel("Night Ldg",    width: Col.nightLdg, to: headerRow, x: &x)
-        if useLegacyColumn {
-            addHeaderLabel("Custom Count", width: Col.counter, to: headerRow, x: &x)
-        } else {
-            for def in counterDefinitions {
-                addHeaderLabel(def.label, width: Col.counter, to: headerRow, x: &x)
-            }
-            if counterDefinitions.isEmpty {
-                addHeaderLabel("Custom Count", width: Col.counter, to: headerRow, x: &x)
-            }
+        for def in counterDefinitions {
+            addHeaderLabel(def.label, width: Col.counter, to: headerRow, x: &x)
         }
         addHeaderLabel("Remarks",      width: Col.remarks,  to: headerRow, x: &x)
         container.addSubview(headerRow)
@@ -485,15 +472,8 @@ final class SpreadsheetContainerView: UIView {
         addTotalCountLabel(sumInt(\.dayLandings),  width: Col.dayLdg,   to: footerRow, x: &x)
         addTotalCountLabel(sumInt(\.nightTakeoffs),width: Col.nightTO,  to: footerRow, x: &x)
         addTotalCountLabel(sumInt(\.nightLandings),width: Col.nightLdg, to: footerRow, x: &x)
-        if useLegacyColumn {
-            addTotalCountLabel(sumInt(\.customCount), width: Col.counter, to: footerRow, x: &x)
-        } else {
-            for def in counterDefinitions {
-                addTotalCounterLabel(definition: def, to: footerRow, x: &x)
-            }
-            if counterDefinitions.isEmpty {
-                addTotalCountLabel(sumInt(\.customCount), width: Col.counter, to: footerRow, x: &x)
-            }
+        for def in counterDefinitions {
+            addTotalCounterLabel(definition: def, to: footerRow, x: &x)
         }
         addEmptyCell(width: Col.remarks,  to: footerRow, x: &x)
         container.addSubview(footerRow)
@@ -782,10 +762,9 @@ final class RightCell: UITableViewCell {
     }
 
     func configure(flight: FlightSector, index: Int, highlighted: Bool, config: SpreadsheetDisplayConfig) {
-        let useLegacy = !UserDefaults.standard.bool(forKey: "legacyCounterMigratedToColumn1") &&
-                        CustomCounterService.shared.definitions.isEmpty
-        let definitions = useLegacy ? [] : CustomCounterService.shared.definitions
-        let counterCount = max(definitions.count, 1)
+        let useCustomFields = UserDefaults.standard.bool(forKey: "useCustomCount")
+        let definitions = useCustomFields ? CustomCounterService.shared.definitions : []
+        let counterCount = definitions.count
 
         if builtCounterCount != counterCount {
             rebuildSubviews(counterCount: counterCount)
@@ -796,20 +775,13 @@ final class RightCell: UITableViewCell {
         let hhmm     = config.showHHMM
         let rounding = config.roundingMode
 
-        var counterValues: [String]
-        if useLegacy {
-            counterValues = [flight.customCount > 0 ? String(flight.customCount) : ""]
-        } else if definitions.isEmpty {
-            counterValues = [flight.customCount > 0 ? String(flight.customCount) : ""]
-        } else {
-            counterValues = definitions.map { def in
-                let raw = flight.counterEntries[def.columnIndex] ?? ""
-                guard !isBlankValue(raw) else { return "" }
-                if def.type == .time, let decimal = Double(raw) {
-                    return hhmm ? FlightSector.decimalToHHMM(decimal) : String(format: "%.1f", decimal)
-                }
-                return raw
+        let counterValues: [String] = definitions.map { def in
+            let raw = flight.counterEntries[def.columnIndex] ?? ""
+            guard !isBlankValue(raw) else { return "" }
+            if def.type == .time, let decimal = Double(raw) {
+                return hhmm ? FlightSector.decimalToHHMM(decimal) : String(format: "%.1f", decimal)
             }
+            return raw
         }
 
         let values: [String] = [
