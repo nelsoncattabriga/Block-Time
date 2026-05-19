@@ -69,6 +69,11 @@ final class CustomCounterService {
         definitions.first { $0.columnIndex == columnIndex }
     }
 
+    func replaceAll(_ definitions: [CustomCounterDefinition]) {
+        self.definitions = definitions
+        persist()
+    }
+
     var isFull: Bool { definitions.count >= 10 }
 
     private func persist() {
