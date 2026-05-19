@@ -55,8 +55,9 @@ Phases completed: 0 / 7
 | 260517-dim | Fix INS Sim 0-SIM flights showing dimmed as future flights | 2026-05-17 | eb2f9b3 | — |
 | 260517-u0w | Multi-counter system (definition + Core Data + dashboard + form + Settings) | 2026-05-18 | 2150c02 | [260517-u0w-implement-multi-counter-system-for-block](./quick/260517-u0w-implement-multi-counter-system-for-block/) |
 | 260519-g0g | Rename Counter/Counters to Field/Fields (UI strings + Swift identifiers) | 2026-05-19 | 9bec18a | [260519-g0g-rename-counter-counters-to-field-fields-](./quick/260519-g0g-rename-counter-counters-to-field-fields-/) |
+| 260519-gta | Fix iPad split view flight list stale row after Save alert | 2026-05-19 | 9b3501f | [260519-gta-fix-ipad-split-view-flight-list-stale-ro](./quick/260519-gta-fix-ipad-split-view-flight-list-stale-ro/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Renamed Counter terminology to Field in Settings, CrewOpsCard, Dashboard (260519-g0g)
+Last activity: 2026-05-19 - Fixed stale flight row in iPad split view after save alert (260519-gta)
 Next action: User builds locally and verifies; then `/gsd:plan-phase 1` — plan Foundation phase
