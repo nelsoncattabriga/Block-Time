@@ -33,7 +33,9 @@ final class DashboardConfiguration {
         let standardCards = legacyMigrated
             ? DashboardCardID.allStandardCases.filter { $0 != .customCount }
             : DashboardCardID.allStandardCases
-        let counterCards = CustomCounterService.shared.definitions.map { DashboardCardID.customCounter($0.columnIndex) }
+        let counterCards = CustomCounterService.shared.definitions
+            .filter { $0.showTotal }
+            .map { DashboardCardID.customCounter($0.columnIndex) }
         return standardCards + counterCards
     }
 
@@ -82,6 +84,21 @@ final class DashboardConfiguration {
     func moveDetailCard(from offsets: IndexSet, to destination: Int) {
         detailCards.move(fromOffsets: offsets, toOffset: destination)
         save()
+    }
+
+    // MARK: - Prune
+
+    /// Removes any sidebar/detail cards that are no longer in allKnownCards.
+    /// Called when counter definitions change (e.g. showTotal toggled off, counter deleted).
+    func pruneRemovedCards() {
+        let known = Set(allKnownCards)
+        let prunedSidebar = sidebarCards.filter { known.contains($0) }
+        let prunedDetail  = detailCards.filter  { known.contains($0) }
+        if prunedSidebar.count != sidebarCards.count || prunedDetail.count != detailCards.count {
+            sidebarCards = prunedSidebar
+            detailCards  = prunedDetail
+            save()
+        }
     }
 
     // MARK: - Remove (returns card to the Available pool)

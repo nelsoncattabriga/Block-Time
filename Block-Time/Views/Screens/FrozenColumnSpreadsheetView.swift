@@ -565,6 +565,10 @@ final class SpreadsheetContainerView: UIView {
     }
 
     private func addTotalCounterLabel(definition: CustomCounterDefinition, to parent: UIView, x: inout CGFloat) {
+        guard definition.showTotal else {
+            addEmptyCell(width: Col.counter, to: parent, x: &x)
+            return
+        }
         let text: String
         switch definition.type {
         case .integer:
@@ -581,7 +585,7 @@ final class SpreadsheetContainerView: UIView {
             let total = flights.reduce(0.0) { sum, f in
                 sum + (Double(f.counterEntries[definition.columnIndex] ?? "") ?? 0.0)
             }
-            text = total == 0 ? "" : FlightSector.decimalToHHMM(total)
+            text = total == 0 ? "" : (config.showHHMM ? FlightSector.decimalToHHMM(total) : String(format: "%.1f", total))
         }
         addTotalTimeLabel(text, width: Col.counter, to: parent, x: &x)
     }
@@ -800,7 +804,11 @@ final class RightCell: UITableViewCell {
         } else {
             counterValues = definitions.map { def in
                 let raw = flight.counterEntries[def.columnIndex] ?? ""
-                return isBlankValue(raw) ? "" : raw
+                guard !isBlankValue(raw) else { return "" }
+                if def.type == .time, let decimal = Double(raw) {
+                    return hhmm ? FlightSector.decimalToHHMM(decimal) : String(format: "%.1f", decimal)
+                }
+                return raw
             }
         }
 

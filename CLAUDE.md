@@ -8,6 +8,7 @@ Never remove any existing feature, button, logic, or behaviour without explicit 
 When something fails repeatedly, when Nelson has to re-explain, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
 - Replace any `NavigationView` encountered with `NavigationStack` and update toolbar placements to `.topBar*`.
 - Previews using `ThemeService` child views must inject `.environment(ThemeService.shared)` or crash with SIGTRAP.
+- Always use `/gsd:quick` (or other GSD commands) and spawn agents for all tasks — never edit directly.
 
 ## Coding Standards
 

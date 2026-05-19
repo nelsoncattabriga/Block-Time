@@ -39,10 +39,10 @@ final class CustomCounterService {
         return true
     }
 
-    func add(label: String, type: CounterType) {
+    func add(label: String, type: CounterType, showTotal: Bool = true) {
         let usedSlots = Set(definitions.map { $0.columnIndex })
         guard let slot = (1...10).first(where: { !usedSlots.contains($0) }) else { return }
-        let definition = CustomCounterDefinition(columnIndex: slot, label: label, type: type)
+        let definition = CustomCounterDefinition(columnIndex: slot, label: label, type: type, showTotal: showTotal)
         definitions.append(definition)
         persist()
     }
@@ -52,10 +52,11 @@ final class CustomCounterService {
         persist()
     }
 
-    func update(columnIndex: Int, label: String, type: CounterType) {
+    func update(columnIndex: Int, label: String, type: CounterType, showTotal: Bool) {
         guard let index = definitions.firstIndex(where: { $0.columnIndex == columnIndex }) else { return }
         definitions[index].label = label
         definitions[index].type = type
+        definitions[index].showTotal = showTotal
         persist()
     }
 
