@@ -54,8 +54,9 @@ Phases completed: 0 / 7
 | 260517-ins | Variable SIM time field for INS Simulator flights | 2026-05-17 | e05a73a | [260517-ins-sim-variable-time](./quick/260517-ins-sim-variable-time/) |
 | 260517-dim | Fix INS Sim 0-SIM flights showing dimmed as future flights | 2026-05-17 | eb2f9b3 | — |
 | 260517-u0w | Multi-counter system (definition + Core Data + dashboard + form + Settings) | 2026-05-18 | 2150c02 | [260517-u0w-implement-multi-counter-system-for-block](./quick/260517-u0w-implement-multi-counter-system-for-block/) |
+| 260519-g0g | Rename Counter/Counters to Field/Fields (UI strings + Swift identifiers) | 2026-05-19 | 9bec18a | [260519-g0g-rename-counter-counters-to-field-fields-](./quick/260519-g0g-rename-counter-counters-to-field-fields-/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-18 - Implemented multi-counter system (260517-u0w), awaiting user build verification
-Next action: User builds locally and verifies Task 6 checkpoint; then `/gsd:plan-phase 1` — plan Foundation phase
+Last activity: 2026-05-19 - Renamed Counter terminology to Field in Settings, CrewOpsCard, Dashboard (260519-g0g)
+Next action: User builds locally and verifies; then `/gsd:plan-phase 1` — plan Foundation phase
