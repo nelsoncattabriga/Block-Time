@@ -59,8 +59,9 @@ Phases completed: 0 / 7
 | 260519-i2o | Fix stale Custom Count column in FrozenColumnSpreadsheetView | 2026-05-19 | 72875fb | [260519-i2o-fix-stale-custom-count-column-in-frozenc](./quick/260519-i2o-fix-stale-custom-count-column-in-frozenc/) |
 | 260519-ir7 | Convert InlineCustomFieldsView to List with drag-reorder and swipe-delete | 2026-05-19 | 36c8453 | [260519-ir7-convert-inlinecustomfieldsview-to-list-w](./quick/260519-ir7-convert-inlinecustomfieldsview-to-list-w/) |
 | 260519-j10 | Suppress swipe-to-delete circles in InlineCustomFieldsView | 2026-05-19 | 960bc66 | [260519-j10-suppress-swipe-to-delete-circles-in-inli](./quick/260519-j10-suppress-swipe-to-delete-circles-in-inli/) |
+| 260519-jer | Restructure InlineCustomFieldsView: Add Field at top, natural list height, no nested bg | 2026-05-19 | 279a16a | [260519-jer-restructure-inlinecustomfieldsview-add-f](./quick/260519-jer-restructure-inlinecustomfieldsview-add-f/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Suppressed red delete circles in InlineCustomFieldsView, delete now only via FieldEditSheet (260519-j10)
+Last activity: 2026-05-19 - Restructured InlineCustomFieldsView: Add Field button at top, removed nested rounded background from List (260519-jer)
 Next action: Continue custom fields integration — CSV export, backup/restore, import mapping, PDF print
