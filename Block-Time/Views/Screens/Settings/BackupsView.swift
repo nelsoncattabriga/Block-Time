@@ -367,6 +367,11 @@ private struct ActionButton: View {
     }
 }
 
+private struct PendingDefinitions: Identifiable {
+    let id = UUID()
+    let definitions: [CustomCounterDefinition]
+}
+
 // MARK: - Backup Detail Sheet
 private struct BackupDetailSheet: View {
     let backup: BackupFileInfo
@@ -379,8 +384,7 @@ private struct BackupDetailSheet: View {
     @State private var showingResultAlert = false
     @State private var resultMessage = ""
     @State private var selectedRestoreMode: ImportMode = .merge
-    @State private var pendingBackupDefinitions: [CustomCounterDefinition]? = nil
-    @State private var showingDefinitionConflict = false
+    @State private var pendingBackupDefinitions: PendingDefinitions? = nil
 
     var body: some View {
         NavigationStack {
@@ -557,25 +561,23 @@ private struct BackupDetailSheet: View {
                 )
                 .presentationDetents([.height(450)])
             }
-            .sheet(isPresented: $showingDefinitionConflict) {
-                if let backupDefs = pendingBackupDefinitions {
-                    DefinitionConflictSheet(
-                        backupDefinitions: backupDefs,
-                        deviceDefinitions: CustomCounterService.shared.definitions,
-                        onKeepExisting: {
-                            showingDefinitionConflict = false
-                            executeRestore(definitionsBehavior: .skip)
-                        },
-                        onUseBackup: {
-                            showingDefinitionConflict = false
-                            executeRestore(definitionsBehavior: .replaceAll)
-                        },
-                        onCancel: {
-                            showingDefinitionConflict = false
-                        }
-                    )
-                    .presentationDetents([.height(500)])
-                }
+            .sheet(item: $pendingBackupDefinitions) { pending in
+                DefinitionConflictSheet(
+                    backupDefinitions: pending.definitions,
+                    deviceDefinitions: CustomCounterService.shared.definitions,
+                    onKeepExisting: {
+                        pendingBackupDefinitions = nil
+                        executeRestore(definitionsBehavior: .skip)
+                    },
+                    onUseBackup: {
+                        pendingBackupDefinitions = nil
+                        executeRestore(definitionsBehavior: .replaceAll)
+                    },
+                    onCancel: {
+                        pendingBackupDefinitions = nil
+                    }
+                )
+                .presentationDetents([.height(500)])
             }
             .alert("Delete Backup", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) { }
@@ -633,14 +635,17 @@ private struct BackupDetailSheet: View {
             url: backup.url, skipSecurityScoping: true
         )
 
+        LogManager.shared.info("extractBackupDefinitions returned \(backupDefs?.count ?? -1) definitions")
+        LogManager.shared.info("Device has \(CustomCounterService.shared.definitions.count) definitions")
         if let backupDefs = backupDefs,
            !backupDefs.isEmpty,
            !CustomCounterService.shared.definitions.isEmpty,
            backupDefs != CustomCounterService.shared.definitions {
             // Conflict: backup has definitions that differ from device — ask user
-            pendingBackupDefinitions = backupDefs
-            showingDefinitionConflict = true
+            LogManager.shared.info("Definition conflict detected — showing conflict sheet")
+            pendingBackupDefinitions = PendingDefinitions(definitions: backupDefs)
         } else {
+            LogManager.shared.info("No conflict — proceeding with mergeIfEmpty")
             executeRestore(definitionsBehavior: .mergeIfEmpty)
         }
     }
@@ -749,8 +754,7 @@ struct ManageBackupsView: View {
     @State private var isRestoring = false
     @State private var showingResultAlert = false
     @State private var resultMessage = ""
-    @State private var pendingBackupDefinitions: [CustomCounterDefinition]? = nil
-    @State private var showingDefinitionConflict = false
+    @State private var pendingBackupDefinitions: PendingDefinitions? = nil
 
     var body: some View {
         ScrollView {
@@ -810,25 +814,27 @@ struct ManageBackupsView: View {
             )
             .presentationDetents([.height(450)])
         }
-        .sheet(isPresented: $showingDefinitionConflict) {
-            if let backupDefs = pendingBackupDefinitions, let fileURL = selectedExternalFile {
-                DefinitionConflictSheet(
-                    backupDefinitions: backupDefs,
-                    deviceDefinitions: CustomCounterService.shared.definitions,
-                    onKeepExisting: {
-                        showingDefinitionConflict = false
+        .sheet(item: $pendingBackupDefinitions) { pending in
+            DefinitionConflictSheet(
+                backupDefinitions: pending.definitions,
+                deviceDefinitions: CustomCounterService.shared.definitions,
+                onKeepExisting: {
+                    pendingBackupDefinitions = nil
+                    if let fileURL = selectedExternalFile {
                         executeExternalRestore(url: fileURL, definitionsBehavior: .skip)
-                    },
-                    onUseBackup: {
-                        showingDefinitionConflict = false
-                        executeExternalRestore(url: fileURL, definitionsBehavior: .replaceAll)
-                    },
-                    onCancel: {
-                        showingDefinitionConflict = false
                     }
-                )
-                .presentationDetents([.height(500)])
-            }
+                },
+                onUseBackup: {
+                    pendingBackupDefinitions = nil
+                    if let fileURL = selectedExternalFile {
+                        executeExternalRestore(url: fileURL, definitionsBehavior: .replaceAll)
+                    }
+                },
+                onCancel: {
+                    pendingBackupDefinitions = nil
+                }
+            )
+            .presentationDetents([.height(500)])
         }
         .alert(resultMessage.contains("successfully") || resultMessage.contains("success") || resultMessage.contains("Restored") || resultMessage.contains("Summary") ? "Success" : "Error", isPresented: $showingResultAlert) {
             Button("OK", role: .cancel) {
@@ -1029,8 +1035,7 @@ struct ManageBackupsView: View {
            !CustomCounterService.shared.definitions.isEmpty,
            backupDefs != CustomCounterService.shared.definitions {
             // Conflict: backup has definitions that differ from device — ask user
-            pendingBackupDefinitions = backupDefs
-            showingDefinitionConflict = true
+            pendingBackupDefinitions = PendingDefinitions(definitions: backupDefs)
         } else {
             executeExternalRestore(url: fileURL, definitionsBehavior: .mergeIfEmpty)
         }
