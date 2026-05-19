@@ -69,9 +69,12 @@ final class CustomCounterService {
         definitions.first { $0.columnIndex == columnIndex }
     }
 
+    // Called by CloudKitSettingsSyncService when remote definitions arrive — persists locally without re-uploading.
     func replaceAll(_ definitions: [CustomCounterDefinition]) {
         self.definitions = definitions
-        persist()
+        if let data = try? JSONEncoder().encode(definitions) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
     }
 
     var isFull: Bool { definitions.count >= 10 }
