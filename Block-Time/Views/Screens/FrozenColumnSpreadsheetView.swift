@@ -13,6 +13,7 @@ struct FrozenColumnSpreadsheetView: UIViewRepresentable {
     let flights: [FlightSector]
     let highlightedFlightID: UUID?
     let displayConfig: SpreadsheetDisplayConfig
+    let counterCount: Int
     var onTap: (FlightSector) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -188,6 +189,7 @@ final class SpreadsheetContainerView: UIView {
     private var flights: [FlightSector] = []
     private var config   = SpreadsheetDisplayConfig(useLocalTime: false, useIATA: false, showHHMM: true, roundingMode: .standard)
     private var highlightedID: UUID?
+    private var lastCounterCount: Int = -1
 
     private var rightTableWidthConstraint: NSLayoutConstraint?
     private var rightContentWidthConstraint: NSLayoutConstraint?
@@ -303,6 +305,7 @@ final class SpreadsheetContainerView: UIView {
         let flightsChanged   = flights.map(\.id) != self.flights.map(\.id)
         let configChanged    = config != self.config
         let highlightChanged = highlightedID != self.highlightedID
+        let counterChanged   = counterCount != lastCounterCount
 
         let previousHighlightedID = self.highlightedID
 
@@ -310,7 +313,7 @@ final class SpreadsheetContainerView: UIView {
         self.config        = config
         self.highlightedID = highlightedID
 
-        if flightsChanged || configChanged {
+        if flightsChanged || configChanged || counterChanged {
             buildHeaders()
             leftTable.reloadData()
             rightTable.reloadData()
@@ -329,6 +332,7 @@ final class SpreadsheetContainerView: UIView {
     private func buildHeaders() {
         leftHeaderView?.removeFromSuperview()
         rightHeaderView?.removeFromSuperview()
+        lastCounterCount = counterCount
 
         let rw = Col.rightWidth(counterCount: counterCount)
         rightTableWidthConstraint?.constant   = rw

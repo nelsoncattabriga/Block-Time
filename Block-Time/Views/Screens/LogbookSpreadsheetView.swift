@@ -23,6 +23,10 @@ struct LogbookSpreadsheetView: View {
     @State private var selectedFlight: FlightSector?     // pushed to AddFlightView
     @State private var isLoading = true
     @State private var showingDiscardAlert = false
+    @State private var activeCounterCount: Int = {
+        UserDefaults.standard.bool(forKey: "useCustomCount")
+            ? CustomCounterService.shared.definitions.count : 0
+    }()
 
     var body: some View {
         NavigationStack {
@@ -101,6 +105,11 @@ struct LogbookSpreadsheetView: View {
                         selectedFlight = nil
                         reload()
                     }
+                    .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+                        let count = UserDefaults.standard.bool(forKey: "useCustomCount")
+                            ? CustomCounterService.shared.definitions.count : 0
+                        activeCounterCount = count
+                    }
                     .onDisappear {
                         selectedFlight = nil
                         reload()
@@ -152,7 +161,8 @@ struct LogbookSpreadsheetView: View {
                     useIATA:      viewModel.useIATACodes,
                     showHHMM:     viewModel.showTimesInHoursMinutes,
                     roundingMode: viewModel.decimalRoundingMode
-                )
+                ),
+                counterCount: activeCounterCount
             ) { tappedFlight in
                 if highlightedFlight?.id == tappedFlight.id {
                     viewModel.loadFlightForEditing(tappedFlight)

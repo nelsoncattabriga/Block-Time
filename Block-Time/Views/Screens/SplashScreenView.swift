@@ -91,9 +91,9 @@ struct SplashScreenView: View {
             // Guard: only runs when logCustomCount was enabled and no new definitions exist yet.
             let legacyCounterMigrationKey = "legacyCounterMigratedToColumn1"
            
-            #if DEBUG
-            UserDefaults.standard.removeObject(forKey: legacyCounterMigrationKey)
-            #endif
+//            #if DEBUG
+//            UserDefaults.standard.removeObject(forKey: legacyCounterMigrationKey)
+//            #endif
             
             if !UserDefaults.standard.bool(forKey: legacyCounterMigrationKey) {
                 let logCustomCount = UserDefaults.standard.bool(forKey: "logCustomCount")
