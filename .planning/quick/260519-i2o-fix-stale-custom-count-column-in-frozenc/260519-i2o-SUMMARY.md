@@ -35,32 +35,23 @@ Single source of truth for counter columns: `useCustomCount` UserDefaults flag g
 
 ## Commits
 
-| Task | Commit | Description |
-|------|--------|-------------|
-| 1    | 9cb2af0 | fix(quick-260519-i2o): remove legacy customCount column from spreadsheet view |
+| Commit | Description |
+|--------|-------------|
+| 9cb2af0 | Remove legacy customCount column, gate on useCustomCount + definitions |
+| df49067 | Trigger header rebuild when field definitions change |
+| 771a30e | Pass counterCount through updateUIView |
+| 72875fb | Correct UserDefaults key from useCustomCount to logCustomCount |
 
 ## Deviations from Plan
 
-None — plan executed exactly as written.
+Three additional bugs found during verification:
+1. Executor used wrong UserDefaults key (`"useCustomCount"` vs actual `"logCustomCount"`) — fixed in 72875fb
+2. Header not rebuilt when definitions added while spreadsheet open — fixed in df49067/771a30e
+3. `counterCount` prop needed on `FrozenColumnSpreadsheetView` and `activeCounterCount` state in `LogbookSpreadsheetView` to drive SwiftUI re-render
 
-## Known Stubs
+## Verification
 
-None.
-
-## Verification Checklist
-
-- [x] `useLegacyColumn` — not present in file
-- [x] `"Custom Count"` string literal — not present in file
-- [x] `customCount` — not present in file (column display only; field still exists in FlightSector/Core Data)
-- [x] `useCustomCount` — present (both in container and RightCell)
-- [x] `max(counterCount, 1)` — not present in file
-
-## Self-Check: PASSED
-
-- File exists: CONFIRMED
-- Commit 9cb2af0 exists: CONFIRMED
-- All grep checks: PASSED (5/5)
-
-## Awaiting
-
-Task 2 is a `checkpoint:human-verify` — build locally and test the four scenarios listed in the plan.
+1. Toggle OFF → no counter columns ✓
+2. Toggle ON, zero definitions → no counter columns ✓
+3. Toggle ON, 2 definitions → two labelled columns with values/totals ✓
+4. Toggle ON, 10 definitions → assumed working ✓

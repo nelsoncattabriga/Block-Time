@@ -56,9 +56,9 @@ Phases completed: 0 / 7
 | 260517-u0w | Multi-counter system (definition + Core Data + dashboard + form + Settings) | 2026-05-18 | 2150c02 | [260517-u0w-implement-multi-counter-system-for-block](./quick/260517-u0w-implement-multi-counter-system-for-block/) |
 | 260519-g0g | Rename Counter/Counters to Field/Fields (UI strings + Swift identifiers) | 2026-05-19 | 9bec18a | [260519-g0g-rename-counter-counters-to-field-fields-](./quick/260519-g0g-rename-counter-counters-to-field-fields-/) |
 | 260519-gta | Fix iPad split view flight list stale row after Save alert | 2026-05-19 | 9b3501f | [260519-gta-fix-ipad-split-view-flight-list-stale-ro](./quick/260519-gta-fix-ipad-split-view-flight-list-stale-ro/) |
-| 260519-i2o | Fix stale Custom Count column in FrozenColumnSpreadsheetView | 2026-05-19 | 9cb2af0 | [260519-i2o-fix-stale-custom-count-column-in-frozenc](./quick/260519-i2o-fix-stale-custom-count-column-in-frozenc/) |
+| 260519-i2o | Fix stale Custom Count column in FrozenColumnSpreadsheetView | 2026-05-19 | 72875fb | [260519-i2o-fix-stale-custom-count-column-in-frozenc](./quick/260519-i2o-fix-stale-custom-count-column-in-frozenc/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Fixed stale Custom Count column in FrozenColumnSpreadsheetView (260519-i2o)
-Next action: User builds locally and verifies four scenarios; then `/gsd:plan-phase 1` — plan Foundation phase
+Last activity: 2026-05-19 - Fixed custom field columns not appearing in spreadsheet view (260519-i2o)
+Next action: Continue custom fields integration — CSV export, backup/restore, import mapping, PDF print
