@@ -2453,6 +2453,9 @@ struct InlineCustomFieldsView: View {
 
             addFieldRow
         }
+        .onChange(of: service.definitions) {
+            draggingID = nil
+        }
         .sheet(isPresented: $showingAddSheet) {
             FieldEditSheet(mode: .add) { label, type, showTotal in
                 service.add(label: label, type: type, showTotal: showTotal)
