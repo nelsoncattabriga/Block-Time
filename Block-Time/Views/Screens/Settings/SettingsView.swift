@@ -2441,6 +2441,7 @@ private struct ICloudSyncHelpSheet: View {
 struct InlineCustomFieldsView: View {
     @State private var showingAddSheet = false
     @State private var editingDefinition: CustomCounterDefinition? = nil
+    @State private var draggingID: Int? = nil
 
     private var service: CustomCounterService { CustomCounterService.shared }
 
@@ -2457,34 +2458,47 @@ struct InlineCustomFieldsView: View {
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 4)
             } else {
-                List {
+                VStack(spacing: 0) {
                     ForEach(service.definitions) { definition in
-                        Button {
-                            editingDefinition = definition
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: iconFor(definition.type))
-                                    .foregroundStyle(colorFor(definition.type))
-                                    .frame(width: 18)
-                                Text(definition.label)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
-                                Spacer()
+                        HStack(spacing: 10) {
+                            Button {
+                                editingDefinition = definition
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: iconFor(definition.type))
+                                        .foregroundStyle(colorFor(definition.type))
+                                        .frame(width: 18)
+                                    Text(definition.label)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
                             }
-                            .contentShape(Rectangle())
+                            .buttonStyle(.plain)
+
+                            Image(systemName: "line.3.horizontal")
+                                .foregroundStyle(.tertiary)
+                                .font(.subheadline)
                         }
-                        .buttonStyle(.plain)
-                        .listRowBackground(Color(.secondarySystemBackground))
-                        .deleteDisabled(true)
-                    }
-                    .onMove { source, destination in
-                        service.move(fromOffsets: source, toOffset: destination)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 10)
+                        .opacity(draggingID == definition.columnIndex ? 0.4 : 1)
+                        .onDrag {
+                            draggingID = definition.columnIndex
+                            return NSItemProvider(object: "\(definition.columnIndex)" as NSString)
+                        }
+                        .onDrop(of: [.text], delegate: FieldDropDelegate(
+                            targetID: definition.columnIndex,
+                            service: service,
+                            draggingID: $draggingID
+                        ))
+
+                        if definition.columnIndex != service.definitions.last?.columnIndex {
+                            Divider().padding(.leading, 28)
+                        }
                     }
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .scrollDisabled(true)
-                .environment(\.editMode, .constant(.active))
             }
         }
         .sheet(isPresented: $showingAddSheet) {
@@ -2515,6 +2529,32 @@ struct InlineCustomFieldsView: View {
         case .decimal: return .orange
         case .integer: return .teal
         }
+    }
+}
+
+private struct FieldDropDelegate: DropDelegate {
+    let targetID: Int
+    let service: CustomCounterService
+    @Binding var draggingID: Int?
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingID = nil
+        return true
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard let fromID = draggingID, fromID != targetID else { return }
+        let defs = service.definitions
+        guard let fromIndex = defs.firstIndex(where: { $0.columnIndex == fromID }),
+              let toIndex = defs.firstIndex(where: { $0.columnIndex == targetID }) else { return }
+        var source = IndexSet()
+        source.insert(fromIndex)
+        let destination = toIndex > fromIndex ? toIndex + 1 : toIndex
+        service.move(fromOffsets: source, toOffset: destination)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
     }
 }
 
