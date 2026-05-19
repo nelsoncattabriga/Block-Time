@@ -16,7 +16,7 @@ private enum CCIPeriod: String, CaseIterable {
 }
 
 struct CustomCounterDashboardCard: View {
-    let counterID: UUID
+    let columnIndex: Int
 
     // Period stored per-counter so each card remembers its own selection
     @AppStorage private var periodRaw: String
@@ -28,15 +28,15 @@ struct CustomCounterDashboardCard: View {
     @State private var displayValue: String = "—"
     @State private var flightCount: Int = 0
 
-    init(counterID: UUID) {
-        self.counterID = counterID
+    init(columnIndex: Int) {
+        self.columnIndex = columnIndex
         _periodRaw = AppStorage(wrappedValue: CCIPeriod.twelveMonths.rawValue,
-                                "customCounter_\(counterID.uuidString)_period")
+                                "customCounter_\(columnIndex)_period")
     }
 
     var body: some View {
         let service = CustomCounterService.shared
-        let definition = service.definition(for: counterID)
+        let definition = service.definition(for: columnIndex)
 
         VStack(alignment: .leading, spacing: 14) {
 
@@ -99,7 +99,7 @@ struct CustomCounterDashboardCard: View {
     // MARK: - Data loading
 
     private func loadStats() {
-        guard let definition = CustomCounterService.shared.definition(for: counterID) else {
+        guard let definition = CustomCounterService.shared.definition(for: columnIndex) else {
             displayValue = "—"
             flightCount = 0
             return
@@ -123,14 +123,13 @@ struct CustomCounterDashboardCard: View {
             flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
         }
 
-        let uuidString = counterID.uuidString
-        let eligible = flights.filter { $0.counterEntries[uuidString] != nil }
+        let eligible = flights.filter { $0.counterEntries[columnIndex] != nil }
         flightCount = eligible.count
 
         switch definition.type {
         case .time:
             let total = eligible.reduce(0.0) { sum, sector in
-                let raw = sector.counterEntries[uuidString] ?? ""
+                let raw = sector.counterEntries[columnIndex] ?? ""
                 return sum + parseTimeValue(raw)
             }
             if showTimesInHoursMinutes {
@@ -141,14 +140,14 @@ struct CustomCounterDashboardCard: View {
 
         case .decimal:
             let total = eligible.reduce(0.0) { sum, sector in
-                let raw = sector.counterEntries[uuidString] ?? ""
+                let raw = sector.counterEntries[columnIndex] ?? ""
                 return sum + (Double(raw) ?? 0.0)
             }
             displayValue = String(format: "%.1f", total)
 
         case .integer:
             let total = eligible.reduce(0) { sum, sector in
-                let raw = sector.counterEntries[uuidString] ?? ""
+                let raw = sector.counterEntries[columnIndex] ?? ""
                 return sum + (Int(raw) ?? 0)
             }
             displayValue = "\(total)"

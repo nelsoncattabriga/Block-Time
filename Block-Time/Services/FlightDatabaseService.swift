@@ -299,13 +299,9 @@ class FlightDatabaseService: ObservableObject {
             flight.createdAt = Date()
             flight.modifiedAt = Date()
 
-            // Save custom counter entries
-            for (uuidString, value) in sector.counterEntries {
-                guard let counterID = UUID(uuidString: uuidString), !value.isEmpty else { continue }
-                let entry = CustomCounterEntry(context: viewContext)
-                entry.counterID = counterID
-                entry.value = value
-                entry.flight = flight
+            // Save counter values to flat columns
+            for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                flight.setCounter(columnIndex, value: value)
             }
 
             do {
@@ -374,18 +370,10 @@ class FlightDatabaseService: ObservableObject {
                 flight.customCount = Int16(sector.customCount)
                 flight.modifiedAt = Date()
 
-                // Replace custom counter entries: delete all existing, re-insert from sector
-                if let existingEntries = flight.counterEntries as? Set<CustomCounterEntry> {
-                    for entry in existingEntries {
-                        viewContext.delete(entry)
-                    }
-                }
-                for (uuidString, value) in sector.counterEntries {
-                    guard let counterID = UUID(uuidString: uuidString), !value.isEmpty else { continue }
-                    let entry = CustomCounterEntry(context: viewContext)
-                    entry.counterID = counterID
-                    entry.value = value
-                    entry.flight = flight
+                // Clear all counter columns then write current values
+                for i in 1...10 { flight.setCounter(i, value: nil) }
+                for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                    flight.setCounter(columnIndex, value: value)
                 }
 
                 try viewContext.save()
@@ -762,7 +750,7 @@ class FlightDatabaseService: ObservableObject {
                ]
                request.fetchBatchSize = 100 // Optimize for large datasets
                request.returnsObjectsAsFaults = false // Eager loading
-               request.relationshipKeyPathsForPrefetching = ["counterEntries"]
+
 
                do {
                    let flights = try viewContext.fetch(request)
@@ -801,7 +789,7 @@ class FlightDatabaseService: ObservableObject {
                 request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
                 request.fetchBatchSize = 100
                 request.returnsObjectsAsFaults = false
-                request.relationshipKeyPathsForPrefetching = ["counterEntries"]
+ 
 
                 do {
                     let flights = try context.fetch(request)
@@ -1073,7 +1061,8 @@ class FlightDatabaseService: ObservableObject {
                 inTime: sector.inTime,
                 scheduledDeparture: sector.scheduledDeparture,
                 scheduledArrival: sector.scheduledArrival,
-                customCount: sector.customCount
+                customCount: sector.customCount,
+                counterEntries: sector.counterEntries
             )
             if saveFlight(copy) { savedCount += 1 }
         }
@@ -1739,6 +1728,32 @@ class FlightDatabaseService: ObservableObject {
         return migratedCount
     }
 
+    /// One-time migration: copy customCount integer into counter1 string column for all flights
+    /// where customCount > 0 and counter1 is not already set.
+    func migrateLegacyCustomCounterToColumn1() -> Int {
+        var migratedCount = 0
+        viewContext.performAndWait {
+            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "customCount > 0")
+            do {
+                let flights = try viewContext.fetch(request)
+                for flight in flights {
+                    // Only write if counter1 is not already populated
+                    guard flight.counter1 == nil || flight.counter1!.isEmpty else { continue }
+                    flight.counter1 = String(flight.customCount)
+                    flight.modifiedAt = Date()
+                    migratedCount += 1
+                }
+                if viewContext.hasChanges { try viewContext.save() }
+            } catch {
+                LogManager.shared.error("migrateLegacyCustomCounterToColumn1 error: \(error.localizedDescription)")
+                viewContext.rollback()
+            }
+        }
+        LogManager.shared.info("migrateLegacyCustomCounterToColumn1: copied customCount → counter1 on \(migratedCount) flights")
+        return migratedCount
+    }
+
     /// One-time migration: update aircraftType from "A321" to "A21N" for the Qantas XLR fleet.
     /// Only affects OGA–OGG registrations (with or without VH- prefix).
     func migrateAircraftTypeA321ToA21N() -> (migratedCount: Int, summary: String) {
@@ -2185,14 +2200,12 @@ class FlightDatabaseService: ObservableObject {
         )
     }
 
-    private func counterEntriesDict(from entity: FlightEntity) -> [String: String] {
-        guard let entries = entity.counterEntries as? Set<CustomCounterEntry> else { return [:] }
-        var result: [String: String] = [:]
-        for entry in entries {
-            guard let counterID = entry.counterID,
-                  let value = entry.value,
-                  !value.isEmpty else { continue }
-            result[counterID.uuidString] = value
+    private func counterEntriesDict(from entity: FlightEntity) -> [Int: String] {
+        var result: [Int: String] = [:]
+        for definition in CustomCounterService.shared.definitions {
+            if let value = entity.counterValue(at: definition.columnIndex), !value.isEmpty {
+                result[definition.columnIndex] = value
+            }
         }
         return result
     }

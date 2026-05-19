@@ -24,7 +24,9 @@ enum CounterType: String, Codable, CaseIterable, Identifiable {
 }
 
 struct CustomCounterDefinition: Codable, Identifiable, Hashable {
-    let id: UUID
+    let columnIndex: Int  // 1–10, permanent slot in FlightEntity.counter1…counter10
     var label: String
     var type: CounterType
+
+    var id: Int { columnIndex }
 }

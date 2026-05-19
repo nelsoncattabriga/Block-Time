@@ -86,6 +86,40 @@ struct SplashScreenView: View {
             }
         }
         .onAppear {
+            // One-time migration: legacy customCount integer → counter1 + CustomCounterService definition.
+            // Runs synchronously on a background thread before the main view appears.
+            // Guard: only runs when logCustomCount was enabled and no new definitions exist yet.
+            let legacyCounterMigrationKey = "legacyCounterMigratedToColumn1"
+           
+            #if DEBUG
+            UserDefaults.standard.removeObject(forKey: legacyCounterMigrationKey)
+            #endif
+            
+            if !UserDefaults.standard.bool(forKey: legacyCounterMigrationKey) {
+                let logCustomCount = UserDefaults.standard.bool(forKey: "logCustomCount")
+                let label = UserDefaults.standard.string(forKey: "customCountLabel") ?? "Passengers"
+                if logCustomCount {
+                    // 1. Register the definition if not already done (main thread — CustomCounterService is @MainActor)
+                    CustomCounterService.shared.migrateLegacyDefinitionIfNeeded(legacyLabel: label)
+                    // 2. Swap dashboard card immediately on main thread, before DashboardConfiguration loads.
+                    //    Safe to call even if already swapped — swapIfNeeded is a no-op when "customCount" absent.
+                    migrateLegacyDashboardCard()
+                    // 3. Copy customCount → counter1 on all flight records (background, idempotent)
+                    DispatchQueue.global(qos: .utility).async {
+                        let count = FlightDatabaseService.shared.migrateLegacyCustomCounterToColumn1()
+                        DispatchQueue.main.async {
+                            UserDefaults.standard.set(true, forKey: legacyCounterMigrationKey)
+                            if count > 0 {
+                                NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                            }
+                        }
+                    }
+                } else {
+                    // Feature was never enabled — mark done so we skip forever
+                    UserDefaults.standard.set(true, forKey: legacyCounterMigrationKey)
+                }
+            }
+
             // Run one-time simulator flight migration off the main thread.
             // Moved here from Block_TimeApp.init() to avoid accessing viewContext
             // before the persistent container is ready (caused blank screen on first launch).
@@ -134,6 +168,29 @@ struct SplashScreenView: View {
             }
         }
     }
+}
+
+/// Replaces the legacy "customCount" card ID with "customCounter.1" in the persisted
+/// sidebar and detail layout arrays. Operates directly on UserDefaults JSON so it runs
+/// before DashboardConfiguration is instantiated — no instance reference needed.
+private func migrateLegacyDashboardCard() {
+    let sidebarKey = "insightsSidebarCards2"
+    let detailKey  = "insightsDetailCards2"
+    let legacyRaw  = "customCount"
+    let newRaw     = "customCounter.1"
+
+    func swapIfNeeded(key: String) {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              var ids = try? JSONDecoder().decode([String].self, from: data),
+              let idx = ids.firstIndex(of: legacyRaw) else { return }
+        ids[idx] = newRaw
+        if let updated = try? JSONEncoder().encode(ids) {
+            UserDefaults.standard.set(updated, forKey: key)
+        }
+    }
+
+    swapIfNeeded(key: sidebarKey)
+    swapIfNeeded(key: detailKey)
 }
 
 #Preview {

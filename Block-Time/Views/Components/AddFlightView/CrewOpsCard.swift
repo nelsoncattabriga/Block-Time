@@ -144,19 +144,23 @@ struct ModernManualEntryDataCard: View {
                 // Toggles section
                 ModernTogglesSection(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
-                // Custom counters (original + multi-counter system)
+                // Custom counters
                 if viewModel.logCustomCount && !viewModel.isPositioning {
                     Divider().padding(.horizontal, 8).padding(.vertical, 4)
 
-                    // Legacy single counter
-                    CounterIntegerField(
-                        label: viewModel.customCountLabel,
-                        value: Binding(
-                            get: { viewModel.customCount > 0 ? "\(viewModel.customCount)" : "" },
-                            set: { viewModel.customCount = Int($0) ?? 0 }
-                        ),
-                        keyboardToolbar: keyboardToolbar
-                    )
+                    let migrated = UserDefaults.standard.bool(forKey: "legacyCounterMigratedToColumn1")
+
+                    // Legacy single counter — hidden once migrated to counter1
+                    if !migrated {
+                        CounterIntegerField(
+                            label: viewModel.customCountLabel,
+                            value: Binding(
+                                get: { viewModel.customCount > 0 ? "\(viewModel.customCount)" : "" },
+                                set: { viewModel.customCount = Int($0) ?? 0 }
+                            ),
+                            keyboardToolbar: keyboardToolbar
+                        )
+                    }
 
                     // Multi-counters
                     ForEach(CustomCounterService.shared.definitions) { definition in
@@ -375,8 +379,8 @@ struct CounterIntegerField: View {
 @ViewBuilder
 private func counterRow(for definition: CustomCounterDefinition, viewModel: FlightTimeExtractorViewModel, keyboardToolbar: KeyboardToolbarState?) -> some View {
     let binding = Binding<String>(
-        get: { viewModel.counterValues[definition.id] ?? "" },
-        set: { viewModel.counterValues[definition.id] = $0 }
+        get: { viewModel.counterValues[definition.columnIndex] ?? "" },
+        set: { viewModel.counterValues[definition.columnIndex] = $0 }
     )
     switch definition.type {
     case .time:

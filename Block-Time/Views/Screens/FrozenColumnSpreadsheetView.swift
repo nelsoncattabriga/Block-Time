@@ -152,19 +152,21 @@ enum Col {
     static let dayLdg:    CGFloat = 68
     static let nightTO:   CGFloat = 76
     static let nightLdg:  CGFloat = 76
-    static let custom:    CGFloat = 100
+    static let counter:   CGFloat = 100
     static let remarks:   CGFloat = 500
 
     static let frozenWidth: CGFloat  = date + flight
     static let headerHeight: CGFloat = 36
     static let rowHeight: CGFloat    = 44
 
-    static let rightWidth: CGFloat =
+    static func rightWidth(counterCount: Int) -> CGFloat {
         reg + type + airport * 2 + std + sta + out + inn +
         block + night + crew * 4 +
         p1 + p1us + p2 + instr + sim + spIns +
         pax + pf + aiii + rnp + ils + gls + npa +
-        dayTO + dayLdg + nightTO + nightLdg + custom + remarks
+        dayTO + dayLdg + nightTO + nightLdg +
+        counter * CGFloat(max(counterCount, 1)) + remarks
+    }
 }
 
 // MARK: - Container UIView
@@ -186,6 +188,9 @@ final class SpreadsheetContainerView: UIView {
     private var flights: [FlightSector] = []
     private var config   = SpreadsheetDisplayConfig(useLocalTime: false, useIATA: false, showHHMM: true, roundingMode: .standard)
     private var highlightedID: UUID?
+
+    private var rightTableWidthConstraint: NSLayoutConstraint?
+    private var rightContentWidthConstraint: NSLayoutConstraint?
 
     // MARK: Init
 
@@ -233,6 +238,12 @@ final class SpreadsheetContainerView: UIView {
         leftTable.layer.shadowRadius  = 4
         leftTable.clipsToBounds       = false
 
+        let initialWidth = Col.rightWidth(counterCount: counterCount)
+        let tableWidthConstraint   = rightTable.widthAnchor.constraint(equalToConstant: initialWidth)
+        let contentWidthConstraint = rightHScroll.contentLayoutGuide.widthAnchor.constraint(equalToConstant: initialWidth)
+        rightTableWidthConstraint   = tableWidthConstraint
+        rightContentWidthConstraint = contentWidthConstraint
+
         NSLayoutConstraint.activate([
             // Left table sits below the frozen header
             leftTable.topAnchor.constraint(equalTo: topAnchor, constant: Col.headerHeight * 2),
@@ -251,10 +262,25 @@ final class SpreadsheetContainerView: UIView {
             rightTable.topAnchor.constraint(equalTo: rightHScroll.frameLayoutGuide.topAnchor),
             rightTable.leadingAnchor.constraint(equalTo: rightHScroll.contentLayoutGuide.leadingAnchor),
             rightTable.heightAnchor.constraint(equalTo: rightHScroll.frameLayoutGuide.heightAnchor),
-            rightTable.widthAnchor.constraint(equalToConstant: Col.rightWidth),
+            tableWidthConstraint,
             // This makes the content guide as wide as the table, enabling horizontal scroll
-            rightHScroll.contentLayoutGuide.widthAnchor.constraint(equalToConstant: Col.rightWidth),
+            contentWidthConstraint,
         ])
+    }
+
+    // MARK: Counter column helpers
+
+    private var useLegacyColumn: Bool {
+        !UserDefaults.standard.bool(forKey: "legacyCounterMigratedToColumn1") &&
+        CustomCounterService.shared.definitions.isEmpty
+    }
+
+    private var counterDefinitions: [CustomCounterDefinition] {
+        useLegacyColumn ? [] : CustomCounterService.shared.definitions
+    }
+
+    private var counterCount: Int {
+        useLegacyColumn ? 1 : max(CustomCounterService.shared.definitions.count, 1)
     }
 
     // MARK: Wire delegate after coordinator is set
@@ -310,6 +336,10 @@ final class SpreadsheetContainerView: UIView {
         leftHeaderView?.removeFromSuperview()
         rightHeaderView?.removeFromSuperview()
 
+        let rw = Col.rightWidth(counterCount: counterCount)
+        rightTableWidthConstraint?.constant   = rw
+        rightContentWidthConstraint?.constant = rw
+
         // Left header: above the left table, fixed
         let lh = makeLeftHeader()
         lh.translatesAutoresizingMaskIntoConstraints = false
@@ -326,7 +356,7 @@ final class SpreadsheetContainerView: UIView {
         // bounds.origin.x is shifted in scrollViewDidScroll to pan it horizontally.
         let rh = makeRightHeader()
         rh.clipsToBounds = true
-        // Use a plain frame-positioned container that is Col.rightWidth wide
+        // Use a plain frame-positioned container that is rw wide
         // but masked by a clipping wrapper pinned to rightHScroll's visible frame.
         let rhClip = UIView()
         rhClip.clipsToBounds = true
@@ -338,7 +368,7 @@ final class SpreadsheetContainerView: UIView {
             rhClip.trailingAnchor.constraint(equalTo: rightHScroll.trailingAnchor),
             rhClip.heightAnchor.constraint(equalToConstant: Col.headerHeight * 2),
         ])
-        rh.frame = CGRect(x: 0, y: 0, width: Col.rightWidth, height: Col.headerHeight * 2)
+        rh.frame = CGRect(x: 0, y: 0, width: rw, height: Col.headerHeight * 2)
         rhClip.addSubview(rh)
         rightHeaderView = rhClip
     }
@@ -370,11 +400,12 @@ final class SpreadsheetContainerView: UIView {
     }
 
     private func makeRightHeader() -> UIView {
-        let container = UIView(frame: CGRect(x: 0, y: 0, width: Col.rightWidth, height: Col.headerHeight * 2))
+        let rw = Col.rightWidth(counterCount: counterCount)
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: rw, height: Col.headerHeight * 2))
         container.backgroundColor = barColor
 
         // Row 1 — column labels
-        let headerRow = rowView(width: Col.rightWidth, height: Col.headerHeight, y: 0)
+        let headerRow = rowView(width: rw, height: Col.headerHeight, y: 0)
         var x: CGFloat = 0
         addHeaderLabel("Reg",          width: Col.reg,      to: headerRow, x: &x)
         addHeaderLabel("Type",         width: Col.type,     to: headerRow, x: &x)
@@ -407,12 +438,21 @@ final class SpreadsheetContainerView: UIView {
         addHeaderLabel("Day Ldg",      width: Col.dayLdg,   to: headerRow, x: &x)
         addHeaderLabel("Night T/O",    width: Col.nightTO,  to: headerRow, x: &x)
         addHeaderLabel("Night Ldg",    width: Col.nightLdg, to: headerRow, x: &x)
-        addHeaderLabel("Custom Count", width: Col.custom,   to: headerRow, x: &x)
+        if useLegacyColumn {
+            addHeaderLabel("Custom Count", width: Col.counter, to: headerRow, x: &x)
+        } else {
+            for def in counterDefinitions {
+                addHeaderLabel(def.label, width: Col.counter, to: headerRow, x: &x)
+            }
+            if counterDefinitions.isEmpty {
+                addHeaderLabel("Custom Count", width: Col.counter, to: headerRow, x: &x)
+            }
+        }
         addHeaderLabel("Remarks",      width: Col.remarks,  to: headerRow, x: &x)
         container.addSubview(headerRow)
 
         // Row 2 — totals
-        let footerRow = rowView(width: Col.rightWidth, height: Col.headerHeight, y: Col.headerHeight)
+        let footerRow = rowView(width: rw, height: Col.headerHeight, y: Col.headerHeight)
         x = 0
         addEmptyCell(width: Col.reg,      to: footerRow, x: &x)
         addEmptyCell(width: Col.type,     to: footerRow, x: &x)
@@ -445,12 +485,21 @@ final class SpreadsheetContainerView: UIView {
         addTotalCountLabel(sumInt(\.dayLandings),  width: Col.dayLdg,   to: footerRow, x: &x)
         addTotalCountLabel(sumInt(\.nightTakeoffs),width: Col.nightTO,  to: footerRow, x: &x)
         addTotalCountLabel(sumInt(\.nightLandings),width: Col.nightLdg, to: footerRow, x: &x)
-        addTotalCountLabel(sumInt(\.customCount),  width: Col.custom,   to: footerRow, x: &x)
+        if useLegacyColumn {
+            addTotalCountLabel(sumInt(\.customCount), width: Col.counter, to: footerRow, x: &x)
+        } else {
+            for def in counterDefinitions {
+                addTotalCounterLabel(definition: def, to: footerRow, x: &x)
+            }
+            if counterDefinitions.isEmpty {
+                addTotalCountLabel(sumInt(\.customCount), width: Col.counter, to: footerRow, x: &x)
+            }
+        }
         addEmptyCell(width: Col.remarks,  to: footerRow, x: &x)
         container.addSubview(footerRow)
 
-        addTopSeparator(to: footerRow, width: Col.rightWidth)
-        addBottomBorder(to: container, width: Col.rightWidth)
+        addTopSeparator(to: footerRow, width: rw)
+        addBottomBorder(to: container, width: rw)
 
         return container
     }
@@ -513,6 +562,28 @@ final class SpreadsheetContainerView: UIView {
         parent.addSubview(label)
         addDivider(to: parent, x: x + width, height: Col.headerHeight)
         x += width
+    }
+
+    private func addTotalCounterLabel(definition: CustomCounterDefinition, to parent: UIView, x: inout CGFloat) {
+        let text: String
+        switch definition.type {
+        case .integer:
+            let total = flights.reduce(0) { sum, f in
+                sum + (Int(f.counterEntries[definition.columnIndex] ?? "") ?? 0)
+            }
+            text = total == 0 ? "" : String(total)
+        case .decimal:
+            let total = flights.reduce(0.0) { sum, f in
+                sum + (Double(f.counterEntries[definition.columnIndex] ?? "") ?? 0.0)
+            }
+            text = total == 0 ? "" : String(format: "%.1f", total)
+        case .time:
+            let total = flights.reduce(0.0) { sum, f in
+                sum + (Double(f.counterEntries[definition.columnIndex] ?? "") ?? 0.0)
+            }
+            text = total == 0 ? "" : FlightSector.decimalToHHMM(total)
+        }
+        addTotalTimeLabel(text, width: Col.counter, to: parent, x: &x)
     }
 
     private func addDivider(to parent: UIView, x: CGFloat, height: CGFloat) {
@@ -640,48 +711,56 @@ final class RightCell: UITableViewCell {
     // One label per right-pane column
     private var labels: [UILabel] = []
 
-    // Column widths in order
-    private static let widths: [CGFloat] = [
+    // Tracks the counter count for which labels were last built
+    private var builtCounterCount: Int = -1
+
+    // Static prefix widths (everything before counter columns)
+    private static let prefixWidths: [CGFloat] = [
         Col.reg, Col.type, Col.airport, Col.airport,
         Col.std, Col.sta, Col.out, Col.inn,
         Col.block, Col.night,
         Col.crew, Col.crew, Col.crew, Col.crew,
         Col.p1, Col.p1us, Col.p2, Col.instr, Col.sim, Col.spIns,
         Col.pax, Col.pf, Col.aiii, Col.rnp, Col.ils, Col.gls, Col.npa,
-        Col.dayTO, Col.dayLdg, Col.nightTO, Col.nightLdg, Col.custom, Col.remarks,
+        Col.dayTO, Col.dayLdg, Col.nightTO, Col.nightLdg,
     ]
 
-    // Whether each column uses monospaced digits
-    private static let isMono: [Bool] = [
+    // Whether each prefix column uses monospaced digits
+    private static let prefixIsMono: [Bool] = [
         true,  false, true,  true,   // reg, type, from, to
         true,  true,  true,  true,   // std, sta, out, in
         true,  true,                 // block, night
         false, false, false, false,  // captain, fo, so1, so2
         true,  true,  true,  true,  true,  true,  // p1, p1us, p2, instr, sim, spIns
         true,  true,  true,  true,  true,  true,  true,  // flags (pax, pf, aiii, rnp, ils, gls, npa)
-        true,  true,  true,  true,  true,  false, // dayTO, dayLdg, nightTO, nightLdg, custom, remarks
+        true,  true,  true,  true,  // dayTO, dayLdg, nightTO, nightLdg
     ]
 
-    // Flag columns (centered, show "1"/blank)
-    private static let flagColumns = Set([20, 21, 22, 23, 24, 25, 26])
-
-    // Time columns (centered): block, night, p1, p1us, p2, instr, sim, spIns
-    private static let rightAlignedColumns = Set([8, 9, 14, 15, 16, 17, 18, 19])
+    // Flag column indices (pax, pf, aiii, rnp, ils, gls, npa) — full-width centered, no padding
+    private static let flagColumnIndices = Set([20, 21, 22, 23, 24, 25, 26])
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         selectionStyle = .none
         separatorInset = .zero
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func rebuildSubviews(counterCount: Int) {
+        contentView.subviews.forEach { $0.removeFromSuperview() }
+        labels.removeAll()
+        builtCounterCount = counterCount
+
+        let widths: [CGFloat] = Self.prefixWidths + Array(repeating: Col.counter, count: counterCount) + [Col.remarks]
+        let isMono: [Bool]    = Self.prefixIsMono + Array(repeating: true, count: counterCount) + [false]
 
         var x: CGFloat = 0
-        for (i, width) in Self.widths.enumerated() {
-            let label = CellLabel(mono: Self.isMono[i])
-            if Self.flagColumns.contains(i) {
+        for (i, width) in widths.enumerated() {
+            let label = CellLabel(mono: isMono[i])
+            if Self.flagColumnIndices.contains(i) {
                 label.textAlignment = .center
                 label.frame = CGRect(x: x, y: 0, width: width, height: Col.rowHeight)
-            } else if Self.rightAlignedColumns.contains(i) {
-                label.textAlignment = .center
-                label.frame = CGRect(x: x + 6, y: 0, width: width - 12, height: Col.rowHeight)
             } else {
                 label.textAlignment = .center
                 label.frame = CGRect(x: x + 6, y: 0, width: width - 12, height: Col.rowHeight)
@@ -689,7 +768,6 @@ final class RightCell: UITableViewCell {
             contentView.addSubview(label)
             labels.append(label)
 
-            // Column divider
             let div = UIView(frame: CGRect(x: x + width - 0.5, y: 0, width: 0.5, height: Col.rowHeight))
             div.backgroundColor = UIColor.label.withAlphaComponent(0.25)
             div.autoresizingMask = [.flexibleHeight]
@@ -699,13 +777,32 @@ final class RightCell: UITableViewCell {
         }
     }
 
-    required init?(coder: NSCoder) { fatalError() }
-
     func configure(flight: FlightSector, index: Int, highlighted: Bool, config: SpreadsheetDisplayConfig) {
+        let useLegacy = !UserDefaults.standard.bool(forKey: "legacyCounterMigratedToColumn1") &&
+                        CustomCounterService.shared.definitions.isEmpty
+        let definitions = useLegacy ? [] : CustomCounterService.shared.definitions
+        let counterCount = max(definitions.count, 1)
+
+        if builtCounterCount != counterCount {
+            rebuildSubviews(counterCount: counterCount)
+        }
+
         let useLocal = config.useLocalTime
         let useIATA  = config.useIATA
         let hhmm     = config.showHHMM
         let rounding = config.roundingMode
+
+        var counterValues: [String]
+        if useLegacy {
+            counterValues = [flight.customCount > 0 ? String(flight.customCount) : ""]
+        } else if definitions.isEmpty {
+            counterValues = [flight.customCount > 0 ? String(flight.customCount) : ""]
+        } else {
+            counterValues = definitions.map { def in
+                let raw = flight.counterEntries[def.columnIndex] ?? ""
+                return isBlankValue(raw) ? "" : raw
+            }
+        }
 
         let values: [String] = [
             flight.aircraftReg,
@@ -739,9 +836,7 @@ final class RightCell: UITableViewCell {
             countString(flight.dayLandings),
             countString(flight.nightTakeoffs),
             countString(flight.nightLandings),
-            flight.customCount > 0 ? String(flight.customCount) : "",
-            flight.remarks,
-        ]
+        ] + counterValues + [flight.remarks]
 
         for (i, label) in labels.enumerated() {
             let raw     = i < values.count ? values[i] : ""

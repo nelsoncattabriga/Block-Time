@@ -71,21 +71,21 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
 
     // MARK: - Custom counter factory
 
-    static func customCounter(_ id: UUID) -> DashboardCardID {
-        DashboardCardID(rawValue: "customCounter.\(id.uuidString)")
+    static func customCounter(_ columnIndex: Int) -> DashboardCardID {
+        DashboardCardID(rawValue: "customCounter.\(columnIndex)")
     }
 
     /// Non-nil when this card represents a user-defined counter.
-    var customCounterID: UUID? {
+    var customCounterColumnIndex: Int? {
         guard rawValue.hasPrefix("customCounter.") else { return nil }
-        return UUID(uuidString: String(rawValue.dropFirst("customCounter.".count)))
+        return Int(String(rawValue.dropFirst("customCounter.".count)))
     }
 
     // MARK: - Display
 
     var displayName: String {
-        if let counterID = customCounterID {
-            return CustomCounterService.shared.definition(for: counterID)?.label ?? "Counter"
+        if let columnIndex = customCounterColumnIndex {
+            return CustomCounterService.shared.definition(for: columnIndex)?.label ?? "Counter"
         }
         switch rawValue {
         case "frmsFlightTime":    return "FRMS Flight Time"
@@ -128,8 +128,8 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
     }
 
     var icon: String {
-        if let counterID = customCounterID {
-            guard let def = CustomCounterService.shared.definition(for: counterID) else {
+        if let columnIndex = customCounterColumnIndex {
+            guard let def = CustomCounterService.shared.definition(for: columnIndex) else {
                 return "questionmark.circle"
             }
             switch def.type {
@@ -179,8 +179,8 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
     }
 
     var accentColor: Color {
-        if let counterID = customCounterID {
-            guard let def = CustomCounterService.shared.definition(for: counterID) else {
+        if let columnIndex = customCounterColumnIndex {
+            guard let def = CustomCounterService.shared.definition(for: columnIndex) else {
                 return .gray
             }
             switch def.type {
@@ -232,7 +232,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
     /// Advisory hint: this card was designed to look good at sidebar (narrow) widths.
     var sidebarHint: Bool {
         // Custom counter cards are sidebar-friendly
-        if customCounterID != nil { return true }
+        if customCounterColumnIndex != nil { return true }
         switch rawValue {
         case "frmsFlightTime", "frmsDutyTime", "frmsRestWindow",
              "totalTime", "picTime", "icusTime", "nightTime", "instrumentTime",

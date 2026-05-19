@@ -26,9 +26,15 @@ final class DashboardConfiguration {
     // MARK: - Computed
 
     /// All known cards: standard cards + one entry per user-defined counter definition.
+    /// Excludes the legacy .customCount card once the counter migration has run, since
+    /// the data is now owned by customCounter.1 and the old card would be a duplicate.
     private var allKnownCards: [DashboardCardID] {
-        let counterCards = CustomCounterService.shared.definitions.map { DashboardCardID.customCounter($0.id) }
-        return DashboardCardID.allStandardCases + counterCards
+        let legacyMigrated = UserDefaults.standard.bool(forKey: "legacyCounterMigratedToColumn1")
+        let standardCards = legacyMigrated
+            ? DashboardCardID.allStandardCases.filter { $0 != .customCount }
+            : DashboardCardID.allStandardCases
+        let counterCards = CustomCounterService.shared.definitions.map { DashboardCardID.customCounter($0.columnIndex) }
+        return standardCards + counterCards
     }
 
     /// Cards not yet assigned to sidebar or detail (iPad).

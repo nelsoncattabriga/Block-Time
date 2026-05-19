@@ -686,11 +686,6 @@ private struct ModernOpsDataCard: View {
                         get: { viewModel.logCustomCount },
                         set: { newValue in
                             viewModel.updateLogCustomCount(newValue)
-                            if newValue {
-                                CustomCounterService.shared.migrateFromLegacyIfNeeded(
-                                    legacyLabel: viewModel.customCountLabel
-                                )
-                            }
                         }
                     ),
                     color: .blue,
@@ -2486,7 +2481,7 @@ struct InlineCustomCountersView: View {
                         .buttonStyle(.plain)
 
                         Button(role: .destructive) {
-                            service.remove(id: definition.id)
+                            service.remove(columnIndex: definition.columnIndex)
                         } label: {
                             Image(systemName: "minus.circle.fill")
                                 .foregroundStyle(.red.opacity(0.8))
@@ -2510,7 +2505,7 @@ struct InlineCustomCountersView: View {
         }
         .sheet(item: $editingDefinition) { definition in
             CounterEditSheet(mode: .edit(definition)) { label, type in
-                service.update(id: definition.id, label: label, type: type)
+                service.update(columnIndex: definition.columnIndex, label: label, type: type)
             }
         }
     }
@@ -2576,7 +2571,7 @@ struct CustomCountersSettingsView: View {
                         .buttonStyle(.plain)
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
-                                service.remove(id: definition.id)
+                                service.remove(columnIndex: definition.columnIndex)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -2607,7 +2602,7 @@ struct CustomCountersSettingsView: View {
         }
         .sheet(item: $editingDefinition) { definition in
             CounterEditSheet(mode: .edit(definition)) { label, type in
-                service.update(id: definition.id, label: label, type: type)
+                service.update(columnIndex: definition.columnIndex, label: label, type: type)
             }
         }
     }

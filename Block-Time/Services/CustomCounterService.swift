@@ -26,25 +26,34 @@ final class CustomCounterService {
         }
     }
 
-    func migrateFromLegacyIfNeeded(legacyLabel: String) {
+    /// One-time migration: if the user had the legacy custom counter enabled but no new
+    /// counter definitions yet, register column 1 using the legacy label.
+    /// Returns true if a definition was created (caller should then run the Core Data migration).
+    @discardableResult
+    func migrateLegacyDefinitionIfNeeded(legacyLabel: String) -> Bool {
         let trimmed = legacyLabel.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, definitions.isEmpty else { return }
-        add(label: trimmed, type: .integer)
+        guard !trimmed.isEmpty, definitions.isEmpty else { return false }
+        let definition = CustomCounterDefinition(columnIndex: 1, label: trimmed, type: .integer)
+        definitions.append(definition)
+        persist()
+        return true
     }
 
     func add(label: String, type: CounterType) {
-        let definition = CustomCounterDefinition(id: UUID(), label: label, type: type)
+        let usedSlots = Set(definitions.map { $0.columnIndex })
+        guard let slot = (1...10).first(where: { !usedSlots.contains($0) }) else { return }
+        let definition = CustomCounterDefinition(columnIndex: slot, label: label, type: type)
         definitions.append(definition)
         persist()
     }
 
-    func remove(id: UUID) {
-        definitions.removeAll { $0.id == id }
+    func remove(columnIndex: Int) {
+        definitions.removeAll { $0.columnIndex == columnIndex }
         persist()
     }
 
-    func update(id: UUID, label: String, type: CounterType) {
-        guard let index = definitions.firstIndex(where: { $0.id == id }) else { return }
+    func update(columnIndex: Int, label: String, type: CounterType) {
+        guard let index = definitions.firstIndex(where: { $0.columnIndex == columnIndex }) else { return }
         definitions[index].label = label
         definitions[index].type = type
         persist()
@@ -55,9 +64,11 @@ final class CustomCounterService {
         persist()
     }
 
-    func definition(for id: UUID) -> CustomCounterDefinition? {
-        definitions.first { $0.id == id }
+    func definition(for columnIndex: Int) -> CustomCounterDefinition? {
+        definitions.first { $0.columnIndex == columnIndex }
     }
+
+    var isFull: Bool { definitions.count >= 10 }
 
     private func persist() {
         if let data = try? JSONEncoder().encode(definitions) {

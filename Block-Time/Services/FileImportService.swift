@@ -1877,7 +1877,7 @@ func resolveIntraImportCollisions(_ sectors: [FlightSector]) -> [FlightSector] {
                     outTime: sector.outTime, inTime: sector.inTime,
                     scheduledDeparture: sector.scheduledDeparture,
                     scheduledArrival: sector.scheduledArrival,
-                    customCount: sector.customCount
+                    counterEntries: sector.counterEntries
                 )
                 resolved.append(updated)
             } else {

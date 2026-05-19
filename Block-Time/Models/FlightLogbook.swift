@@ -102,7 +102,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var scheduledDeparture: String  // STD - Scheduled Time of Departure (HHMM format)
     var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
     var customCount: Int
-    var counterEntries: [String: String] = [:]  // counterID.uuidString → raw value
+    var counterEntries: [Int: String] = [:]  // columnIndex → raw value
     var createdAt: Date?
     let parsedDate: Date?
 
@@ -134,7 +134,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
          isILS: Bool = false, isGLS: Bool = false, isNPA: Bool = false, remarks: String = "",
          dayTakeoffs: Int = 0, dayLandings: Int = 0, nightTakeoffs: Int = 0, nightLandings: Int = 0,
          outTime: String = "", inTime: String = "", scheduledDeparture: String = "", scheduledArrival: String = "",
-         customCount: Int = 0, counterEntries: [String: String] = [:], createdAt: Date? = nil) {
+         customCount: Int = 0, counterEntries: [Int: String] = [:], createdAt: Date? = nil) {
         self.id = id ?? UUID()
         self.date = date
         self.flightNumber = flightNumber
@@ -223,7 +223,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         scheduledDeparture = try c.decode(String.self, forKey: .scheduledDeparture)
         scheduledArrival = try c.decode(String.self, forKey: .scheduledArrival)
         customCount = try c.decode(Int.self, forKey: .customCount)
-        counterEntries = (try? c.decodeIfPresent([String: String].self, forKey: .counterEntries)) ?? [:]
+        counterEntries = (try? c.decodeIfPresent([Int: String].self, forKey: .counterEntries)) ?? [:]
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
         parsedDate = FlightSector.cachedDateFormatter.date(from: date)
     }
@@ -288,13 +288,11 @@ struct FlightSector: Identifiable, Codable, Hashable {
         // IMPORTANT: Database stores dates in UTC, so we must use UTC timezone when formatting
         let dateString = Self.cachedUTCDateFormatter.string(from: date)
 
-        // Load custom counter entries from the Core Data relationship
-        var loadedCounterEntries: [String: String] = [:]
-        if let entries = entity.counterEntries as? Set<CustomCounterEntry> {
-            for entry in entries {
-                if let counterID = entry.counterID, let value = entry.value, !value.isEmpty {
-                    loadedCounterEntries[counterID.uuidString] = value
-                }
+        // Load counter entries from flat columns using current definition slots
+        var loadedCounterEntries: [Int: String] = [:]
+        for definition in CustomCounterService.shared.definitions {
+            if let value = entity.counterValue(at: definition.columnIndex), !value.isEmpty {
+                loadedCounterEntries[definition.columnIndex] = value
             }
         }
 

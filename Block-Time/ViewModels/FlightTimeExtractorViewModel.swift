@@ -166,7 +166,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     }
     @Published var remarks = ""
     @Published var customCount = 0
-    @Published var counterValues: [UUID: String] = [:]
+    @Published var counterValues: [Int: String] = [:]
     @Published var dayTakeoffs = 0
     @Published var dayLandings = 0
     @Published var nightTakeoffs = 0
@@ -1637,7 +1637,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
             customCount: isPositioning ? 0 : customCount,
-            counterEntries: currentCounterEntriesDict()
+            counterEntries: isPositioning ? [:] : currentCounterEntries()
         )
                     LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), p2Time=\(newFlight.p2Time)")
 
@@ -1952,7 +1952,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
             customCount: isPositioning ? 0 : customCount,
-            counterEntries: currentCounterEntriesDict()
+            counterEntries: isPositioning ? [:] : currentCounterEntries()
         )
 
         let databaseService = FlightDatabaseService.shared
@@ -1996,25 +1996,20 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
     /// Populate counterValues from a sector's counterEntries dict (loaded from Core Data).
     func loadCounterEntries(from sector: FlightSector) {
-        counterValues = [:]
-        for (uuidString, value) in sector.counterEntries {
-            if let uuid = UUID(uuidString: uuidString) {
-                counterValues[uuid] = value
-            }
-        }
+        counterValues = sector.counterEntries
     }
 
-    /// Return counterValues as a [uuidString: rawValue] dict, skipping empty / zero entries.
-    func currentCounterEntriesDict() -> [String: String] {
-        var result: [String: String] = [:]
-        for (uuid, value) in counterValues {
+    /// Return counterValues as a [columnIndex: rawValue] dict, skipping empty / zero entries.
+    func currentCounterEntries() -> [Int: String] {
+        var result: [Int: String] = [:]
+        for (columnIndex, value) in counterValues {
             let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty,
                   trimmed != "0",
                   trimmed != "0.0",
                   trimmed != "00:00",
                   trimmed != "0:00" else { continue }
-            result[uuid.uuidString] = trimmed
+            result[columnIndex] = trimmed
         }
         return result
     }
@@ -2067,7 +2062,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                scheduledArrival != original.scheduledArrival ||
                !timeValuesEqual(spInsTime, original.spInsTime) ||
                (isSpIns && !isInstructingInAircraft && !timeValuesEqual(simInsTime, original.simTime)) ||
-               currentCounterEntriesDict() != original.counterEntries
+               currentCounterEntries() != original.counterEntries
     }
 
     var changesSummary: String {
@@ -2192,14 +2187,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
             changes.append("\(customCountLabel): \(original.customCount) → \(customCount)")
         }
 
-        let newEntries = currentCounterEntriesDict()
+        let newEntries = currentCounterEntries()
         let allKeys = Set(newEntries.keys).union(original.counterEntries.keys)
-        for uuidString in allKeys {
-            let oldVal = original.counterEntries[uuidString] ?? ""
-            let newVal = newEntries[uuidString] ?? ""
+        for columnIndex in allKeys {
+            let oldVal = original.counterEntries[columnIndex] ?? ""
+            let newVal = newEntries[columnIndex] ?? ""
             if oldVal != newVal {
-                let label = CustomCounterService.shared.definitions
-                    .first { $0.id.uuidString == uuidString }?.label ?? "Counter"
+                let label = CustomCounterService.shared.definition(for: columnIndex)?.label ?? "Counter"
                 changes.append("\(label): \(oldVal.isEmpty ? "—" : oldVal) → \(newVal.isEmpty ? "—" : newVal)")
             }
         }
