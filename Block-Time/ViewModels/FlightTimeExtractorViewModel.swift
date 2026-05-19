@@ -142,14 +142,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         didSet { isPilotFlying = isSimulator }
     }
     @Published var isSpIns = false
-    @Published var spInsTime = "" {
-        didSet {
-            // Autofill simInsTime to match INS time unless user has manually set it
-            if isSpIns && !isInstructingInAircraft && !simInsTimeIsManual {
-                simInsTime = spInsTime
-            }
-        }
-    }
+    @Published var spInsTime = ""
     @Published var simInsTime = ""          // SIM portion of an INS Sim session (0…spInsTime)
     private var simInsTimeIsManual = false  // true once user manually edits the SIM field
     @Published var isPositioning = false
