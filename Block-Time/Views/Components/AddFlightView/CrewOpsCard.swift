@@ -152,7 +152,7 @@ struct ModernManualEntryDataCard: View {
 
                     // Legacy single counter — hidden once migrated to counter1
                     if !migrated {
-                        CounterIntegerField(
+                        FieldIntegerField(
                             label: viewModel.customCountLabel,
                             value: Binding(
                                 get: { viewModel.customCount > 0 ? "\(viewModel.customCount)" : "" },
@@ -164,7 +164,7 @@ struct ModernManualEntryDataCard: View {
 
                     // Multi-counters
                     ForEach(CustomCounterService.shared.definitions) { definition in
-                        counterRow(for: definition, viewModel: viewModel, keyboardToolbar: keyboardToolbar)
+                        fieldRow(for: definition, viewModel: viewModel, keyboardToolbar: keyboardToolbar)
                     }
                 }
                 
@@ -191,9 +191,9 @@ struct ModernManualEntryDataCard: View {
     }
 }
 
-// MARK: - Counter field types (shared by CrewOpsCard)
+// MARK: - Field types (shared by CrewOpsCard)
 
-struct CounterTimeField: View {
+struct FieldTimeField: View {
     let label: String
     @Binding var value: String
     var keyboardToolbar: KeyboardToolbarState?
@@ -291,7 +291,7 @@ struct CounterTimeField: View {
     }
 }
 
-struct CounterDecimalField: View {
+struct FieldDecimalField: View {
     let label: String
     @Binding var value: String
     var keyboardToolbar: KeyboardToolbarState?
@@ -337,7 +337,7 @@ struct CounterDecimalField: View {
     }
 }
 
-struct CounterIntegerField: View {
+struct FieldIntegerField: View {
     let label: String
     @Binding var value: String
     var keyboardToolbar: KeyboardToolbarState?
@@ -374,20 +374,20 @@ struct CounterIntegerField: View {
     }
 }
 
-// MARK: - Counter row dispatcher
+// MARK: - Field row dispatcher
 
 @ViewBuilder
-private func counterRow(for definition: CustomCounterDefinition, viewModel: FlightTimeExtractorViewModel, keyboardToolbar: KeyboardToolbarState?) -> some View {
+private func fieldRow(for definition: CustomCounterDefinition, viewModel: FlightTimeExtractorViewModel, keyboardToolbar: KeyboardToolbarState?) -> some View {
     let binding = Binding<String>(
         get: { viewModel.counterValues[definition.columnIndex] ?? "" },
         set: { viewModel.counterValues[definition.columnIndex] = $0 }
     )
     switch definition.type {
     case .time:
-        CounterTimeField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
+        FieldTimeField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
     case .decimal:
-        CounterDecimalField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
+        FieldDecimalField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
     case .integer:
-        CounterIntegerField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
+        FieldIntegerField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
     }
 }
