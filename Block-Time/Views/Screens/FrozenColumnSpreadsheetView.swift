@@ -30,7 +30,7 @@ struct FrozenColumnSpreadsheetView: UIViewRepresentable {
 
     func updateUIView(_ uiView: SpreadsheetContainerView, context: Context) {
         context.coordinator.parent = self
-        uiView.update(flights: flights, config: displayConfig, highlightedID: highlightedFlightID)
+        uiView.update(flights: flights, config: displayConfig, highlightedID: highlightedFlightID, counterCount: counterCount)
     }
 }
 
@@ -301,11 +301,12 @@ final class SpreadsheetContainerView: UIView {
         // Headers built in didMoveToWindow once tables are ready
     }
 
-    func update(flights: [FlightSector], config: SpreadsheetDisplayConfig, highlightedID: UUID?) {
+    func update(flights: [FlightSector], config: SpreadsheetDisplayConfig, highlightedID: UUID?, counterCount: Int) {
         let flightsChanged   = flights.map(\.id) != self.flights.map(\.id)
         let configChanged    = config != self.config
         let highlightChanged = highlightedID != self.highlightedID
         let counterChanged   = counterCount != lastCounterCount
+        lastCounterCount     = counterCount
 
         let previousHighlightedID = self.highlightedID
 
