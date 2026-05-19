@@ -60,8 +60,9 @@ Phases completed: 0 / 7
 | 260519-ir7 | Convert InlineCustomFieldsView to List with drag-reorder and swipe-delete | 2026-05-19 | 36c8453 | [260519-ir7-convert-inlinecustomfieldsview-to-list-w](./quick/260519-ir7-convert-inlinecustomfieldsview-to-list-w/) |
 | 260519-j10 | Suppress swipe-to-delete circles in InlineCustomFieldsView | 2026-05-19 | 960bc66 | [260519-j10-suppress-swipe-to-delete-circles-in-inli](./quick/260519-j10-suppress-swipe-to-delete-circles-in-inli/) |
 | 260519-jer | Restructure InlineCustomFieldsView: Add Field at top, natural list height, no nested bg | 2026-05-19 | 279a16a | [260519-jer-restructure-inlinecustomfieldsview-add-f](./quick/260519-jer-restructure-inlinecustomfieldsview-add-f/) |
+| 260519-ka3 | Add CloudKit KVS sync for CustomCounterDefinition array | 2026-05-19 | d834545 | [260519-ka3-add-cloudkit-kvs-sync-for-customcounterd](./quick/260519-ka3-add-cloudkit-kvs-sync-for-customcounterd/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Restructured InlineCustomFieldsView: Add Field button at top, removed nested rounded background from List (260519-jer)
+Last activity: 2026-05-19 - Added CloudKit KVS sync for CustomCounterDefinition array; definitions now roam across devices (260519-ka3)
 Next action: Continue custom fields integration — CSV export, backup/restore, import mapping, PDF print
