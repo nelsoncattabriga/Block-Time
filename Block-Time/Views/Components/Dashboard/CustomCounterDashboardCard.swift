@@ -42,7 +42,7 @@ struct CustomCounterDashboardCard: View {
 
             // Header
             CardHeader(
-                title: definition?.label ?? "Counter",
+                title: definition?.label ?? "Field",
                 icon: iconForType(definition?.type),
                 iconColor: colorForType(definition?.type)
             ) {
@@ -84,7 +84,7 @@ struct CustomCounterDashboardCard: View {
                         .foregroundStyle(.tertiary)
                 }
             } else {
-                Text("Counter unavailable")
+                Text("Field unavailable")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

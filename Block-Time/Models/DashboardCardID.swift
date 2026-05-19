@@ -85,7 +85,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
 
     var displayName: String {
         if let columnIndex = customCounterColumnIndex {
-            return CustomCounterService.shared.definition(for: columnIndex)?.label ?? "Counter"
+            return CustomCounterService.shared.definition(for: columnIndex)?.label ?? "Field"
         }
         switch rawValue {
         case "frmsFlightTime":    return "FRMS Flight Time"

@@ -2193,7 +2193,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             let oldVal = original.counterEntries[columnIndex] ?? ""
             let newVal = newEntries[columnIndex] ?? ""
             if oldVal != newVal {
-                let label = CustomCounterService.shared.definition(for: columnIndex)?.label ?? "Counter"
+                let label = CustomCounterService.shared.definition(for: columnIndex)?.label ?? "Field"
                 changes.append("\(label): \(oldVal.isEmpty ? "—" : oldVal) → \(newVal.isEmpty ? "—" : newVal)")
             }
         }
