@@ -1197,11 +1197,11 @@ private struct DefinitionConflictSheet: View {
                     .font(.system(size: 50))
                     .foregroundColor(.orange)
 
-                Text("Counter Definitions Conflict")
+                Text("Custom Fields Conflict")
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("The backup contains counter definitions that differ from your current settings.")
+                Text("The backup contains custom field definitions that differ from your current settings.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

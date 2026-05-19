@@ -61,8 +61,10 @@ Phases completed: 0 / 7
 | 260519-j10 | Suppress swipe-to-delete circles in InlineCustomFieldsView | 2026-05-19 | 960bc66 | [260519-j10-suppress-swipe-to-delete-circles-in-inli](./quick/260519-j10-suppress-swipe-to-delete-circles-in-inli/) |
 | 260519-jer | Restructure InlineCustomFieldsView: Add Field at top, natural list height, no nested bg | 2026-05-19 | 279a16a | [260519-jer-restructure-inlinecustomfieldsview-add-f](./quick/260519-jer-restructure-inlinecustomfieldsview-add-f/) |
 | 260519-ka3 | Add CloudKit KVS sync for CustomCounterDefinition array | 2026-05-19 | d834545 | [260519-ka3-add-cloudkit-kvs-sync-for-customcounterd](./quick/260519-ka3-add-cloudkit-kvs-sync-for-customcounterd/) |
+| 260519-ctr | Round-trip custom counter definitions + values in backup/restore | 2026-05-19 | 3b07bef | [260519-ctr-backup-restore-custom-counters](./quick/260519-ctr-backup-restore-custom-counters/) |
+| 260519-pds | Fix blank DefinitionConflictSheet — switch to sheet(item:) with PendingDefinitions | 2026-05-19 | 7c45530 | — |
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Added CloudKit KVS sync for CustomCounterDefinition array; definitions now roam across devices (260519-ka3)
-Next action: Continue custom fields integration — CSV export, backup/restore, import mapping, PDF print
+Last activity: 2026-05-19 - Custom counter backup/restore complete: #DEFINITIONS: line in CSV, Counter1–Counter10 columns, DefinitionConflictSheet for merge conflicts (260519-ctr)
+Next action: Continue custom fields integration — CSV export (standalone), CSV import mapping, PDF print
