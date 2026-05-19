@@ -2452,36 +2452,42 @@ struct InlineCustomFieldsView: View {
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 4)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(service.definitions.enumerated()), id: \.element.id) { index, definition in
-                        HStack(spacing: 10) {
-                            Image(systemName: iconFor(definition.type))
-                                .foregroundStyle(colorFor(definition.type))
-                                .frame(width: 18)
-
-                            Text(definition.label)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-
-                            Spacer()
-
-                            Button("Edit", systemImage: "pencil.circle") {
-                                editingDefinition = definition
+                List {
+                    ForEach(service.definitions) { definition in
+                        Button {
+                            editingDefinition = definition
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: iconFor(definition.type))
+                                    .foregroundStyle(colorFor(definition.type))
+                                    .frame(width: 18)
+                                Text(definition.label)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                Spacer()
                             }
-                            .labelStyle(.iconOnly)
-                            .foregroundStyle(.secondary)
-                            .buttonStyle(.plain)
+                            .contentShape(Rectangle())
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-
-                        if index < service.definitions.count - 1 {
-                            Divider().padding(.leading, 40)
+                        .buttonStyle(.plain)
+                        .listRowBackground(Color(.secondarySystemBackground))
+                    }
+                    .onMove { source, destination in
+                        service.move(fromOffsets: source, toOffset: destination)
+                    }
+                    .onDelete { offsets in
+                        let columnIndices = offsets.map { service.definitions[$0].columnIndex }
+                        for columnIndex in columnIndices {
+                            service.remove(columnIndex: columnIndex)
                         }
                     }
                 }
-                .background(Color(.secondarySystemBackground))
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollDisabled(true)
+                .environment(\.editMode, .constant(.active))
+                .frame(height: CGFloat(service.definitions.count) * 44)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
+                .background(Color(.secondarySystemBackground).clipShape(RoundedRectangle(cornerRadius: 8)))
             }
 
             Divider()
