@@ -20,6 +20,7 @@ struct FlightsSplitView: View {
     @State private var showingDiscardAlert: Bool = false
     @State private var pendingFlightSelection: FlightSector?
     @State private var showingSaveFailedAlert: Bool = false
+    @State private var listRefreshTrigger: UUID = UUID()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @Environment(PurchaseService.self) private var purchaseService
@@ -39,6 +40,7 @@ struct FlightsSplitView: View {
                     selectedFlight: $selectedFlight,
                     isAddingNewFlight: $isAddingNewFlight,
                     isSelectMode: $isSelectMode,
+                    refreshTrigger: $listRefreshTrigger,
                     onFlightSelected: { flight in
                         if viewModel.hasUnsavedChanges {
                             pendingFlightSelection = flight
@@ -102,6 +104,7 @@ struct FlightsSplitView: View {
                                             selectedFlight = nil
                                             viewModel.exitEditingMode()
                                         }
+                                        listRefreshTrigger = UUID()
                                     } else {
                                         pendingFlightSelection = nil
                                         showingSaveFailedAlert = true
@@ -178,6 +181,7 @@ private struct FlightsListContent: View {
     @Binding var selectedFlight: FlightSector?
     @Binding var isAddingNewFlight: Bool
     @Binding var isSelectMode: Bool
+    @Binding var refreshTrigger: UUID
     let onFlightSelected: (FlightSector) -> Void
 
     private let databaseService = FlightDatabaseService.shared
@@ -661,6 +665,9 @@ private struct FlightsListContent: View {
                     }
                 }
             }
+        }
+        .onChange(of: refreshTrigger) { _, _ in
+            Task { await loadFlights() }
         }
         .alert(flightToDelete.map { "Delete flight \($0.flightNumberFormatted)?" } ?? "Delete Flight?",
                isPresented: $showingDeleteAlert,
