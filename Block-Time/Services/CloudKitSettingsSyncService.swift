@@ -169,7 +169,18 @@ class CloudKitSettingsSyncService {
             return
         }
 
+        let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
+
         DispatchQueue.main.async {
+            // Apply custom field definitions immediately regardless of rate limit.
+            if changedKeys.contains(CloudKeys.customCounterDefinitions),
+               let definitionsJSON = self.ubiquitousStore.string(forKey: CloudKeys.customCounterDefinitions),
+               let definitionsData = definitionsJSON.data(using: .utf8),
+               let cloudDefinitions = try? JSONDecoder().decode([CustomCounterDefinition].self, from: definitionsData),
+               cloudDefinitions != CustomCounterService.shared.definitions {
+                CustomCounterService.shared.replaceAll(cloudDefinitions)
+            }
+
             switch changeReason {
             case NSUbiquitousKeyValueStoreServerChange:
                 LogManager.shared.info("iCloud sync: Server change - syncing from cloud")

@@ -83,6 +83,7 @@ final class CustomCounterService {
         if let data = try? JSONEncoder().encode(definitions) {
             UserDefaults.standard.set(data, forKey: storageKey)
         }
+        CloudKitSettingsSyncService.shared.markLocalModification()
         CloudKitSettingsSyncService.shared.syncToCloud()
     }
 }
