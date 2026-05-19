@@ -2470,15 +2470,10 @@ struct InlineCustomFieldsView: View {
                         }
                         .buttonStyle(.plain)
                         .listRowBackground(Color(.secondarySystemBackground))
+                        .deleteDisabled(true)
                     }
                     .onMove { source, destination in
                         service.move(fromOffsets: source, toOffset: destination)
-                    }
-                    .onDelete { offsets in
-                        let columnIndices = offsets.map { service.definitions[$0].columnIndex }
-                        for columnIndex in columnIndices {
-                            service.remove(columnIndex: columnIndex)
-                        }
                     }
                 }
                 .listStyle(.plain)
