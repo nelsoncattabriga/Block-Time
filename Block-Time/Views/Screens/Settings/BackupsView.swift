@@ -379,6 +379,8 @@ private struct BackupDetailSheet: View {
     @State private var showingResultAlert = false
     @State private var resultMessage = ""
     @State private var selectedRestoreMode: ImportMode = .merge
+    @State private var pendingBackupDefinitions: [CustomCounterDefinition]? = nil
+    @State private var showingDefinitionConflict = false
 
     var body: some View {
         NavigationStack {
@@ -555,6 +557,26 @@ private struct BackupDetailSheet: View {
                 )
                 .presentationDetents([.height(450)])
             }
+            .sheet(isPresented: $showingDefinitionConflict) {
+                if let backupDefs = pendingBackupDefinitions {
+                    DefinitionConflictSheet(
+                        backupDefinitions: backupDefs,
+                        deviceDefinitions: CustomCounterService.shared.definitions,
+                        onKeepExisting: {
+                            showingDefinitionConflict = false
+                            executeRestore(definitionsBehavior: .skip)
+                        },
+                        onUseBackup: {
+                            showingDefinitionConflict = false
+                            executeRestore(definitionsBehavior: .replaceAll)
+                        },
+                        onCancel: {
+                            showingDefinitionConflict = false
+                        }
+                    )
+                    .presentationDetents([.height(500)])
+                }
+            }
             .alert("Delete Backup", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
@@ -600,33 +622,53 @@ private struct BackupDetailSheet: View {
         LogManager.shared.info("📁 Backup URL: \(backup.url.path)")
         LogManager.shared.info("🔀 Restore mode: \(selectedRestoreMode)")
 
+        if selectedRestoreMode == .replace {
+            // Replace mode: always overwrite definitions — no conflict check needed
+            executeRestore(definitionsBehavior: .replaceAll)
+            return
+        }
+
+        // Merge mode: check for definition conflicts before restoring
+        let backupDefs = FileImportService.shared.extractBackupDefinitions(
+            url: backup.url, skipSecurityScoping: true
+        )
+
+        if let backupDefs = backupDefs,
+           !backupDefs.isEmpty,
+           !CustomCounterService.shared.definitions.isEmpty,
+           backupDefs != CustomCounterService.shared.definitions {
+            // Conflict: backup has definitions that differ from device — ask user
+            pendingBackupDefinitions = backupDefs
+            showingDefinitionConflict = true
+        } else {
+            executeRestore(definitionsBehavior: .mergeIfEmpty)
+        }
+    }
+
+    private func executeRestore(definitionsBehavior: DefinitionsBehavior) {
         isRestoring = true
-
         LogManager.shared.info("📖 Calling quickRestoreFromBackup...")
-        // skipSecurityScoping=true because this file is from our app's backup directory
-        FileImportService.shared.quickRestoreFromBackup(url: backup.url, mode: selectedRestoreMode, skipSecurityScoping: true) { result in
-            print("📥 quickRestoreFromBackup completion handler called")
+        FileImportService.shared.quickRestoreFromBackup(
+            url: backup.url,
+            mode: selectedRestoreMode,
+            skipSecurityScoping: true,
+            definitionsBehavior: definitionsBehavior
+        ) { result in
             isRestoring = false
-
             switch result {
             case .success(let importResult):
                 LogManager.shared.info("Restore succeeded: \(importResult.successCount) flights")
                 var message = "Restore Summary\n\n"
                 message += "Mode: \(self.selectedRestoreMode == .merge ? "Merge" : "Overwrite")\n\n"
                 message += "✓ Successfully restored: \(importResult.successCount) flights\n"
-
                 if importResult.duplicateCount > 0 {
                     message += "⊘ Skipped \(importResult.duplicateCount) duplicated flights\n"
                 }
-
                 if importResult.failureCount > 0 {
                     message += "Failed to restore: \(importResult.failureCount) flights\n"
                 }
-
                 resultMessage = message
                 showingResultAlert = true
-                // Database service observers will automatically post debounced .flightDataChanged notification
-
             case .failure(let error):
                 LogManager.shared.error("Restore failed: \(error.localizedDescription)")
                 if (error as? ImportError) == .notLoggerFormat {
@@ -707,6 +749,8 @@ struct ManageBackupsView: View {
     @State private var isRestoring = false
     @State private var showingResultAlert = false
     @State private var resultMessage = ""
+    @State private var pendingBackupDefinitions: [CustomCounterDefinition]? = nil
+    @State private var showingDefinitionConflict = false
 
     var body: some View {
         ScrollView {
@@ -765,6 +809,26 @@ struct ManageBackupsView: View {
                 }
             )
             .presentationDetents([.height(450)])
+        }
+        .sheet(isPresented: $showingDefinitionConflict) {
+            if let backupDefs = pendingBackupDefinitions, let fileURL = selectedExternalFile {
+                DefinitionConflictSheet(
+                    backupDefinitions: backupDefs,
+                    deviceDefinitions: CustomCounterService.shared.definitions,
+                    onKeepExisting: {
+                        showingDefinitionConflict = false
+                        executeExternalRestore(url: fileURL, definitionsBehavior: .skip)
+                    },
+                    onUseBackup: {
+                        showingDefinitionConflict = false
+                        executeExternalRestore(url: fileURL, definitionsBehavior: .replaceAll)
+                    },
+                    onCancel: {
+                        showingDefinitionConflict = false
+                    }
+                )
+                .presentationDetents([.height(500)])
+            }
         }
         .alert(resultMessage.contains("successfully") || resultMessage.contains("success") || resultMessage.contains("Restored") || resultMessage.contains("Summary") ? "Success" : "Error", isPresented: $showingResultAlert) {
             Button("OK", role: .cancel) {
@@ -949,29 +1013,51 @@ struct ManageBackupsView: View {
     private func performExternalRestore() {
         guard let fileURL = selectedExternalFile else { return }
 
+        if selectedRestoreMode == .replace {
+            // Replace mode: always overwrite definitions — no conflict check needed
+            executeExternalRestore(url: fileURL, definitionsBehavior: .replaceAll)
+            return
+        }
+
+        // Merge mode: check for definition conflicts before restoring
+        let backupDefs = FileImportService.shared.extractBackupDefinitions(
+            url: fileURL, skipSecurityScoping: false
+        )
+
+        if let backupDefs = backupDefs,
+           !backupDefs.isEmpty,
+           !CustomCounterService.shared.definitions.isEmpty,
+           backupDefs != CustomCounterService.shared.definitions {
+            // Conflict: backup has definitions that differ from device — ask user
+            pendingBackupDefinitions = backupDefs
+            showingDefinitionConflict = true
+        } else {
+            executeExternalRestore(url: fileURL, definitionsBehavior: .mergeIfEmpty)
+        }
+    }
+
+    private func executeExternalRestore(url: URL, definitionsBehavior: DefinitionsBehavior) {
         isRestoring = true
-
-        // skipSecurityScoping=false because this is an external file selected by the user
-        FileImportService.shared.quickRestoreFromBackup(url: fileURL, mode: selectedRestoreMode, skipSecurityScoping: false) { result in
+        FileImportService.shared.quickRestoreFromBackup(
+            url: url,
+            mode: selectedRestoreMode,
+            skipSecurityScoping: false,
+            definitionsBehavior: definitionsBehavior
+        ) { result in
             isRestoring = false
-
             switch result {
             case .success(let importResult):
                 var message = "Restore Summary\n\n"
                 message += "Mode: \(selectedRestoreMode == .merge ? "Merge" : "Overwrite")\n\n"
                 message += "✓ Successfully restored: \(importResult.successCount) flights\n"
-
                 if importResult.duplicateCount > 0 {
                     message += "⊘ Skipped \(importResult.duplicateCount) duplicated flights\n"
                 }
-
                 if importResult.failureCount > 0 {
                     message += "Failed to restore: \(importResult.failureCount) flights\n"
                 }
-
                 resultMessage = message
                 showingResultAlert = true
-
             case .failure(let error):
                 if (error as? ImportError) == .notLoggerFormat {
                     resultMessage = "This file is not in Block-Time backup format. Please use 'Import with Field Mapping' to import files from other logbook apps."
@@ -1087,6 +1173,94 @@ private struct RestoreModeSheet: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
+        }
+    }
+}
+
+// MARK: - Definition Conflict Sheet
+private struct DefinitionConflictSheet: View {
+    let backupDefinitions: [CustomCounterDefinition]
+    let deviceDefinitions: [CustomCounterDefinition]
+    let onKeepExisting: () -> Void
+    let onUseBackup: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(.orange)
+
+                Text("Counter Definitions Conflict")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                Text("The backup contains counter definitions that differ from your current settings.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            .padding(.top, 32)
+
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("On This Device")
+                        .font(.headline)
+                    ForEach(deviceDefinitions) { def in
+                        Text("• \(def.label)")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("In Backup")
+                        .font(.headline)
+                    ForEach(backupDefinitions) { def in
+                        Text("• \(def.label)")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 20)
+
+            VStack(spacing: 12) {
+                Button(action: onKeepExisting) {
+                    Text("Keep Existing")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+
+                Button(action: onUseBackup) {
+                    Text("Use Backup Definitions")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+
+                Button(action: onCancel) {
+                    Text("Cancel Restore")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 20)
+
+            Spacer()
         }
     }
 }

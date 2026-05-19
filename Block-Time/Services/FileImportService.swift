@@ -9,6 +9,12 @@
 import Foundation
 import CommonCrypto
 
+enum DefinitionsBehavior {
+    case skip
+    case replaceAll
+    case mergeIfEmpty
+}
+
 class FileImportService {
     static let shared = FileImportService()
 
@@ -718,7 +724,7 @@ class FileImportService {
             }
         }
 
-        let flight = FlightSector(
+        var flight = FlightSector(
             id: deterministicID,
             date: date,
             flightNumber: flightNumber,
@@ -756,6 +762,12 @@ class FileImportService {
             scheduledArrival: scheduledArrival,
             customCount: isPositioning ? 0 : max(0, customCount)
         )
+
+        // Populate custom counter entries from Counter1…Counter10 columns
+        for i in 1...10 {
+            let val = getValue("Counter\(i)").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !val.isEmpty { flight.counterEntries[i] = val }
+        }
 
         return .success(flight)
     }
@@ -827,6 +839,7 @@ class FileImportService {
         url: URL,
         mode: ImportMode = .merge,
         skipSecurityScoping: Bool = false,
+        definitionsBehavior: DefinitionsBehavior = .mergeIfEmpty,
         completion: @escaping (Result<ImportResult, Error>) -> Void
     ) {
         LogManager.shared.info("quickRestoreFromBackup called with mode: \(mode)")
@@ -834,32 +847,115 @@ class FileImportService {
         LogManager.shared.info("skipSecurityScoping: \(skipSecurityScoping)")
 
         do {
-            // Parse the file
-            // skipSecurityScoping=true means the file is in our app container and doesn't need security-scoped access
+            // Read raw content to check for #DEFINITIONS: header line
+            let needsSecurity = !skipSecurityScoping && !isInAppContainer(url)
+            if needsSecurity {
+                guard url.startAccessingSecurityScopedResource() else {
+                    completion(.failure(ImportError.accessDenied))
+                    return
+                }
+            }
+
+            let rawContent: String
+            do {
+                rawContent = try String(contentsOf: url, encoding: .utf8)
+            } catch {
+                if needsSecurity { url.stopAccessingSecurityScopedResource() }
+                completion(.failure(error))
+                return
+            }
+            if needsSecurity { url.stopAccessingSecurityScopedResource() }
+
+            // Check for #DEFINITIONS: prefix line
+            let lines = rawContent.components(separatedBy: .newlines)
+            if let firstLine = lines.first, firstLine.hasPrefix("#DEFINITIONS:") {
+                // Extract definitions from the first line
+                var extractedDefinitions: [CustomCounterDefinition]? = nil
+                let json = String(firstLine.dropFirst("#DEFINITIONS:".count))
+                if let data = json.data(using: .utf8),
+                   let defs = try? JSONDecoder().decode([CustomCounterDefinition].self, from: data) {
+                    extractedDefinitions = defs
+                    LogManager.shared.info("Extracted \(defs.count) counter definition(s) from backup")
+                }
+
+                // Write content minus the #DEFINITIONS: line to a temp file for parsing
+                let remainder = lines.dropFirst().joined(separator: "\n")
+                let tempURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(UUID().uuidString + ".csv")
+                try remainder.write(to: tempURL, atomically: true, encoding: .utf8)
+                defer { try? FileManager.default.removeItem(at: tempURL) }
+
+                let importData = try parseFile(url: tempURL, forceSecurityScoping: false)
+                LogManager.shared.info("Successfully parsed file: \(importData.rows.count) rows")
+                LogManager.shared.info("   Headers: \(importData.headers.prefix(6).joined(separator: ", "))")
+
+                guard isLoggerExportFormat(headers: importData.headers) else {
+                    LogManager.shared.info("File is not in Block-Time export format")
+                    completion(.failure(ImportError.notLoggerFormat))
+                    return
+                }
+
+                LogManager.shared.info("Detected Block-Time export format")
+                let mappings = createLoggerFieldMapping(headers: importData.headers)
+                LogManager.shared.info("Created \(mappings.count) field mappings")
+                LogManager.shared.info("Starting import with mode: \(mode)")
+
+                importFlights(from: importData, mapping: mappings, mode: mode) { result in
+                    if case .success = result, let defs = extractedDefinitions {
+                        DispatchQueue.main.async {
+                            switch definitionsBehavior {
+                            case .replaceAll:
+                                CustomCounterService.shared.replaceAll(defs)
+                            case .mergeIfEmpty:
+                                if CustomCounterService.shared.definitions.isEmpty {
+                                    CustomCounterService.shared.replaceAll(defs)
+                                }
+                            case .skip:
+                                break
+                            }
+                        }
+                    }
+                    completion(result)
+                }
+                return
+            }
+
+            // No #DEFINITIONS: line — original path (old backup format)
             let importData = try parseFile(url: url, forceSecurityScoping: !skipSecurityScoping)
             LogManager.shared.info("Successfully parsed file: \(importData.rows.count) rows")
             LogManager.shared.info("   Headers: \(importData.headers.prefix(6).joined(separator: ", "))")
 
-            // Detect if this is Block-Time's export format
             guard isLoggerExportFormat(headers: importData.headers) else {
-                // Not Block-Time format - use regular import with mapping
                 LogManager.shared.info("File is not in Block-Time export format")
                 throw ImportError.notLoggerFormat
             }
 
             LogManager.shared.info("Detected Block-Time export format")
-
-            // Create automatic field mapping based on Logger's export header
             let mappings = createLoggerFieldMapping(headers: importData.headers)
             LogManager.shared.info("Created \(mappings.count) field mappings")
-
-            // Perform import with automatic mapping
             LogManager.shared.info("Starting import with mode: \(mode)")
             importFlights(from: importData, mapping: mappings, mode: mode, completion: completion)
 
         } catch {
             completion(.failure(error))
         }
+    }
+
+    /// Reads the first line of a backup CSV and extracts counter definitions if present.
+    /// Returns nil if the line is absent or unreadable.
+    func extractBackupDefinitions(url: URL, skipSecurityScoping: Bool) -> [CustomCounterDefinition]? {
+        let needsSecurity = !skipSecurityScoping && !isInAppContainer(url)
+        if needsSecurity { guard url.startAccessingSecurityScopedResource() else { return nil } }
+        defer { if needsSecurity { url.stopAccessingSecurityScopedResource() } }
+
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        let firstLine = content.components(separatedBy: .newlines).first ?? ""
+        guard firstLine.hasPrefix("#DEFINITIONS:") else { return nil }
+        let json = String(firstLine.dropFirst("#DEFINITIONS:".count))
+        guard let data = json.data(using: .utf8),
+              let defs = try? JSONDecoder().decode([CustomCounterDefinition].self, from: data)
+        else { return nil }
+        return defs
     }
 
     // MARK: - Import webCIS Data
@@ -1142,6 +1238,8 @@ class FileImportService {
                 mappings.append(FieldMapping(logbookField: "PAX", logbookFieldDescription: "PAX", sourceColumn: header, isRequired: false))
             } else if headerLower == "custom count" {
                 mappings.append(FieldMapping(logbookField: "Custom Count", logbookFieldDescription: "Custom Count", sourceColumn: header, isRequired: false))
+            } else if let idx = parseCounterColumnIndex(headerLower) {
+                mappings.append(FieldMapping(logbookField: "Counter\(idx)", logbookFieldDescription: "Counter \(idx)", sourceColumn: header, isRequired: false))
             } else if headerLower == "remarks" {
                 mappings.append(FieldMapping(logbookField: "Remarks", logbookFieldDescription: "Remarks", sourceColumn: header, isRequired: false))
             }
@@ -1151,13 +1249,36 @@ class FileImportService {
     }
 
     // MARK: - Export to CSV
+    /// Main-thread-safe export. Reads counter definitions from CustomCounterService on the caller's thread.
+    /// Must be called from the main thread (or pass definitions explicitly via the overload below).
     func exportToCSV(flights: [FlightSector]) -> String {
-        // CSV Header
-        var csv = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks,Custom Count\n"
+        let definitions = CustomCounterService.shared.definitions
+            .sorted { $0.columnIndex < $1.columnIndex }
+        return exportToCSV(flights: flights, definitions: definitions)
+    }
+
+    /// Thread-safe overload: caller supplies pre-captured definitions (use when calling from a background thread).
+    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition]) -> String {
+        let definitions = definitions.sorted { $0.columnIndex < $1.columnIndex }
+
+        // Prepend #DEFINITIONS: line if any counters are configured
+        var result = ""
+        if !definitions.isEmpty,
+           let data = try? JSONEncoder().encode(definitions),
+           let json = String(data: data, encoding: .utf8) {
+            result += "#DEFINITIONS:\(json)\n"
+        }
+
+        // Build header row — keep legacy Custom Count, append Counter1…CounterN
+        var headerRow = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks,Custom Count"
+        for def in definitions {
+            headerRow += ",Counter\(def.columnIndex)"
+        }
+        result += headerRow + "\n"
 
         // Add each flight as a row
         for flight in flights {
-            let row = [
+            var row = [
                 flight.date,
                 flight.flightNumber,
                 flight.aircraftReg,
@@ -1194,11 +1315,21 @@ class FileImportService {
                 escapeCSVField(flight.remarks),
                 flight.customCount > 0 ? String(flight.customCount) : ""
             ]
+            for def in definitions {
+                row.append(flight.counterEntries[def.columnIndex] ?? "")
+            }
 
-            csv += row.joined(separator: ",") + "\n"
+            result += row.joined(separator: ",") + "\n"
         }
 
-        return csv
+        return result
+    }
+
+    private func parseCounterColumnIndex(_ header: String) -> Int? {
+        guard header.hasPrefix("counter"),
+              let idx = Int(header.dropFirst("counter".count)),
+              (1...10).contains(idx) else { return nil }
+        return idx
     }
 
     // Helper to escape CSV fields that contain commas or quotes
