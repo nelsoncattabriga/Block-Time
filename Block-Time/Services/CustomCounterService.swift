@@ -77,6 +77,12 @@ final class CustomCounterService {
         }
     }
 
+    // Called after a backup restore — persists locally AND pushes to CloudKit so other devices sync.
+    func replaceAllAndSync(_ definitions: [CustomCounterDefinition]) {
+        self.definitions = definitions
+        persist()
+    }
+
     var isFull: Bool { definitions.count >= 10 }
 
     private func persist() {

@@ -905,10 +905,10 @@ class FileImportService {
                         DispatchQueue.main.async {
                             switch definitionsBehavior {
                             case .replaceAll:
-                                CustomCounterService.shared.replaceAll(defs)
+                                CustomCounterService.shared.replaceAllAndSync(defs)
                             case .mergeIfEmpty:
                                 if CustomCounterService.shared.definitions.isEmpty {
-                                    CustomCounterService.shared.replaceAll(defs)
+                                    CustomCounterService.shared.replaceAllAndSync(defs)
                                 }
                             case .skip:
                                 break
