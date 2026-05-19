@@ -680,7 +680,7 @@ private struct ModernOpsDataCard: View {
                     .padding(.vertical, 4)
 
                 ModernToggleRow(
-                    title: "Use Custom Counters",
+                    title: "Use Custom Fields",
                     subtitle: "Log per-flight values such as PAX, approaches etc",
                     isOn: Binding(
                         get: { viewModel.logCustomCount },
@@ -693,7 +693,7 @@ private struct ModernOpsDataCard: View {
                 )
 
                 if viewModel.logCustomCount {
-                    InlineCustomCountersView()
+                    InlineCustomFieldsView()
                 }
 
             
@@ -2434,11 +2434,11 @@ private struct ICloudSyncHelpSheet: View {
     }
 }
 
-// MARK: - Custom Counters Settings View
+// MARK: - Custom Fields Settings View
 
-// MARK: - Inline Custom Counters (embedded in Crew & Ops card)
+// MARK: - Inline Custom Fields (embedded in Crew & Ops card)
 
-struct InlineCustomCountersView: View {
+struct InlineCustomFieldsView: View {
     @State private var showingAddSheet = false
     @State private var editingDefinition: CustomCounterDefinition? = nil
 
@@ -2447,65 +2447,61 @@ struct InlineCustomCountersView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if service.definitions.isEmpty {
-                Text("No counters yet. Tap \"Add Counter\" to create one.")
+                Text("No fields added yet.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 4)
             } else {
-                ForEach(service.definitions) { definition in
-                    HStack(spacing: 10) {
-                        Image(systemName: iconFor(definition.type))
-                            .foregroundStyle(colorFor(definition.type))
-                            .frame(width: 18)
+                VStack(spacing: 0) {
+                    ForEach(Array(service.definitions.enumerated()), id: \.element.id) { index, definition in
+                        HStack(spacing: 10) {
+                            Image(systemName: iconFor(definition.type))
+                                .foregroundStyle(colorFor(definition.type))
+                                .frame(width: 18)
 
-                        Text(definition.label)
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
+                            Text(definition.label)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
 
-                        Spacer()
+                            Spacer()
 
-                        Text(definition.type.displayName)
-                            .font(.caption)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(colorFor(definition.type).opacity(0.15))
-                            .foregroundStyle(colorFor(definition.type))
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-
-                        Button {
-                            editingDefinition = definition
-                        } label: {
-                            Image(systemName: "pencil.circle")
-                                .foregroundStyle(.secondary)
+                            Button("Edit", systemImage: "pencil.circle") {
+                                editingDefinition = definition
+                            }
+                            .labelStyle(.iconOnly)
+                            .foregroundStyle(.secondary)
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
 
-                        Button(role: .destructive) {
-                            service.remove(columnIndex: definition.columnIndex)
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundStyle(.red.opacity(0.8))
+                        if index < service.definitions.count - 1 {
+                            Divider().padding(.leading, 40)
                         }
-                        .buttonStyle(.plain)
                     }
-                    .padding(.vertical, 2)
                 }
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
-            Button("Add Counter", systemImage: "plus.circle.fill", action: { showingAddSheet = true })
+            Divider()
+
+            Button("Add Field", systemImage: "plus.circle.fill", action: { showingAddSheet = true })
                 .font(.subheadline)
                 .foregroundStyle(.blue)
                 .buttonStyle(.plain)
-                .padding(.top, 4)
+                .padding(.top, 8)
         }
         .sheet(isPresented: $showingAddSheet) {
-            CounterEditSheet(mode: .add) { label, type in
-                service.add(label: label, type: type)
+            FieldEditSheet(mode: .add) { label, type, showTotal in
+                service.add(label: label, type: type, showTotal: showTotal)
             }
         }
         .sheet(item: $editingDefinition) { definition in
-            CounterEditSheet(mode: .edit(definition)) { label, type in
-                service.update(columnIndex: definition.columnIndex, label: label, type: type)
+            FieldEditSheet(mode: .edit(definition)) { label, type, showTotal in
+                service.update(columnIndex: definition.columnIndex, label: label, type: type, showTotal: showTotal)
+            } onDelete: {
+                service.remove(columnIndex: definition.columnIndex)
             }
         }
     }
@@ -2527,9 +2523,9 @@ struct InlineCustomCountersView: View {
     }
 }
 
-// MARK: - Full-page Custom Counters (iPad split view, kept for future use)
+// MARK: - Full-page Custom Fields (iPad split view, kept for future use)
 
-struct CustomCountersSettingsView: View {
+struct CustomFieldsSettingsView: View {
     @Environment(ThemeService.self) private var themeService
     @State private var showingAddSheet = false
     @State private var editingDefinition: CustomCounterDefinition? = nil
@@ -2540,7 +2536,7 @@ struct CustomCountersSettingsView: View {
         List {
             Section {
                 if service.definitions.isEmpty {
-                    Text("No counters defined. Tap \"Add Counter\" to create one.")
+                    Text("No fields defined. Tap \"Add Field\" to create one.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
@@ -2580,29 +2576,31 @@ struct CustomCountersSettingsView: View {
                     .onMove(perform: service.move)
                 }
             } footer: {
-                Text("Counters appear in the Add/Edit flight form and as selectable Dashboard cards.")
+                Text("Fields appear in the Add/Edit flight form and as selectable Dashboard cards.")
             }
 
             Section {
-                Button("Add Counter", systemImage: "plus.circle.fill", action: showAdd)
+                Button("Add Field", systemImage: "plus.circle.fill", action: showAdd)
                     .foregroundStyle(.indigo)
             }
         }
         .background(themeService.getGradient().ignoresSafeArea())
         .scrollContentBackground(.hidden)
-        .navigationTitle("Custom Counters")
+        .navigationTitle("Custom Fields")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             EditButton()
         }
         .sheet(isPresented: $showingAddSheet) {
-            CounterEditSheet(mode: .add) { label, type in
-                service.add(label: label, type: type)
+            FieldEditSheet(mode: .add) { label, type, showTotal in
+                service.add(label: label, type: type, showTotal: showTotal)
             }
         }
         .sheet(item: $editingDefinition) { definition in
-            CounterEditSheet(mode: .edit(definition)) { label, type in
-                service.update(columnIndex: definition.columnIndex, label: label, type: type)
+            FieldEditSheet(mode: .edit(definition)) { label, type, showTotal in
+                service.update(columnIndex: definition.columnIndex, label: label, type: type, showTotal: showTotal)
+            } onDelete: {
+                service.remove(columnIndex: definition.columnIndex)
             }
         }
     }
@@ -2628,52 +2626,97 @@ struct CustomCountersSettingsView: View {
     }
 }
 
-// MARK: - Counter Edit Sheet
+// MARK: - Field Edit Sheet
 
-private enum CounterEditMode {
+private enum FieldEditMode {
     case add
     case edit(CustomCounterDefinition)
 }
 
-private struct CounterEditSheet: View {
-    let mode: CounterEditMode
-    var onSave: (String, CounterType) -> Void
+private struct FieldEditSheet: View {
+    let mode: FieldEditMode
+    var onSave: (String, CounterType, Bool) -> Void
+    var onDelete: (() -> Void)?
 
     @State private var label: String
     @State private var type: CounterType
+    @State private var showTotal: Bool
+    @State private var showingDeleteConfirmation = false
     @Environment(\.dismiss) private var dismiss
 
-    init(mode: CounterEditMode, onSave: @escaping (String, CounterType) -> Void) {
+    init(mode: FieldEditMode, onSave: @escaping (String, CounterType, Bool) -> Void, onDelete: (() -> Void)? = nil) {
         self.mode = mode
         self.onSave = onSave
+        self.onDelete = onDelete
         switch mode {
         case .add:
             _label = State(initialValue: "")
             _type = State(initialValue: .integer)
+            _showTotal = State(initialValue: true)
         case .edit(let definition):
             _label = State(initialValue: definition.label)
             _type = State(initialValue: definition.type)
+            _showTotal = State(initialValue: definition.showTotal)
         }
     }
 
     private var title: String {
         switch mode {
-        case .add:  return "Add Counter"
-        case .edit: return "Edit Counter"
+        case .add:  return "Add Field"
+        case .edit: return "Edit Field"
         }
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Counter Details") {
+                Section("Field Details") {
                     TextField("Label", text: $label)
 
-                    Picker("Type", selection: $type) {
-                        ForEach(CounterType.allCases) { counterType in
-                            Text(counterType.displayName).tag(counterType)
+                    ForEach(CounterType.allCases) { counterType in
+                        Button {
+                            type = counterType
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: iconFor(counterType))
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(colorFor(counterType))
+                                    .frame(width: 28)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(counterType.displayName)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.primary)
+                                    Text(counterType.subtitle)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                if type == counterType {
+                                    Image(systemName: "checkmark")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.teal)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Toggle(isOn: $showTotal) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Show Total")
+                                .font(.subheadline)
+                            Text("When off, values aren't summed and no Dashboard card is shown.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
+                    .tint(.teal)
                 }
             }
             .navigationTitle(title)
@@ -2688,11 +2731,48 @@ private struct CounterEditSheet: View {
                         .disabled(label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                if case .edit = mode, onDelete != nil {
+                    Button(role: .destructive) {
+                        showingDeleteConfirmation = true
+                    } label: {
+                        Text("Delete Field")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                    .padding()
+                }
+            }
+            .confirmationDialog("Delete this field?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    onDelete?()
+                    dismiss()
+                }
+            } message: {
+                Text("This will remove the field and all its data cannot be recovered.")
+            }
+        }
+    }
+
+    private func iconFor(_ type: CounterType) -> String {
+        switch type {
+        case .time:    return "clock.fill"
+        case .decimal: return "number.circle.fill"
+        case .integer: return "numbers.rectangle.fill"
+        }
+    }
+
+    private func colorFor(_ type: CounterType) -> Color {
+        switch type {
+        case .time:    return .blue
+        case .decimal: return .orange
+        case .integer: return .teal
         }
     }
 
     private func save() {
-        onSave(label.trimmingCharacters(in: .whitespacesAndNewlines), type)
+        onSave(label.trimmingCharacters(in: .whitespacesAndNewlines), type, showTotal)
         dismiss()
     }
 
