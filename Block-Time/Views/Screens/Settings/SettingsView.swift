@@ -2441,12 +2441,16 @@ private struct ICloudSyncHelpSheet: View {
 struct InlineCustomFieldsView: View {
     @State private var showingAddSheet = false
     @State private var editingDefinition: CustomCounterDefinition? = nil
-    @State private var rowHeight: CGFloat = 44
 
     private var service: CustomCounterService { CustomCounterService.shared }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            Button("Add Field", systemImage: "plus.circle.fill", action: { showingAddSheet = true })
+                .font(.subheadline)
+                .foregroundStyle(.blue)
+                .buttonStyle(.plain)
+
             if service.definitions.isEmpty {
                 Text("No fields added yet.")
                     .font(.caption)
@@ -2472,7 +2476,6 @@ struct InlineCustomFieldsView: View {
                         .buttonStyle(.plain)
                         .listRowBackground(Color(.secondarySystemBackground))
                         .deleteDisabled(true)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowHeight = $0 }
                     }
                     .onMove { source, destination in
                         service.move(fromOffsets: source, toOffset: destination)
@@ -2482,18 +2485,7 @@ struct InlineCustomFieldsView: View {
                 .scrollContentBackground(.hidden)
                 .scrollDisabled(true)
                 .environment(\.editMode, .constant(.active))
-                .frame(height: rowHeight * CGFloat(service.definitions.count))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .background(Color(.secondarySystemBackground).clipShape(RoundedRectangle(cornerRadius: 8)))
             }
-
-            Divider()
-
-            Button("Add Field", systemImage: "plus.circle.fill", action: { showingAddSheet = true })
-                .font(.subheadline)
-                .foregroundStyle(.blue)
-                .buttonStyle(.plain)
-                .padding(.top, 8)
         }
         .sheet(isPresented: $showingAddSheet) {
             FieldEditSheet(mode: .add) { label, type, showTotal in
