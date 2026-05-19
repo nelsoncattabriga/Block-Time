@@ -24,7 +24,7 @@ struct LogbookSpreadsheetView: View {
     @State private var isLoading = true
     @State private var showingDiscardAlert = false
     @State private var activeCounterCount: Int = {
-        UserDefaults.standard.bool(forKey: "useCustomCount")
+        UserDefaults.standard.bool(forKey: "logCustomCount")
             ? CustomCounterService.shared.definitions.count : 0
     }()
 
@@ -106,7 +106,7 @@ struct LogbookSpreadsheetView: View {
                         reload()
                     }
                     .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-                        let count = UserDefaults.standard.bool(forKey: "useCustomCount")
+                        let count = UserDefaults.standard.bool(forKey: "logCustomCount")
                             ? CustomCounterService.shared.definitions.count : 0
                         activeCounterCount = count
                     }
