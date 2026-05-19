@@ -58,8 +58,9 @@ Phases completed: 0 / 7
 | 260519-gta | Fix iPad split view flight list stale row after Save alert | 2026-05-19 | 9b3501f | [260519-gta-fix-ipad-split-view-flight-list-stale-ro](./quick/260519-gta-fix-ipad-split-view-flight-list-stale-ro/) |
 | 260519-i2o | Fix stale Custom Count column in FrozenColumnSpreadsheetView | 2026-05-19 | 72875fb | [260519-i2o-fix-stale-custom-count-column-in-frozenc](./quick/260519-i2o-fix-stale-custom-count-column-in-frozenc/) |
 | 260519-ir7 | Convert InlineCustomFieldsView to List with drag-reorder and swipe-delete | 2026-05-19 | 36c8453 | [260519-ir7-convert-inlinecustomfieldsview-to-list-w](./quick/260519-ir7-convert-inlinecustomfieldsview-to-list-w/) |
+| 260519-j10 | Suppress swipe-to-delete circles in InlineCustomFieldsView | 2026-05-19 | 960bc66 | [260519-j10-suppress-swipe-to-delete-circles-in-inli](./quick/260519-j10-suppress-swipe-to-delete-circles-in-inli/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Converted InlineCustomFieldsView VStack to List with always-active drag handles and swipe-delete (260519-ir7)
+Last activity: 2026-05-19 - Suppressed red delete circles in InlineCustomFieldsView, delete now only via FieldEditSheet (260519-j10)
 Next action: Continue custom fields integration — CSV export, backup/restore, import mapping, PDF print
