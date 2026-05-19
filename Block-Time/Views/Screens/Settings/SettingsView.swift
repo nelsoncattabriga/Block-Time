@@ -2441,6 +2441,7 @@ private struct ICloudSyncHelpSheet: View {
 struct InlineCustomFieldsView: View {
     @State private var showingAddSheet = false
     @State private var editingDefinition: CustomCounterDefinition? = nil
+    @State private var rowHeight: CGFloat = 44
 
     private var service: CustomCounterService { CustomCounterService.shared }
 
@@ -2471,6 +2472,7 @@ struct InlineCustomFieldsView: View {
                         .buttonStyle(.plain)
                         .listRowBackground(Color(.secondarySystemBackground))
                         .deleteDisabled(true)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowHeight = $0 }
                     }
                     .onMove { source, destination in
                         service.move(fromOffsets: source, toOffset: destination)
@@ -2480,7 +2482,7 @@ struct InlineCustomFieldsView: View {
                 .scrollContentBackground(.hidden)
                 .scrollDisabled(true)
                 .environment(\.editMode, .constant(.active))
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(height: rowHeight * CGFloat(service.definitions.count))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .background(Color(.secondarySystemBackground).clipShape(RoundedRectangle(cornerRadius: 8)))
             }
