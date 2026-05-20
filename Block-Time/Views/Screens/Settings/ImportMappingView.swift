@@ -123,6 +123,12 @@ struct RemarksAppendEntry: Identifiable {
     }
 }
 
+// MARK: - Pending Slot Config (for undefined counter slots being configured during import)
+private struct PendingSlotConfig {
+    var label: String = ""
+    var type: CounterType = .integer
+}
+
 // MARK: - Saved Mapping
 private struct SavedRemarksAppendEntry: Codable {
     let sourceColumn: String
@@ -193,6 +199,7 @@ struct ImportMappingView: View {
     @State private var showingRegistrationMapping = false
     @State private var registrationMappings: [RegistrationTypeMapping] = []
     @AppStorage("importTimesAreLocal") private var timesAreLocal = false
+    @State private var pendingSlotConfigs: [Int: PendingSlotConfig] = [:]
 
     enum PreviewSelection: String, CaseIterable, Identifiable {
         case first100 = "First Rows"
@@ -296,6 +303,28 @@ struct ImportMappingView: View {
                             mapping: $mapping,
                             availableHeaders: importData.headers
                         )
+                    }
+                }
+
+                Section(header: Text("Custom Fields")) {
+                    ForEach(1...10, id: \.self) { slot in
+                        let service = CustomCounterService.shared
+                        let def = service.definition(for: slot)
+                        let mappingIndex = fieldMappings.firstIndex { $0.logbookField == "Counter\(slot)" }
+                        if let idx = mappingIndex {
+                            CustomFieldSlotRow(
+                                slot: slot,
+                                mapping: $fieldMappings[idx],
+                                pendingConfig: Binding(
+                                    get: { pendingSlotConfigs[slot] ?? PendingSlotConfig() },
+                                    set: { pendingSlotConfigs[slot] = $0 }
+                                ),
+                                availableHeaders: importData.headers,
+                                isDefined: def != nil,
+                                definitionLabel: def?.label ?? "",
+                                definitionTypeName: def?.type.displayName ?? ""
+                            )
+                        }
                     }
                 }
 
@@ -430,6 +459,17 @@ struct ImportMappingView: View {
                         if let data = try? JSONEncoder().encode(entries) {
                             UserDefaults.standard.set(data, forKey: "LastImportMapping_\(importData.delimiter)")
                         }
+                        // Commit any pending new counter definitions before import
+                        for slot in 1...10 {
+                            guard CustomCounterService.shared.definition(for: slot) == nil else { continue }
+                            guard let mapping = fieldMappings.first(where: { $0.logbookField == "Counter\(slot)" }),
+                                  !mapping.sourceColumns.isEmpty,
+                                  let config = pendingSlotConfigs[slot] else { continue }
+                            let trimmedLabel = config.label.trimmingCharacters(in: .whitespaces)
+                            guard !trimmedLabel.isEmpty else { continue }
+                            CustomCounterService.shared.addToSlot(slot, label: trimmedLabel, type: config.type)
+                            UserDefaults.standard.set(true, forKey: "logCustomCount")
+                        }
                         onImport(fieldMappings, importMode, enableRegistrationMapping ? registrationMappings : [], timesAreLocal)
                         dismiss()
                     }
@@ -445,7 +485,16 @@ struct ImportMappingView: View {
 
     private var isValidMapping: Bool {
         // Check that all required fields are mapped
-        fieldMappings.filter { $0.isRequired }.allSatisfy { !$0.sourceColumns.isEmpty }
+        let requiredMapped = fieldMappings.filter { $0.isRequired }.allSatisfy { !$0.sourceColumns.isEmpty }
+        // Check: any Counter1..10 slot that is undefined but has a column assigned must have a non-empty label
+        let counterSlotsValid = (1...10).allSatisfy { slot in
+            guard CustomCounterService.shared.definition(for: slot) == nil else { return true }
+            let mapping = fieldMappings.first { $0.logbookField == "Counter\(slot)" }
+            guard let cols = mapping?.sourceColumns, !cols.isEmpty else { return true }
+            let label = pendingSlotConfigs[slot]?.label.trimmingCharacters(in: .whitespaces) ?? ""
+            return !label.isEmpty
+        }
+        return requiredMapped && counterSlotsValid
     }
 
     private var previewRows: [[String]] {
@@ -558,7 +607,31 @@ struct ImportMappingView: View {
                 supportsMultipleColumns: supportsMultiple
             )
         }
-        return (mappings: mappings, profileName: detected?.name)
+
+        // Append Counter1…Counter10 entries with auto-detection for defined slots
+        let service = CustomCounterService.shared
+        var counterMappings: [FieldMapping] = []
+        for slot in 1...10 {
+            let logbookKey = "Counter\(slot)"
+            var detectedColumn: String? = nil
+            if let def = service.definition(for: slot) {
+                // Fuzzy-match: normalize def.label, check if any header contains/prefixes it
+                let normLabel = normalize(def.label)
+                detectedColumn = headers.first { h in
+                    let normH = normalize(h)
+                    return normH == normLabel || normH.hasPrefix(normLabel) || normLabel.hasPrefix(normH)
+                }
+            }
+            counterMappings.append(FieldMapping(
+                logbookField: logbookKey,
+                logbookFieldDescription: service.definition(for: slot)?.label ?? "Custom Field \(slot)",
+                sourceColumn: detectedColumn,
+                isRequired: false,
+                supportsMultipleColumns: false
+            ))
+        }
+        let allMappings = mappings + counterMappings
+        return (mappings: allMappings, profileName: detected?.name)
     }
 
     // MARK: - Column Detection
@@ -970,6 +1043,84 @@ struct FieldMappingRow: View {
                 selectedColumns: $appendPickerSelection,
                 availableHeaders: availableHeaders,
                 fieldName: "Append to Remarks",
+                allowMultiple: false
+            )
+        }
+    }
+}
+
+// MARK: - Custom Field Slot Row
+private struct CustomFieldSlotRow: View {
+    let slot: Int
+    @Binding var mapping: FieldMapping
+    @Binding var pendingConfig: PendingSlotConfig
+    let availableHeaders: [String]
+    let isDefined: Bool
+    let definitionLabel: String      // non-empty when isDefined
+    let definitionTypeName: String   // non-empty when isDefined
+
+    @State private var showingColumnPicker = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if isDefined {
+                HStack(spacing: 6) {
+                    Text(definitionLabel)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text("· \(definitionTypeName)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            } else {
+                HStack {
+                    Text("Custom Field \(slot)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+
+            // Column picker button (same style as FieldMappingRow single-column picker)
+            Button { showingColumnPicker.toggle() } label: {
+                HStack {
+                    if let selected = mapping.sourceColumns.first {
+                        Text(selected).lineLimit(1)
+                    } else {
+                        Text("Not Mapped").foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.down").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(8)
+                .background(Color(.systemGray6).opacity(0.75))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            // Inline label + type config — only for undefined slots that have a column assigned
+            if !isDefined && !mapping.sourceColumns.isEmpty {
+                HStack(spacing: 8) {
+                    TextField("Label", text: $pendingConfig.label)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.subheadline)
+                    Picker("Type", selection: $pendingConfig.type) {
+                        ForEach(CounterType.allCases) { t in
+                            Text(t.displayName).tag(t)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(.vertical, 4)
+        .sheet(isPresented: $showingColumnPicker) {
+            ColumnPickerView(
+                selectedColumns: $mapping.sourceColumns,
+                availableHeaders: availableHeaders,
+                fieldName: isDefined ? definitionLabel : "Custom Field \(slot)",
                 allowMultiple: false
             )
         }
