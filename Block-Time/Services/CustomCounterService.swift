@@ -47,6 +47,15 @@ final class CustomCounterService {
         persist()
     }
 
+    /// Inserts a definition at a specific slot index. No-ops if that slot is already occupied.
+    func addToSlot(_ columnIndex: Int, label: String, type: CounterType, showTotal: Bool = true) {
+        guard (1...10).contains(columnIndex) else { return }
+        guard !definitions.contains(where: { $0.columnIndex == columnIndex }) else { return }
+        let definition = CustomCounterDefinition(columnIndex: columnIndex, label: label, type: type, showTotal: showTotal)
+        definitions.append(definition)
+        persist()
+    }
+
     func remove(columnIndex: Int) {
         definitions.removeAll { $0.columnIndex == columnIndex }
         persist()
