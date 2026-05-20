@@ -64,8 +64,9 @@ Phases completed: 0 / 7
 | 260519-ctr | Round-trip custom counter definitions + values in backup/restore | 2026-05-19 | 3b07bef | [260519-ctr-backup-restore-custom-counters](./quick/260519-ctr-backup-restore-custom-counters/) |
 | 260519-pds | Fix blank DefinitionConflictSheet — switch to sheet(item:) with PendingDefinitions | 2026-05-19 | 7c45530 | — |
 | 260520-sqy | Add useLabelsAsHeaders param to exportToCSV; ExportLogbookView passes true | 2026-05-20 | 7bf55b6 | [260520-sqy-add-uselabelsasheaders-param-to-exportto](./quick/260520-sqy-add-uselabelsasheaders-param-to-exportto/) |
+| 260520-t6j | Add custom fields section to ImportMappingView | 2026-05-20 | 0370e6d | [260520-t6j-add-custom-fields-section-to-importmappi](./quick/260520-t6j-add-custom-fields-section-to-importmappi/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-20 - CSV export now uses label-based headers for user-facing export; backup keeps Counter<N> keys (260520-sqy)
-Next action: Continue custom fields integration — CSV import mapping, PDF print
+Last activity: 2026-05-20 - Custom Fields section added to ImportMappingView with 10 slot rows, inline define-on-import, and addToSlot commit before onImport fires (260520-t6j)
+Next action: Continue custom fields integration — PDF/print integration
