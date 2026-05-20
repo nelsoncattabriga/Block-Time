@@ -136,7 +136,12 @@ struct ExportLogbookView: View {
                     return f1.date < f2.date
                 }
 
-                let csvString = FileImportService.shared.exportToCSV(flights: sortedFlights)
+                let definitions = CustomCounterService.shared.definitions
+                let csvString = FileImportService.shared.exportToCSV(
+                    flights: sortedFlights,
+                    definitions: definitions,
+                    useLabelsAsHeaders: true
+                )
 
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd_HHmm"
