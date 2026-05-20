@@ -63,8 +63,9 @@ Phases completed: 0 / 7
 | 260519-ka3 | Add CloudKit KVS sync for CustomCounterDefinition array | 2026-05-19 | d834545 | [260519-ka3-add-cloudkit-kvs-sync-for-customcounterd](./quick/260519-ka3-add-cloudkit-kvs-sync-for-customcounterd/) |
 | 260519-ctr | Round-trip custom counter definitions + values in backup/restore | 2026-05-19 | 3b07bef | [260519-ctr-backup-restore-custom-counters](./quick/260519-ctr-backup-restore-custom-counters/) |
 | 260519-pds | Fix blank DefinitionConflictSheet — switch to sheet(item:) with PendingDefinitions | 2026-05-19 | 7c45530 | — |
+| 260520-sqy | Add useLabelsAsHeaders param to exportToCSV; ExportLogbookView passes true | 2026-05-20 | 7bf55b6 | [260520-sqy-add-uselabelsasheaders-param-to-exportto](./quick/260520-sqy-add-uselabelsasheaders-param-to-exportto/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Custom counter backup/restore complete: #DEFINITIONS: line in CSV, Counter1–Counter10 columns, DefinitionConflictSheet for merge conflicts (260519-ctr)
-Next action: Continue custom fields integration — CSV export (standalone), CSV import mapping, PDF print
+Last activity: 2026-05-20 - CSV export now uses label-based headers for user-facing export; backup keeps Counter<N> keys (260520-sqy)
+Next action: Continue custom fields integration — CSV import mapping, PDF print
