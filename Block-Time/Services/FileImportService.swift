@@ -1258,7 +1258,7 @@ class FileImportService {
     }
 
     /// Thread-safe overload: caller supplies pre-captured definitions (use when calling from a background thread).
-    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition]) -> String {
+    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition], useLabelsAsHeaders: Bool = false) -> String {
         let definitions = definitions.sorted { $0.columnIndex < $1.columnIndex }
 
         // Prepend #DEFINITIONS: line if any counters are configured
@@ -1272,7 +1272,8 @@ class FileImportService {
         // Build header row — keep legacy Custom Count, append Counter1…CounterN
         var headerRow = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks,Custom Count"
         for def in definitions {
-            headerRow += ",Counter\(def.columnIndex)"
+            let header = useLabelsAsHeaders ? def.label : "Counter\(def.columnIndex)"
+            headerRow += ",\(header)"
         }
         result += headerRow + "\n"
 
