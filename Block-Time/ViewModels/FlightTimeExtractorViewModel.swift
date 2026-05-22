@@ -39,7 +39,6 @@ struct DraftFlightData: Codable {
     let isICUS: Bool
     let selectedTimeCredit: TimeCreditType
     let remarks: String
-    var customCount: Int = 0
     let dayTakeoffs: Int
     let dayLandings: Int
     let nightTakeoffs: Int
@@ -158,7 +157,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
     }
     @Published var remarks = ""
-    @Published var customCount = 0
     @Published var counterValues: [Int: String] = [:]
     @Published var dayTakeoffs = 0
     @Published var dayLandings = 0
@@ -1629,7 +1627,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             inTime: inTime,
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
-            customCount: isPositioning ? 0 : customCount,
             counterEntries: isPositioning ? [:] : currentCounterEntries()
         )
                     LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), p2Time=\(newFlight.p2Time)")
@@ -1779,7 +1776,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
 //        print("DEBUG: Set selectedApproachType to: \(selectedApproachType ?? "nil")")
 
         remarks = sector.remarks
-        customCount = sector.customCount
         dayTakeoffs = sector.dayTakeoffs
         dayLandings = sector.dayLandings
         nightTakeoffs = sector.nightTakeoffs
@@ -1944,7 +1940,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             inTime: inTime,
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
-            customCount: isPositioning ? 0 : customCount,
             counterEntries: isPositioning ? [:] : currentCounterEntries()
         )
 
@@ -2044,7 +2039,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
                isSpIns != (original.isSpInsOnly || original.isAircraftInstruction) ||
                isInstructingInAircraft != original.isAircraftInstruction ||
                remarks != original.remarks ||
-               customCount != original.customCount ||
                dayTakeoffs != original.dayTakeoffs ||
                dayLandings != original.dayLandings ||
                nightTakeoffs != original.nightTakeoffs ||
@@ -2174,10 +2168,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         if remarks != original.remarks {
             changes.append("Remarks updated")
-        }
-
-        if customCount != original.customCount {
-            changes.append("\(customCountLabel): \(original.customCount) → \(customCount)")
         }
 
         let newEntries = currentCounterEntries()
@@ -2594,7 +2584,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
         simInsTimeIsManual = false
         isPositioning = false
         remarks = ""
-        customCount = 0
         counterValues = [:]
         dayTakeoffs = 0
         dayLandings = 0
@@ -2883,7 +2872,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 inTime: inTime,
                 scheduledDeparture: scheduledDeparture,
                 scheduledArrival: scheduledArrival,
-                customCount: isPositioning ? 0 : customCount,
                 counterEntries: isPositioning ? [:] : currentCounterEntries()
             )
 
@@ -2939,7 +2927,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 inTime: inTime,
                 scheduledDeparture: scheduledDeparture,
                 scheduledArrival: scheduledArrival,
-                customCount: isPositioning ? 0 : customCount,
                 counterEntries: isPositioning ? [:] : currentCounterEntries()
             )
                         LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), isSimulator=\(isSimulator), simTime=\(newFlight.simTime), blockTime=\(newFlight.blockTime), p2Time=\(newFlight.p2Time)")
@@ -3387,7 +3374,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             isICUS: isICUS,
             selectedTimeCredit: selectedTimeCredit,
             remarks: remarks,
-            customCount: customCount,
             dayTakeoffs: dayTakeoffs,
             dayLandings: dayLandings,
             nightTakeoffs: nightTakeoffs,
@@ -3453,7 +3439,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             isICUS = draft.isICUS
             selectedTimeCredit = draft.selectedTimeCredit
             remarks = draft.remarks
-            customCount = draft.customCount
             dayTakeoffs = draft.dayTakeoffs
             dayLandings = draft.dayLandings
             nightTakeoffs = draft.nightTakeoffs
