@@ -68,8 +68,9 @@ Phases completed: 0 / 7
 | 260522-ke8 | Retire legacy customCount field across app (UI, import/export, FlightSector, DB writes) | 2026-05-22 | 6c557d2 | [260522-ke8-retire-legacy-customcount-field-across-a](./quick/260522-ke8-retire-legacy-customcount-field-across-a/) |
 | 260522-lvy | Fix duplicate Counter1-10 rows in ImportMappingView generic Field Mapping section | 2026-05-22 | ddb7982 | [260522-lvy-fix-duplicate-counter1-10-rows-in-import](./quick/260522-lvy-fix-duplicate-counter1-10-rows-in-import/) |
 | 260522-m4f | Move InlineCustomFieldsView into its own card in Crew & Ops Data settings | 2026-05-22 | 2a795ac | [260522-m4f-move-inlinecustomfieldsview-into-its-own](./quick/260522-m4f-move-inlinecustomfieldsview-into-its-own/) |
+| 260522-u9i | Revamp FieldEditSheet to card-based layout in Settings | 2026-05-22 | 92ee3f7 | [260522-u9i-revamp-fieldeditsheet-to-card-based-layo](./quick/260522-u9i-revamp-fieldeditsheet-to-card-based-layo/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-22 - Extracted InlineCustomFieldsView into standalone ModernCustomFieldsCard in Settings (260522-m4f)
+Last activity: 2026-05-22 - Revamped FieldEditSheet from Form to card-based ScrollView layout (260522-u9i)
 Next action: Continue custom fields integration — PDF/print integration
