@@ -2695,7 +2695,7 @@ private struct FieldEditSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemBackground).ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 20) {
@@ -2711,7 +2711,7 @@ private struct FieldEditSheet: View {
                                     .font(.subheadline)
                             }
                             .padding(12)
-                            .background(Color(.systemGray6).opacity(0.75))
+                            .background(Color(.systemGray6))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
 
@@ -2766,7 +2766,7 @@ private struct FieldEditSheet: View {
                                     }
                                 }
                             }
-                            .background(Color(.systemGray6).opacity(0.75))
+                            .background(Color(.systemGray6))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
 
