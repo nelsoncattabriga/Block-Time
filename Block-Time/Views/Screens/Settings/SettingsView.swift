@@ -2690,54 +2690,107 @@ private struct FieldEditSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Field Details") {
-                    TextField("Label", text: $label)
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
-                    ForEach(CounterType.allCases) { counterType in
-                        Button {
-                            type = counterType
-                        } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: iconFor(counterType))
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(colorFor(counterType))
-                                    .frame(width: 28)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // LABEL section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("LABEL")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
 
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(counterType.displayName)
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(.primary)
-                                    Text(counterType.subtitle)
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
-                                }
+                            VStack {
+                                TextField("Label", text: $label)
+                                    .font(.subheadline)
+                            }
+                            .padding(12)
+                            .background(Color(.systemGray6).opacity(0.75))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
 
-                                Spacer()
+                        // TYPE section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("TYPE")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
 
-                                if type == counterType {
-                                    Image(systemName: "checkmark")
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.teal)
+                            VStack(spacing: 0) {
+                                ForEach(CounterType.allCases.enumerated(), id: \.element.id) { index, counterType in
+                                    Button {
+                                        type = counterType
+                                    } label: {
+                                        HStack(spacing: 14) {
+                                            Image(systemName: iconFor(counterType))
+                                                .font(.system(size: 20))
+                                                .foregroundStyle(colorFor(counterType))
+                                                .frame(width: 28)
+
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(counterType.displayName)
+                                                    .font(.subheadline)
+                                                    .fontWeight(.medium)
+                                                    .foregroundStyle(.primary)
+                                                Text(counterType.subtitle)
+                                                    .font(.footnote)
+                                                    .foregroundStyle(.secondary)
+                                            }
+
+                                            Spacer()
+
+                                            if type == counterType {
+                                                Image(systemName: "checkmark")
+                                                    .font(.subheadline.weight(.semibold))
+                                                    .foregroundStyle(.blue)
+                                            }
+                                        }
+                                        .padding(12)
+                                        .contentShape(Rectangle())
+                                        .background(
+                                            type == counterType
+                                                ? colorFor(counterType).opacity(0.10)
+                                                : Color.clear
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    if index < CounterType.allCases.count - 1 {
+                                        Divider()
+                                    }
                                 }
                             }
-                            .padding(.vertical, 4)
-                            .contentShape(Rectangle())
+                            .background(Color(.systemGray6).opacity(0.75))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .buttonStyle(.plain)
-                    }
 
-                    Toggle(isOn: $showTotal) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Show Total")
-                                .font(.subheadline)
-                            Text("When off, values aren't summed and no Dashboard card is shown.")
-                                .font(.caption)
+                        // OPTIONS section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("OPTIONS")
+                                .font(.caption.bold())
                                 .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
+
+                            VStack {
+                                Toggle(isOn: $showTotal) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Show Total")
+                                            .font(.subheadline)
+                                        Text("When off, values aren't summed and no Dashboard card is shown.")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .tint(.blue)
+                            }
+                            .padding(12)
+                            .background(Color(.systemGray6).opacity(0.75))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
-                    .tint(.teal)
+                    .padding(16)
                 }
             }
             .navigationTitle(title)
