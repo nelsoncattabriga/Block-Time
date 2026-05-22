@@ -295,7 +295,6 @@ class FlightDatabaseService: ObservableObject {
             flight.inTime = sector.inTime
             flight.scheduledDeparture = sector.scheduledDeparture
             flight.scheduledArrival = sector.scheduledArrival
-            flight.customCount = Int16(sector.customCount)
             flight.createdAt = Date()
             flight.modifiedAt = Date()
 
@@ -367,7 +366,6 @@ class FlightDatabaseService: ObservableObject {
                 flight.inTime = sector.inTime
                 flight.scheduledDeparture = sector.scheduledDeparture
                 flight.scheduledArrival = sector.scheduledArrival
-                flight.customCount = Int16(sector.customCount)
                 flight.modifiedAt = Date()
 
                 // Clear all counter columns then write current values
@@ -448,7 +446,6 @@ class FlightDatabaseService: ObservableObject {
                     flight.inTime = updatedSector.inTime
                     flight.scheduledDeparture = updatedSector.scheduledDeparture
                     flight.scheduledArrival = updatedSector.scheduledArrival
-                    flight.customCount = Int16(updatedSector.customCount)
                     flight.modifiedAt = Date()
                 }
 
@@ -1067,7 +1064,6 @@ class FlightDatabaseService: ObservableObject {
                 inTime: sector.inTime,
                 scheduledDeparture: sector.scheduledDeparture,
                 scheduledArrival: sector.scheduledArrival,
-                customCount: sector.customCount,
                 counterEntries: sector.counterEntries
             )
             if saveFlight(copy) { savedCount += 1 }
@@ -1360,7 +1356,6 @@ class FlightDatabaseService: ObservableObject {
                 flight.inTime = sector.inTime
                 flight.scheduledDeparture = sector.scheduledDeparture
                 flight.scheduledArrival = sector.scheduledArrival
-                flight.customCount = Int16(sector.customCount)
                 flight.importSessionID = sessionID
                 flight.importedAt = Date()
                 flight.createdAt = batchBaseTime.addingTimeInterval(Double(sectorIndex) * 0.001)
@@ -2200,7 +2195,6 @@ class FlightDatabaseService: ObservableObject {
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
             scheduledArrival: entity.scheduledArrival ?? "",
-            customCount: Int(entity.customCount),
             counterEntries: counterEntriesDict(from: entity),
             createdAt: entity.createdAt
         )
