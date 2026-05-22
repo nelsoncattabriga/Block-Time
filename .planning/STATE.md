@@ -65,8 +65,9 @@ Phases completed: 0 / 7
 | 260519-pds | Fix blank DefinitionConflictSheet — switch to sheet(item:) with PendingDefinitions | 2026-05-19 | 7c45530 | — |
 | 260520-sqy | Add useLabelsAsHeaders param to exportToCSV; ExportLogbookView passes true | 2026-05-20 | 7bf55b6 | [260520-sqy-add-uselabelsasheaders-param-to-exportto](./quick/260520-sqy-add-uselabelsasheaders-param-to-exportto/) |
 | 260520-t6j | Add custom fields section to ImportMappingView | 2026-05-20 | 0370e6d | [260520-t6j-add-custom-fields-section-to-importmappi](./quick/260520-t6j-add-custom-fields-section-to-importmappi/) |
+| 260522-ke8 | Retire legacy customCount field across app (UI, import/export, FlightSector, DB writes) | 2026-05-22 | 6c557d2 | [260522-ke8-retire-legacy-customcount-field-across-a](./quick/260522-ke8-retire-legacy-customcount-field-across-a/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-20 - Custom Fields section added to ImportMappingView with 10 slot rows, inline define-on-import, and addToSlot commit before onImport fires (260520-t6j)
+Last activity: 2026-05-22 - Retired legacy customCount from FlightSector, all UI, import/export, and DB write paths. Migration code and Core Data attribute untouched (260522-ke8)
 Next action: Continue custom fields integration — PDF/print integration
