@@ -18,7 +18,6 @@ struct DashboardCardView: View {
 
     @State private var showTimesInHoursMinutes: Bool =
         UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
-    @AppStorage("logCustomCount") private var logCustomCount: Bool = false
     @AppStorage("showSpInsSelector") private var showSpInsSelector: Bool = false
     @AppStorage("countSimInTotal") private var countSimInTotal: Bool = true
     @Environment(\.horizontalSizeClass) private var naturalSizeClass
@@ -100,7 +99,7 @@ struct DashboardCardView: View {
         case .careerMilestones:
             CareerMilestonesCard(stats: viewModel.careerStats)
         case .customCount:
-            if logCustomCount { CustomCountCard() }
+            if !CustomCounterService.shared.definitions.isEmpty { CustomCountCard() }
         case .punctuality:
             PunctualityCard()
         case .crewFrequency:

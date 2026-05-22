@@ -273,8 +273,7 @@ final class SpreadsheetContainerView: UIView {
     // MARK: Counter column helpers
 
     private var counterDefinitions: [CustomCounterDefinition] {
-        let useCustomFields = UserDefaults.standard.bool(forKey: "logCustomCount")
-        return useCustomFields ? CustomCounterService.shared.definitions : []
+        CustomCounterService.shared.definitions
     }
 
     private var counterCount: Int { counterDefinitions.count }
@@ -767,8 +766,7 @@ final class RightCell: UITableViewCell {
     }
 
     func configure(flight: FlightSector, index: Int, highlighted: Bool, config: SpreadsheetDisplayConfig) {
-        let useCustomFields = UserDefaults.standard.bool(forKey: "logCustomCount")
-        let definitions = useCustomFields ? CustomCounterService.shared.definitions : []
+        let definitions = CustomCounterService.shared.definitions
         let counterCount = definitions.count
 
         if builtCounterCount != counterCount {

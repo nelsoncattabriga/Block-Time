@@ -93,8 +93,10 @@ struct CustomCountCard: View {
             flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
         }
 
-        let eligible = flights.filter { !$0.isPositioning && $0.customCount > 0 }
-        total = eligible.reduce(0) { $0 + $1.customCount }
+        let eligible = flights.filter {
+            !$0.isPositioning && (Int($0.counterEntries[1] ?? "") ?? 0) > 0
+        }
+        total = eligible.reduce(0) { $0 + (Int($1.counterEntries[1] ?? "") ?? 0) }
         flightCount = eligible.count
     }
 }
