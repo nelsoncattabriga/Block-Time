@@ -2883,7 +2883,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 inTime: inTime,
                 scheduledDeparture: scheduledDeparture,
                 scheduledArrival: scheduledArrival,
-                customCount: isPositioning ? 0 : customCount
+                customCount: isPositioning ? 0 : customCount,
+                counterEntries: isPositioning ? [:] : currentCounterEntries()
             )
 
             if databaseService.updateScheduledFlightWithActualData(scheduledFlight, actualData: actualFlightData) {
@@ -2938,7 +2939,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 inTime: inTime,
                 scheduledDeparture: scheduledDeparture,
                 scheduledArrival: scheduledArrival,
-                customCount: isPositioning ? 0 : customCount
+                customCount: isPositioning ? 0 : customCount,
+                counterEntries: isPositioning ? [:] : currentCounterEntries()
             )
                         LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), isSimulator=\(isSimulator), simTime=\(newFlight.simTime), blockTime=\(newFlight.blockTime), p2Time=\(newFlight.p2Time)")
 
