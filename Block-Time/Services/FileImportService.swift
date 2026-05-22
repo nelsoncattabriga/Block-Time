@@ -1258,12 +1258,13 @@ class FileImportService {
     }
 
     /// Thread-safe overload: caller supplies pre-captured definitions (use when calling from a background thread).
-    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition], useLabelsAsHeaders: Bool = false) -> String {
+    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition], useLabelsAsHeaders: Bool = false, writeDefinitionsHeader: Bool = true) -> String {
         let definitions = definitions.sorted { $0.columnIndex < $1.columnIndex }
 
-        // Prepend #DEFINITIONS: line if any counters are configured
+        // Prepend #DEFINITIONS: line if any counters are configured (backup only)
         var result = ""
-        if !definitions.isEmpty,
+        if writeDefinitionsHeader,
+           !definitions.isEmpty,
            let data = try? JSONEncoder().encode(definitions),
            let json = String(data: data, encoding: .utf8) {
             result += "#DEFINITIONS:\(json)\n"

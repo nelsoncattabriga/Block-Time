@@ -140,7 +140,8 @@ struct ExportLogbookView: View {
                 let csvString = FileImportService.shared.exportToCSV(
                     flights: sortedFlights,
                     definitions: definitions,
-                    useLabelsAsHeaders: true
+                    useLabelsAsHeaders: true,
+                    writeDefinitionsHeader: false
                 )
 
                 let dateFormatter = DateFormatter()
