@@ -589,8 +589,7 @@ struct ImportMappingView: View {
             ("GLS", "GLS (yes/no, true/false, 1/0)", false, false),
             ("NPA", "NPA (yes/no, true/false, 1/0)", false, false),
             ("AIII", "AIII (yes/no, true/false, 1/0)", false, false),
-            ("Remarks", "Remarks/notes", false, false),
-            ("Custom Count", "Custom numeric counter (e.g. PAX carried)", false, false)
+            ("Remarks", "Remarks/notes", false, false)
         ]
 
         // Detect app profile once for all fields

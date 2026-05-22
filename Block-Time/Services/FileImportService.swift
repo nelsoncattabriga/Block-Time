@@ -614,8 +614,6 @@ class FileImportService {
         let isGLS = parseBool(getValue("GLS"))
         let isNPA = parseBool(getValue("NPA"))
         let isPositioning = parseBool(getValue("PAX"))
-        let customCountRaw = getValue("Custom Count")
-        let customCount = Int(customCountRaw.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
 
         // If Pilot Flying is not set or false, check if we should infer it from Instrument Time
         if !isPilotFlying {
@@ -759,8 +757,7 @@ class FileImportService {
             outTime: outTime,
             inTime: inTime,
             scheduledDeparture: scheduledDeparture,
-            scheduledArrival: scheduledArrival,
-            customCount: isPositioning ? 0 : max(0, customCount)
+            scheduledArrival: scheduledArrival
         )
 
         // Populate custom counter entries from Counter1…Counter10 columns
@@ -1237,7 +1234,7 @@ class FileImportService {
             } else if headerLower == "pax" {
                 mappings.append(FieldMapping(logbookField: "PAX", logbookFieldDescription: "PAX", sourceColumn: header, isRequired: false))
             } else if headerLower == "custom count" {
-                mappings.append(FieldMapping(logbookField: "Custom Count", logbookFieldDescription: "Custom Count", sourceColumn: header, isRequired: false))
+                mappings.append(FieldMapping(logbookField: "Counter1", logbookFieldDescription: "Counter 1", sourceColumn: header, isRequired: false))
             } else if let idx = parseCounterColumnIndex(headerLower) {
                 mappings.append(FieldMapping(logbookField: "Counter\(idx)", logbookFieldDescription: "Counter \(idx)", sourceColumn: header, isRequired: false))
             } else if headerLower == "remarks" {
@@ -1270,8 +1267,8 @@ class FileImportService {
             result += "#DEFINITIONS:\(json)\n"
         }
 
-        // Build header row — keep legacy Custom Count, append Counter1…CounterN
-        var headerRow = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks,Custom Count"
+        // Build header row, append Counter1…CounterN
+        var headerRow = "Date,Flight Number,Aircraft Reg,Aircraft Type,From Airport,To Airport,Captain Name,F/O Name,S/O1 Name,S/O2 Name,STD,STA,OUT Time,IN Time,Block Time,Night Time,P1 Time,P1US Time,P2 Time,Instrument Time,SIM Time,Sp/Ins Time,PAX,Pilot Flying,AIII,RNP,ILS,GLS,NPA,Day Takeoffs,Day Landings,Night Takeoffs,Night Landings,Remarks"
         for def in definitions {
             let header = useLabelsAsHeaders ? def.label : "Counter\(def.columnIndex)"
             headerRow += ",\(header)"
@@ -1314,8 +1311,7 @@ class FileImportService {
                 String(flight.dayLandings),
                 String(flight.nightTakeoffs),
                 String(flight.nightLandings),
-                escapeCSVField(flight.remarks),
-                flight.customCount > 0 ? String(flight.customCount) : ""
+                escapeCSVField(flight.remarks)
             ]
             for def in definitions {
                 row.append(flight.counterEntries[def.columnIndex] ?? "")
