@@ -299,10 +299,12 @@ struct ImportMappingView: View {
                         .listRowBackground(Color.green.opacity(0.08))
                     }
                     ForEach($fieldMappings) { $mapping in
-                        FieldMappingRow(
-                            mapping: $mapping,
-                            availableHeaders: importData.headers
-                        )
+                        if !isCustomCounterField(mapping.logbookField) {
+                            FieldMappingRow(
+                                mapping: $mapping,
+                                availableHeaders: importData.headers
+                            )
+                        }
                     }
                 }
 
@@ -508,6 +510,17 @@ struct ImportMappingView: View {
         case .last100:
             return Array(importData.rows.suffix(maxRows))
         }
+    }
+
+    // MARK: - Field Classification
+
+    /// Returns true for logbookField values of the form "Counter" followed by one or more digits
+    /// (e.g. "Counter1"…"Counter10"). These entries render exclusively in the "Custom Fields"
+    /// section and must be excluded from the generic "Field Mapping" ForEach.
+    private func isCustomCounterField(_ logbookField: String) -> Bool {
+        guard logbookField.hasPrefix("Counter") else { return false }
+        let suffix = logbookField.dropFirst("Counter".count)
+        return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
     }
 
     // MARK: - Registration Pattern Detection
