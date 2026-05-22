@@ -2860,8 +2860,8 @@ private struct FieldEditSheet: View {
     private func subtitleFor(_ type: CounterType) -> String {
         if type == .time {
             return showAsHHMM
-                ? "Duration, e.g. Dual Time. Shown as 1:30"
-                : "Duration, e.g. Dual Time. Shown as 1.5"
+                ? "Duration, Shown as 1:30"
+                : "Duration, Shown as 1.5"
         }
         return type.subtitle
     }
