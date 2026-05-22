@@ -374,5 +374,13 @@ private func fieldRow(for definition: CustomCounterDefinition, viewModel: Flight
         FieldDecimalField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
     case .integer:
         FieldIntegerField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
+    case .text:
+        ModernRemarksField(
+            label: definition.label,
+            value: binding,
+            icon: "text.alignleft",
+            placeholder: "Add text...",
+            keyboardToolbar: keyboardToolbar
+        )
     }
 }

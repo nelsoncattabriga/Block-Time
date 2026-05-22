@@ -395,6 +395,7 @@ struct ModernRemarksField: View {
     let label: String
     @Binding var value: String
     let icon: String
+    var placeholder: String = "Add remarks..."
     var keyboardToolbar: KeyboardToolbarState? = nil
     @FocusState private var editorFocused: Bool
 
@@ -412,7 +413,7 @@ struct ModernRemarksField: View {
 
             ZStack(alignment: .topLeading) {
                 if value.isEmpty {
-                    Text("Add remarks...")
+                    Text(placeholder)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 4)

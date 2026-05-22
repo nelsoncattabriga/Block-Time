@@ -11,6 +11,7 @@ enum CounterType: String, Codable, CaseIterable, Identifiable {
     case time     // HH:MM via ModernDecimalTimeField
     case decimal  // decimal keyboard
     case integer  // integer keyboard
+    case text     // free-form text, no totalling
 
     var id: String { rawValue }
 
@@ -19,6 +20,7 @@ enum CounterType: String, Codable, CaseIterable, Identifiable {
         case .integer: return "Count"
         case .decimal: return "Decimal"
         case .time:    return "Time"
+        case .text:    return "Text"
         }
     }
 
@@ -27,6 +29,7 @@ enum CounterType: String, Codable, CaseIterable, Identifiable {
         case .integer: return "Whole numbers, e.g. PAX, approaches."
         case .decimal: return "Decimal numbers, e.g. fuel, distance. Shown as 1.5"
         case .time:    return "Duration, e.g. Dual Time. Shown as 1:30 or 1.5"
+        case .text:    return "Notes, codes, or any text value"
         }
     }
 }
