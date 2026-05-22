@@ -476,7 +476,10 @@ class MigrationImportService {
                 inTime: migrationFlight.inTime,
                 scheduledDeparture: migrationFlight.scheduledDeparture,
                 scheduledArrival: migrationFlight.scheduledArrival,
-                customCount: migrationFlight.customCount ?? 0
+                counterEntries: {
+                    guard let cc = migrationFlight.customCount, cc > 0 else { return [:] }
+                    return [1: String(cc)]
+                }()
             )
         }
 

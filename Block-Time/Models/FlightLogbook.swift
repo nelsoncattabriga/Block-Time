@@ -101,7 +101,6 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var inTime: String
     var scheduledDeparture: String  // STD - Scheduled Time of Departure (HHMM format)
     var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
-    var customCount: Int
     var counterEntries: [Int: String] = [:]  // columnIndex → raw value
     var createdAt: Date?
     let parsedDate: Date?
@@ -112,7 +111,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         case blockTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, simTime, spInsTime
         case isPilotFlying, isPositioning, isAIII, isRNP, isILS, isGLS, isNPA
         case remarks, dayTakeoffs, dayLandings, nightTakeoffs, nightLandings
-        case outTime, inTime, scheduledDeparture, scheduledArrival, customCount, counterEntries, createdAt
+        case outTime, inTime, scheduledDeparture, scheduledArrival, counterEntries, createdAt
     }
 
     // MARK: - Validate and clean time string values
@@ -134,7 +133,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
          isILS: Bool = false, isGLS: Bool = false, isNPA: Bool = false, remarks: String = "",
          dayTakeoffs: Int = 0, dayLandings: Int = 0, nightTakeoffs: Int = 0, nightLandings: Int = 0,
          outTime: String = "", inTime: String = "", scheduledDeparture: String = "", scheduledArrival: String = "",
-         customCount: Int = 0, counterEntries: [Int: String] = [:], createdAt: Date? = nil) {
+         counterEntries: [Int: String] = [:], createdAt: Date? = nil) {
         self.id = id ?? UUID()
         self.date = date
         self.flightNumber = flightNumber
@@ -170,7 +169,6 @@ struct FlightSector: Identifiable, Codable, Hashable {
         self.inTime = inTime
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
-        self.customCount = max(0, customCount)
         self.counterEntries = counterEntries
         self.createdAt = createdAt
         self.parsedDate = FlightSector.cachedDateFormatter.date(from: date)
@@ -222,7 +220,6 @@ struct FlightSector: Identifiable, Codable, Hashable {
         inTime = try c.decode(String.self, forKey: .inTime)
         scheduledDeparture = try c.decode(String.self, forKey: .scheduledDeparture)
         scheduledArrival = try c.decode(String.self, forKey: .scheduledArrival)
-        customCount = try c.decode(Int.self, forKey: .customCount)
         counterEntries = (try? c.decodeIfPresent([Int: String].self, forKey: .counterEntries)) ?? [:]
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
         parsedDate = FlightSector.cachedDateFormatter.date(from: date)
@@ -332,7 +329,6 @@ struct FlightSector: Identifiable, Codable, Hashable {
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
             scheduledArrival: entity.scheduledArrival ?? "",
-            customCount: Int(entity.customCount),
             counterEntries: loadedCounterEntries
         )
     }
