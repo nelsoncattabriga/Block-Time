@@ -2701,7 +2701,7 @@ private struct FieldEditSheet: View {
                     VStack(spacing: 20) {
                         // LABEL section
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("LABEL")
+                            Text("FIELD NAME")
                                 .font(.caption.bold())
                                 .foregroundStyle(.secondary)
                                 .padding(.leading, 4)
@@ -2717,7 +2717,7 @@ private struct FieldEditSheet: View {
 
                         // TYPE section
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("TYPE")
+                            Text("DATA TYPE")
                                 .font(.caption.bold())
                                 .foregroundStyle(.secondary)
                                 .padding(.leading, 4)
