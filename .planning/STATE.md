@@ -67,8 +67,9 @@ Phases completed: 0 / 7
 | 260520-t6j | Add custom fields section to ImportMappingView | 2026-05-20 | 0370e6d | [260520-t6j-add-custom-fields-section-to-importmappi](./quick/260520-t6j-add-custom-fields-section-to-importmappi/) |
 | 260522-ke8 | Retire legacy customCount field across app (UI, import/export, FlightSector, DB writes) | 2026-05-22 | 6c557d2 | [260522-ke8-retire-legacy-customcount-field-across-a](./quick/260522-ke8-retire-legacy-customcount-field-across-a/) |
 | 260522-lvy | Fix duplicate Counter1-10 rows in ImportMappingView generic Field Mapping section | 2026-05-22 | ddb7982 | [260522-lvy-fix-duplicate-counter1-10-rows-in-import](./quick/260522-lvy-fix-duplicate-counter1-10-rows-in-import/) |
+| 260522-m4f | Move InlineCustomFieldsView into its own card in Crew & Ops Data settings | 2026-05-22 | 2a795ac | [260522-m4f-move-inlinecustomfieldsview-into-its-own](./quick/260522-m4f-move-inlinecustomfieldsview-into-its-own/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-22 - Fixed duplicate Counter1-10 rendering in ImportMappingView — counter slots now appear only in Custom Fields section (260522-lvy)
+Last activity: 2026-05-22 - Extracted InlineCustomFieldsView into standalone ModernCustomFieldsCard in Settings (260522-m4f)
 Next action: Continue custom fields integration — PDF/print integration
