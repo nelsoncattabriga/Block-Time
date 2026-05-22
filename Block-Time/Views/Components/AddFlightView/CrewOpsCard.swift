@@ -145,24 +145,9 @@ struct ModernManualEntryDataCard: View {
                 ModernTogglesSection(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                 // Custom counters
-                if viewModel.logCustomCount && !viewModel.isPositioning {
+                if !CustomCounterService.shared.definitions.isEmpty && !viewModel.isPositioning {
                     Divider().padding(.horizontal, 8).padding(.vertical, 4)
 
-                    let migrated = UserDefaults.standard.bool(forKey: "legacyCounterMigratedToColumn1")
-
-                    // Legacy single counter — hidden once migrated to counter1
-                    if !migrated {
-                        FieldIntegerField(
-                            label: viewModel.customCountLabel,
-                            value: Binding(
-                                get: { viewModel.customCount > 0 ? "\(viewModel.customCount)" : "" },
-                                set: { viewModel.customCount = Int($0) ?? 0 }
-                            ),
-                            keyboardToolbar: keyboardToolbar
-                        )
-                    }
-
-                    // Multi-counters
                     ForEach(CustomCounterService.shared.definitions) { definition in
                         fieldRow(for: definition, viewModel: viewModel, keyboardToolbar: keyboardToolbar)
                     }

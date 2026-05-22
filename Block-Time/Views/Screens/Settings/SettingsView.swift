@@ -679,22 +679,7 @@ private struct ModernOpsDataCard: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
 
-                ModernToggleRow(
-                    title: "Use Custom Fields",
-                    subtitle: "Log per-flight values such as PAX, approaches etc",
-                    isOn: Binding(
-                        get: { viewModel.logCustomCount },
-                        set: { newValue in
-                            viewModel.updateLogCustomCount(newValue)
-                        }
-                    ),
-                    color: .blue,
-                    icon: "slider.horizontal.below.square.and.square.filled"
-                )
-
-                if viewModel.logCustomCount {
-                    InlineCustomFieldsView()
-                }
+                InlineCustomFieldsView()
 
             
             }
