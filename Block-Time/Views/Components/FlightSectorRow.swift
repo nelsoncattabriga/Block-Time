@@ -9,6 +9,7 @@ struct FlightSectorRow: View, Equatable {
     var roundingMode: RoundingMode = .standard
     var includeAirlinePrefixInFlightNumber: Bool = UserDefaults.standard.bool(forKey: "includeAirlinePrefixInFlightNumber")
     var isCustomAirlinePrefix: Bool = UserDefaults.standard.bool(forKey: "isCustomAirlinePrefix")
+    @AppStorage("showOutInTimes") private var showOutInTimes: Bool = true
     @Environment(\.colorScheme) var colorScheme
 
     // Cached computed values - initialized once
@@ -278,22 +279,24 @@ struct FlightSectorRow: View, Equatable {
                     Spacer()
 
                     // OUT & IN Times
-                    Text(cachedOutTime)
-                        .font(.subheadline)
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
-
-                    // Show arrow if we have both times (actual or scheduled)
-                    let hasOutTime = !sector.outTime.isEmpty || !sector.scheduledDeparture.isEmpty
-                    let hasInTime = !sector.inTime.isEmpty || !sector.scheduledArrival.isEmpty
-                    if hasOutTime && hasInTime {
-                        Image(systemName: "arrow.right")
+                    if showOutInTimes {
+                        Text(cachedOutTime)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
+                            .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
 
-                    Text(cachedInTime)
-                        .font(.subheadline)
-                        .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
+                        // Show arrow if we have both times (actual or scheduled)
+                        let hasOutTime = !sector.outTime.isEmpty || !sector.scheduledDeparture.isEmpty
+                        let hasInTime = !sector.inTime.isEmpty || !sector.scheduledArrival.isEmpty
+                        if hasOutTime && hasInTime {
+                            Image(systemName: "arrow.right")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Text(cachedInTime)
+                            .font(.subheadline)
+                            .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
+                    }
                 }
 
                 // Aircraft Type
