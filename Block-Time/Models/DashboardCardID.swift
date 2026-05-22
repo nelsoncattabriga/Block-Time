@@ -136,6 +136,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
             case .time:    return "clock.fill"
             case .decimal: return "number.circle.fill"
             case .integer: return "number.square.fill"
+            case .text:    return "text.alignleft"
             }
         }
         switch rawValue {
@@ -187,6 +188,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
             case .time:    return .blue
             case .decimal: return .orange
             case .integer: return .teal
+            case .text:    return .purple
             }
         }
         switch rawValue {

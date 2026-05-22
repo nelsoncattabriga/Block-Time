@@ -2532,6 +2532,7 @@ struct InlineCustomFieldsView: View {
         case .time:    return "clock.fill"
         case .decimal: return "number.circle.fill"
         case .integer: return "number.square.fill"
+        case .text:    return "text.alignleft"
         }
     }
 
@@ -2540,6 +2541,7 @@ struct InlineCustomFieldsView: View {
         case .time:    return .blue
         case .decimal: return .orange
         case .integer: return .teal
+        case .text:    return .purple
         }
     }
 }
@@ -2635,6 +2637,7 @@ struct CustomFieldsSettingsView: View {
         case .time:    return "clock.fill"
         case .decimal: return "number.circle.fill"
         case .integer: return "number.square.fill"
+        case .text:    return "text.alignleft"
         }
     }
 
@@ -2643,6 +2646,7 @@ struct CustomFieldsSettingsView: View {
         case .time:    return .blue
         case .decimal: return .orange
         case .integer: return .teal
+        case .text:    return .purple
         }
     }
 }
@@ -2728,19 +2732,24 @@ private struct FieldEditSheet: View {
                         .buttonStyle(.plain)
                     }
 
-                    Toggle(isOn: $showTotal) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Show Total")
-                                .font(.subheadline)
-                            Text("When off, values aren't summed and no Dashboard card is shown.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    if type != .text {
+                        Toggle(isOn: $showTotal) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Show Total")
+                                    .font(.subheadline)
+                                Text("When off, values aren't summed and no Dashboard card is shown.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .tint(.teal)
                     }
-                    .tint(.teal)
                 }
             }
             .navigationTitle(title)
+            .onChange(of: type) { _, newValue in
+                if newValue == .text { showTotal = false }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -2781,6 +2790,7 @@ private struct FieldEditSheet: View {
         case .time:    return "clock.fill"
         case .decimal: return "number.circle.fill"
         case .integer: return "numbers.rectangle.fill"
+        case .text:    return "text.alignleft"
         }
     }
 
@@ -2789,6 +2799,7 @@ private struct FieldEditSheet: View {
         case .time:    return .blue
         case .decimal: return .orange
         case .integer: return .teal
+        case .text:    return .purple
         }
     }
 
