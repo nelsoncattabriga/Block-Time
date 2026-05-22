@@ -273,6 +273,7 @@ struct PersonalCrewSettingsView: View {
             VStack(spacing: 16) {
                 ModernDefaultCrewNamesCard(viewModel: viewModel)
                 ModernOpsDataCard(viewModel: viewModel)
+                ModernCustomFieldsCard()
 
                 Spacer(minLength: 20)
             }
@@ -673,16 +674,36 @@ private struct ModernOpsDataCard: View {
                     .background(Color(.systemGray6).opacity(0.5))
                     .cornerRadius(8)
                 }
-                
-            
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-
-                InlineCustomFieldsView()
-
-            
             }
+        }
+        .padding(16)
+        .background(.thinMaterial)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
+private struct ModernCustomFieldsCard: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "list.bullet.rectangle.portrait")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+
+                Text("Custom Fields")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+
+                Spacer()
+            }
+
+            InlineCustomFieldsView()
         }
         .padding(16)
         .background(.thinMaterial)
