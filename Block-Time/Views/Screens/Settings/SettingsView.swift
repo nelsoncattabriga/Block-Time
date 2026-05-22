@@ -2701,7 +2701,7 @@ private struct FieldEditSheet: View {
                     VStack(spacing: 20) {
                         // LABEL section
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("FIELD NAME")
+                            Text("CUSTOM FIELD")
                                 .font(.caption.bold())
                                 .foregroundStyle(.secondary)
                                 .padding(.leading, 4)
@@ -2723,7 +2723,7 @@ private struct FieldEditSheet: View {
                                 .padding(.leading, 4)
 
                             VStack(spacing: 0) {
-                                ForEach(CounterType.allCases.enumerated(), id: \.element.id) { index, counterType in
+                                ForEach(Array(CounterType.allCases.enumerated()), id: \.element.id) { index, counterType in
                                     Button {
                                         type = counterType
                                     } label: {
