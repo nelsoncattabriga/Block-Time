@@ -127,6 +127,10 @@ struct CustomCounterDashboardCard: View {
         flightCount = eligible.count
 
         switch definition.type {
+        case .text:
+            displayValue = "—"
+            return
+
         case .time:
             let total = eligible.reduce(0.0) { sum, sector in
                 let raw = sector.counterEntries[columnIndex] ?? ""
@@ -179,6 +183,7 @@ struct CustomCounterDashboardCard: View {
         case .time:    return "clock.fill"
         case .decimal: return "number.circle.fill"
         case .integer: return "number.square.fill"
+        case .text:    return "text.alignleft"
         case nil:      return "questionmark.circle"
         }
     }
@@ -188,6 +193,7 @@ struct CustomCounterDashboardCard: View {
         case .time:    return .blue
         case .decimal: return .orange
         case .integer: return .teal
+        case .text:    return .purple
         case nil:      return .gray
         }
     }
