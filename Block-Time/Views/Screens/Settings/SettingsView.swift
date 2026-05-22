@@ -2668,6 +2668,7 @@ private struct FieldEditSheet: View {
     @State private var showTotal: Bool
     @State private var showingDeleteConfirmation = false
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("showTimesInHoursMinutes") private var showAsHHMM: Bool = false
 
     init(mode: FieldEditMode, onSave: @escaping (String, CounterType, Bool) -> Void, onDelete: (() -> Void)? = nil) {
         self.mode = mode
@@ -2738,7 +2739,7 @@ private struct FieldEditSheet: View {
                                                     .font(.subheadline)
                                                     .fontWeight(.medium)
                                                     .foregroundStyle(.primary)
-                                                Text(counterType.subtitle)
+                                                Text(subtitleFor(counterType))
                                                     .font(.footnote)
                                                     .foregroundStyle(.secondary)
                                             }
@@ -2854,6 +2855,15 @@ private struct FieldEditSheet: View {
         case .integer: return .teal
         case .text:    return .purple
         }
+    }
+
+    private func subtitleFor(_ type: CounterType) -> String {
+        if type == .time {
+            return showAsHHMM
+                ? "Duration, e.g. Dual Time. Shown as 1:30"
+                : "Duration, e.g. Dual Time. Shown as 1.5"
+        }
+        return type.subtitle
     }
 
     private func save() {
