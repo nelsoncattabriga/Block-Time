@@ -570,6 +570,9 @@ final class SpreadsheetContainerView: UIView {
                 sum + (Double(f.counterEntries[definition.columnIndex] ?? "") ?? 0.0)
             }
             text = total == 0 ? "" : (config.showHHMM ? FlightSector.decimalToHHMM(total) : String(format: "%.1f", total))
+        case .text:
+            // Text fields have showTotal = false so this branch is never reached in practice
+            text = ""
         }
         addTotalTimeLabel(text, width: Col.counter, to: parent, x: &x)
     }
