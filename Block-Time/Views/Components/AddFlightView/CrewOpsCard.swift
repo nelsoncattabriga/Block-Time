@@ -186,6 +186,16 @@ struct FieldTimeField: View {
     @State private var editingText: String = ""
     @AppStorage("showTimesInHoursMinutes") private var showAsHHMM: Bool = false
 
+    private func padHHMM(_ s: String) -> String {
+        guard s.contains(":") else { return s }
+        let parts = s.split(separator: ":")
+        guard parts.count == 2,
+              let h = Int(parts[0]),
+              let m = Int(parts[1]),
+              h >= 0, m >= 0, m < 60 else { return s }
+        return String(format: "%02d:%02d", h, m)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
@@ -196,9 +206,9 @@ struct FieldTimeField: View {
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
             }
-            TextField(showAsHHMM ? "0:00" : "0.0", text: $editingText)
+            TextField(showAsHHMM ? "00:00" : "0.0", text: $editingText)
                 .font(.subheadline)
-                .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
+                .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : (showAsHHMM ? .numberPad : .decimalPad))
                 .focused($isFocused)
                 .onChange(of: editingText) { _, newValue in
                     let filtered: String
@@ -221,11 +231,11 @@ struct FieldTimeField: View {
                             editingText = ""
                         } else if showAsHHMM {
                             if value.contains(":") {
-                                editingText = value
+                                editingText = padHHMM(value)
                             } else if let d = Double(value) {
-                                editingText = FlightSector.decimalToHHMM(d)
+                                editingText = padHHMM(FlightSector.decimalToHHMM(d))
                             } else {
-                                editingText = value
+                                editingText = padHHMM(value)
                             }
                         } else {
                             // decimal mode: value is stored as decimal string
@@ -261,9 +271,9 @@ struct FieldTimeField: View {
                         editingText = ""
                     } else if showAsHHMM {
                         if let d = Double(value) {
-                            editingText = FlightSector.decimalToHHMM(d)
+                            editingText = padHHMM(FlightSector.decimalToHHMM(d))
                         } else {
-                            editingText = value
+                            editingText = padHHMM(value)
                         }
                     } else {
                         editingText = value.contains(":") ? (FlightSector.hhmmToDecimal(value).map { String(format: "%.1f", $0) } ?? value) : value
