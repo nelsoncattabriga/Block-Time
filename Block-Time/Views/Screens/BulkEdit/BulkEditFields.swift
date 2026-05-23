@@ -16,6 +16,7 @@ struct BulkEditTextField: View {
     var placeholder: String? = nil
     var isTimeField: Bool = false
     var showClearButton: Bool = false
+    var keyboardToolbar: KeyboardToolbarState? = nil
 
     @State private var textValue: String = ""
     @FocusState private var isFocused: Bool
@@ -73,9 +74,13 @@ struct BulkEditTextField: View {
                     fieldState = .value(formattedValue)
                 }
                 .onChange(of: isFocused) { _, focused in
-                    if focused && fieldState.isMixed {
-                        textValue = ""
-                    } else if !focused && isTimeField && !textValue.isEmpty {
+                    if focused {
+                        if fieldState.isMixed { textValue = "" }
+                        keyboardToolbar?.fieldDidFocus(clear: {
+                            textValue = ""
+                            fieldState = .value("")
+                        })
+                    } else if isTimeField && !textValue.isEmpty {
                         textValue = formatTimeWithLeadingZeros(textValue)
                         fieldState = .value(textValue)
                     }
@@ -170,6 +175,7 @@ struct BulkEditIntField: View {
     let label: String
     @Binding var fieldState: BulkEditViewModel.FieldState<Int>
     var keyboardType: UIKeyboardType = .numberPad
+    var keyboardToolbar: KeyboardToolbarState? = nil
 
     @State private var textValue: String = ""
     @FocusState private var isFocused: Bool
@@ -203,8 +209,12 @@ struct BulkEditIntField: View {
                 }
             }
             .onChange(of: isFocused) { _, focused in
-                if focused && fieldState.isMixed {
-                    textValue = ""
+                if focused {
+                    if fieldState.isMixed { textValue = "" }
+                    keyboardToolbar?.fieldDidFocus(clear: {
+                        textValue = ""
+                        fieldState = .value(0)
+                    })
                 }
             }
             .onAppear {

@@ -26,6 +26,7 @@ struct BulkEditSheet: View {
 
     @StateObject private var bulkEditViewModel: BulkEditViewModel
     @State private var showingDiscardAlert = false
+    @State private var keyboardToolbar = KeyboardToolbarState()
 
     // MARK: - Initialization
 
@@ -156,49 +157,57 @@ struct BulkEditSheet: View {
                             BulkEditTextField(
                                 label: "BLOCK Time",
                                 fieldState: $bulkEditViewModel.blockTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
                                 label: "NIGHT Time",
                                 fieldState: $bulkEditViewModel.nightTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
                                 label: "P1 Time",
                                 fieldState: $bulkEditViewModel.p1Time,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
                                 label: "ICUS Time",
                                 fieldState: $bulkEditViewModel.p1usTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
                                 label: "P2 Time",
                                 fieldState: $bulkEditViewModel.p2Time,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
                                 label: "Instrument Time",
                                 fieldState: $bulkEditViewModel.instrumentTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
                                 label: "SIM Time",
                                 fieldState: $bulkEditViewModel.simTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
                                 label: "SP/INS Time",
                                 fieldState: $bulkEditViewModel.spInsTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                keyboardToolbar: keyboardToolbar
                             )
                         }
                     }
@@ -211,7 +220,8 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.outTime,
                                 keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
                                 placeholder: "HH:MM",
-                                isTimeField: true
+                                isTimeField: true,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
@@ -219,7 +229,8 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.inTime,
                                 keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
                                 placeholder: "HH:MM",
-                                isTimeField: true
+                                isTimeField: true,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
@@ -227,7 +238,8 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.scheduledDeparture,
                                 keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
                                 placeholder: "HH:MM",
-                                isTimeField: true
+                                isTimeField: true,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditTextField(
@@ -235,7 +247,8 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.scheduledArrival,
                                 keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
                                 placeholder: "HH:MM",
-                                isTimeField: true
+                                isTimeField: true,
+                                keyboardToolbar: keyboardToolbar
                             )
                         }
                     }
@@ -273,25 +286,29 @@ struct BulkEditSheet: View {
                             BulkEditIntField(
                                 label: "Day T/O",
                                 fieldState: $bulkEditViewModel.dayTakeoffs,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditIntField(
                                 label: "Day Ldg",
                                 fieldState: $bulkEditViewModel.dayLandings,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditIntField(
                                 label: "Night T/O",
                                 fieldState: $bulkEditViewModel.nightTakeoffs,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                keyboardToolbar: keyboardToolbar
                             )
 
                             BulkEditIntField(
                                 label: "Night Ldg",
                                 fieldState: $bulkEditViewModel.nightLandings,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                keyboardToolbar: keyboardToolbar
                             )
                         }
                     }
@@ -314,8 +331,9 @@ struct BulkEditSheet: View {
                                             get: { bulkEditViewModel.customCounterStates[def.columnIndex] ?? .notEdited },
                                             set: { bulkEditViewModel.customCounterStates[def.columnIndex] = $0 }
                                         ),
-                                        keyboardType: keyboardType(for: def.type),
-                                        isTimeField: def.type == .time
+                                        keyboardType: customFieldKeyboardType(for: def.type),
+                                        isTimeField: isTimeField(for: def.type),
+                                        keyboardToolbar: def.type != .text ? keyboardToolbar : nil
                                     )
                                 }
                             }
@@ -348,6 +366,25 @@ struct BulkEditSheet: View {
                     .foregroundColor(bulkEditViewModel.hasModifications ? .blue : .gray)
                 }
             }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    if keyboardToolbar.isAnyFieldFocused {
+                        Button("Clear") {
+                            keyboardToolbar.onClear?()
+                        }
+                        .foregroundStyle(.red)
+                        Spacer()
+                        Button("Done") {
+                            UIApplication.shared.sendAction(
+                                #selector(UIResponder.resignFirstResponder),
+                                to: nil, from: nil, for: nil
+                            )
+                            keyboardToolbar.isAnyFieldFocused = false
+                        }
+                        .font(.subheadline.bold())
+                    }
+                }
+            }
             .alert("Discard Changes?", isPresented: $showingDiscardAlert) {
                 Button("Discard", role: .destructive) {
                     dismiss()
@@ -366,7 +403,28 @@ struct BulkEditSheet: View {
         switch type {
         case .time:    return isPad ? .numbersAndPunctuation : .numberPad
         case .decimal: return isPad ? .numbersAndPunctuation : .decimalPad
-        case .integer: return isPad ? .numbersAndPunctuation : .numberPad
+        case .integer: return isPad ? .numbersAndPunctuation : .decimalPad
+        case .text:    return .default
+        }
+    }
+
+    private func isTimeField(for type: CounterType) -> Bool {
+        type == .time && viewModel.showTimesInHoursMinutes
+    }
+
+    private func customFieldKeyboardType(for type: CounterType) -> UIKeyboardType {
+        let isPad = UIDevice.current.userInterfaceIdiom == .pad
+        switch type {
+        case .time:
+            // hrs:min mode → numberPad (digits only, colon inserted by formatter)
+            // decimal mode → decimalPad (needs decimal point)
+            if viewModel.showTimesInHoursMinutes {
+                return isPad ? .numbersAndPunctuation : .numberPad
+            } else {
+                return isPad ? .numbersAndPunctuation : .decimalPad
+            }
+        case .decimal: return isPad ? .numbersAndPunctuation : .decimalPad
+        case .integer: return isPad ? .numbersAndPunctuation : .decimalPad
         case .text:    return .default
         }
     }
