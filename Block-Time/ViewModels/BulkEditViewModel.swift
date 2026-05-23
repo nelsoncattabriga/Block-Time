@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 class BulkEditViewModel: ObservableObject {
 
@@ -42,6 +43,9 @@ class BulkEditViewModel: ObservableObject {
 
     // MARK: - Published Properties
 
+    // Flight Date
+    @Published var flightDate: FieldState<String> = .notEdited
+
     // Aircraft Info
     @Published var aircraftReg: FieldState<String> = .notEdited
     @Published var aircraftType: FieldState<String> = .notEdited
@@ -64,6 +68,7 @@ class BulkEditViewModel: ObservableObject {
     @Published var p2Time: FieldState<String> = .notEdited
     @Published var instrumentTime: FieldState<String> = .notEdited
     @Published var simTime: FieldState<String> = .notEdited
+    @Published var spInsTime: FieldState<String> = .notEdited
 
     // Schedule
     @Published var outTime: FieldState<String> = .notEdited
@@ -75,6 +80,7 @@ class BulkEditViewModel: ObservableObject {
     @Published var isPilotFlying: FieldState<Bool> = .notEdited
     @Published var isPositioning: FieldState<Bool> = .notEdited
     @Published var isSimulator: FieldState<Bool> = .notEdited
+    @Published var isSpIns: FieldState<Bool> = .notEdited
 
     // Time Credit Type
     @Published var selectedTimeCredit: FieldState<TimeCreditType> = .notEdited
@@ -105,6 +111,9 @@ class BulkEditViewModel: ObservableObject {
     // Remarks
     @Published var remarks: FieldState<String> = .notEdited
 
+    // Custom Counters (keyed by columnIndex 1-10)
+    @Published var customCounterStates: [Int: FieldState<String>] = [:]
+
     // Modification tracking
     @Published var hasModifications: Bool = false
 
@@ -132,6 +141,8 @@ class BulkEditViewModel: ObservableObject {
     // MARK: - Field Analysis
 
     private func analyzeFields() {
+        flightDate = Self.analyzeStringField(selectedFlights) { $0.date }
+
         aircraftReg = Self.analyzeStringField(selectedFlights) { $0.aircraftReg }
         aircraftType = Self.analyzeStringField(selectedFlights) { $0.aircraftType }
 
@@ -147,6 +158,7 @@ class BulkEditViewModel: ObservableObject {
         p2Time = Self.analyzeStringField(selectedFlights) { $0.p2Time }
         instrumentTime = Self.analyzeStringField(selectedFlights) { $0.instrumentTime }
         simTime = Self.analyzeStringField(selectedFlights) { $0.simTime }
+        spInsTime = Self.analyzeStringField(selectedFlights) { $0.spInsTime }
 
         outTime = Self.analyzeStringField(selectedFlights) { $0.outTime }
         inTime = Self.analyzeStringField(selectedFlights) { $0.inTime }
@@ -158,6 +170,10 @@ class BulkEditViewModel: ObservableObject {
         isSimulator = Self.analyzeBoolField(selectedFlights) { flight in
             let simValue = Double(flight.simTime) ?? 0.0
             return simValue > 0.0
+        }
+        isSpIns = Self.analyzeBoolField(selectedFlights) { flight in
+            let spValue = Double(flight.spInsTime) ?? 0.0
+            return spValue > 0.0
         }
 
         // Analyze time credit type
@@ -182,6 +198,15 @@ class BulkEditViewModel: ObservableObject {
         toAirport = Self.analyzeStringField(selectedFlights) { $0.toAirport }
 
         remarks = Self.analyzeStringField(selectedFlights) { $0.remarks }
+
+        // Analyze custom counter states — BulkEditSheet is constructed on main thread,
+        // so MainActor.assumeIsolated is safe here during init.
+        let defs = MainActor.assumeIsolated { CustomCounterService.shared.definitions }
+        for def in defs {
+            customCounterStates[def.columnIndex] = Self.analyzeStringField(selectedFlights) {
+                $0.counterEntries[def.columnIndex] ?? ""
+            }
+        }
     }
 
     private static func analyzeStringField(_ flights: [FlightSector], keyPath: (FlightSector) -> String) -> FieldState<String> {
@@ -259,6 +284,7 @@ class BulkEditViewModel: ObservableObject {
 
     private func storeInitialStates() {
         initialStates = [
+            "flightDate": flightDate,
             "aircraftReg": aircraftReg,
             "aircraftType": aircraftType,
             "prefixOperation": prefixOperation,
@@ -276,6 +302,7 @@ class BulkEditViewModel: ObservableObject {
             "p2Time": p2Time,
             "instrumentTime": instrumentTime,
             "simTime": simTime,
+            "spInsTime": spInsTime,
             "outTime": outTime,
             "inTime": inTime,
             "scheduledDeparture": scheduledDeparture,
@@ -283,6 +310,7 @@ class BulkEditViewModel: ObservableObject {
             "isPilotFlying": isPilotFlying,
             "isPositioning": isPositioning,
             "isSimulator": isSimulator,
+            "isSpIns": isSpIns,
             "selectedTimeCredit": selectedTimeCredit,
             "selectedApproachType": selectedApproachType,
             "isAIII": isAIII,
@@ -298,6 +326,10 @@ class BulkEditViewModel: ObservableObject {
             "toAirport": toAirport,
             "remarks": remarks
         ]
+        // Store initial states for each custom counter independently
+        for (columnIndex, state) in customCounterStates {
+            initialStates["customCounter_\(columnIndex)"] = state
+        }
     }
 
     // MARK: - Modification Tracking
@@ -404,6 +436,20 @@ class BulkEditViewModel: ObservableObject {
                 self?.checkForModifications()
             }
             .store(in: &cancellables)
+
+        Publishers.CombineLatest3(
+            $flightDate, $isSpIns, $spInsTime
+        )
+        .sink { [weak self] _ in
+            self?.checkForModifications()
+        }
+        .store(in: &cancellables)
+
+        $customCounterStates
+            .sink { [weak self] _ in
+                self?.checkForModifications()
+            }
+            .store(in: &cancellables)
     }
 
     private func checkForModifications() {
@@ -446,7 +492,13 @@ class BulkEditViewModel: ObservableObject {
                           hasFieldBeenModified(nightLandings, key: "nightLandings") ||
                           hasFieldBeenModified(fromAirport, key: "fromAirport") ||
                           hasFieldBeenModified(toAirport, key: "toAirport") ||
-                          hasFieldBeenModified(remarks, key: "remarks")
+                          hasFieldBeenModified(remarks, key: "remarks") ||
+                          hasFieldBeenModified(flightDate, key: "flightDate") ||
+                          hasFieldBeenModified(isSpIns, key: "isSpIns") ||
+                          hasFieldBeenModified(spInsTime, key: "spInsTime") ||
+                          customCounterStates.contains(where: { (col, state) in
+                              hasFieldBeenModified(state, key: "customCounter_\(col)")
+                          })
     }
 
     private func hasFieldBeenModified<T: Equatable>(_ field: FieldState<T>, key: String) -> Bool {
@@ -468,6 +520,10 @@ class BulkEditViewModel: ObservableObject {
             var updated = flight
 
             // Only update fields that have .value state (user explicitly set them)
+            if case .value(let d) = flightDate {
+                updated.date = d
+            }
+
             if case .value(let reg) = aircraftReg {
                 updated.aircraftReg = reg
             }
@@ -555,6 +611,25 @@ class BulkEditViewModel: ObservableObject {
                 }
             }
 
+            // Handle Sp/Ins conversion, mirroring the isSimulator pattern above
+            if case .value(let isSp) = isSpIns {
+                if isSp {
+                    // Converting to Sp/Ins: move blockTime to spInsTime, set blockTime to 0
+                    let currentBlock = updated.blockTime
+                    if let v = Double(currentBlock), v > 0 {
+                        updated.spInsTime = currentBlock
+                        updated.blockTime = "0.0"
+                    }
+                } else {
+                    // Converting from Sp/Ins: move spInsTime to blockTime, set spInsTime to 0
+                    let currentSp = updated.spInsTime
+                    if let v = Double(currentSp), v > 0 {
+                        updated.blockTime = currentSp
+                        updated.spInsTime = "0.0"
+                    }
+                }
+            }
+
             // Handle time credit type change
             // This redistributes time from the current credit type to the new one
             if case .value(let creditType) = selectedTimeCredit {
@@ -610,6 +685,9 @@ class BulkEditViewModel: ObservableObject {
             }
             if case .value(let sim) = simTime {
                 updated.simTime = sim
+            }
+            if case .value(let sp) = spInsTime {
+                updated.spInsTime = sp
             }
 
             if case .value(let out) = outTime {
@@ -704,6 +782,17 @@ class BulkEditViewModel: ObservableObject {
 
             if case .value(let rem) = remarks {
                 updated.remarks = rem
+            }
+
+            // Write back custom counter values
+            for (columnIndex, state) in customCounterStates {
+                if case .value(let v) = state {
+                    if v.isEmpty {
+                        updated.counterEntries.removeValue(forKey: columnIndex)
+                    } else {
+                        updated.counterEntries[columnIndex] = v
+                    }
+                }
             }
 
             updatedFlights[flight.id] = updated
