@@ -503,7 +503,13 @@ class BulkEditViewModel: ObservableObject {
                           hasFieldBeenModified(isSpIns, key: "isSpIns") ||
                           hasFieldBeenModified(spInsTime, key: "spInsTime") ||
                           customCounterStates.contains(where: { (col, state) in
-                              hasFieldBeenModified(state, key: "customCounter_\(col)")
+                              let key = "customCounter_\(col)"
+                              if initialStates[key] != nil {
+                                  return hasFieldBeenModified(state, key: key)
+                              }
+                              // New definition added after sheet init — any non-empty value is a modification
+                              if case .value(let v) = state { return !v.isEmpty }
+                              return false
                           })
     }
 
