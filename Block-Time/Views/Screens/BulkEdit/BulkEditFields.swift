@@ -386,6 +386,16 @@ struct BulkEditTimeField: View {
         return showAsHHMM ? .numberPad : .decimalPad
     }
 
+    private func padHHMM(_ s: String) -> String {
+        guard s.contains(":") else { return s }
+        let parts = s.split(separator: ":")
+        guard parts.count == 2,
+              let h = Int(parts[0]),
+              let m = Int(parts[1]),
+              h >= 0, m >= 0, m < 60 else { return s }
+        return String(format: "%02d:%02d", h, m)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
@@ -394,7 +404,7 @@ struct BulkEditTimeField: View {
                 .foregroundStyle(.secondary)
 
             TextField(
-                fieldState.isMixed ? "(Mixed)" : (showAsHHMM ? "0:00" : "0.0"),
+                fieldState.isMixed ? "(Mixed)" : (showAsHHMM ? "00:00" : "0.0"),
                 text: $editingText
             )
             .keyboardType(computedKeyboardType)
@@ -427,11 +437,11 @@ struct BulkEditTimeField: View {
                             editingText = ""
                         } else if showAsHHMM {
                             if v.contains(":") {
-                                editingText = v
+                                editingText = padHHMM(v)
                             } else if let d = Double(v) {
-                                editingText = FlightSector.decimalToHHMM(d)
+                                editingText = padHHMM(FlightSector.decimalToHHMM(d))
                             } else {
-                                editingText = v
+                                editingText = padHHMM(v)
                             }
                         } else {
                             if v.contains(":") {
@@ -476,11 +486,11 @@ struct BulkEditTimeField: View {
                         editingText = ""
                     } else if showAsHHMM {
                         if v.contains(":") {
-                            editingText = v
+                            editingText = padHHMM(v)
                         } else if let d = Double(v) {
-                            editingText = FlightSector.decimalToHHMM(d)
+                            editingText = padHHMM(FlightSector.decimalToHHMM(d))
                         } else {
-                            editingText = v
+                            editingText = padHHMM(v)
                         }
                     } else {
                         if v.contains(":") {
