@@ -264,9 +264,9 @@ struct FieldTimeField: View {
                                 blurInput = trimmed
                             }
                             if blurInput.contains(":"), let decimal = FlightSector.hhmmToDecimal(blurInput) {
-                                value = String(format: "%.1f", decimal)
+                                value = String(format: "%.2f", decimal)
                             } else if let d = Double(blurInput) {
-                                value = String(format: "%.1f", d)
+                                value = String(format: "%.2f", d)
                             } else {
                                 value = blurInput
                             }
