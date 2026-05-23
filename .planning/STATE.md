@@ -74,8 +74,9 @@ Phases completed: 0 / 7
 | 260523-qbo | Add missing fields to BulkEditSheet (flight date, INS toggle, custom fields) | 2026-05-23 | 58efd94 | [260523-qbo-add-missing-fields-to-bulkeditsheet-flig](./quick/260523-qbo-add-missing-fields-to-bulkeditsheet-flig/) |
 | 260523-qsz | Fix Save button not illuminating when INS toggle tapped in BulkEditSheet | 2026-05-23 | 269942e | [260523-qsz-fix-save-button-not-illuminating-when-in](./quick/260523-qsz-fix-save-button-not-illuminating-when-in/) |
 | 260523-r6m | Fix updateFlightsBulk missing counter column writes | 2026-05-23 | 0282eee | [260523-r6m-fix-updateflightsbulk-missing-counter-co](./quick/260523-r6m-fix-updateflightsbulk-missing-counter-co/) |
+| 260523-req | Fix Save button not enabling for new custom fields in BulkEditSheet | 2026-05-23 | 9330e6d | [260523-req-fix-save-button-not-enabling-for-new-cus](./quick/260523-req-fix-save-button-not-enabling-for-new-cus/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-23 - Fixed updateFlightsBulk missing counter column writes (260523-r6m)
+Last activity: 2026-05-23 - Fixed Save button not enabling for new custom fields in BulkEditSheet (260523-req)
 Next action: Continue custom fields integration — PDF/print integration
