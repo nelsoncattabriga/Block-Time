@@ -369,6 +369,140 @@ struct BulkEditDateField: View {
     }
 }
 
+// MARK: - BulkEditTimeField
+
+struct BulkEditTimeField: View {
+    let label: String
+    @Binding var fieldState: BulkEditViewModel.FieldState<String>
+    var keyboardToolbar: KeyboardToolbarState? = nil
+
+    @AppStorage("showTimesInHoursMinutes") private var showAsHHMM: Bool = false
+    @State private var editingText: String = ""
+    @FocusState private var isFocused: Bool
+
+    private var computedKeyboardType: UIKeyboardType {
+        let isPad = UIDevice.current.userInterfaceIdiom == .pad
+        if isPad { return .numbersAndPunctuation }
+        return showAsHHMM ? .numberPad : .decimalPad
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(.secondary)
+
+            TextField(
+                fieldState.isMixed ? "(Mixed)" : (showAsHHMM ? "0:00" : "0.0"),
+                text: $editingText
+            )
+            .keyboardType(computedKeyboardType)
+            .focused($isFocused)
+            .font(.body)
+            .padding(10)
+            .contentShape(Rectangle())
+            .onTapGesture { isFocused = true }
+            .onChange(of: editingText) { _, newValue in
+                let filtered: String
+                if showAsHHMM {
+                    filtered = newValue.filter { $0.isNumber || $0 == ":" }
+                } else {
+                    var result = ""
+                    var hasDot = false
+                    for ch in newValue {
+                        if ch.isNumber { result.append(ch) }
+                        else if (ch == "." || ch == ",") && !hasDot { result.append("."); hasDot = true }
+                    }
+                    filtered = result
+                }
+                if filtered != newValue { editingText = filtered }
+            }
+            .onChange(of: isFocused) { _, focused in
+                if focused {
+                    if fieldState.isMixed {
+                        editingText = ""
+                    } else if case .value(let v) = fieldState {
+                        if v.isEmpty || v == "0.0" || v == "0:00" {
+                            editingText = ""
+                        } else if showAsHHMM {
+                            if v.contains(":") {
+                                editingText = v
+                            } else if let d = Double(v) {
+                                editingText = FlightSector.decimalToHHMM(d)
+                            } else {
+                                editingText = v
+                            }
+                        } else {
+                            if v.contains(":") {
+                                editingText = FlightSector.hhmmToDecimal(v).map { String(format: "%.1f", $0) } ?? v
+                            } else {
+                                editingText = v
+                            }
+                        }
+                    } else {
+                        editingText = ""
+                    }
+                    keyboardToolbar?.fieldDidFocus(clear: {
+                        editingText = ""
+                        fieldState = .value("")
+                    })
+                } else {
+                    let trimmed = editingText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if trimmed.isEmpty {
+                        fieldState = .value("")
+                    } else if showAsHHMM {
+                        if trimmed.contains(":"), let decimal = FlightSector.hhmmToDecimal(trimmed) {
+                            fieldState = .value(String(format: "%.1f", decimal))
+                        } else if let d = Double(trimmed) {
+                            fieldState = .value(String(format: "%.1f", d))
+                        } else {
+                            fieldState = .value(trimmed)
+                        }
+                    } else {
+                        if let d = Double(trimmed) {
+                            fieldState = .value(String(format: "%.1f", d))
+                        } else {
+                            fieldState = .value(trimmed)
+                        }
+                    }
+                }
+            }
+            .onAppear {
+                if fieldState.isMixed {
+                    editingText = ""
+                } else if case .value(let v) = fieldState {
+                    if v.isEmpty || v == "0.0" || v == "0:00" {
+                        editingText = ""
+                    } else if showAsHHMM {
+                        if v.contains(":") {
+                            editingText = v
+                        } else if let d = Double(v) {
+                            editingText = FlightSector.decimalToHHMM(d)
+                        } else {
+                            editingText = v
+                        }
+                    } else {
+                        if v.contains(":") {
+                            editingText = FlightSector.hhmmToDecimal(v).map { String(format: "%.1f", $0) } ?? v
+                        } else {
+                            editingText = v
+                        }
+                    }
+                } else {
+                    editingText = ""
+                }
+            }
+            .background(Color(.secondarySystemBackground))
+            .clipShape(.rect(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isFocused ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 2)
+            )
+        }
+    }
+}
+
 // MARK: - BulkEditTextEditor
 
 struct BulkEditTextEditor: View {
