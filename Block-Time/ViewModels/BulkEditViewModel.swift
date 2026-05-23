@@ -437,6 +437,12 @@ class BulkEditViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
+        $isSpIns
+            .sink { [weak self] _ in
+                self?.checkForModifications()
+            }
+            .store(in: &cancellables)
+
         Publishers.CombineLatest3(
             $flightDate, $isSpIns, $spInsTime
         )
