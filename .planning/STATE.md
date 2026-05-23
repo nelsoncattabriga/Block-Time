@@ -78,8 +78,9 @@ Phases completed: 0 / 7
 | 260523-rt0 | Fix customCounterStates willSet ordering — pass newStates via sink closure | 2026-05-23 | 3f1741d | [260523-rt0-fix-customcounterstates-willset-ordering](./quick/260523-rt0-fix-customcounterstates-willset-ordering/) |
 | 260523-sv8 | Add BulkEditTimeField for dual-mode decimal/HH:MM custom Time fields in BulkEditSheet | 2026-05-23 | 9a2ae39 | [260523-sv8-add-bulkedittimefield-replicating-fieldt](./quick/260523-sv8-add-bulkedittimefield-replicating-fieldt/) |
 | 260523-tux | Fix HH:MM mode input in FieldTimeField and BulkEditTimeField (numberPad, 00:00 placeholder, leading-zero display) | 2026-05-23 | b4cc346 | [260523-tux-fix-hh-mm-mode-input-in-fieldtimefield-a](./quick/260523-tux-fix-hh-mm-mode-input-in-fieldtimefield-a/) |
+| 260523-urt | Show custom counter fields by user-defined label in ImportMappingView | 2026-05-23 | 2e82238 | [260523-urt-show-custom-counter-fields-by-user-defin](./quick/260523-urt-show-custom-counter-fields-by-user-defin/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-23 - Fixed HH:MM keyboard/placeholder/display in FieldTimeField and BulkEditTimeField (260523-tux)
+Last activity: 2026-05-23 - Show custom field labels (logbookFieldDescription) in ImportMappingView display sites (260523-urt)
 Next action: Continue custom fields integration — PDF/print integration
