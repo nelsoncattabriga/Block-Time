@@ -274,6 +274,91 @@ struct BulkEditToggle: View {
     }
 }
 
+// MARK: - BulkEditDateField
+
+struct BulkEditDateField: View {
+    let label: String
+    @Binding var fieldState: BulkEditViewModel.FieldState<String>
+
+    @State private var selectedDate: Date = Date()
+    @State private var showingPicker: Bool = false
+    @State private var hasInitialised: Bool = false
+
+    private static let storageFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.locale = Locale(identifier: "en_AU")
+        return f
+    }()
+
+    private static let displayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM yyyy"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.locale = Locale(identifier: "en_AU")
+        return f
+    }()
+
+    private var buttonLabelText: String {
+        if case .value(let s) = fieldState, let d = Self.storageFormatter.date(from: s) {
+            return Self.displayFormatter.string(from: d)
+        }
+        if fieldState.isMixed { return "(Mixed)" }
+        return "Select date"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+
+            Button {
+                showingPicker = true
+                HapticManager.shared.impact(.light)
+            } label: {
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.blue)
+                    Text(buttonLabelText)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(10)
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showingPicker) {
+            DatePicker(
+                "",
+                selection: $selectedDate,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.graphical)
+            .labelsHidden()
+            .padding()
+            .presentationDetents([.height(420)])
+            .onChange(of: selectedDate) { _, newValue in
+                let s = Self.storageFormatter.string(from: newValue)
+                fieldState = .value(s)
+                showingPicker = false
+            }
+        }
+        .onAppear {
+            guard !hasInitialised else { return }
+            hasInitialised = true
+            if case .value(let s) = fieldState, let d = Self.storageFormatter.date(from: s) {
+                selectedDate = d
+            }
+        }
+    }
+}
+
 // MARK: - BulkEditTextEditor
 
 struct BulkEditTextEditor: View {
