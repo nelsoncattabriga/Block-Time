@@ -1581,7 +1581,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             simTimeValue = blockTimeCalculated
         } else if isSimInstruction {
             let ins = Double(spInsTime) ?? 0
-            let sim = min(Double(simInsTime) ?? ins, ins)
+            let sim = min(Double(simInsTime) ?? 0, ins)
             simTimeValue = String(format: "%.2f", sim)
         } else {
             simTimeValue = "0.0"
@@ -1894,7 +1894,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             simTimeValue = blockTime
         } else if isSimInstruction {
             let ins = Double(spInsTime) ?? 0
-            let sim = min(Double(simInsTime) ?? ins, ins)
+            let sim = min(Double(simInsTime) ?? 0, ins)
             simTimeValue = String(format: "%.2f", sim)
         } else {
             simTimeValue = "0.0"
@@ -2812,7 +2812,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             simTimeValue = blockTimeCalculated
         } else if isSimInstruction {
             let ins = Double(spInsTime) ?? 0
-            let sim = min(Double(simInsTime) ?? ins, ins)
+            let sim = min(Double(simInsTime) ?? 0, ins)
             simTimeValue = String(format: "%.2f", sim)
         } else {
             simTimeValue = "0.0"

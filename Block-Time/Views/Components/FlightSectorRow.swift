@@ -72,7 +72,7 @@ struct FlightSectorRow: View, Equatable {
         let simTime = sector.simTimeValue
 
         // First check if it has been flown (has block or sim time)
-        guard blockTime == 0 && simTime == 0 else {
+        guard blockTime == 0 && simTime == 0 && sector.spInsTimeValue == 0 else {
             return false
         }
 
