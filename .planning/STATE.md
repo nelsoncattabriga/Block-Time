@@ -71,8 +71,9 @@ Phases completed: 0 / 7
 | 260522-tsl | Add Text type to custom fields (CounterType.text, placeholder, no totalling) | 2026-05-22 | 8fbf502 | [260522-tsl-add-text-type-to-custom-fields-counterty](./quick/260522-tsl-add-text-type-to-custom-fields-counterty/) |
 | 260522-u9i | Revamp FieldEditSheet to card-based layout in Settings | 2026-05-22 | 92ee3f7 | [260522-u9i-revamp-fieldeditsheet-to-card-based-layo](./quick/260522-u9i-revamp-fieldeditsheet-to-card-based-layo/) |
 | 260523-ps8 | Fix Clear button in keyboard toolbar for ModernRemarksField | 2026-05-23 | 34d3255 | [260523-ps8-fix-clear-button-in-keyboard-toolbar-for](./quick/260523-ps8-fix-clear-button-in-keyboard-toolbar-for/) |
+| 260523-qbo | Add missing fields to BulkEditSheet (flight date, INS toggle, custom fields) | 2026-05-23 | 58efd94 | [260523-qbo-add-missing-fields-to-bulkeditsheet-flig](./quick/260523-qbo-add-missing-fields-to-bulkeditsheet-flig/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-23 - Fixed keyboard toolbar Clear button no-op in ModernRemarksField (260523-ps8)
+Last activity: 2026-05-23 - Added flight date, INS toggle, SP/INS Time, and Custom Fields card to BulkEditSheet (260523-qbo)
 Next action: Continue custom fields integration — PDF/print integration
