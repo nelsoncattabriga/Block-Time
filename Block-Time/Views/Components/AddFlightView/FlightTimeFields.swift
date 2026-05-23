@@ -437,8 +437,7 @@ struct ModernRemarksField: View {
         }
         .onChange(of: editorFocused) { _, isFocused in
             if isFocused {
-                // Remarks has no Clear button — pass a no-op clear action
-                keyboardToolbar?.fieldDidFocus(clear: {})
+                keyboardToolbar?.fieldDidFocus(clear: { value = "" })
             }
         }
         // No .toolbar here — toolbar is owned by the parent scroll container.
