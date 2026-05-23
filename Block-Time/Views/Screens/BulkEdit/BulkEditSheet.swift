@@ -15,6 +15,10 @@ struct BulkEditSheet: View {
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
     @Environment(ThemeService.self) private var themeService
 
+    // CustomCounterService is @Observable — accessed via .shared since it is not injected
+    // via @Environment at the presentation sites (FlightsView / FlightsSplitView).
+    private var customCounterService: CustomCounterService { CustomCounterService.shared }
+
     // MARK: - Properties
 
     let selectedFlights: [FlightSector]
@@ -41,6 +45,14 @@ struct BulkEditSheet: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
+
+                        // Flight Date Card
+                        SectionCard(title: "Flight Date", icon: "calendar", color: .blue) {
+                            BulkEditDateField(
+                                label: "Date",
+                                fieldState: $bulkEditViewModel.flightDate
+                            )
+                        }
 
                         // Aircraft Info Card
                         SectionCard(title: "Aircraft Information", icon: "airplane", color: .blue) {
@@ -182,6 +194,12 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.simTime,
                                 keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
                             )
+
+                            BulkEditTextField(
+                                label: "SP/INS Time",
+                                fieldState: $bulkEditViewModel.spInsTime,
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+                            )
                         }
                     }
 
@@ -227,7 +245,8 @@ struct BulkEditSheet: View {
                         VStack(spacing: 16) {
                             BulkEditFlightTypeToggle(
                                 isPositioning: $bulkEditViewModel.isPositioning,
-                                isSimulator: $bulkEditViewModel.isSimulator
+                                isSimulator: $bulkEditViewModel.isSimulator,
+                                isSpIns: $bulkEditViewModel.isSpIns
                             )
 
                             BulkEditPilotRoleSegmentedPicker(
@@ -280,6 +299,25 @@ struct BulkEditSheet: View {
                             fieldState: $bulkEditViewModel.remarks
                         )
                     }
+
+                    // Custom Fields Card (hidden when no definitions are configured)
+                    if !customCounterService.definitions.isEmpty {
+                        SectionCard(title: "Custom Fields", icon: "slider.horizontal.below.square.filled.and.square", color: .mint) {
+                            VStack(spacing: 12) {
+                                ForEach(customCounterService.definitions) { def in
+                                    BulkEditTextField(
+                                        label: def.label,
+                                        fieldState: Binding(
+                                            get: { bulkEditViewModel.customCounterStates[def.columnIndex] ?? .notEdited },
+                                            set: { bulkEditViewModel.customCounterStates[def.columnIndex] = $0 }
+                                        ),
+                                        keyboardType: keyboardType(for: def.type),
+                                        isTimeField: def.type == .time
+                                    )
+                                }
+                            }
+                        }
+                    }
                     }
                     .padding()
                 }
@@ -315,6 +353,17 @@ struct BulkEditSheet: View {
             } message: {
                 Text("You have unsaved changes. Are you sure you want to discard them?")
             }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func keyboardType(for type: CounterType) -> UIKeyboardType {
+        switch type {
+        case .time:    return .numberPad
+        case .decimal: return UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
+        case .integer: return .numberPad
+        case .text:    return .default
         }
     }
 
