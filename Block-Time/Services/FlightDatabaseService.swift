@@ -447,6 +447,12 @@ class FlightDatabaseService: ObservableObject {
                     flight.scheduledDeparture = updatedSector.scheduledDeparture
                     flight.scheduledArrival = updatedSector.scheduledArrival
                     flight.modifiedAt = Date()
+
+                    // Clear all counter columns then write current values
+                    for i in 1...10 { flight.setCounter(i, value: nil) }
+                    for (columnIndex, value) in updatedSector.counterEntries where !value.isEmpty {
+                        flight.setCounter(columnIndex, value: value)
+                    }
                 }
 
                 // Single transaction for all records
