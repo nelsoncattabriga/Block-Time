@@ -243,11 +243,14 @@ struct BulkEditSheet: View {
                     // Operations Card
                     SectionCard(title: "Operations", icon: "slider.horizontal.3", color: .orange) {
                         VStack(spacing: 16) {
-                            BulkEditFlightTypeToggle(
-                                isPositioning: $bulkEditViewModel.isPositioning,
-                                isSimulator: $bulkEditViewModel.isSimulator,
-                                isSpIns: $bulkEditViewModel.isSpIns
-                            )
+                            // TODO: Flight Type toggle (FLT/PAX/SIM/INS) hidden — Save button
+                            // modification tracking has a Combine ordering bug with sequential
+                            // property writes. Revisit before shipping.
+//                            BulkEditFlightTypeToggle(
+//                                isPositioning: $bulkEditViewModel.isPositioning,
+//                                isSimulator: $bulkEditViewModel.isSimulator,
+//                                isSpIns: $bulkEditViewModel.isSpIns
+//                            )
 
                             BulkEditPilotRoleSegmentedPicker(
                                 fieldState: $bulkEditViewModel.isPilotFlying
@@ -359,10 +362,11 @@ struct BulkEditSheet: View {
     // MARK: - Helpers
 
     private func keyboardType(for type: CounterType) -> UIKeyboardType {
+        let isPad = UIDevice.current.userInterfaceIdiom == .pad
         switch type {
-        case .time:    return .numberPad
-        case .decimal: return UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad
-        case .integer: return .numberPad
+        case .time:    return isPad ? .numbersAndPunctuation : .numberPad
+        case .decimal: return isPad ? .numbersAndPunctuation : .decimalPad
+        case .integer: return isPad ? .numbersAndPunctuation : .numberPad
         case .text:    return .default
         }
     }
