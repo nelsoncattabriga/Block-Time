@@ -452,13 +452,15 @@ class BulkEditViewModel: ObservableObject {
         .store(in: &cancellables)
 
         $customCounterStates
-            .sink { [weak self] _ in
-                self?.checkForModifications()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] newStates in
+                self?.checkForModifications(customStates: newStates)
             }
             .store(in: &cancellables)
     }
 
-    private func checkForModifications() {
+    private func checkForModifications(customStates: [Int: FieldState<String>]? = nil) {
+        let counters = customStates ?? customCounterStates
         // Check if any field has been changed from its initial state
         hasModifications = hasFieldBeenModified(aircraftReg, key: "aircraftReg") ||
                           hasFieldBeenModified(aircraftType, key: "aircraftType") ||
@@ -502,7 +504,7 @@ class BulkEditViewModel: ObservableObject {
                           hasFieldBeenModified(flightDate, key: "flightDate") ||
                           hasFieldBeenModified(isSpIns, key: "isSpIns") ||
                           hasFieldBeenModified(spInsTime, key: "spInsTime") ||
-                          customCounterStates.contains(where: { (col, state) in
+                          counters.contains(where: { (col, state) in
                               let key = "customCounter_\(col)"
                               if initialStates[key] != nil {
                                   return hasFieldBeenModified(state, key: key)
