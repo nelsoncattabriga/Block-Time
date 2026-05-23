@@ -885,7 +885,11 @@ struct FieldMappingRow: View {
         VStack(alignment: .leading, spacing: 8) {
             // Header
             HStack {
-                Text(mapping.logbookFieldDescription.isEmpty ? mapping.logbookField : mapping.logbookFieldDescription)
+                Text({
+                    let f = mapping.logbookField
+                    let isCounter = f.hasPrefix("Counter") && f.dropFirst("Counter".count).allSatisfy(\.isNumber)
+                    return isCounter ? (mapping.logbookFieldDescription.isEmpty ? f : mapping.logbookFieldDescription) : f
+                }())
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 if mapping.isRequired {
@@ -2009,7 +2013,12 @@ private struct PreviewRowView: View {
 
             ForEach(fieldMappings, id: \.id) { mapping in
                 HStack(alignment: .top, spacing: 12) {
-                    Text((mapping.logbookFieldDescription.isEmpty ? mapping.logbookField : mapping.logbookFieldDescription) + ":")
+                    Text({
+                        let f = mapping.logbookField
+                        let isCounter = f.hasPrefix("Counter") && f.dropFirst("Counter".count).allSatisfy(\.isNumber)
+                        let label = isCounter ? (mapping.logbookFieldDescription.isEmpty ? f : mapping.logbookFieldDescription) : f
+                        return label + ":"
+                    }())
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .frame(minWidth: 80, alignment: .leading)
