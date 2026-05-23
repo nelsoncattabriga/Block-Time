@@ -213,7 +213,13 @@ struct FieldTimeField: View {
                 .onChange(of: editingText) { _, newValue in
                     let filtered: String
                     if showAsHHMM {
-                        filtered = newValue.filter { $0.isNumber || $0 == ":" }
+                        let digitsAndColon = newValue.filter { $0.isNumber || $0 == ":" }
+                        // Auto-insert colon when exactly 4 digits typed without one
+                        if digitsAndColon.count == 4 && !digitsAndColon.contains(":") {
+                            filtered = "\(digitsAndColon.prefix(2)):\(digitsAndColon.suffix(2))"
+                        } else {
+                            filtered = String(digitsAndColon.prefix(5))
+                        }
                     } else {
                         var result = ""
                         var hasDot = false
@@ -250,12 +256,19 @@ struct FieldTimeField: View {
                         if trimmed.isEmpty {
                             value = ""
                         } else if showAsHHMM {
-                            if trimmed.contains(":"), let decimal = FlightSector.hhmmToDecimal(trimmed) {
+                            // Handle bare 4-digit entry (e.g. "0330" → "03:30")
+                            let blurInput: String
+                            if trimmed.count == 4 && !trimmed.contains(":") && trimmed.allSatisfy(\.isNumber) {
+                                blurInput = "\(trimmed.prefix(2)):\(trimmed.suffix(2))"
+                            } else {
+                                blurInput = trimmed
+                            }
+                            if blurInput.contains(":"), let decimal = FlightSector.hhmmToDecimal(blurInput) {
                                 value = String(format: "%.1f", decimal)
-                            } else if let d = Double(trimmed) {
+                            } else if let d = Double(blurInput) {
                                 value = String(format: "%.1f", d)
                             } else {
-                                value = trimmed
+                                value = blurInput
                             }
                         } else {
                             if let d = Double(trimmed) {
