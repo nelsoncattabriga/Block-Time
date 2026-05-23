@@ -75,8 +75,9 @@ Phases completed: 0 / 7
 | 260523-qsz | Fix Save button not illuminating when INS toggle tapped in BulkEditSheet | 2026-05-23 | 269942e | [260523-qsz-fix-save-button-not-illuminating-when-in](./quick/260523-qsz-fix-save-button-not-illuminating-when-in/) |
 | 260523-r6m | Fix updateFlightsBulk missing counter column writes | 2026-05-23 | 0282eee | [260523-r6m-fix-updateflightsbulk-missing-counter-co](./quick/260523-r6m-fix-updateflightsbulk-missing-counter-co/) |
 | 260523-req | Fix Save button not enabling for new custom fields in BulkEditSheet | 2026-05-23 | 9330e6d | [260523-req-fix-save-button-not-enabling-for-new-cus](./quick/260523-req-fix-save-button-not-enabling-for-new-cus/) |
+| 260523-rt0 | Fix customCounterStates willSet ordering — pass newStates via sink closure | 2026-05-23 | 3f1741d | [260523-rt0-fix-customcounterstates-willset-ordering](./quick/260523-rt0-fix-customcounterstates-willset-ordering/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-23 - Fixed Save button not enabling for new custom fields in BulkEditSheet (260523-req)
+Last activity: 2026-05-23 - Fixed customCounterStates willSet ordering in BulkEditViewModel (260523-rt0)
 Next action: Continue custom fields integration — PDF/print integration
