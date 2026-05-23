@@ -450,8 +450,11 @@ struct BulkEditTimeField: View {
                                 editingText = padHHMM(v)
                             }
                         } else {
+                            // decimal mode: display at 1dp regardless of stored precision
                             if v.contains(":") {
                                 editingText = FlightSector.hhmmToDecimal(v).map { String(format: "%.1f", $0) } ?? v
+                            } else if let d = Double(v) {
+                                editingText = String(format: "%.1f", d)
                             } else {
                                 editingText = v
                             }
@@ -506,8 +509,11 @@ struct BulkEditTimeField: View {
                             editingText = padHHMM(v)
                         }
                     } else {
+                        // decimal mode: display at 1dp regardless of stored precision
                         if v.contains(":") {
                             editingText = FlightSector.hhmmToDecimal(v).map { String(format: "%.1f", $0) } ?? v
+                        } else if let d = Double(v) {
+                            editingText = String(format: "%.1f", d)
                         } else {
                             editingText = v
                         }

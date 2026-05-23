@@ -244,8 +244,14 @@ struct FieldTimeField: View {
                                 editingText = padHHMM(value)
                             }
                         } else {
-                            // decimal mode: value is stored as decimal string
-                            editingText = value.contains(":") ? (FlightSector.hhmmToDecimal(value).map { String(format: "%.1f", $0) } ?? value) : value
+                            // decimal mode: display at 1dp regardless of stored precision
+                            if value.contains(":") {
+                                editingText = FlightSector.hhmmToDecimal(value).map { String(format: "%.1f", $0) } ?? value
+                            } else if let d = Double(value) {
+                                editingText = String(format: "%.1f", d)
+                            } else {
+                                editingText = value
+                            }
                         }
                         keyboardToolbar?.fieldDidFocus(clear: {
                             editingText = ""
@@ -289,7 +295,14 @@ struct FieldTimeField: View {
                             editingText = padHHMM(value)
                         }
                     } else {
-                        editingText = value.contains(":") ? (FlightSector.hhmmToDecimal(value).map { String(format: "%.1f", $0) } ?? value) : value
+                        // decimal mode: display at 1dp regardless of stored precision
+                        if value.contains(":") {
+                            editingText = FlightSector.hhmmToDecimal(value).map { String(format: "%.1f", $0) } ?? value
+                        } else if let d = Double(value) {
+                            editingText = String(format: "%.1f", d)
+                        } else {
+                            editingText = value
+                        }
                     }
                 }
         }
