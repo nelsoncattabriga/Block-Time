@@ -73,8 +73,9 @@ Phases completed: 0 / 7
 | 260523-ps8 | Fix Clear button in keyboard toolbar for ModernRemarksField | 2026-05-23 | 34d3255 | [260523-ps8-fix-clear-button-in-keyboard-toolbar-for](./quick/260523-ps8-fix-clear-button-in-keyboard-toolbar-for/) |
 | 260523-qbo | Add missing fields to BulkEditSheet (flight date, INS toggle, custom fields) | 2026-05-23 | 58efd94 | [260523-qbo-add-missing-fields-to-bulkeditsheet-flig](./quick/260523-qbo-add-missing-fields-to-bulkeditsheet-flig/) |
 | 260523-qsz | Fix Save button not illuminating when INS toggle tapped in BulkEditSheet | 2026-05-23 | 269942e | [260523-qsz-fix-save-button-not-illuminating-when-in](./quick/260523-qsz-fix-save-button-not-illuminating-when-in/) |
+| 260523-r6m | Fix updateFlightsBulk missing counter column writes | 2026-05-23 | 0282eee | [260523-r6m-fix-updateflightsbulk-missing-counter-co](./quick/260523-r6m-fix-updateflightsbulk-missing-counter-co/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-23 - Fixed Save button not illuminating on INS toggle tap in BulkEditSheet (260523-qsz)
+Last activity: 2026-05-23 - Fixed updateFlightsBulk missing counter column writes (260523-r6m)
 Next action: Continue custom fields integration — PDF/print integration
