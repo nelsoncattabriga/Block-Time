@@ -325,16 +325,37 @@ struct BulkEditSheet: View {
                         SectionCard(title: "Custom Fields", icon: "slider.horizontal.below.square.filled.and.square", color: .mint) {
                             VStack(spacing: 12) {
                                 ForEach(customCounterService.definitions) { def in
-                                    BulkEditTextField(
-                                        label: def.label,
-                                        fieldState: Binding(
-                                            get: { bulkEditViewModel.customCounterStates[def.columnIndex] ?? .notEdited },
-                                            set: { bulkEditViewModel.customCounterStates[def.columnIndex] = $0 }
-                                        ),
-                                        keyboardType: customFieldKeyboardType(for: def.type),
-                                        isTimeField: isTimeField(for: def.type),
-                                        keyboardToolbar: def.type != .text ? keyboardToolbar : nil
+                                    let binding = Binding<BulkEditViewModel.FieldState<String>>(
+                                        get: { bulkEditViewModel.customCounterStates[def.columnIndex] ?? .notEdited },
+                                        set: { bulkEditViewModel.customCounterStates[def.columnIndex] = $0 }
                                     )
+                                    switch def.type {
+                                    case .time:
+                                        BulkEditTimeField(
+                                            label: def.label,
+                                            fieldState: binding,
+                                            keyboardToolbar: keyboardToolbar
+                                        )
+                                    case .decimal:
+                                        BulkEditTextField(
+                                            label: def.label,
+                                            fieldState: binding,
+                                            keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                            keyboardToolbar: keyboardToolbar
+                                        )
+                                    case .integer:
+                                        BulkEditTextField(
+                                            label: def.label,
+                                            fieldState: binding,
+                                            keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                            keyboardToolbar: keyboardToolbar
+                                        )
+                                    case .text:
+                                        BulkEditTextField(
+                                            label: def.label,
+                                            fieldState: binding
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -402,27 +423,6 @@ struct BulkEditSheet: View {
         let isPad = UIDevice.current.userInterfaceIdiom == .pad
         switch type {
         case .time:    return isPad ? .numbersAndPunctuation : .numberPad
-        case .decimal: return isPad ? .numbersAndPunctuation : .decimalPad
-        case .integer: return isPad ? .numbersAndPunctuation : .decimalPad
-        case .text:    return .default
-        }
-    }
-
-    private func isTimeField(for type: CounterType) -> Bool {
-        type == .time && viewModel.showTimesInHoursMinutes
-    }
-
-    private func customFieldKeyboardType(for type: CounterType) -> UIKeyboardType {
-        let isPad = UIDevice.current.userInterfaceIdiom == .pad
-        switch type {
-        case .time:
-            // hrs:min mode → numberPad (digits only, colon inserted by formatter)
-            // decimal mode → decimalPad (needs decimal point)
-            if viewModel.showTimesInHoursMinutes {
-                return isPad ? .numbersAndPunctuation : .numberPad
-            } else {
-                return isPad ? .numbersAndPunctuation : .decimalPad
-            }
         case .decimal: return isPad ? .numbersAndPunctuation : .decimalPad
         case .integer: return isPad ? .numbersAndPunctuation : .decimalPad
         case .text:    return .default
