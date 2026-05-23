@@ -1201,7 +1201,7 @@ private struct DefinitionConflictSheet: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("The backup contains custom field definitions that differ from your current settings.")
+                Text("The backup contains custom fields that differ from your current settings.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

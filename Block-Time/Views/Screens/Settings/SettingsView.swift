@@ -2702,7 +2702,7 @@ private struct FieldEditSheet: View {
                     VStack(spacing: 20) {
                         // LABEL section
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("CUSTOM FIELD")
+                            Text("FIELD LABEL")
                                 .font(.caption.bold())
                                 .foregroundStyle(.secondary)
                                 .padding(.leading, 4)
@@ -2834,7 +2834,7 @@ private struct FieldEditSheet: View {
                     dismiss()
                 }
             } message: {
-                Text("This will remove the field and all its data cannot be recovered.")
+                Text("This will delete the field and all its data.")
             }
         }
     }
