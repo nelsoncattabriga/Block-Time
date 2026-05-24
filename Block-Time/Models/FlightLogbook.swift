@@ -495,7 +495,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     /// Convert HH:MM format to decimal hours
     /// - Parameter hhmmString: Time in HH:MM format (e.g., "13:40")
     /// - Returns: Time in decimal hours (e.g., 13.67)
-    static func hhmmToDecimal(_ hhmmString: String) -> Double? {
+    nonisolated static func hhmmToDecimal(_ hhmmString: String) -> Double? {
         let trimmed = hhmmString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
