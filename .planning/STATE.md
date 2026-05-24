@@ -84,8 +84,9 @@ Phases completed: 0 / 7
 | 260524-eml | Apply HH:MM input fixes to ModernDecimalTimeField (numberPad, 00:00, auto-colon, blur normalise) | 2026-05-24 | 6575178 | [260524-eml-apply-hh-mm-input-fixes-to-moderndecimal/](./quick/260524-eml-apply-hh-mm-input-fixes-to-moderndecimal/) |
 | 260524-f6d | Add PDFContentMode (allFlights / includeINS / instructorHoursOnly) to Print Logbook PDF export | 2026-05-24 | 47f3684 | [260524-f6d-add-pdfcontentmode-allflights-includeins/](./quick/260524-f6d-add-pdfcontentmode-allflights-includeins/) |
 | 260524-fyn | Rename PDFContentMode labels to Standard / + SIM INS / INS Record | 2026-05-24 | a963f31 | [260524-fyn-rename-pdfcontentmode-labels-in-logbookp](./quick/260524-fyn-rename-pdfcontentmode-labels-in-logbookp/) |
+| 260524-hb5 | Fix FlightSectorRow Sim/Flt label for INS|Simulator flights | 2026-05-24 | 80ab8f2 | [260524-hb5-fix-flightsectorrow-to-show-sim-for-ins-](./quick/260524-hb5-fix-flightsectorrow-to-show-sim-for-ins-/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-24 - Rename PDFContentMode labels to Standard / + SIM INS / INS Record (260524-fyn)
+Last activity: 2026-05-24 - Fix FlightSectorRow Sim/Flt label for INS|Simulator flights (260524-hb5)
 Next action: Continue custom fields integration — PDF/print integration
