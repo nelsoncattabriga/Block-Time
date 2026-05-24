@@ -25,7 +25,7 @@ enum AppUpdateService {
 
     // MARK: - iTunes lookup
 
-    private static let lookupURL = URL(string: "https://itunes.apple.com/lookup?bundleId=com.thezoolab.blocktime")!
+    private static let lookupURL = URL(string: "https://itunes.apple.com/lookup?bundleId=com.thezoolab.blocktime&country=au")!
 
     // MARK: - Public API
 
@@ -38,6 +38,9 @@ enum AppUpdateService {
     ///   returns nil so the app proceeds normally.
     /// - Uses numeric component-wise comparison so "1.10.0" > "1.9.0".
     static func checkForUpdate() async -> String? {
+        #if DEBUG
+        return nil //"1.99"
+        #else
         let defaults = UserDefaults.standard
 
         // 24h cache check
@@ -56,6 +59,7 @@ enum AppUpdateService {
 
         // Compare versions
         let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        print("[AppUpdateService] current: \(currentVersion), store: \(storeVersion)")
         let isNewer = isVersion(storeVersion, newerThan: currentVersion)
 
         // Persist result
@@ -67,6 +71,7 @@ enum AppUpdateService {
         }
 
         return isNewer ? storeVersion : nil
+        #endif
     }
 
     // MARK: - Private helpers

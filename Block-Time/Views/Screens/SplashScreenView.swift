@@ -69,7 +69,7 @@ struct SplashScreenView: View {
                         .foregroundColor(.secondary)
 
                     if availableUpdateVersion != nil {
-                        Text("Update Available!")
+                        Text("Update Available")
                             .font(.footnote)
                             .fontWeight(.semibold)
                             .foregroundStyle(.white.opacity(0.85))
