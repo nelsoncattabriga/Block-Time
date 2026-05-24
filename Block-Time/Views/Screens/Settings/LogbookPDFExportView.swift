@@ -18,7 +18,7 @@ enum PDFDateRangePreset: String, CaseIterable {
 
 enum PDFContentMode: String, CaseIterable {
     case allFlights          = "Standard"
-    case instructorHoursOnly = "Training Record"
+    case instructorHoursOnly = "Trainer Log"
 }
 
 // MARK: - Export View
@@ -470,7 +470,7 @@ struct LogbookPDFExportView: View {
         let preset    = datePreset
         let from      = customFrom
         let to        = customTo
-        let coverTitle = contentMode == .instructorHoursOnly ? "TRAINING RECORD" : "PILOT LOGBOOK"
+        let coverTitle = contentMode == .instructorHoursOnly ? "TRAINER LOG" : "PILOT LOGBOOK"
         // Capture custom fields on main actor before Task.detached
         let pdfCustomFields = contentMode == .instructorHoursOnly ? selectedCustomFields : []
 
