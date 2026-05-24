@@ -134,6 +134,63 @@ enum LogbookPDFLayout {
     static nonisolated var footerTop: CGFloat {
         dataTop + CGFloat(maxDataSlotsPerPage) * dataRowHeight
     }
+
+    // MARK: Training Record Dynamic Layout
+
+    /// Builds the column array for Training Record mode.
+    /// Crew columns (CAPT, F/O) are omitted. Up to 7 custom field columns are inserted
+    /// between REMARKS and TRNG. Custom column ids follow the rule: id = 100 + n,
+    /// where n is the zero-based index into the passed customFields array.
+    /// This means customFields[n].columnIndex is reached via id 100+n in the drawer.
+    static nonisolated func trainingRecordColumns(customFields: [CustomCounterDefinition]) -> [ColumnDef] {
+        let fields = Array(customFields.prefix(7))
+        let customCount = fields.count
+
+        // Remarks width shrinks as custom fields are added (44 pt each).
+        // Fixed non-remarks total = 246 pt: DATE(46)+TYPE(36)+REG(36)+FLT#(30)+FROM(34)+TO(34)+TRNG(30) = 246
+        let remarksWidth: CGFloat = 560 - CGFloat(customCount) * 44
+
+        var cols: [ColumnDef] = [
+            ColumnDef(id: 0,  title: "DATE",    width:  46, alignment: .center, group: .date),
+            ColumnDef(id: 1,  title: "TYPE",    width:  36, alignment: .center, group: .aircraft),
+            ColumnDef(id: 2,  title: "REG",     width:  36, alignment: .center, group: .aircraft),
+            ColumnDef(id: 5,  title: "FLT #",   width:  30, alignment: .center, group: .route),
+            ColumnDef(id: 6,  title: "FROM",    width:  34, alignment: .center, group: .route),
+            ColumnDef(id: 7,  title: "TO",      width:  34, alignment: .center, group: .route),
+            ColumnDef(id: 8,  title: "REMARKS", width: remarksWidth, alignment: .left,   group: .remarks),
+        ]
+
+        // Custom field columns (id 100, 101, …): use .time group for vertical-line treatment.
+        for (n, def) in fields.enumerated() {
+            cols.append(ColumnDef(id: 100 + n, title: def.label.uppercased(), width: 44, alignment: .center, group: .time))
+        }
+
+        // TRNG column last in the .time group.
+        cols.append(ColumnDef(id: 16, title: "TRNG", width: 30, alignment: .center, group: .time))
+
+        return cols
+    }
+
+    /// Computes x-offsets for an arbitrary column array (companion to the cached `columnOffsets`).
+    /// Do NOT modify or replace the cached `columnOffsets` property above.
+    static nonisolated func columnOffsets(for columns: [ColumnDef]) -> [Int: CGFloat] {
+        var offsets: [Int: CGFloat] = [:]
+        var x = marginH
+        for col in columns {
+            offsets[col.id] = x
+            x += col.width
+        }
+        return offsets
+    }
+
+    /// Returns the x-origin and total width of the given group within the supplied column array + offset map.
+    /// Mirrors `groupGeometry(for:)` but operates on injected data instead of the static statics.
+    static nonisolated func groupGeometry(for group: ColumnGroup, in columns: [ColumnDef], offsets: [Int: CGFloat]) -> (x: CGFloat, width: CGFloat) {
+        let cols = columns.filter { $0.group == group }
+        guard let first = cols.first, let offset = offsets[first.id] else { return (marginH, 0) }
+        let width = cols.reduce(0) { $0 + $1.width }
+        return (offset, width)
+    }
 }
 
 // MARK: - UIColor hex init
