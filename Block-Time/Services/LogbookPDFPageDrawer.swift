@@ -47,8 +47,11 @@ struct LogbookPDFCoverDrawer {
         ctx.setStrokeColor(UIColor.black.cgColor)
         ctx.setLineWidth(0.75)
         let ruleY = page.height / 2 - 46
-        ctx.move(to: CGPoint(x: centreX - 120, y: ruleY))
-        ctx.addLine(to: CGPoint(x: centreX + 120, y: ruleY))
+        let titleAttrs: [NSAttributedString.Key: Any] = [.font: titleFont]
+        let titleSize = (title as NSString).size(withAttributes: titleAttrs)
+        let ruleHalfWidth = titleSize.width / 2 + 8
+        ctx.move(to: CGPoint(x: centreX - ruleHalfWidth, y: ruleY))
+        ctx.addLine(to: CGPoint(x: centreX + ruleHalfWidth, y: ruleY))
         ctx.strokePath()
 
         let nameFont = UIFont(name: "TimesNewRomanPSMT", size: 16) ?? .systemFont(ofSize: 16)
