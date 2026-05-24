@@ -205,6 +205,7 @@ private struct FlightsListContent: View {
     @State private var showingDeleteSessionAlert = false
     @State private var cachedTotalHours: Double = 0.0
     @State private var hasScrolledOnLaunch = false
+    @State private var pendingScrollToLatest = false
 
     // Cached date formatter for performance
     private let dateFormatter: DateFormatter = {
@@ -294,6 +295,15 @@ private struct FlightsListContent: View {
                 }
             }
             .onChange(of: filteredFlightSectors) { _, sectors in
+                if pendingScrollToLatest, !sectors.isEmpty {
+                    pendingScrollToLatest = false
+                    if let id = sectors.first?.id {
+                        Task { @MainActor in
+                            proxy.scrollTo(id, anchor: .top)
+                        }
+                    }
+                    return
+                }
                 guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
                 hasScrolledOnLaunch = true
                 let anchorID = sectors.first(where: {
@@ -307,6 +317,7 @@ private struct FlightsListContent: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightAdded)) { _ in
                 hasScrolledOnLaunch = false
+                pendingScrollToLatest = true
             }
         }
     }
