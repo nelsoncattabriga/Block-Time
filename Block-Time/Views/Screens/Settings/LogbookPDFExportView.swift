@@ -323,7 +323,7 @@ struct LogbookPDFExportView: View {
         let defs = CustomCounterService.shared.definitions
 
         VStack(alignment: .leading, spacing: 10) {
-            Text("Custom Fields")
+            Text("Custom Fields to include")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
@@ -343,10 +343,8 @@ struct LogbookPDFExportView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.primary)
                             Spacer()
-                            if isSelected {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.brown)
-                            }
+                            Image(systemName: isSelected ? "checkmark" : "xmark")
+                                .foregroundColor(isSelected ? .brown : .secondary)
                         }
                         .contentShape(Rectangle())
                     }
