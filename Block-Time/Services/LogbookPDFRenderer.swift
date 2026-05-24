@@ -19,6 +19,7 @@ struct LogbookPDFRenderer {
         resolvedDates: [String],
         pilotName: String,
         arn: String = "",
+        title: String = "PILOT LOGBOOK",
         dateFormat: String = "dd MMM yyyy",
         useHHMM: Bool = false,
         priorTotals: PageTotals = PageTotals()
@@ -36,6 +37,7 @@ struct LogbookPDFRenderer {
             ctx.beginPage()
             LogbookPDFCoverDrawer(
                 context: ctx,
+                title: title,
                 pilotName: pilotName,
                 arn: arn,
                 dateRange: dateRange

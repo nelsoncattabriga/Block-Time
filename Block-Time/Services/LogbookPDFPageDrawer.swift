@@ -10,6 +10,7 @@ import UIKit
 struct LogbookPDFCoverDrawer {
 
     let context: UIGraphicsPDFRendererContext
+    let title: String
     let pilotName: String
     let arn: String
     let dateRange: String
@@ -39,7 +40,7 @@ struct LogbookPDFCoverDrawer {
         let textWidth: CGFloat = page.width - 120
 
         let titleFont = UIFont(name: "TimesNewRomanPS-BoldMT", size: 28) ?? .boldSystemFont(ofSize: 28)
-        drawCentredText("PILOT LOGBOOK",
+        drawCentredText(title,
                         centreX: centreX, y: page.height / 2 - 80,
                         width: textWidth, font: titleFont, color: .black)
 

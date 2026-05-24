@@ -396,6 +396,7 @@ struct LogbookPDFExportView: View {
         let preset    = datePreset
         let from      = customFrom
         let to        = customTo
+        let coverTitle = contentMode == .instructorHoursOnly ? "TRAINING RECORD" : "PILOT LOGBOOK"
 
         do {
             // Fetch on main actor (fast)
@@ -435,7 +436,8 @@ struct LogbookPDFExportView: View {
             let pdfData = await Task.detached(priority: .userInitiated) {
                 LogbookPDFRenderer.render(
                     flights: sorted, resolvedDates: resolvedDates,
-                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm,
+                    pilotName: name, arn: arnNumber, title: coverTitle,
+                    dateFormat: format, useHHMM: hhmm,
                     priorTotals: priorTotals)
             }.value
 
