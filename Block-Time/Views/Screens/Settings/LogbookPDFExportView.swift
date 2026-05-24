@@ -14,6 +14,14 @@ enum PDFDateRangePreset: String, CaseIterable {
     case custom       = "Custom"
 }
 
+// MARK: - Content Mode
+
+enum PDFContentMode: String, CaseIterable {
+    case allFlights          = "All Flights"
+    case includeINSSessions  = "Flights + INS"
+    case instructorHoursOnly = "Instructor Hours Only"
+}
+
 // MARK: - Export View
 
 struct LogbookPDFExportView: View {
@@ -35,9 +43,13 @@ struct LogbookPDFExportView: View {
     @AppStorage("logbookPDFCustomTo")     private var customToInterval: Double = 0
     @AppStorage("logbookPDFUseLocalDates") private var useLocalDates: Bool = true
     @AppStorage("logbookPDFUseHHMM")       private var useHHMM: Bool = false
+    @AppStorage("logbookPDFContentMode")   private var contentModeRaw: String = PDFContentMode.allFlights.rawValue
 
     private var datePreset: PDFDateRangePreset {
         PDFDateRangePreset(rawValue: datePresetRaw) ?? .all
+    }
+    private var contentMode: PDFContentMode {
+        PDFContentMode(rawValue: contentModeRaw) ?? .allFlights
     }
     private var customFrom: Date {
         get { customFromInterval > 0 ? Date(timeIntervalSince1970: customFromInterval) : earliestDate }
@@ -191,6 +203,24 @@ struct LogbookPDFExportView: View {
             .background(Color.brown.opacity(0.06))
             .cornerRadius(12)
 
+            // Content
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Content")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Picker("Content", selection: $contentModeRaw) {
+                    ForEach(PDFContentMode.allCases, id: \.rawValue) { mode in
+                        Text(mode.rawValue).tag(mode.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: contentModeRaw) { _, _ in updateFlightCount() }
+            }
+            .padding()
+            .background(Color.brown.opacity(0.06))
+            .cornerRadius(12)
+
             // Date Format + timezone
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center) {
@@ -242,6 +272,18 @@ struct LogbookPDFExportView: View {
     }
 
     // MARK: - Actions
+
+    /// Base content predicate per selected content mode.
+    private func matchesContentMode(_ f: FlightSector) -> Bool {
+        switch contentMode {
+        case .allFlights:
+            return !f.isPositioning && (f.blockTimeValue > 0 || f.simTimeValue > 0)
+        case .includeINSSessions:
+            return !f.isPositioning && (f.blockTimeValue > 0 || f.simTimeValue > 0 || f.spInsTimeValue > 0)
+        case .instructorHoursOnly:
+            return f.isSpInsOnly
+        }
+    }
 
     private static let inputDF: DateFormatter = {
         let f = DateFormatter()
@@ -314,7 +356,7 @@ struct LogbookPDFExportView: View {
 
     private func updateFlightCount() {
         let all = FlightDatabaseService.shared.fetchAllFlights()
-            .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
+            .filter { matchesContentMode($0) }
         flightCount = filtered(from: all).count
     }
 
@@ -352,7 +394,7 @@ struct LogbookPDFExportView: View {
         do {
             // Fetch on main actor (fast)
             let all = FlightDatabaseService.shared.fetchAllFlights()
-                .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
+                .filter { matchesContentMode($0) }
 
             // Filter on main actor (AirportService calls for effective dates)
             let filtered: [FlightSector]
