@@ -193,22 +193,13 @@ struct LogbookPDFExportView: View {
 
             // Content — only shown when Log Instructor Time is enabled
             if showSpInsSelector {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Content")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Content", selection: $contentModeRaw) {
-                        ForEach(PDFContentMode.allCases, id: \.rawValue) { mode in
-                            Text(mode.rawValue).tag(mode.rawValue)
-                        }
+                Picker("Content", selection: $contentModeRaw) {
+                    ForEach(PDFContentMode.allCases, id: \.rawValue) { mode in
+                        Text(mode.rawValue).tag(mode.rawValue)
                     }
-                    .pickerStyle(.segmented)
-                    .onChange(of: contentModeRaw) { _, _ in updateFlightCount() }
                 }
-                .padding()
-                .background(Color.brown.opacity(0.06))
-                .cornerRadius(12)
+                .pickerStyle(.segmented)
+                .onChange(of: contentModeRaw) { _, _ in updateFlightCount() }
 
                 // Custom Fields picker — shown only in Training Record mode
                 if contentMode == .instructorHoursOnly {
@@ -343,8 +334,13 @@ struct LogbookPDFExportView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.primary)
                             Spacer()
-                            Image(systemName: isSelected ? "checkmark" : "xmark")
-                                .foregroundColor(isSelected ? .brown : .secondary)
+                            Text(isSelected ? "Yes" :"No")
+                                .font(.subheadline)
+                                .foregroundColor(.brown)
+                            
+//                            Image(systemName: isSelected ? "checkmark" : "xmark")
+//                                .foregroundColor(isSelected ? .green : .brown)
+//                                .foregroundColor(isSelected ? .brown : .secondary)
                         }
                         .contentShape(Rectangle())
                     }
