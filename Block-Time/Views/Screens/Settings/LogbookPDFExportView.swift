@@ -68,7 +68,7 @@ struct LogbookPDFExportView: View {
             .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
         let available = CustomCounterService.shared.definitions
         let resolved = indices.compactMap { idx in available.first(where: { $0.columnIndex == idx }) }
-        return Array(resolved.prefix(7))
+        return Array(resolved.prefix(10))
     }
 
     /// Whether the given custom field is selected for Training Record.
@@ -84,7 +84,7 @@ struct LogbookPDFExportView: View {
         if let pos = indices.firstIndex(of: def.columnIndex) {
             indices.remove(at: pos)
         } else {
-            guard indices.count < 7 else { return }
+            guard indices.count < 10 else { return }
             indices.append(def.columnIndex)
         }
         trainingCustomFieldsRaw = indices.map(String.init).joined(separator: ",")
@@ -333,13 +333,13 @@ struct LogbookPDFExportView: View {
                     .font(.footnote)
                     .foregroundColor(.secondary)
             } else {
-                Text("\(selectedCount) of 7 selected")
+                Text("\(selectedCount) of 10 selected")
                     .font(.caption)
                     .foregroundColor(.secondary)
 
                 ForEach(defs) { def in
                     let isSelected = isCustomFieldSelected(def)
-                    let atCap = selectedCount >= 7 && !isSelected
+                    let atCap = selectedCount >= 10 && !isSelected
 
                     Button {
                         if !atCap { toggleCustomField(def) }

@@ -138,12 +138,12 @@ enum LogbookPDFLayout {
     // MARK: Training Record Dynamic Layout
 
     /// Builds the column array for Training Record mode.
-    /// Crew columns (CAPT, F/O) are omitted. Up to 7 custom field columns are inserted
+    /// Crew columns (CAPT, F/O) are omitted. Up to 10 custom field columns are inserted
     /// between REMARKS and TRNG. Custom column ids follow the rule: id = 100 + n,
     /// where n is the zero-based index into the passed customFields array.
     /// This means customFields[n].columnIndex is reached via id 100+n in the drawer.
     static nonisolated func trainingRecordColumns(customFields: [CustomCounterDefinition]) -> [ColumnDef] {
-        let fields = Array(customFields.prefix(7))
+        let fields = Array(customFields.prefix(10))
         let customCount = fields.count
 
         // Remarks fills all remaining space after fixed cols + custom cols.
