@@ -44,6 +44,8 @@ struct LogbookPDFExportView: View {
     @AppStorage("logbookPDFUseHHMM")       private var useHHMM: Bool = false
     @AppStorage("logbookPDFContentMode3")  private var contentModeRaw: String = PDFContentMode.allFlights.rawValue
     @AppStorage("showSpInsSelector")       private var showSpInsSelector: Bool = false
+    /// Comma-separated columnIndex ints of the custom fields selected for Training Record PDF.
+    @AppStorage("logbookPDFTrainingCustomFields") private var trainingCustomFieldsRaw: String = ""
 
     private var datePreset: PDFDateRangePreset {
         PDFDateRangePreset(rawValue: datePresetRaw) ?? .all
@@ -56,6 +58,36 @@ struct LogbookPDFExportView: View {
     }
     private var customTo: Date {
         get { customToInterval > 0 ? Date(timeIntervalSince1970: customToInterval) : latestDate }
+    }
+
+    /// Resolves the raw comma-separated columnIndex string into definitions in saved order,
+    /// intersected with currently-defined custom fields, capped at 7.
+    private var selectedCustomFields: [CustomCounterDefinition] {
+        let indices = trainingCustomFieldsRaw
+            .split(separator: ",")
+            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        let available = CustomCounterService.shared.definitions
+        let resolved = indices.compactMap { idx in available.first(where: { $0.columnIndex == idx }) }
+        return Array(resolved.prefix(7))
+    }
+
+    /// Whether the given custom field is selected for Training Record.
+    private func isCustomFieldSelected(_ def: CustomCounterDefinition) -> Bool {
+        selectedCustomFields.contains(where: { $0.columnIndex == def.columnIndex })
+    }
+
+    /// Toggles a custom field in/out of the Training Record selection.
+    private func toggleCustomField(_ def: CustomCounterDefinition) {
+        var indices = trainingCustomFieldsRaw
+            .split(separator: ",")
+            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        if let pos = indices.firstIndex(of: def.columnIndex) {
+            indices.remove(at: pos)
+        } else {
+            guard indices.count < 7 else { return }
+            indices.append(def.columnIndex)
+        }
+        trainingCustomFieldsRaw = indices.map(String.init).joined(separator: ",")
     }
 
     private static let dateFormats: [(label: String, format: String)] = [
@@ -177,6 +209,11 @@ struct LogbookPDFExportView: View {
                 .padding()
                 .background(Color.brown.opacity(0.06))
                 .cornerRadius(12)
+
+                // Custom Fields picker — shown only in Training Record mode
+                if contentMode == .instructorHoursOnly {
+                    customFieldsPickerSection
+                }
             }
 
             // Date Range
@@ -277,6 +314,56 @@ struct LogbookPDFExportView: View {
             .cornerRadius(12)
 
         }
+    }
+
+    // MARK: - Custom Fields Picker
+
+    @ViewBuilder
+    private var customFieldsPickerSection: some View {
+        let defs = CustomCounterService.shared.definitions
+        let selectedCount = selectedCustomFields.count
+
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Custom Fields")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            if defs.isEmpty {
+                Text("No custom fields defined — add them in Settings")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("\(selectedCount) of 7 selected")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                ForEach(defs) { def in
+                    let isSelected = isCustomFieldSelected(def)
+                    let atCap = selectedCount >= 7 && !isSelected
+
+                    Button {
+                        if !atCap { toggleCustomField(def) }
+                    } label: {
+                        HStack {
+                            Text(def.label)
+                                .font(.subheadline)
+                                .foregroundColor(atCap ? .secondary : .primary)
+                            Spacer()
+                            if isSelected {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.brown)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .disabled(atCap)
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding()
+        .background(Color.brown.opacity(0.06))
+        .cornerRadius(12)
     }
 
     // MARK: - Actions
@@ -397,6 +484,8 @@ struct LogbookPDFExportView: View {
         let from      = customFrom
         let to        = customTo
         let coverTitle = contentMode == .instructorHoursOnly ? "TRAINING RECORD" : "PILOT LOGBOOK"
+        // Capture custom fields on main actor before Task.detached
+        let pdfCustomFields = contentMode == .instructorHoursOnly ? selectedCustomFields : []
 
         do {
             // Fetch on main actor (fast)
@@ -438,7 +527,8 @@ struct LogbookPDFExportView: View {
                     flights: sorted, resolvedDates: resolvedDates,
                     pilotName: name, arn: arnNumber, title: coverTitle,
                     dateFormat: format, useHHMM: hhmm,
-                    priorTotals: priorTotals)
+                    priorTotals: priorTotals,
+                    customFields: pdfCustomFields)
             }.value
 
             let timestamp = DateFormatter()
