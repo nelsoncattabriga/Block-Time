@@ -20,6 +20,7 @@ struct FlightsSplitView: View {
     @State private var showingDiscardAlert: Bool = false
     @State private var pendingFlightSelection: FlightSector?
     @State private var showingSaveFailedAlert: Bool = false
+    @State private var listRefreshTrigger: UUID = UUID()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
     @Environment(PurchaseService.self) private var purchaseService
@@ -39,6 +40,7 @@ struct FlightsSplitView: View {
                     selectedFlight: $selectedFlight,
                     isAddingNewFlight: $isAddingNewFlight,
                     isSelectMode: $isSelectMode,
+                    refreshTrigger: $listRefreshTrigger,
                     onFlightSelected: { flight in
                         if viewModel.hasUnsavedChanges {
                             pendingFlightSelection = flight
@@ -102,6 +104,7 @@ struct FlightsSplitView: View {
                                             selectedFlight = nil
                                             viewModel.exitEditingMode()
                                         }
+                                        listRefreshTrigger = UUID()
                                     } else {
                                         pendingFlightSelection = nil
                                         showingSaveFailedAlert = true
@@ -178,6 +181,7 @@ private struct FlightsListContent: View {
     @Binding var selectedFlight: FlightSector?
     @Binding var isAddingNewFlight: Bool
     @Binding var isSelectMode: Bool
+    @Binding var refreshTrigger: UUID
     let onFlightSelected: (FlightSector) -> Void
 
     private let databaseService = FlightDatabaseService.shared
@@ -196,10 +200,12 @@ private struct FlightsListContent: View {
     @State private var showingBulkDuplicateAlert = false
     @State private var showingBulkEditSheet = false
     @State private var summaryToEdit: FlightSector?
+    @State private var showingNewSummarySheet = false
     @State private var sessionFilterIDs: Set<UUID> = []
     @State private var showingDeleteSessionAlert = false
     @State private var cachedTotalHours: Double = 0.0
     @State private var hasScrolledOnLaunch = false
+    @State private var pendingScrollToLatest = false
 
     // Cached date formatter for performance
     private let dateFormatter: DateFormatter = {
@@ -280,7 +286,7 @@ private struct FlightsListContent: View {
                 guard !hasScrolledOnLaunch, !filteredFlightSectors.isEmpty else { return }
                 hasScrolledOnLaunch = true
                 let anchorID = filteredFlightSectors.first(where: {
-                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
                 })?.id ?? filteredFlightSectors.last?.id
                 if let id = anchorID {
                     Task { @MainActor in
@@ -289,10 +295,22 @@ private struct FlightsListContent: View {
                 }
             }
             .onChange(of: filteredFlightSectors) { _, sectors in
+                if pendingScrollToLatest, !sectors.isEmpty {
+                    pendingScrollToLatest = false
+                    let anchorID = sectors.first(where: {
+                        $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
+                    })?.id ?? sectors.last?.id
+                    if let id = anchorID {
+                        Task { @MainActor in
+                            proxy.scrollTo(id, anchor: .top)
+                        }
+                    }
+                    return
+                }
                 guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
                 hasScrolledOnLaunch = true
                 let anchorID = sectors.first(where: {
-                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
                 })?.id ?? sectors.last?.id
                 if let id = anchorID {
                     Task { @MainActor in
@@ -302,6 +320,7 @@ private struct FlightsListContent: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightAdded)) { _ in
                 hasScrolledOnLaunch = false
+                pendingScrollToLatest = true
             }
         }
     }
@@ -450,15 +469,25 @@ private struct FlightsListContent: View {
                 }
             } else {
                 // Add + Select buttons on the left
-                Button(action: {
-                    HapticManager.shared.impact(.light)
-                    if purchaseService.canAddFlight {
-                        selectedFlight = nil
-                        isAddingNewFlight = true
-                    } else {
-                        showingPaywall = true
+                Menu {
+                    Button {
+                        HapticManager.shared.impact(.light)
+                        if purchaseService.canAddFlight {
+                            selectedFlight = nil
+                            isAddingNewFlight = true
+                        } else {
+                            showingPaywall = true
+                        }
+                    } label: {
+                        Label("New Flight", systemImage: "airplane")
                     }
-                }) {
+                    Button {
+                        HapticManager.shared.impact(.light)
+                        showingNewSummarySheet = true
+                    } label: {
+                        Label("Add Aircraft Summary", systemImage: "list.bullet.rectangle")
+                    }
+                } label: {
                     Image(systemName: "plus.circle")
                         .font(.title)
                 }
@@ -651,6 +680,9 @@ private struct FlightsListContent: View {
                 }
             }
         }
+        .onChange(of: refreshTrigger) { _, _ in
+            Task { await loadFlights() }
+        }
         .alert(flightToDelete.map { "Delete flight \($0.flightNumberFormatted)?" } ?? "Delete Flight?",
                isPresented: $showingDeleteAlert,
                presenting: flightToDelete) { flight in
@@ -711,6 +743,14 @@ private struct FlightsListContent: View {
                 },
                 onDelete: { summaryToDelete in
                     deleteSummary(summaryToDelete)
+                }
+            )
+        }
+        .sheet(isPresented: $showingNewSummarySheet) {
+            AircraftSummarySheet(
+                editingSector: nil,
+                onSave: { newSummary in
+                    saveSummary(newSummary)
                 }
             )
         }
@@ -1034,10 +1074,11 @@ private struct FlightsListContent: View {
                 let time1 = flight1.outTime.isEmpty ? flight1.scheduledDeparture : flight1.outTime
                 let time2 = flight2.outTime.isEmpty ? flight2.scheduledDeparture : flight2.outTime
                 if time1.isEmpty && time2.isEmpty {
-                    // No time data — fall back to insertion order (descending createdAt so last-in-file = first in list)
                     let result = (flight1.createdAt ?? .distantPast) > (flight2.createdAt ?? .distantPast)
                     return filterViewModel.sortOrderReversed ? !result : result
                 }
+                if time1.isEmpty { return filterViewModel.sortOrderReversed ? false : true }
+                if time2.isEmpty { return filterViewModel.sortOrderReversed ? true : false }
                 let result = compareOutTimes(time1, time2)
                 return filterViewModel.sortOrderReversed ? !result : result
             } else {

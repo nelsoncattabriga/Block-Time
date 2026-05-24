@@ -340,7 +340,7 @@ class AircraftFleetService: ObservableObject {
                       let type = entity.type else {
                     return nil
                 }
-                return Aircraft(registration: registration, type: type)
+                return Aircraft(customRegistration: registration, type: type)
             }
         } catch {
             LogManager.shared.error("Error fetching custom aircraft: \(error.localizedDescription)")

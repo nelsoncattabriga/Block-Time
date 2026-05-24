@@ -68,7 +68,7 @@ struct MigrationImportView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     if importComplete, let summary = importSummary {
@@ -86,7 +86,7 @@ struct MigrationImportView: View {
 //            .navigationTitle("Migrate from Logger")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         onDismiss?()
                         dismiss()

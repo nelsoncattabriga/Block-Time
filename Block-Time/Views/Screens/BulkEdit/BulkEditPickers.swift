@@ -10,11 +10,13 @@ import SwiftUI
 struct BulkEditFlightTypeToggle: View {
     @Binding var isPositioning: BulkEditViewModel.FieldState<Bool>
     @Binding var isSimulator: BulkEditViewModel.FieldState<Bool>
+    @Binding var isSpIns: BulkEditViewModel.FieldState<Bool>
 
     enum FlightType {
         case flight
         case positioning
         case simulator
+        case ins
         case mixed
     }
 
@@ -22,15 +24,18 @@ struct BulkEditFlightTypeToggle: View {
         // Determine the current flight type based on field states
         let posValue = isPositioning.displayValue
         let simValue = isSimulator.displayValue
+        let spValue = isSpIns.displayValue
 
-        // If either field is mixed, the whole thing is mixed
-        if isPositioning.isMixed || isSimulator.isMixed {
+        // If any field is mixed, the whole thing is mixed
+        if isPositioning.isMixed || isSimulator.isMixed || isSpIns.isMixed {
             return .mixed
         }
 
         // Determine concrete type
         if let sim = simValue, sim == true {
             return .simulator
+        } else if let sp = spValue, sp == true {
+            return .ins
         } else if let pos = posValue, pos == true {
             return .positioning
         } else {
@@ -51,6 +56,7 @@ struct BulkEditFlightTypeToggle: View {
                     // First tap on mixed sets to FLT
                     isPositioning = .value(false)
                     isSimulator = .value(false)
+                    isSpIns = .value(false)
                     HapticManager.shared.impact(.light)
                 } label: {
                     Text("(Mixed)")
@@ -70,12 +76,13 @@ struct BulkEditFlightTypeToggle: View {
                     Button(action: {
                         isPositioning = .value(false)
                         isSimulator = .value(false)
+                        isSpIns = .value(false)
                         HapticManager.shared.impact(.light)
                     }) {
                         Text("FLT")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .flight ? .white : .secondary)
-                            .frame(width: 55, height: 28)
+                            .frame(width: 48, height: 28)
                             .background(currentType == .flight ? Color.blue : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
@@ -88,12 +95,13 @@ struct BulkEditFlightTypeToggle: View {
                     Button(action: {
                         isPositioning = .value(true)
                         isSimulator = .value(false)
+                        isSpIns = .value(false)
                         HapticManager.shared.impact(.light)
                     }) {
                         Text("PAX")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .positioning ? .white : .secondary)
-                            .frame(width: 55, height: 28)
+                            .frame(width: 48, height: 28)
                             .background(currentType == .positioning ? Color.orange : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
@@ -106,13 +114,33 @@ struct BulkEditFlightTypeToggle: View {
                     Button(action: {
                         isPositioning = .value(false)
                         isSimulator = .value(true)
+                        isSpIns = .value(false)
                         HapticManager.shared.impact(.light)
                     }) {
                         Text("SIM")
                             .font(.subheadline.bold())
                             .foregroundColor(currentType == .simulator ? .white : .secondary)
-                            .frame(width: 55, height: 28)
+                            .frame(width: 48, height: 28)
                             .background(currentType == .simulator ? Color.purple : Color(.secondarySystemBackground))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    Divider()
+                        .frame(height: 20)
+
+                    // INS Button
+                    Button(action: {
+                        isPositioning = .value(false)
+                        isSimulator = .value(false)
+                        isSpIns = .value(true)
+                        HapticManager.shared.impact(.light)
+                    }) {
+                        Text("INS")
+                            .font(.subheadline.bold())
+                            .foregroundColor(currentType == .ins ? .white : .secondary)
+                            .frame(width: 48, height: 28)
+                            .background(currentType == .ins ? Color.indigo : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())

@@ -11,54 +11,55 @@ struct ExportLogbookView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var isExporting = false
-    @State private var exportComplete = false
     @State private var exportedFileURL: URL?
     @State private var exportError: String?
     @State private var flightCount: Int = 0
     @State private var showShareSheet = false
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    if exportComplete {
-                        // Export Success View
-                        exportSuccessView
-                    } else {
-                        // Export Setup View
+        NavigationStack {
+            ZStack {
+                ScrollView {
+                    VStack(spacing: 24) {
                         exportSetupView
                     }
+                }
+
+                if isExporting {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                    ProgressView("Exporting…")
+                        .progressViewStyle(.circular)
+                        .padding(24)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
             }
             .navigationTitle("Export Logbook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Export", action: performExport)
+                        .disabled(isExporting || flightCount == 0)
                 }
             }
             .alert("Export Error", isPresented: Binding(
                 get: { exportError != nil },
                 set: { if !$0 { exportError = nil } }
             )) {
-                Button("OK", role: .cancel) {
-                    exportError = nil
-                }
+                Button("OK", role: .cancel) { exportError = nil }
             } message: {
-                if let error = exportError {
-                    Text(error)
-                }
+                if let error = exportError { Text(error) }
             }
-            .onAppear {
-                loadFlightCount()
-            }
-            .sheet(isPresented: $showShareSheet) {
+            .onAppear { loadFlightCount() }
+            .sheet(isPresented: $showShareSheet, onDismiss: { dismiss() }) {
                 if let fileURL = exportedFileURL {
                     ExportShareSheet(items: [fileURL])
                 }
             }
+            .allowsHitTesting(!isExporting)
         }
     }
 
@@ -66,7 +67,6 @@ struct ExportLogbookView: View {
 
     private var exportSetupView: some View {
         VStack(spacing: 24) {
-            // Header
             VStack(spacing: 12) {
                 Image(systemName: "square.and.arrow.up.fill")
                     .font(.system(size: 60))
@@ -78,7 +78,6 @@ struct ExportLogbookView: View {
             }
             .padding(.top)
 
-            // Flight Count Info
             VStack(spacing: 8) {
                 Text("\(flightCount)")
                     .font(.system(size: 48, weight: .bold))
@@ -93,161 +92,22 @@ struct ExportLogbookView: View {
             .cornerRadius(12)
             .padding(.horizontal)
 
-            // Instructions
             VStack(alignment: .leading, spacing: 12) {
-                InstructionRow(
-                    icon: "doc.text.fill",
-                    text: "Export format: CSV File"
-                )
-
-                InstructionRow(
-                    icon: "calendar",
-                    text: "All flights sorted by date (oldest first)"
-                )
-
-                InstructionRow(
-                    icon: "checkmark.circle.fill",
-                    text: "Compatible with other logbooks"
-                )
+                InstructionRow(icon: "doc.text.fill", text: "Export format: CSV File")
+                InstructionRow(icon: "calendar", text: "All flights sorted by date (oldest first)")
+                InstructionRow(icon: "checkmark.circle.fill", text: "Compatible with other logbooks")
             }
             .padding()
             .background(Color.indigo.opacity(0.1))
             .cornerRadius(12)
             .padding(.horizontal)
-
-            Spacer()
-
-            // Export Button
-            Button(action: {
-                performExport()
-            }) {
-                HStack {
-                    if isExporting {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .indigo))
-                    } else {
-                        Image(systemName: "square.and.arrow.up.fill")
-                            .foregroundColor(.indigo)
-                    }
-                    Text(isExporting ? "Exporting..." : "Export Logbook")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.indigo.opacity(0.12))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.indigo.opacity(0.4), lineWidth: 1)
-                )
-            }
-            .disabled(isExporting || flightCount == 0)
-            .padding(.horizontal)
-            .padding(.bottom)
-        }
-    }
-
-    // MARK: - Export Success View
-
-    private var exportSuccessView: some View {
-        VStack(spacing: 24) {
-            // Success Icon
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 60))
-                .foregroundColor(.green)
-                .padding(.top)
-
-            // Summary
-            VStack(spacing: 8) {
-                Text("Export Complete")
-                    .font(.title2)
-                    .fontWeight(.bold)
-
-                Text("Successfully exported \(flightCount) flight\(flightCount == 1 ? "" : "s")")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            // Export Info Card
-            VStack(spacing: 16) {
-                HStack(spacing: 16) {
-                    Image(systemName: "doc.fill")
-                        .font(.title2)
-                        .foregroundColor(.indigo)
-                        .frame(width: 32)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(flightCount)")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
-
-                        Text(flightCount == 1 ? "Flight Exported" : "Flights Exported")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-                }
-                .padding()
-                .background(Color.indigo.opacity(0.1))
-                .cornerRadius(12)
-            }
-            .padding(.horizontal)
-
-            Spacer()
-
-            // Share Button
-            if exportedFileURL != nil {
-                Button(action: {
-                    showShareSheet = true
-                }) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(.indigo)
-                        Text("Share Export File")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.indigo.opacity(0.12))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.indigo.opacity(0.4), lineWidth: 1)
-                    )
-                }
-                .padding(.horizontal)
-
-                Button(action: {
-                    dismiss()
-                }) {
-                    Text("Done")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .foregroundColor(.secondary)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
-                        )
-                }
-                .padding(.horizontal)
-                .padding(.bottom)
-            }
         }
     }
 
     // MARK: - Helper Functions
 
     private func loadFlightCount() {
-        let flights = FlightDatabaseService.shared.fetchAllFlights()
-        flightCount = flights.count
+        flightCount = FlightDatabaseService.shared.fetchAllFlights().count
     }
 
     private func performExport() {
@@ -255,12 +115,11 @@ struct ExportLogbookView: View {
 
         Task {
             do {
-                // Add minimum delay to show spinner for user feedback
-                try await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+                try await Task.sleep(nanoseconds: 300_000_000)
 
                 let flights = FlightDatabaseService.shared.fetchAllFlights()
 
-                if flights.isEmpty {
+                guard !flights.isEmpty else {
                     await MainActor.run {
                         isExporting = false
                         exportError = "No flights to export. Your logbook is empty."
@@ -268,37 +127,33 @@ struct ExportLogbookView: View {
                     return
                 }
 
-                // Sort flights by date (oldest first)
-                let sortedFlights = flights.sorted { flight1, flight2 in
+                let sortedFlights = flights.sorted { f1, f2 in
                     let formatter = DateFormatter()
                     formatter.dateFormat = "dd/MM/yyyy"
-                    if let date1 = formatter.date(from: flight1.date),
-                       let date2 = formatter.date(from: flight2.date) {
-                        return date1 < date2
+                    if let d1 = formatter.date(from: f1.date), let d2 = formatter.date(from: f2.date) {
+                        return d1 < d2
                     }
-                    return flight1.date < flight2.date
+                    return f1.date < f2.date
                 }
 
-                // Generate CSV
-                let csvString = FileImportService.shared.exportToCSV(flights: sortedFlights)
+                let definitions = CustomCounterService.shared.definitions
+                let csvString = FileImportService.shared.exportToCSV(
+                    flights: sortedFlights,
+                    definitions: definitions,
+                    useLabelsAsHeaders: true,
+                    writeDefinitionsHeader: false
+                )
 
-                // Create filename with timestamp
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd_HHmm"
-                let timestamp = dateFormatter.string(from: Date())
-                let fileName = "Logbook_Export_\(timestamp).csv"
-
-                // Save to temporary directory
-                let tempDir = FileManager.default.temporaryDirectory
-                let fileURL = tempDir.appendingPathComponent(fileName)
+                let fileName = "Logbook_Export_\(dateFormatter.string(from: Date())).csv"
+                let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
 
                 try csvString.write(to: fileURL, atomically: true, encoding: .utf8)
 
                 await MainActor.run {
                     isExporting = false
                     exportedFileURL = fileURL
-                    exportComplete = true
-                    // Automatically show share sheet after export completes
                     showShareSheet = true
                 }
 
@@ -323,22 +178,20 @@ private struct InstructionRow: View {
             Image(systemName: icon)
                 .foregroundColor(.indigo)
                 .frame(width: 24)
-
             Text(text)
                 .font(.subheadline)
-
             Spacer()
         }
     }
 }
 
 // MARK: - Export Share Sheet
+
 private struct ExportShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        return controller
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}

@@ -22,7 +22,7 @@ struct CustomCountField: View {
                     .foregroundColor(.secondary)
             }
             TextField("0", text: $text)
-                .keyboardType(.numberPad)
+                .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad)
                 .font(.subheadline)
                 .focused($isFocused)
                 .onChange(of: text) { _, newValue in
@@ -144,16 +144,13 @@ struct ModernManualEntryDataCard: View {
                 // Toggles section
                 ModernTogglesSection(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
-                // Custom counter field (e.g. PAX)
-                if viewModel.logCustomCount && !viewModel.isPositioning {
-                    CustomCountField(
-                        label: viewModel.customCountLabel,
-                        count: Binding(
-                            get: { viewModel.customCount },
-                            set: { viewModel.customCount = $0 }
-                        ),
-                        keyboardToolbar: keyboardToolbar
-                    )
+                // Custom counters
+                if !CustomCounterService.shared.definitions.isEmpty && !viewModel.isPositioning {
+                    Divider().padding(.horizontal, 8).padding(.vertical, 4)
+
+                    ForEach(CustomCounterService.shared.definitions) { definition in
+                        fieldRow(for: definition, viewModel: viewModel, keyboardToolbar: keyboardToolbar)
+                    }
                 }
                 
                 // Remarks section
@@ -175,6 +172,251 @@ struct ModernManualEntryDataCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Field types (shared by CrewOpsCard)
+
+struct FieldTimeField: View {
+    let label: String
+    @Binding var value: String
+    var keyboardToolbar: KeyboardToolbarState?
+    @FocusState private var isFocused: Bool
+    @State private var editingText: String = ""
+    @AppStorage("showTimesInHoursMinutes") private var showAsHHMM: Bool = false
+
+    private func padHHMM(_ s: String) -> String {
+        guard s.contains(":") else { return s }
+        let parts = s.split(separator: ":")
+        guard parts.count == 2,
+              let h = Int(parts[0]),
+              let m = Int(parts[1]),
+              h >= 0, m >= 0, m < 60 else { return s }
+        return String(format: "%02d:%02d", h, m)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: "clock.fill")
+                    .foregroundStyle(.blue)
+                    .frame(width: 20)
+                Text(label.uppercased())
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+            }
+            TextField(showAsHHMM ? "00:00" : "0.0", text: $editingText)
+                .font(.subheadline)
+                .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : (showAsHHMM ? .numberPad : .decimalPad))
+                .focused($isFocused)
+                .onChange(of: editingText) { _, newValue in
+                    let filtered: String
+                    if showAsHHMM {
+                        let digitsAndColon = newValue.filter { $0.isNumber || $0 == ":" }
+                        // Auto-insert colon when exactly 4 digits typed without one
+                        if digitsAndColon.count == 4 && !digitsAndColon.contains(":") {
+                            filtered = "\(digitsAndColon.prefix(2)):\(digitsAndColon.suffix(2))"
+                        } else {
+                            filtered = String(digitsAndColon.prefix(5))
+                        }
+                    } else {
+                        var result = ""
+                        var hasDot = false
+                        for ch in newValue {
+                            if ch.isNumber { result.append(ch) }
+                            else if (ch == "." || ch == ",") && !hasDot { result.append("."); hasDot = true }
+                        }
+                        filtered = result
+                    }
+                    if filtered != newValue { editingText = filtered }
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if focused {
+                        if value.isEmpty || value == "0:00" || value == "0.0" {
+                            editingText = ""
+                        } else if showAsHHMM {
+                            if value.contains(":") {
+                                editingText = padHHMM(value)
+                            } else if let d = Double(value) {
+                                editingText = padHHMM(FlightSector.decimalToHHMM(d))
+                            } else {
+                                editingText = padHHMM(value)
+                            }
+                        } else {
+                            // decimal mode: display at 1dp regardless of stored precision
+                            if value.contains(":") {
+                                editingText = FlightSector.hhmmToDecimal(value).map { String(format: "%.1f", $0) } ?? value
+                            } else if let d = Double(value) {
+                                editingText = String(format: "%.1f", d)
+                            } else {
+                                editingText = value
+                            }
+                        }
+                        keyboardToolbar?.fieldDidFocus(clear: {
+                            editingText = ""
+                            value = ""
+                        })
+                    } else {
+                        let trimmed = editingText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if trimmed.isEmpty {
+                            value = ""
+                        } else if showAsHHMM {
+                            // Handle bare 4-digit entry (e.g. "0330" → "03:30")
+                            let blurInput: String
+                            if trimmed.count == 4 && !trimmed.contains(":") && trimmed.allSatisfy(\.isNumber) {
+                                blurInput = "\(trimmed.prefix(2)):\(trimmed.suffix(2))"
+                            } else {
+                                blurInput = trimmed
+                            }
+                            if blurInput.contains(":"), let decimal = FlightSector.hhmmToDecimal(blurInput) {
+                                value = String(format: "%.2f", decimal)
+                            } else if let d = Double(blurInput) {
+                                value = String(format: "%.2f", d)
+                            } else {
+                                value = blurInput
+                            }
+                        } else {
+                            if let d = Double(trimmed) {
+                                value = String(format: "%.1f", d)
+                            } else {
+                                value = trimmed
+                            }
+                        }
+                    }
+                }
+                .onAppear {
+                    if value.isEmpty || value == "0.0" || value == "0:00" {
+                        editingText = ""
+                    } else if showAsHHMM {
+                        if let d = Double(value) {
+                            editingText = padHHMM(FlightSector.decimalToHHMM(d))
+                        } else {
+                            editingText = padHHMM(value)
+                        }
+                    } else {
+                        // decimal mode: display at 1dp regardless of stored precision
+                        if value.contains(":") {
+                            editingText = FlightSector.hhmmToDecimal(value).map { String(format: "%.1f", $0) } ?? value
+                        } else if let d = Double(value) {
+                            editingText = String(format: "%.1f", d)
+                        } else {
+                            editingText = value
+                        }
+                    }
+                }
+        }
+        .padding(12)
+        .background(Color(.systemGray6).opacity(0.75))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct FieldDecimalField: View {
+    let label: String
+    @Binding var value: String
+    var keyboardToolbar: KeyboardToolbarState?
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: "number.circle.fill")
+                    .foregroundStyle(.orange)
+                    .frame(width: 20)
+                Text(label.uppercased())
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+            }
+            TextField("0.0", text: $value)
+                .font(.subheadline)
+                .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
+                .focused($isFocused)
+                .onChange(of: value) { _, newValue in
+                    var result = ""
+                    var hasDot = false
+                    for ch in newValue {
+                        if ch.isNumber {
+                            result.append(ch)
+                        } else if (ch == "." || ch == ",") && !hasDot {
+                            result.append(".")
+                            hasDot = true
+                        }
+                    }
+                    if result != newValue { value = result }
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if focused {
+                        if value == "0.0" || value == "0" { value = "" }
+                        keyboardToolbar?.fieldDidFocus(clear: { value = "" })
+                    }
+                }
+        }
+        .padding(12)
+        .background(Color(.systemGray6).opacity(0.75))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct FieldIntegerField: View {
+    let label: String
+    @Binding var value: String
+    var keyboardToolbar: KeyboardToolbarState?
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: "number.square.fill")
+                    .foregroundStyle(.teal)
+                    .frame(width: 20)
+                Text(label.uppercased())
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+            }
+            TextField("0", text: $value)
+                .font(.subheadline)
+                .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad)
+                .focused($isFocused)
+                .onChange(of: value) { _, newValue in
+                    let filtered = newValue.filter { $0.isNumber }
+                    if filtered != newValue { value = filtered }
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if focused {
+                        if value == "0" { value = "" }
+                        keyboardToolbar?.fieldDidFocus(clear: { value = "" })
+                    }
+                }
+        }
+        .padding(12)
+        .background(Color(.systemGray6).opacity(0.75))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - Field row dispatcher
+
+@ViewBuilder
+private func fieldRow(for definition: CustomCounterDefinition, viewModel: FlightTimeExtractorViewModel, keyboardToolbar: KeyboardToolbarState?) -> some View {
+    let binding = Binding<String>(
+        get: { viewModel.counterValues[definition.columnIndex] ?? "" },
+        set: { viewModel.counterValues[definition.columnIndex] = $0 }
+    )
+    switch definition.type {
+    case .time:
+        FieldTimeField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
+    case .decimal:
+        FieldDecimalField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
+    case .integer:
+        FieldIntegerField(label: definition.label, value: binding, keyboardToolbar: keyboardToolbar)
+    case .text:
+        ModernRemarksField(
+            label: definition.label,
+            value: binding,
+            icon: "text.alignleft",
+            placeholder: "Add text...",
+            keyboardToolbar: keyboardToolbar
         )
     }
 }

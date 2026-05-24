@@ -295,9 +295,13 @@ class FlightDatabaseService: ObservableObject {
             flight.inTime = sector.inTime
             flight.scheduledDeparture = sector.scheduledDeparture
             flight.scheduledArrival = sector.scheduledArrival
-            flight.customCount = Int16(sector.customCount)
             flight.createdAt = Date()
             flight.modifiedAt = Date()
+
+            // Save counter values to flat columns
+            for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                flight.setCounter(columnIndex, value: value)
+            }
 
             do {
                 try viewContext.save()
@@ -311,7 +315,7 @@ class FlightDatabaseService: ObservableObject {
 
         return success
     }
-    
+
     /// Update an existing flight sector
     func updateFlight(_ sector: FlightSector) -> Bool {
         var success = false
@@ -362,8 +366,13 @@ class FlightDatabaseService: ObservableObject {
                 flight.inTime = sector.inTime
                 flight.scheduledDeparture = sector.scheduledDeparture
                 flight.scheduledArrival = sector.scheduledArrival
-                flight.customCount = Int16(sector.customCount)
                 flight.modifiedAt = Date()
+
+                // Clear all counter columns then write current values
+                for i in 1...10 { flight.setCounter(i, value: nil) }
+                for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                    flight.setCounter(columnIndex, value: value)
+                }
 
                 try viewContext.save()
                 success = true
@@ -437,8 +446,13 @@ class FlightDatabaseService: ObservableObject {
                     flight.inTime = updatedSector.inTime
                     flight.scheduledDeparture = updatedSector.scheduledDeparture
                     flight.scheduledArrival = updatedSector.scheduledArrival
-                    flight.customCount = Int16(updatedSector.customCount)
                     flight.modifiedAt = Date()
+
+                    // Clear all counter columns then write current values
+                    for i in 1...10 { flight.setCounter(i, value: nil) }
+                    for (columnIndex, value) in updatedSector.counterEntries where !value.isEmpty {
+                        flight.setCounter(columnIndex, value: value)
+                    }
                 }
 
                 // Single transaction for all records
@@ -732,22 +746,14 @@ class FlightDatabaseService: ObservableObject {
            viewContext.performAndWait {
                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
 
-               // Include flights that have ANY of:
-               // 1. Non-zero block time (completed operating flights)
-               // 2. Non-zero sim time (simulator flights)
-               // 3. isPositioning = true (PAX flights, even if blockTime=0)
-               // 4. Has scheduled times (rostered/future flights with scheduledDeparture or scheduledArrival)
-               // This approach includes all real flights (past and future) while excluding only empty placeholders
-               request.predicate = NSPredicate(
-                   format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (isPositioning == YES) OR (scheduledDeparture != nil AND scheduledDeparture != %@) OR (scheduledArrival != nil AND scheduledArrival != %@)",
-                   "0", "0.0", "0.00", "0", "0.0", "0.00", "", ""
-               )
+               request.predicate = NSPredicate(format: "date != nil")
 
                request.sortDescriptors = [
                    NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)
                ]
                request.fetchBatchSize = 100 // Optimize for large datasets
                request.returnsObjectsAsFaults = false // Eager loading
+
 
                do {
                    let flights = try viewContext.fetch(request)
@@ -763,7 +769,10 @@ class FlightDatabaseService: ObservableObject {
                        if a.1 != b.1 { return a.1 > b.1 }
                        let aTime = a.0.outTime.isEmpty ? a.0.scheduledDeparture : a.0.outTime
                        let bTime = b.0.outTime.isEmpty ? b.0.scheduledDeparture : b.0.outTime
-                       if aTime.isEmpty && bTime.isEmpty { return false }
+                       if aTime.isEmpty && bTime.isEmpty {
+                           guard let ac = a.0.createdAt, let bc = b.0.createdAt else { return false }
+                           return ac > bc
+                       }
                        if aTime.isEmpty { return false }
                        if bTime.isEmpty { return true }
                        return aTime > bTime
@@ -782,13 +791,11 @@ class FlightDatabaseService: ObservableObject {
         return await withCheckedContinuation { continuation in
             context.perform {
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-                request.predicate = NSPredicate(
-                    format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (isPositioning == YES) OR (scheduledDeparture != nil AND scheduledDeparture != %@) OR (scheduledArrival != nil AND scheduledArrival != %@)",
-                    "0", "0.0", "0.00", "0", "0.0", "0.00", "", ""
-                )
+                request.predicate = NSPredicate(format: "date != nil")
                 request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
                 request.fetchBatchSize = 100
                 request.returnsObjectsAsFaults = false
+ 
 
                 do {
                     let flights = try context.fetch(request)
@@ -801,7 +808,10 @@ class FlightDatabaseService: ObservableObject {
                         if a.1 != b.1 { return a.1 > b.1 }
                         let aTime = a.0.outTime.isEmpty ? a.0.scheduledDeparture : a.0.outTime
                         let bTime = b.0.outTime.isEmpty ? b.0.scheduledDeparture : b.0.outTime
-                        if aTime.isEmpty && bTime.isEmpty { return false }
+                        if aTime.isEmpty && bTime.isEmpty {
+                            guard let ac = a.0.createdAt, let bc = b.0.createdAt else { return false }
+                            return ac > bc
+                        }
                         if aTime.isEmpty { return false }
                         if bTime.isEmpty { return true }
                         return aTime > bTime
@@ -881,7 +891,7 @@ class FlightDatabaseService: ObservableObject {
                     var totalHours: Double = 0, p1Time: Double = 0, p1usTime: Double = 0, p2Time: Double = 0, simTime: Double = 0
                     for flight in flights {
                         let blockTime = self.safeDoubleFromString(flight.blockTime)
-                        let flightSimTime = self.entityIsSpInsOnly(flight) ? 0 : self.safeDoubleFromString(flight.simTime)
+                        let flightSimTime = self.safeDoubleFromString(flight.simTime)
                         let isSimFlight = blockTime == 0 && flightSimTime > 0
                         totalHours += blockTime > 0 ? blockTime : (countSimInTotal ? flightSimTime : 0)
                         if !isSimFlight {
@@ -920,6 +930,7 @@ class FlightDatabaseService: ObservableObject {
             request.sortDescriptors = [
                 NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)
             ]
+            request.relationshipKeyPathsForPrefetching = ["counterEntries"]
 
             do {
                 let flights = try viewContext.fetch(request)
@@ -955,6 +966,7 @@ class FlightDatabaseService: ObservableObject {
             request.sortDescriptors = [
                 NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)
             ]
+            request.relationshipKeyPathsForPrefetching = ["counterEntries"]
 
             do {
                 let flights = try viewContext.fetch(request)
@@ -1058,7 +1070,7 @@ class FlightDatabaseService: ObservableObject {
                 inTime: sector.inTime,
                 scheduledDeparture: sector.scheduledDeparture,
                 scheduledArrival: sector.scheduledArrival,
-                customCount: sector.customCount
+                counterEntries: sector.counterEntries
             )
             if saveFlight(copy) { savedCount += 1 }
         }
@@ -1350,7 +1362,6 @@ class FlightDatabaseService: ObservableObject {
                 flight.inTime = sector.inTime
                 flight.scheduledDeparture = sector.scheduledDeparture
                 flight.scheduledArrival = sector.scheduledArrival
-                flight.customCount = Int16(sector.customCount)
                 flight.importSessionID = sessionID
                 flight.importedAt = Date()
                 flight.createdAt = batchBaseTime.addingTimeInterval(Double(sectorIndex) * 0.001)
@@ -1724,6 +1735,32 @@ class FlightDatabaseService: ObservableObject {
         return migratedCount
     }
 
+    /// One-time migration: copy customCount integer into counter1 string column for all flights
+    /// where customCount > 0 and counter1 is not already set.
+    func migrateLegacyCustomCounterToColumn1() -> Int {
+        var migratedCount = 0
+        viewContext.performAndWait {
+            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "customCount > 0")
+            do {
+                let flights = try viewContext.fetch(request)
+                for flight in flights {
+                    // Only write if counter1 is not already populated
+                    guard flight.counter1 == nil || flight.counter1!.isEmpty else { continue }
+                    flight.counter1 = String(flight.customCount)
+                    flight.modifiedAt = Date()
+                    migratedCount += 1
+                }
+                if viewContext.hasChanges { try viewContext.save() }
+            } catch {
+                LogManager.shared.error("migrateLegacyCustomCounterToColumn1 error: \(error.localizedDescription)")
+                viewContext.rollback()
+            }
+        }
+        LogManager.shared.info("migrateLegacyCustomCounterToColumn1: copied customCount → counter1 on \(migratedCount) flights")
+        return migratedCount
+    }
+
     /// One-time migration: update aircraftType from "A321" to "A21N" for the Qantas XLR fleet.
     /// Only affects OGA–OGG registrations (with or without VH- prefix).
     func migrateAircraftTypeA321ToA21N() -> (migratedCount: Int, summary: String) {
@@ -1867,10 +1904,11 @@ class FlightDatabaseService: ObservableObject {
     /// Get comprehensive flight statistics (excludes rostered/future flights with blockTime == 0 and simTime == 0)
     func getFlightStatistics() -> FlightStatistics {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-        // Exclude rostered and positioning flights; include completed block or sim time
+        // Exclude rostered and positioning flights; include completed block, sim, or instructor time.
+        // spInsTime check is needed so INS Sim sessions with 0 SIM (observer role) are not excluded.
         request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
-            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (spInsTime != %@ AND spInsTime != %@ AND spInsTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00", "0", "0.0", "0.00")
         ])
 
         do {
@@ -1895,7 +1933,7 @@ class FlightDatabaseService: ObservableObject {
 
             for flight in flights {
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let flightSimTime = safeDoubleFromString(flight.simTime)
                 let isSimFlight = blockTime == 0 && flightSimTime > 0
                 totalBlock += blockTime
                 if !isSimFlight {
@@ -1951,7 +1989,7 @@ class FlightDatabaseService: ObservableObject {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             NSPredicate(format: "isPositioning == NO OR isPositioning == nil"),
-            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00")
+            NSPredicate(format: "(blockTime != %@ AND blockTime != %@ AND blockTime != %@) OR (simTime != %@ AND simTime != %@ AND simTime != %@) OR (spInsTime != %@ AND spInsTime != %@ AND spInsTime != %@)", "0", "0.0", "0.00", "0", "0.0", "0.00", "0", "0.0", "0.00")
         ])
 
         do {
@@ -1976,7 +2014,7 @@ class FlightDatabaseService: ObservableObject {
 
             for flight in flights {
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let flightSimTime = safeDoubleFromString(flight.simTime)
                 let isSimFlight = blockTime == 0 && flightSimTime > 0
                 totalBlock      += blockTime
                 if !isSimFlight {
@@ -2057,7 +2095,7 @@ class FlightDatabaseService: ObservableObject {
 
         for flight in flights {
             guard !flight.isPositioning else { continue }
-            let isSimFlight = flight.blockTimeValue == 0 && (flight.isSpInsOnly ? 0 : flight.simTimeValue) > 0
+            let isSimFlight = flight.blockTimeValue == 0 && flight.simTimeValue > 0
             totalBlock += flight.blockTimeValue
             if !isSimFlight {
                 totalP1 += flight.p1TimeValue
@@ -2066,7 +2104,7 @@ class FlightDatabaseService: ObservableObject {
             }
             totalNight += flight.nightTimeValue
             totalInstrument += flight.instrumentTimeValue
-            totalSIM += flight.isSpInsOnly ? 0 : flight.simTimeValue
+            totalSIM += flight.simTimeValue
             let spVal = flight.spInsTimeValue
             totalSpIns += spVal
             if flight.isSpInsOnly {
@@ -2163,16 +2201,24 @@ class FlightDatabaseService: ObservableObject {
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
             scheduledArrival: entity.scheduledArrival ?? "",
-            customCount: Int(entity.customCount),
+            counterEntries: counterEntriesDict(from: entity),
             createdAt: entity.createdAt
         )
     }
 
+    private func counterEntriesDict(from entity: FlightEntity) -> [Int: String] {
+        var result: [Int: String] = [:]
+        for definition in CustomCounterService.shared.definitions {
+            if let value = entity.counterValue(at: definition.columnIndex), !value.isEmpty {
+                result[definition.columnIndex] = value
+            }
+        }
+        return result
+    }
+
     /// Safely convert string to double with validation
     private func entityIsSpInsOnly(_ flight: FlightEntity) -> Bool {
-        let spVal = safeDoubleFromString(flight.spInsTime)
-        guard spVal > 0 else { return false }
-        return abs(safeDoubleFromString(flight.simTime) - spVal) < 0.01
+        safeDoubleFromString(flight.spInsTime) > 0 && safeDoubleFromString(flight.blockTime) < 0.01
     }
 
     private func safeDoubleFromString(_ string: String?) -> Double {
@@ -2419,8 +2465,7 @@ class FlightDatabaseService: ObservableObject {
             let flights = try viewContext.fetch(request)
             let totalHours = flights.reduce(0.0) { sum, flight in
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let simTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
-                // Use block time if available, otherwise use sim time (SpIns excluded)
+                let simTime = safeDoubleFromString(flight.simTime)
                 return sum + (blockTime > 0 ? blockTime : simTime)
             }
             return totalHours
@@ -2640,8 +2685,7 @@ class FlightDatabaseService: ObservableObject {
             let flights = try viewContext.fetch(request)
             let totalHours = flights.reduce(0.0) { sum, flight in
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let simTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
-                // Use block time if available, otherwise use sim time (SpIns excluded)
+                let simTime = safeDoubleFromString(flight.simTime)
                 return sum + (blockTime > 0 ? blockTime : simTime)
             }
             return (totalHours, flights.count)
@@ -2673,7 +2717,7 @@ class FlightDatabaseService: ObservableObject {
             let countSimInTotal = UserDefaults.standard.object(forKey: "countSimInTotal") as? Bool ?? true
             for flight in flights {
                 let blockTime = safeDoubleFromString(flight.blockTime)
-                let flightSimTime = entityIsSpInsOnly(flight) ? 0 : safeDoubleFromString(flight.simTime)
+                let flightSimTime = safeDoubleFromString(flight.simTime)
                 let isSimFlight = blockTime == 0 && flightSimTime > 0
                 totalHours += blockTime > 0 ? blockTime : (countSimInTotal ? flightSimTime : 0)
                 if !isSimFlight {

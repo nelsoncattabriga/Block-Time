@@ -25,17 +25,31 @@ final class DashboardConfiguration {
 
     // MARK: - Computed
 
+    /// All known cards: standard cards + one entry per user-defined counter definition.
+    /// Excludes the legacy .customCount card once the counter migration has run, since
+    /// the data is now owned by customCounter.1 and the old card would be a duplicate.
+    private var allKnownCards: [DashboardCardID] {
+        let legacyMigrated = UserDefaults.standard.bool(forKey: "legacyCounterMigratedToColumn1")
+        let standardCards = legacyMigrated
+            ? DashboardCardID.allStandardCases.filter { $0 != .customCount }
+            : DashboardCardID.allStandardCases
+        let counterCards = CustomCounterService.shared.definitions
+            .filter { $0.showTotal }
+            .map { DashboardCardID.customCounter($0.columnIndex) }
+        return standardCards + counterCards
+    }
+
     /// Cards not yet assigned to sidebar or detail (iPad).
     var availableCards: [DashboardCardID] {
         let used = Set(sidebarCards + detailCards)
-        return DashboardCardID.allCases.filter { !used.contains($0) }
+        return allKnownCards.filter { !used.contains($0) }
     }
 
     /// Cards not in the detail list — used on iPhone where there is no sidebar.
     /// Sidebar-only cards appear here so iPhone users can still add them.
     var availableForPhone: [DashboardCardID] {
         let used = Set(detailCards)
-        return DashboardCardID.allCases.filter { !used.contains($0) }
+        return allKnownCards.filter { !used.contains($0) }
     }
 
     // MARK: - Add
@@ -70,6 +84,21 @@ final class DashboardConfiguration {
     func moveDetailCard(from offsets: IndexSet, to destination: Int) {
         detailCards.move(fromOffsets: offsets, toOffset: destination)
         save()
+    }
+
+    // MARK: - Prune
+
+    /// Removes any sidebar/detail cards that are no longer in allKnownCards.
+    /// Called when counter definitions change (e.g. showTotal toggled off, counter deleted).
+    func pruneRemovedCards() {
+        let known = Set(allKnownCards)
+        let prunedSidebar = sidebarCards.filter { known.contains($0) }
+        let prunedDetail  = detailCards.filter  { known.contains($0) }
+        if prunedSidebar.count != sidebarCards.count || prunedDetail.count != detailCards.count {
+            sidebarCards = prunedSidebar
+            detailCards  = prunedDetail
+            save()
+        }
     }
 
     // MARK: - Remove (returns card to the Available pool)
@@ -109,7 +138,7 @@ final class DashboardConfiguration {
         } else {
             let isIPad = UIDevice.current.userInterfaceIdiom == .pad
             let sidebarDefaults: Set<DashboardCardID> = [.totalTime, .frmsFlightTime, .frmsDutyTime]
-            let remaining = DashboardCardID.allCases.filter { !sidebarDefaults.contains($0) }
+            let remaining = DashboardCardID.allStandardCases.filter { !sidebarDefaults.contains($0) }
             detailCards = isIPad
                 ? remaining
                 : [.totalTime, .frmsFlightTime, .frmsDutyTime] + remaining

@@ -30,6 +30,7 @@ struct DraftFlightData: Codable {
     let isSimulator: Bool
     var isSpIns: Bool = false
     var spInsTime: String = ""
+    var simInsTime: String = ""
     let isPositioning: Bool
     let outTime: String
     let inTime: String
@@ -38,7 +39,6 @@ struct DraftFlightData: Codable {
     let isICUS: Bool
     let selectedTimeCredit: TimeCreditType
     let remarks: String
-    var customCount: Int = 0
     let dayTakeoffs: Int
     let dayLandings: Int
     let nightTakeoffs: Int
@@ -142,6 +142,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
     }
     @Published var isSpIns = false
     @Published var spInsTime = ""
+    @Published var simInsTime = ""          // SIM portion of an INS Sim session (0…spInsTime)
+    private var simInsTimeIsManual = false  // true once user manually edits the SIM field
     @Published var isPositioning = false
     @Published var outTime = ""
     @Published var inTime = ""
@@ -155,7 +157,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
     }
     @Published var remarks = ""
-    @Published var customCount = 0
+    @Published var counterValues: [Int: String] = [:]
     @Published var dayTakeoffs = 0
     @Published var dayLandings = 0
     @Published var nightTakeoffs = 0
@@ -221,10 +223,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
         if isSpIns && !isInstructingInAircraft {
             return !spInsTime.isEmpty && !flightDate.isEmpty
         }
-        // For regular flights, require date and airports, plus either OUT/IN times or STD/STA (for future flights)
+        // For regular flights, require date and airports, plus either OUT/IN times, STD/STA, or a manual block time
         let hasActualTimes = !outTime.isEmpty && !inTime.isEmpty
         let hasScheduledTimes = !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty
-        return !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty && (hasActualTimes || hasScheduledTimes)
+        let hasManualBlockTime = !blockTime.isEmpty && blockTime != "0.0"
+        return !flightDate.isEmpty && !fromAirport.isEmpty && !toAirport.isEmpty && (hasActualTimes || hasScheduledTimes || hasManualBlockTime)
     }
 
     /// Named requirement checks used to drive the dot indicators on the Save button and field labels.
@@ -275,11 +278,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 needsBlockOrInsTime: true
             )
         }
+        let hasManualBlockTime = !blockTime.isEmpty && blockTime != "0.0"
         return SaveRequirements(
             date: !flightDate.isEmpty,
             airports: !fromAirport.isEmpty && !toAirport.isEmpty,
-            out: timesOut,
-            in: timesIn,
+            out: timesOut || hasManualBlockTime,
+            in: timesIn || hasManualBlockTime,
             blockOrInsTime: false,
             blockOrInsTimeLabel: "",
             needsAirports: true,
@@ -684,6 +688,16 @@ class FlightTimeExtractorViewModel: ObservableObject {
     func updateDefaultSOName(_ value: String) {
         defaultSOName = value
         userDefaultsService.setDefaultSOName(value)
+    }
+
+    func userEditedSimInsTime(_ value: String) {
+        simInsTimeIsManual = !value.isEmpty
+        simInsTime = value
+    }
+
+    func resetSimInsTime() {
+        simInsTime = ""
+        simInsTimeIsManual = false
     }
 
     func updateFlightTimePosition(_ value: FlightTimePosition) {
@@ -1514,12 +1528,15 @@ class FlightTimeExtractorViewModel: ObservableObject {
         } else if isSimulator {
             guard !blockTime.isEmpty else { return }
         } else if !isPositioning {
-            guard !outTime.isEmpty && !inTime.isEmpty else { return }
-            let computed = calculateFlightTime()
-            guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
-                statusMessage = "Block time cannot be zero"
-                statusColor = .red
-                return
+            let isFutureFlight = !scheduledDeparture.isEmpty || !scheduledArrival.isEmpty
+            if !isFutureFlight {
+                guard !outTime.isEmpty && !inTime.isEmpty else { return }
+                let computed = calculateFlightTime()
+                guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
+                    statusMessage = "Block time cannot be zero"
+                    statusColor = .red
+                    return
+                }
             }
         }
 
@@ -1559,7 +1576,17 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         let instrumentTimeValue = (isPilotFlying && !isSimulator) ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
         let nightTimeValue = isSimulator ? "0.0" : nightTime
-        let simTimeValue = isSimulator ? blockTimeCalculated : "0.0"
+        let simTimeValue: String
+        if isSimulator {
+            simTimeValue = blockTimeCalculated
+        } else if isSimInstruction {
+            let ins = Double(spInsTime) ?? 0
+            let sim = min(Double(simInsTime) ?? 0, ins)
+            simTimeValue = String(format: "%.2f", sim)
+        } else {
+            simTimeValue = "0.0"
+        }
+        let spInsTimeValue = isSpIns && isInstructingInAircraft ? blockTimeCalculated : spInsTime
                     LogManager.shared.debug("DEBUG: saveToLogbook PF=\(isPilotFlying), isSimulator=\(isSimulator), simTime=\(simTimeValue), block=\(isSimulator ? "0.0" : blockTimeCalculated), p1=\(p1TimeValue)")
 
         // Create database service instance or inject it
@@ -1576,14 +1603,14 @@ class FlightTimeExtractorViewModel: ObservableObject {
             foName: coPilotName,
             so1Name: so1Name.isEmpty ? nil : so1Name,  // Add SO1
             so2Name: so2Name.isEmpty ? nil : so2Name,  // Add SO2
-            blockTime: isSimulator ? "0.0" : blockTimeCalculated,
+            blockTime: (isSimulator || isSimInstruction) ? "0.0" : blockTimeCalculated,
             nightTime: nightTimeValue,
             p1Time: p1TimeValue,
             p1usTime: p1usTimeValue,
             p2Time: p2TimeValue,
             instrumentTime: instrumentTimeValue,
             simTime: simTimeValue,
-            spInsTime: spInsTime,
+            spInsTime: spInsTimeValue,
             isPilotFlying: isPilotFlying,
             isPositioning: isPositioning,
             isAIII: isPilotFlying && isAIII,
@@ -1600,7 +1627,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             inTime: inTime,
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
-            customCount: isPositioning ? 0 : customCount
+            counterEntries: isPositioning ? [:] : currentCounterEntries()
         )
                     LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), p2Time=\(newFlight.p2Time)")
 
@@ -1708,6 +1735,14 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         // Load Sp/Ins time
         spInsTime = sector.spInsTime
+        if isSpIns && !isInstructingInAircraft {
+            // Restore the stored simTime as simInsTime; mark manual if it differs from INS time
+            simInsTime = sector.simTime
+            simInsTimeIsManual = abs(sector.simTimeValue - sector.spInsTimeValue) > 0.01
+        } else {
+            simInsTime = ""
+            simInsTimeIsManual = false
+        }
 
         if let nightValue = Double(sector.nightTime) {
             nightTime = String(format: "%.2f", nightValue)
@@ -1741,7 +1776,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
 //        print("DEBUG: Set selectedApproachType to: \(selectedApproachType ?? "nil")")
 
         remarks = sector.remarks
-        customCount = sector.customCount
         dayTakeoffs = sector.dayTakeoffs
         dayLandings = sector.dayLandings
         nightTakeoffs = sector.nightTakeoffs
@@ -1796,6 +1830,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // Store original ICUS value (inferred from time credits)
         originalIsICUS = isICUS
 
+        // Load custom counter entries
+        loadCounterEntries(from: sector)
+
 //        print("DEBUG: Loaded flight for editing: \(sector.flightNumber)")
     }
 
@@ -1810,10 +1847,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 return false
             }
         } else if !isSimulator && !isPositioning {
-            guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
-                statusMessage = "Block time cannot be zero"
-                statusColor = .red
-                return false
+            let isFutureFlight = (Double(blockTime) ?? 0) == 0 && (!scheduledDeparture.isEmpty || !scheduledArrival.isEmpty)
+            if !isFutureFlight {
+                guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
+                    statusMessage = "Block time cannot be zero"
+                    statusColor = .red
+                    return false
+                }
             }
         }
 
@@ -1849,8 +1889,16 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         let instrumentTimeValue = (isPilotFlying && !isSimulator) ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
         let nightTimeValue = isSimulator ? "0.0" : nightTime
-        // For sim Sp/Ins: simTime must equal spInsTime so isSpInsOnly is true (simTime==spInsTime>0)
-        let simTimeValue = isSimulator ? blockTime : (isSimInstruction ? spInsTime : "0.0")
+        let simTimeValue: String
+        if isSimulator {
+            simTimeValue = blockTime
+        } else if isSimInstruction {
+            let ins = Double(spInsTime) ?? 0
+            let sim = min(Double(simInsTime) ?? 0, ins)
+            simTimeValue = String(format: "%.2f", sim)
+        } else {
+            simTimeValue = "0.0"
+        }
         // For aircraft instruction: store blockTime in spInsTime so it can be identified and badged
         let spInsTimeValue = isSpIns && isInstructingInAircraft ? blockTime : spInsTime
 
@@ -1892,7 +1940,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             inTime: inTime,
             scheduledDeparture: scheduledDeparture,
             scheduledArrival: scheduledArrival,
-            customCount: isPositioning ? 0 : customCount
+            counterEntries: isPositioning ? [:] : currentCounterEntries()
         )
 
         let databaseService = FlightDatabaseService.shared
@@ -1902,6 +1950,15 @@ class FlightTimeExtractorViewModel: ObservableObject {
             statusMessage = "Flight updated successfully!"
             statusColor = .green
             HapticManager.shared.notification(.success)
+
+            // Sync VM fields to what was actually persisted so hasUnsavedChanges
+            // matches on the next render. For aircraft instruction the persisted
+            // spInsTime mirrors blockTime; the VM's own spInsTime field is unused
+            // in that mode and left stale, which would otherwise re-trigger the
+            // change-detection alert in iPad split view.
+            if isSpIns && isInstructingInAircraft {
+                spInsTime = blockTime
+            }
 
             // Update originalFlightData so hasUnsavedChanges returns false
             // This is important for iPad split view where we stay in edit mode after save
@@ -1923,18 +1980,39 @@ class FlightTimeExtractorViewModel: ObservableObject {
         return .p1
     }
 
+    // MARK: - Custom Counter Helpers
+
+    /// Populate counterValues from a sector's counterEntries dict (loaded from Core Data).
+    func loadCounterEntries(from sector: FlightSector) {
+        counterValues = sector.counterEntries
+    }
+
+    /// Return counterValues as a [columnIndex: rawValue] dict, skipping empty / zero entries.
+    func currentCounterEntries() -> [Int: String] {
+        var result: [Int: String] = [:]
+        for (columnIndex, value) in counterValues {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  trimmed != "0",
+                  trimmed != "0.0",
+                  trimmed != "00:00",
+                  trimmed != "0:00" else { continue }
+            result[columnIndex] = trimmed
+        }
+        return result
+    }
+
     var hasUnsavedChanges: Bool {
         guard let original = originalFlightData else { return false }
 
-        // Helper to compare time values numerically (ignoring precision differences like "4.5" vs "4.50")
+        // Helper to compare time values numerically (ignoring precision differences like "4.5" vs "4.50").
+        // Empty string is treated as zero so "" == "0.0" == "0.00" (FlightSector normalises empty → "0.00").
         func timeValuesEqual(_ a: String, _ b: String) -> Bool {
-            guard let aVal = Double(a), let bVal = Double(b) else {
-                return a == b // Fall back to string comparison if not numeric
-            }
-            return abs(aVal - bVal) < 0.01 // Consider equal if within 0.01 hours (~36 seconds)
+            let aVal = Double(a) ?? 0.0
+            let bVal = Double(b) ?? 0.0
+            return abs(aVal - bVal) < 0.01
         }
 
-        // Check if original flight was a simulator flight (INS flights have simTime==spInsTime, exclude them)
         let originalWasSimulator = (Double(original.simTime) ?? 0.0) > 0.0 && !original.isSpInsOnly
 
         return flightDateForStorage != original.date ||
@@ -1958,8 +2036,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
                selectedTimeCredit != originalTimeCreditType(original) ||
                isSimulator != originalWasSimulator ||
                isPositioning != original.isPositioning ||
+               isSpIns != (original.isSpInsOnly || original.isAircraftInstruction) ||
+               isInstructingInAircraft != original.isAircraftInstruction ||
                remarks != original.remarks ||
-               customCount != original.customCount ||
                dayTakeoffs != original.dayTakeoffs ||
                dayLandings != original.dayLandings ||
                nightTakeoffs != original.nightTakeoffs ||
@@ -1968,7 +2047,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
                inTime != original.inTime ||
                scheduledDeparture != original.scheduledDeparture ||
                scheduledArrival != original.scheduledArrival ||
-               !timeValuesEqual(spInsTime, original.spInsTime)
+               !timeValuesEqual(spInsTime, original.spInsTime) ||
+               (isSpIns && !isInstructingInAircraft && !timeValuesEqual(simInsTime, original.simTime)) ||
+               currentCounterEntries() != original.counterEntries
     }
 
     var changesSummary: String {
@@ -2040,6 +2121,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
             changes.append("INS: \(original.spInsTime) → \(spInsTime)")
         }
 
+        if isSpIns && !isInstructingInAircraft,
+           (Double(simInsTime) ?? 0.0) != (Double(original.simTime) ?? 0.0) {
+            changes.append("SIM (INS): \(original.simTime) → \(simInsTime)")
+        }
+
         if isPilotFlying != original.isPilotFlying {
             changes.append("PF: \(original.isPilotFlying ? "Yes" : "No") → \(isPilotFlying ? "Yes" : "No")")
         }
@@ -2051,7 +2137,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             changes.append("App: \(originalApproach) → \(currentApproach)")
         }
 
-        // Simulator/Flight type changes (INS flights have simTime==spInsTime, exclude them)
         let originalWasSimulator = (Double(original.simTime) ?? 0.0) > 0.0 && !original.isSpInsOnly
         let originalWasSpIns = original.isSpInsOnly
         if isSimulator != originalWasSimulator || isSpIns != originalWasSpIns {
@@ -2083,6 +2168,17 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         if remarks != original.remarks {
             changes.append("Remarks updated")
+        }
+
+        let newEntries = currentCounterEntries()
+        let allKeys = Set(newEntries.keys).union(original.counterEntries.keys)
+        for columnIndex in allKeys {
+            let oldVal = original.counterEntries[columnIndex] ?? ""
+            let newVal = newEntries[columnIndex] ?? ""
+            if oldVal != newVal {
+                let label = CustomCounterService.shared.definition(for: columnIndex)?.label ?? "Field"
+                changes.append("\(label): \(oldVal.isEmpty ? "—" : oldVal) → \(newVal.isEmpty ? "—" : newVal)")
+            }
         }
 
         return changes.isEmpty ? "No changes detected" : changes.joined(separator: "\n")
@@ -2484,9 +2580,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
         isSpIns = false
         isInstructingInAircraft = showSpInsSelector ? (defaultInstructionEnvironment == .aircraft) : false
         spInsTime = ""
+        simInsTime = ""
+        simInsTimeIsManual = false
         isPositioning = false
         remarks = ""
-        customCount = 0
+        counterValues = [:]
         dayTakeoffs = 0
         dayLandings = 0
         nightTakeoffs = 0
@@ -2657,8 +2755,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 return
             }
         } else {
-            guard !outTime.isEmpty && !inTime.isEmpty || !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty else {
-                showError("No times extracted yet")
+            let hasActualTimes = !outTime.isEmpty && !inTime.isEmpty
+            let hasScheduledTimes = !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty
+            let hasManualBlockTime = !blockTime.isEmpty && blockTime != "0.0"
+            guard hasActualTimes || hasScheduledTimes || hasManualBlockTime else {
+                showError("Enter OUT/IN times or a manual block time")
                 return
             }
         }
@@ -2706,8 +2807,16 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         let instrumentTimeValue = (isPilotFlying && !isSimulator) ? String(format: "%.1f", Double(pfAutoInstrumentMinutes) / 60.0) : "0.0"
         let nightTimeValue = isSimulator ? "0.0" : nightTime
-        // For sim Sp/Ins: simTime must equal spInsTime so isSpInsOnly is true (simTime==spInsTime>0)
-        let simTimeValue = isSimulator ? blockTimeCalculated : (isSimInstruction ? spInsTime : "0.0")
+        let simTimeValue: String
+        if isSimulator {
+            simTimeValue = blockTimeCalculated
+        } else if isSimInstruction {
+            let ins = Double(spInsTime) ?? 0
+            let sim = min(Double(simInsTime) ?? 0, ins)
+            simTimeValue = String(format: "%.2f", sim)
+        } else {
+            simTimeValue = "0.0"
+        }
         // For aircraft instruction: store blockTime in spInsTime so it can be identified and badged
         let spInsTimeValue = isSpIns && isInstructingInAircraft ? blockTimeCalculated : spInsTime
                     LogManager.shared.debug("DEBUG: addToInternalLogbook PF=\(isPilotFlying), isSimulator=\(isSimulator), instrumentTimeValue=\(instrumentTimeValue), simTime=\(simTimeValue), block=\(blockTimeCalculated), p1=\(p1TimeValue), p1us=\(p1usTimeValue), p2=\(p2TimeValue)")
@@ -2763,7 +2872,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 inTime: inTime,
                 scheduledDeparture: scheduledDeparture,
                 scheduledArrival: scheduledArrival,
-                customCount: isPositioning ? 0 : customCount
+                counterEntries: isPositioning ? [:] : currentCounterEntries()
             )
 
             if databaseService.updateScheduledFlightWithActualData(scheduledFlight, actualData: actualFlightData) {
@@ -2818,7 +2927,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 inTime: inTime,
                 scheduledDeparture: scheduledDeparture,
                 scheduledArrival: scheduledArrival,
-                customCount: isPositioning ? 0 : customCount
+                counterEntries: isPositioning ? [:] : currentCounterEntries()
             )
                         LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), isSimulator=\(isSimulator), simTime=\(newFlight.simTime), blockTime=\(newFlight.blockTime), p2Time=\(newFlight.p2Time)")
 
@@ -3256,6 +3365,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             isSimulator: isSimulator,
             isSpIns: isSpIns,
             spInsTime: spInsTime,
+            simInsTime: simInsTime,
             isPositioning: isPositioning,
             outTime: outTime,
             inTime: inTime,
@@ -3264,7 +3374,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             isICUS: isICUS,
             selectedTimeCredit: selectedTimeCredit,
             remarks: remarks,
-            customCount: customCount,
             dayTakeoffs: dayTakeoffs,
             dayLandings: dayLandings,
             nightTakeoffs: nightTakeoffs,
@@ -3320,6 +3429,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
             isSpIns = draft.isSpIns
             isInstructingInAircraft = isSpIns ? (defaultInstructionEnvironment == .aircraft) : false
             spInsTime = draft.spInsTime
+            simInsTime = draft.simInsTime
+            simInsTimeIsManual = !draft.simInsTime.isEmpty && draft.simInsTime != draft.spInsTime
             isPositioning = draft.isPositioning
             outTime = draft.outTime
             inTime = draft.inTime
@@ -3328,7 +3439,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             isICUS = draft.isICUS
             selectedTimeCredit = draft.selectedTimeCredit
             remarks = draft.remarks
-            customCount = draft.customCount
             dayTakeoffs = draft.dayTakeoffs
             dayLandings = draft.dayLandings
             nightTakeoffs = draft.nightTakeoffs

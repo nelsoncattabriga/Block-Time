@@ -11,6 +11,8 @@ struct LogbookPDFRenderer {
     /// - Parameters:
     ///   - flights: All flights, pre-sorted oldest-first. Positioning flights are filtered internally.
     ///   - pilotName: Displayed on the cover page.
+    ///   - customFields: Non-empty only for Training Record mode. Triggers dynamic column layout
+    ///     (crew columns dropped, custom field columns inserted). Empty for Standard mode (default).
     /// - Returns: PDF data ready to write to disk or share.
     /// resolvedDates: pre-computed effective date string per flight (local or UTC),
     /// resolved on the main actor before Task.detached. Same order as flights.
@@ -19,12 +21,24 @@ struct LogbookPDFRenderer {
         resolvedDates: [String],
         pilotName: String,
         arn: String = "",
+        title: String = "PILOT LOGBOOK",
         dateFormat: String = "dd MMM yyyy",
-        useHHMM: Bool = false
+        useHHMM: Bool = false,
+        priorTotals: PageTotals = PageTotals(),
+        customFields: [CustomCounterDefinition] = []
     ) -> Data {
+        // Choose column layout: dynamic Training Record when customFields are provided,
+        // otherwise the fixed Standard set.
+        let columns = customFields.isEmpty
+            ? LogbookPDFLayout.columns
+            : LogbookPDFLayout.trainingRecordColumns(customFields: customFields)
+        let offsets = customFields.isEmpty
+            ? LogbookPDFLayout.columnOffsets
+            : LogbookPDFLayout.columnOffsets(for: columns)
+
         let slots = LogbookPDFPaginator.buildSlots(from: flights)
         let pages = LogbookPDFPaginator.paginate(slots)
-        let totals = LogbookPDFPaginator.computeTotals(pages: pages)
+        let totals = LogbookPDFPaginator.computeTotals(pages: pages, seed: priorTotals, customFields: customFields)
         let totalPages = pages.count
         let dateRange = makeDateRange(resolvedDates: resolvedDates, dateFormat: dateFormat)
 
@@ -35,6 +49,7 @@ struct LogbookPDFRenderer {
             ctx.beginPage()
             LogbookPDFCoverDrawer(
                 context: ctx,
+                title: title,
                 pilotName: pilotName,
                 arn: arn,
                 dateRange: dateRange
@@ -60,7 +75,10 @@ struct LogbookPDFRenderer {
                     totalPages: totalPages,
                     dateFormat: dateFormat,
                     useHHMM: useHHMM,
-                    flightToDate: flightToDate
+                    flightToDate: flightToDate,
+                    columns: columns,
+                    columnOffsets: offsets,
+                    customFields: customFields
                 ).draw()
             }
         }

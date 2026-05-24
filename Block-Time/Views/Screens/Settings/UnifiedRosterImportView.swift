@@ -42,7 +42,7 @@ struct UnifiedRosterImportView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                 // Header
@@ -184,7 +184,7 @@ struct UnifiedRosterImportView: View {
             .navigationTitle("Import Roster")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
@@ -491,7 +491,7 @@ private struct UnifiedRosterImportResultView: View {
     let onDone: () -> Void
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     // Success/Warning Icon
@@ -572,7 +572,7 @@ private struct UnifiedRosterImportResultView: View {
             .navigationTitle("Import Complete")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         onDone()
                     }

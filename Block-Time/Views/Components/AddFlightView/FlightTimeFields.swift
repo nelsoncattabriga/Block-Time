@@ -158,11 +158,21 @@ struct ModernDecimalTimeField: View {
     var onSave: (() -> Void)? = nil
 
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
+    @State private var editingText: String = ""
 
     private func sanitize(_ input: String) -> String {
         if showAsHHMM {
-            // Allow digits and colon for HH:MM format
-            return input.filter { $0.isNumber || $0 == ":" }
+            // If the incoming value is a decimal (e.g. "1.58" stored while mode was decimal),
+            // convert it to HH:MM first so the dot isn't stripped, leaving "158".
+            if input.contains("."), let d = Double(input) {
+                return FlightSector.decimalToHHMM(d)
+            }
+            // Allow digits and colon; auto-insert colon on exactly 4 digits without one
+            let digitsAndColon = input.filter { $0.isNumber || $0 == ":" }
+            if digitsAndColon.count == 4 && !digitsAndColon.contains(":") {
+                return "\(digitsAndColon.prefix(2)):\(digitsAndColon.suffix(2))"
+            }
+            return String(digitsAndColon.prefix(5))
         } else {
             // Allow digits, decimal point, and comma for decimal format
             var result = ""
@@ -183,21 +193,28 @@ struct ModernDecimalTimeField: View {
 
     private func formatOnBlur(_ input: String) -> String {
         if showAsHHMM {
+            // Normalise bare 4-digit entry (e.g. "0130" → "01:30")
+            let blurInput: String
+            if input.count == 4 && !input.contains(":") && input.allSatisfy(\.isNumber) {
+                blurInput = "\(input.prefix(2)):\(input.suffix(2))"
+            } else {
+                blurInput = input
+            }
             // Convert to HH:MM format
-            if input.contains(":") {
+            if blurInput.contains(":") {
                 // Already in HH:MM, validate and reformat
-                let components = input.split(separator: ":")
+                let components = blurInput.split(separator: ":")
                 if components.count == 2,
                    let hours = Int(components[0]),
                    let minutes = Int(components[1]),
                    hours >= 0, minutes >= 0, minutes < 60 {
                     return String(format: "%d:%02d", hours, minutes)
                 }
-            } else if let decimalValue = Double(input) {
+            } else if let decimalValue = Double(blurInput) {
                 // Convert decimal to HH:MM
                 return FlightSector.decimalToHHMM(decimalValue)
             }
-            return input.isEmpty ? "0:00" : input
+            return blurInput.isEmpty ? "0:00" : blurInput
         } else {
             // Format as decimal using the user's rounding mode
             let cleaned = input.replacingOccurrences(of: ",", with: ".")
@@ -217,6 +234,18 @@ struct ModernDecimalTimeField: View {
             }
         }
         return input
+    }
+
+    private func formattedDisplayValue() -> String {
+        guard !value.isEmpty else { return showAsHHMM ? "0:00" : "0.0" }
+        if showAsHHMM {
+            if value.contains(":") { return value }
+            guard let d = Double(value) else { return "0:00" }
+            return FlightSector.decimalToHHMM(d)
+        }
+        guard let d = Double(value) else { return "0.0" }
+        let rounded = viewModel.decimalRoundingMode.apply(to: d, decimalPlaces: 1)
+        return String(format: "%.1f", rounded)
     }
 
     var body: some View {
@@ -247,32 +276,45 @@ struct ModernDecimalTimeField: View {
                             .foregroundColor(.gray)
                     }
                 } else {
-                    TextField(showAsHHMM ? "0:00" : "0.0", text: Binding(
-                        get: {
-                            // When field is focused or empty, show raw value
-                            // When not focused, show formatted value
-                            if decimalFieldFocused || value.isEmpty {
-                                return value
-                            } else {
-                                return displayValue
-                            }
-                        },
-                        set: { newValue in
-                            value = sanitize(newValue)
-                        }
-                    ))
+                    TextField(showAsHHMM ? "00:00" : "0.0", text: $editingText)
                         .font(.subheadline.bold())
-                        .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
+                        .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : (showAsHHMM ? .numberPad : .decimalPad))
                         .focused($decimalFieldFocused)
+                        .onChange(of: editingText) { _, newValue in
+                            editingText = sanitize(newValue)
+                        }
                         .onChange(of: decimalFieldFocused) { _, isFocused in
                             if isFocused {
-                                keyboardToolbar?.fieldDidFocus(clear: { value = "" })
+                                // Clear to empty when value is zero so placeholder shows and user can type immediately
+                                let numericValue = Double(value) ?? 0
+                                if numericValue == 0 {
+                                    editingText = ""
+                                } else if showAsHHMM, !value.contains(":"), let d = Double(value) {
+                                    editingText = FlightSector.decimalToHHMM(d)
+                                } else {
+                                    editingText = formattedDisplayValue()
+                                }
+                                keyboardToolbar?.fieldDidFocus(clear: {
+                                    value = ""
+                                    editingText = ""
+                                })
                             } else {
-                                // Convert to decimal for storage, then format for display
-                                let decimalValue = convertToDecimalForStorage(value)
-                                value = decimalValue
+                                // Format, convert to storage format, write back on blur
+                                let formatted = formatOnBlur(editingText)
+                                let stored = convertToDecimalForStorage(formatted)
+                                value = stored
+                                editingText = formatted
                                 onSave?()
                             }
+                        }
+                        .onChange(of: value) { _, _ in
+                            // Sync external writes (e.g. auto-calculated block time) into editingText.
+                            // Always update — even when focused — so recalculation after tabbing
+                            // from OUT/IN lands correctly before the user types anything.
+                            editingText = formattedDisplayValue()
+                        }
+                        .onAppear {
+                            editingText = formattedDisplayValue()
                         }
                         .submitLabel(.done)
                 }
@@ -289,20 +331,6 @@ struct ModernDecimalTimeField: View {
             }
         }
         // No .toolbar here — toolbar is owned by the parent scroll container.
-    }
-
-    private var displayValue: String {
-        guard !value.isEmpty, let decimalValue = Double(value) else {
-            return showAsHHMM ? "0:00" : "0.0"
-        }
-
-        if showAsHHMM {
-            return FlightSector.decimalToHHMM(decimalValue)
-        } else {
-            // Apply the user's rounding mode for consistent display
-            let rounded = viewModel.decimalRoundingMode.apply(to: decimalValue, decimalPlaces: 1)
-            return String(format: "%.1f", rounded)
-        }
     }
 }
 
@@ -378,6 +406,7 @@ struct ModernRemarksField: View {
     let label: String
     @Binding var value: String
     let icon: String
+    var placeholder: String = "Add remarks..."
     var keyboardToolbar: KeyboardToolbarState? = nil
     @FocusState private var editorFocused: Bool
 
@@ -395,7 +424,7 @@ struct ModernRemarksField: View {
 
             ZStack(alignment: .topLeading) {
                 if value.isEmpty {
-                    Text("Add remarks...")
+                    Text(placeholder)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 4)
@@ -419,8 +448,7 @@ struct ModernRemarksField: View {
         }
         .onChange(of: editorFocused) { _, isFocused in
             if isFocused {
-                // Remarks has no Clear button — pass a no-op clear action
-                keyboardToolbar?.fieldDidFocus(clear: {})
+                keyboardToolbar?.fieldDidFocus(clear: { value = "" })
             }
         }
         // No .toolbar here — toolbar is owned by the parent scroll container.

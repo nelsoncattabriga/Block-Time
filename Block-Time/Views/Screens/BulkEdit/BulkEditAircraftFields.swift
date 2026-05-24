@@ -172,7 +172,7 @@ struct BulkEditAircraftPickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Search Bar and Add Button Section
                 VStack(spacing: 12) {
@@ -271,7 +271,7 @@ struct BulkEditAircraftPickerSheet: View {
             .navigationTitle("Select Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedReg.isEmpty {
                         Button("Clear") {
                             HapticManager.shared.impact(.light)
@@ -283,7 +283,7 @@ struct BulkEditAircraftPickerSheet: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         onDismiss()
                     }
@@ -331,7 +331,7 @@ struct BulkEditAddAircraftSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("Aircraft Details")) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -382,7 +382,7 @@ struct BulkEditAddAircraftSheet: View {
             .navigationTitle("Add New Aircraft")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }

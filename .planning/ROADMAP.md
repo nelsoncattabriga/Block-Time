@@ -116,6 +116,16 @@ All 65 v1 requirements mapped to exactly one phase. No orphans.
 | 7 — Mac + Pre-release | MAC-01, MAC-02, MAC-03, MAC-04, MAC-05 | 5 |
 | **Total** | | **68/68** |
 
+### Phase 8: Multi-Counter System
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 8 to break down)
+
 ---
 
 ## Progress Table

@@ -23,6 +23,7 @@ struct LogbookSpreadsheetView: View {
     @State private var selectedFlight: FlightSector?     // pushed to AddFlightView
     @State private var isLoading = true
     @State private var showingDiscardAlert = false
+    @State private var activeCounterCount: Int = CustomCounterService.shared.definitions.count
 
     var body: some View {
         NavigationStack {
@@ -101,6 +102,9 @@ struct LogbookSpreadsheetView: View {
                         selectedFlight = nil
                         reload()
                     }
+                    .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+                        activeCounterCount = CustomCounterService.shared.definitions.count
+                    }
                     .onDisappear {
                         selectedFlight = nil
                         reload()
@@ -119,7 +123,7 @@ struct LogbookSpreadsheetView: View {
             Spacer()
             legendPill("PAX",     color: .orange)
             legendPill("SIM",     color: .purple)
-            legendPill("Sp/Ins",  color: .red)
+            legendPill("Instructor",  color: .red)
             Spacer()
         }
         .padding(.vertical, 5)
@@ -128,11 +132,14 @@ struct LogbookSpreadsheetView: View {
 
     private func legendPill(_ label: String, color: Color) -> some View {
         Text(label)
-            .font(.caption2)
+            .font(.footnote)
             .foregroundStyle(.white)
             .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.85), in: Capsule())
+            .padding(.vertical, 4)
+            .background(
+                color.opacity(0.85),
+                in: RoundedRectangle(cornerRadius: 5)
+            )
     }
 
     // MARK: - Spreadsheet
@@ -149,7 +156,8 @@ struct LogbookSpreadsheetView: View {
                     useIATA:      viewModel.useIATACodes,
                     showHHMM:     viewModel.showTimesInHoursMinutes,
                     roundingMode: viewModel.decimalRoundingMode
-                )
+                ),
+                counterCount: activeCounterCount
             ) { tappedFlight in
                 if highlightedFlight?.id == tappedFlight.id {
                     viewModel.loadFlightForEditing(tappedFlight)
@@ -167,6 +175,7 @@ struct LogbookSpreadsheetView: View {
     private func reload() {
         Task { @MainActor in
             await Task.yield()
+            highlightedFlight = nil
             var loaded = initialFlights ?? databaseService.fetchAllFlights()
             let cal = Calendar.current
             let df = DateFormatter()

@@ -548,8 +548,9 @@ class FRMSViewModel {
         let firstDuty = flightDuties.min(by: { $0.duty.signOn < $1.duty.signOn })!.duty
         let lastDuty = flightDuties.max(by: { $0.duty.signOff < $1.duty.signOff })!.duty
 
-        // Sum up flight times and night times
+        // Sum up flight times, sim session times, and night times
         let totalFlightTime = flightDuties.reduce(0.0) { $0 + $1.duty.flightTime }
+        let totalSimSessionTime = flightDuties.reduce(0.0) { $0 + $1.duty.simSessionTime }
         let totalNightTime = flightDuties.reduce(0.0) { $0 + $1.duty.nightTime }
 
         // Count sectors
@@ -590,6 +591,7 @@ class FRMSViewModel {
             signOn: signOn,
             signOff: signOff,
             flightTime: totalFlightTime,
+            simSessionTime: totalSimSessionTime,
             nightTime: totalNightTime,
             sectors: totalSectors,
             isInternational: isInternational,

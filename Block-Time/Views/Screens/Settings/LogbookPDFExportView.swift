@@ -14,6 +14,13 @@ enum PDFDateRangePreset: String, CaseIterable {
     case custom       = "Custom"
 }
 
+// MARK: - Content Mode
+
+enum PDFContentMode: String, CaseIterable {
+    case allFlights          = "Standard"
+    case instructorHoursOnly = "Trainer Log"
+}
+
 // MARK: - Export View
 
 struct LogbookPDFExportView: View {
@@ -35,15 +42,52 @@ struct LogbookPDFExportView: View {
     @AppStorage("logbookPDFCustomTo")     private var customToInterval: Double = 0
     @AppStorage("logbookPDFUseLocalDates") private var useLocalDates: Bool = true
     @AppStorage("logbookPDFUseHHMM")       private var useHHMM: Bool = false
+    @AppStorage("logbookPDFContentMode3")  private var contentModeRaw: String = PDFContentMode.allFlights.rawValue
+    @AppStorage("showSpInsSelector")       private var showSpInsSelector: Bool = false
+    /// Comma-separated columnIndex ints of the custom fields selected for Training Record PDF.
+    @AppStorage("logbookPDFTrainingCustomFields") private var trainingCustomFieldsRaw: String = ""
 
     private var datePreset: PDFDateRangePreset {
         PDFDateRangePreset(rawValue: datePresetRaw) ?? .all
+    }
+    private var contentMode: PDFContentMode {
+        PDFContentMode(rawValue: contentModeRaw) ?? .allFlights
     }
     private var customFrom: Date {
         get { customFromInterval > 0 ? Date(timeIntervalSince1970: customFromInterval) : earliestDate }
     }
     private var customTo: Date {
         get { customToInterval > 0 ? Date(timeIntervalSince1970: customToInterval) : latestDate }
+    }
+
+    /// Resolves the raw comma-separated columnIndex string into definitions in saved order,
+    /// intersected with currently-defined custom fields, capped at 7.
+    private var selectedCustomFields: [CustomCounterDefinition] {
+        let indices = trainingCustomFieldsRaw
+            .split(separator: ",")
+            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        let available = CustomCounterService.shared.definitions
+        let resolved = indices.compactMap { idx in available.first(where: { $0.columnIndex == idx }) }
+        return Array(resolved.prefix(10))
+    }
+
+    /// Whether the given custom field is selected for Training Record.
+    private func isCustomFieldSelected(_ def: CustomCounterDefinition) -> Bool {
+        selectedCustomFields.contains(where: { $0.columnIndex == def.columnIndex })
+    }
+
+    /// Toggles a custom field in/out of the Training Record selection.
+    private func toggleCustomField(_ def: CustomCounterDefinition) {
+        var indices = trainingCustomFieldsRaw
+            .split(separator: ",")
+            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        if let pos = indices.firstIndex(of: def.columnIndex) {
+            indices.remove(at: pos)
+        } else {
+            guard indices.count < 10 else { return }
+            indices.append(def.columnIndex)
+        }
+        trainingCustomFieldsRaw = indices.map(String.init).joined(separator: ",")
     }
 
     private static let dateFormats: [(label: String, format: String)] = [
@@ -58,18 +102,34 @@ struct LogbookPDFExportView: View {
     ]
 
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 16) {
-                    setupView
+        NavigationStack {
+            ZStack {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        setupView
+                    }
+                    .padding()
                 }
-                .padding()
+
+                if isGenerating {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                    ProgressView("Generating…")
+                        .progressViewStyle(.circular)
+                        .padding(24)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                }
             }
+            .allowsHitTesting(!isGenerating)
             .navigationTitle("Print Logbook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Print") { Task { await generatePDF() } }
+                        .disabled(flightCount == 0 || isGenerating)
                 }
             }
             .alert("Export Error", isPresented: Binding(
@@ -85,7 +145,13 @@ struct LogbookPDFExportView: View {
                     PDFPreviewView(url: url)
                 }
             }
-            .onAppear { loadFlights() }
+            .onAppear {
+                if !showSpInsSelector { contentModeRaw = PDFContentMode.allFlights.rawValue }
+                loadFlights()
+            }
+            .onChange(of: showSpInsSelector) { _, enabled in
+                if !enabled { contentModeRaw = PDFContentMode.allFlights.rawValue }
+            }
         }
     }
 
@@ -123,6 +189,22 @@ struct LogbookPDFExportView: View {
                         .keyboardType(.numbersAndPunctuation)
                 }
                 .frame(width: 110)
+            }
+
+            // Content — only shown when Log Instructor Time is enabled
+            if showSpInsSelector {
+                Picker("Content", selection: $contentModeRaw) {
+                    ForEach(PDFContentMode.allCases, id: \.rawValue) { mode in
+                        Text(mode.rawValue).tag(mode.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: contentModeRaw) { _, _ in updateFlightCount() }
+
+                // Custom Fields picker — shown only in Training Record mode
+                if contentMode == .instructorHoursOnly {
+                    customFieldsPickerSection
+                }
             }
 
             // Date Range
@@ -216,36 +298,72 @@ struct LogbookPDFExportView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 130)
                 }
+
             }
             .padding()
             .background(Color.brown.opacity(0.06))
             .cornerRadius(12)
 
-            // Generate button
-            Button { Task { await generatePDF() } } label: {
-                HStack {
-                    if isGenerating {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .brown))
-                    } else {
-                        Image(systemName: "books.vertical.fill")
-                            .foregroundColor(.brown)
-                    }
-                    Text(isGenerating ? "Generating…" : "Generate PDF")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.brown.opacity(0.12))
-                .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.brown.opacity(0.4), lineWidth: 1))
-            }
-            .disabled(isGenerating || flightCount == 0)
         }
     }
 
+    // MARK: - Custom Fields Picker
+
+    @ViewBuilder
+    private var customFieldsPickerSection: some View {
+        let defs = CustomCounterService.shared.definitions
+
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Custom Fields to include")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            if defs.isEmpty {
+                Text("No custom fields defined — add them in Settings")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(defs) { def in
+                    let isSelected = isCustomFieldSelected(def)
+
+                    Button {
+                        toggleCustomField(def)
+                    } label: {
+                        HStack {
+                            Text(def.label)
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(isSelected ? "Yes" :"No")
+                                .font(.subheadline)
+                                .foregroundColor(.brown)
+                            
+//                            Image(systemName: isSelected ? "checkmark" : "xmark")
+//                                .foregroundColor(isSelected ? .green : .brown)
+//                                .foregroundColor(isSelected ? .brown : .secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding()
+        .background(Color.brown.opacity(0.06))
+        .cornerRadius(12)
+    }
+
     // MARK: - Actions
+
+    /// Base content predicate per selected content mode.
+    private func matchesContentMode(_ f: FlightSector) -> Bool {
+        switch contentMode {
+        case .allFlights:
+            return !f.isPositioning && (f.blockTimeValue > 0 || f.simTimeValue > 0)
+        case .instructorHoursOnly:
+            return f.spInsTimeValue > 0
+        }
+    }
 
     private static let inputDF: DateFormatter = {
         let f = DateFormatter()
@@ -318,7 +436,7 @@ struct LogbookPDFExportView: View {
 
     private func updateFlightCount() {
         let all = FlightDatabaseService.shared.fetchAllFlights()
-            .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
+            .filter { matchesContentMode($0) }
         flightCount = filtered(from: all).count
     }
 
@@ -344,7 +462,7 @@ struct LogbookPDFExportView: View {
     @MainActor
     private func generatePDF() async {
         isGenerating = true
-        await Task.yield()  // let SwiftUI render the spinner before blocking work begins
+        try? await Task.sleep(nanoseconds: 32_000_000) // two frames — guarantees overlay renders before main-thread work
         let name      = logbookName.trimmingCharacters(in: .whitespacesAndNewlines)
         let arnNumber = arn.trimmingCharacters(in: .whitespacesAndNewlines)
         let format    = dateFormat
@@ -352,11 +470,14 @@ struct LogbookPDFExportView: View {
         let preset    = datePreset
         let from      = customFrom
         let to        = customTo
+        let coverTitle = contentMode == .instructorHoursOnly ? "TRAINER LOG" : "PILOT LOGBOOK"
+        // Capture custom fields on main actor before Task.detached
+        let pdfCustomFields = contentMode == .instructorHoursOnly ? selectedCustomFields : []
 
         do {
             // Fetch on main actor (fast)
             let all = FlightDatabaseService.shared.fetchAllFlights()
-                .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
+                .filter { matchesContentMode($0) }
 
             // Filter on main actor (AirportService calls for effective dates)
             let filtered: [FlightSector]
@@ -378,11 +499,23 @@ struct LogbookPDFExportView: View {
             let sorted = filtered.sorted { effectiveSortDate(for: $0) < effectiveSortDate(for: $1) }
             let resolvedDates = sorted.map { effectiveDateString(for: $0) }
 
+            // Compute totals for flights before the selected range (career BF for partial exports)
+            var priorTotals = PageTotals()
+            if preset != .all {
+                let filteredSet = Set(filtered)
+                for f in all where !filteredSet.contains(f) {
+                    priorTotals.accumulate(f)
+                }
+            }
+
             // Render off-thread
             let pdfData = await Task.detached(priority: .userInitiated) {
                 LogbookPDFRenderer.render(
                     flights: sorted, resolvedDates: resolvedDates,
-                    pilotName: name, arn: arnNumber, dateFormat: format, useHHMM: hhmm)
+                    pilotName: name, arn: arnNumber, title: coverTitle,
+                    dateFormat: format, useHHMM: hhmm,
+                    priorTotals: priorTotals,
+                    customFields: pdfCustomFields)
             }.value
 
             let timestamp = DateFormatter()
@@ -410,16 +543,16 @@ struct PDFPreviewView: View {
     @State private var showShareSheet = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             PDFKitView(url: url)
                 .ignoresSafeArea(edges: .bottom)
                 .navigationTitle("Logbook Preview")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Close") { dismiss() }
                     }
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             showShareSheet = true
                         } label: {
@@ -431,7 +564,6 @@ struct PDFPreviewView: View {
                     PDFShareSheet(items: [url])
                 }
         }
-        .navigationViewStyle(.stack)
     }
 }
 

@@ -105,7 +105,7 @@ struct AircraftSummarySheet: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 themeService.getGradient()
                     .ignoresSafeArea()
@@ -196,7 +196,7 @@ struct AircraftSummarySheet: View {
             .navigationTitle(isEditMode ? "Edit Summary" : "Add Summary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         if hasModifications {
                             showingDiscardAlert = true
@@ -206,7 +206,7 @@ struct AircraftSummarySheet: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(isEditMode ? "Save" : "Add") {
                         saveEntry()
                     }

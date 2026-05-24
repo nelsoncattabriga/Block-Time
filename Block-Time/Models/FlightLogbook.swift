@@ -101,7 +101,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     var inTime: String
     var scheduledDeparture: String  // STD - Scheduled Time of Departure (HHMM format)
     var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
-    var customCount: Int
+    var counterEntries: [Int: String] = [:]  // columnIndex → raw value
     var createdAt: Date?
     let parsedDate: Date?
 
@@ -111,7 +111,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         case blockTime, nightTime, p1Time, p1usTime, p2Time, instrumentTime, simTime, spInsTime
         case isPilotFlying, isPositioning, isAIII, isRNP, isILS, isGLS, isNPA
         case remarks, dayTakeoffs, dayLandings, nightTakeoffs, nightLandings
-        case outTime, inTime, scheduledDeparture, scheduledArrival, customCount, createdAt
+        case outTime, inTime, scheduledDeparture, scheduledArrival, counterEntries, createdAt
     }
 
     // MARK: - Validate and clean time string values
@@ -133,7 +133,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
          isILS: Bool = false, isGLS: Bool = false, isNPA: Bool = false, remarks: String = "",
          dayTakeoffs: Int = 0, dayLandings: Int = 0, nightTakeoffs: Int = 0, nightLandings: Int = 0,
          outTime: String = "", inTime: String = "", scheduledDeparture: String = "", scheduledArrival: String = "",
-         customCount: Int = 0, createdAt: Date? = nil) {
+         counterEntries: [Int: String] = [:], createdAt: Date? = nil) {
         self.id = id ?? UUID()
         self.date = date
         self.flightNumber = flightNumber
@@ -169,7 +169,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         self.inTime = inTime
         self.scheduledDeparture = scheduledDeparture
         self.scheduledArrival = scheduledArrival
-        self.customCount = max(0, customCount)
+        self.counterEntries = counterEntries
         self.createdAt = createdAt
         self.parsedDate = FlightSector.cachedDateFormatter.date(from: date)
 
@@ -220,7 +220,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         inTime = try c.decode(String.self, forKey: .inTime)
         scheduledDeparture = try c.decode(String.self, forKey: .scheduledDeparture)
         scheduledArrival = try c.decode(String.self, forKey: .scheduledArrival)
-        customCount = try c.decode(Int.self, forKey: .customCount)
+        counterEntries = (try? c.decodeIfPresent([Int: String].self, forKey: .counterEntries)) ?? [:]
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
         parsedDate = FlightSector.cachedDateFormatter.date(from: date)
     }
@@ -252,9 +252,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     nonisolated var spInsTimeValue: Double { safeDoubleValue(spInsTime) }
 
     nonisolated var isSpInsOnly: Bool {
-        let spVal = spInsTimeValue
-        guard spVal > 0 else { return false }
-        return abs(simTimeValue - spVal) < 0.01
+        spInsTimeValue > 0 && blockTimeValue < 0.01
     }
 
     nonisolated var isAircraftInstruction: Bool {
@@ -286,6 +284,14 @@ struct FlightSector: Identifiable, Codable, Hashable {
         // Convert Date object to string format for FlightSector
         // IMPORTANT: Database stores dates in UTC, so we must use UTC timezone when formatting
         let dateString = Self.cachedUTCDateFormatter.string(from: date)
+
+        // Load counter entries from flat columns using current definition slots
+        var loadedCounterEntries: [Int: String] = [:]
+        for definition in CustomCounterService.shared.definitions {
+            if let value = entity.counterValue(at: definition.columnIndex), !value.isEmpty {
+                loadedCounterEntries[definition.columnIndex] = value
+            }
+        }
 
         return FlightSector(
             id: id,
@@ -322,7 +328,8 @@ struct FlightSector: Identifiable, Codable, Hashable {
             outTime: entity.outTime ?? "",
             inTime: entity.inTime ?? "",
             scheduledDeparture: entity.scheduledDeparture ?? "",
-            scheduledArrival: entity.scheduledArrival ?? ""
+            scheduledArrival: entity.scheduledArrival ?? "",
+            counterEntries: loadedCounterEntries
         )
     }
     
@@ -488,7 +495,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     /// Convert HH:MM format to decimal hours
     /// - Parameter hhmmString: Time in HH:MM format (e.g., "13:40")
     /// - Returns: Time in decimal hours (e.g., 13.67)
-    static func hhmmToDecimal(_ hhmmString: String) -> Double? {
+    nonisolated static func hhmmToDecimal(_ hhmmString: String) -> Double? {
         let trimmed = hhmmString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 

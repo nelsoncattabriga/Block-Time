@@ -209,8 +209,8 @@ class FRMSCalculationService {
             for flight in flights {
                 guard let flightDate = dateFormatter.date(from: flight.date),
                       flightDate <= endOfToday else { continue }
-                // Sp/Ins only (instructor running sim) contributes to duty but NOT flight time
-                let ft = flight.isSpInsOnly ? 0.0 : (flight.blockTimeValue > 0 ? flight.blockTimeValue : flight.simTimeValue)
+                // Only operating sectors count as flight time; SIM, positioning, and Sp/Ins contribute duty only
+                let ft = (flight.isSpInsOnly || flight.isPositioning || flight.simTimeValue > 0) ? 0.0 : flight.blockTimeValue
                 if ft == 0 { continue }
                 if flightDate >= threeSixtyFiveDaysAgo { ft365 += ft }
                 if flightDate >= flightTimePeriodAgo   { ft28  += ft }
@@ -222,9 +222,10 @@ class FRMSCalculationService {
 
         } else {
             // Fallback to duty-based calculation if flights not provided (for backward compatibility)
-            flightTime7Days = duties7Days.reduce(0.0) { $0 + $1.flightTime }
-            flightTime28Or30Days = dutiesFlightTimePeriod.reduce(0.0) { $0 + $1.flightTime }
-            flightTime365Days = duties365Days.reduce(0.0) { $0 + $1.flightTime }
+            // Only operating sectors count as flight time; exclude SIM and positioning (deadheading)
+            flightTime7Days = duties7Days.reduce(0.0) { $0 + ($1.dutyType == .operating ? $1.flightTime : 0) }
+            flightTime28Or30Days = dutiesFlightTimePeriod.reduce(0.0) { $0 + ($1.dutyType == .operating ? $1.flightTime : 0) }
+            flightTime365Days = duties365Days.reduce(0.0) { $0 + ($1.dutyType == .operating ? $1.flightTime : 0) }
         }
 
         // Calculate duty time totals
@@ -1651,19 +1652,13 @@ class FRMSCalculationService {
         // Determine if this is a simulator or Sp/Ins instructor session
         let isSim = (flightSector.blockTimeValue == 0 && flightSector.simTimeValue > 0) || flightSector.isSpInsOnly
 
-        // Get flight time from sector
-        // For Sp/Ins only (instructor running sim): no flight time contribution
-        // For regular sim: use simTime. For flights: use blockTime.
-        let flightTime: Double
-        if flightSector.isSpInsOnly {
-            flightTime = 0
-        } else {
-            flightTime = flightSector.blockTimeValue > 0 ? flightSector.blockTimeValue : flightSector.simTimeValue
-        }
+        // Only operating sectors count as flight time.
+        // SIM, positioning (PAX), and Sp/Ins instructor sessions contribute duty time only.
+        let flightTime: Double = (isSim || flightSector.isPositioning) ? 0 : flightSector.blockTimeValue
 
         // If no flight time at all, check if it's a positioning flight or Sp/Ins instructor session
         // Both may have zero flightTime but still contribute to duty time
-        if flightTime == 0 && !flightSector.isPositioning && !flightSector.isSpInsOnly {
+        if flightTime == 0 && !isSim && !flightSector.isPositioning && !flightSector.isSpInsOnly {
             return nil
         }
 
@@ -1824,7 +1819,7 @@ class FRMSCalculationService {
         let nightTime = flightSector.nightTimeValue
 
         // Duty type
-        let dutyType: DutyType = isSim ? .simulator : (flightSector.isPositioning ? .deadheading : .operating)
+        let dutyType: DutyType = flightSector.isSpInsOnly ? .instructor : (isSim ? .simulator : (flightSector.isPositioning ? .deadheading : .operating))
 
         // Get home base timezone for time classification
         let homeTimeZone = getHomeBaseTimeZone()
@@ -1844,6 +1839,7 @@ class FRMSCalculationService {
             signOn: signOn,
             signOff: signOff,
             flightTime: flightTime,
+            simSessionTime: isSim ? flightSector.simTimeValue : 0,
             nightTime: nightTime,
             sectors: 1,  // Each FlightSector is 1 sector
             isInternational: isInternational,

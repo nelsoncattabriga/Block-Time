@@ -92,6 +92,7 @@ struct NewDashboardView: View {
             Task { await loadAll() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            config.pruneRemovedCards()
             Task { await viewModel.load(duties: frmsViewModel.dutiesLast365Days) }
         }
     }
@@ -136,6 +137,7 @@ struct NewDashboardView: View {
             Task { await loadAll() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            config.pruneRemovedCards()
             Task { await viewModel.load(duties: frmsViewModel.dutiesLast365Days) }
         }
     }

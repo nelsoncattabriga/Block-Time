@@ -264,6 +264,9 @@ class AutomaticBackupService: ObservableObject {
         isBackupInProgress = true
         lastBackupError = nil
 
+        // Capture counter definitions on main thread before going to background
+        let counterDefinitions = CustomCounterService.shared.definitions
+
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
 
@@ -284,7 +287,7 @@ class AutomaticBackupService: ObservableObject {
                     return flight1.date < flight2.date
                 }
 
-                let csvString = FileImportService.shared.exportToCSV(flights: sortedFlights)
+                let csvString = FileImportService.shared.exportToCSV(flights: sortedFlights, definitions: counterDefinitions)
                 let backupURL = try self.createBackupFile(csvString: csvString, flightCount: flights.count)
                 try self.cleanupOldBackups()
 

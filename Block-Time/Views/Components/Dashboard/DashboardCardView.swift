@@ -18,7 +18,6 @@ struct DashboardCardView: View {
 
     @State private var showTimesInHoursMinutes: Bool =
         UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
-    @AppStorage("logCustomCount") private var logCustomCount: Bool = false
     @AppStorage("showSpInsSelector") private var showSpInsSelector: Bool = false
     @AppStorage("countSimInTotal") private var countSimInTotal: Bool = true
     @Environment(\.horizontalSizeClass) private var naturalSizeClass
@@ -43,11 +42,14 @@ struct DashboardCardView: View {
     }
 
     private func isInsightsCard(_ id: DashboardCardID) -> Bool {
+        // Custom counter cards are always rendered as insights cards
+        if id.customCounterColumnIndex != nil { return true }
         switch id {
         case .frmsFlightTime, .frmsDutyTime, .frmsRestWindow, .frmsLimitsGauge,
              .frmsRollingLine, .activityChart, .timeByType,
              .pfRatioChart, .takeoffLanding, .approachTypes, .topRoutes,
-             .topRegistrations, .airportStats, .workRateHeatmap, .careerMilestones, .customCount:
+             .topRegistrations, .airportStats, .workRateHeatmap, .careerMilestones, .customCount,
+             .punctuality, .crewFrequency:
             return true
         default:
             return false
@@ -58,6 +60,10 @@ struct DashboardCardView: View {
 
     @ViewBuilder
     private var insightsContent: some View {
+        // Custom counter cards: dispatch before the main switch
+        if let columnIndex = cardID.customCounterColumnIndex {
+            CustomCounterDashboardCard(columnIndex: columnIndex)
+        } else {
         switch cardID {
         case .frmsFlightTime:
             FRMSFlightStripCard(data: viewModel.frmsStrip)
@@ -68,12 +74,7 @@ struct DashboardCardView: View {
         case .frmsLimitsGauge:
             FRMSLimitsGaugeCard(
                 frmsViewModel: frmsViewModel,
-                strip: viewModel.frmsStrip,
-                projectedFlightHours7d:   viewModel.projectedFRMS.flightHours7d,
-                projectedFlightHours28d:  viewModel.projectedFRMS.flightHours28d,
-                projectedFlightHours365d: viewModel.projectedFRMS.flightHours365d,
-                projectedDutyHours7d:     viewModel.projectedFRMS.dutyHours7d,
-                projectedDutyHours14d:    viewModel.projectedFRMS.dutyHours14d
+                strip: viewModel.frmsStrip
             )
         case .frmsRollingLine:
             FRMSRollingLineCard(data: viewModel.frmsRolling)
@@ -98,10 +99,15 @@ struct DashboardCardView: View {
         case .careerMilestones:
             CareerMilestonesCard(stats: viewModel.careerStats)
         case .customCount:
-            if logCustomCount { CustomCountCard() }
+            if !CustomCounterService.shared.definitions.isEmpty { CustomCountCard() }
+        case .punctuality:
+            PunctualityCard()
+        case .crewFrequency:
+            TopCrewCard()
         default:
             EmptyView()
         }
+        } // end else (non-custom-counter)
     }
 
     // MARK: - Dashboard stat cards

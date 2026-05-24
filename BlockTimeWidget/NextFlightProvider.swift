@@ -131,7 +131,13 @@ struct NextFlightProvider: AppIntentTimelineProvider {
             }
         }
 
-        return Timeline(entries: entries, policy: .atEnd)
+        let nextMidnight = cal.nextDate(
+            after: now,
+            matching: DateComponents(hour: 0, minute: 0, second: 0),
+            matchingPolicy: .nextTime
+        )
+        let policy: TimelineReloadPolicy = nextMidnight.map { .after($0) } ?? .atEnd
+        return Timeline(entries: entries, policy: policy)
     }
 
     // MARK: - Countdown timeline

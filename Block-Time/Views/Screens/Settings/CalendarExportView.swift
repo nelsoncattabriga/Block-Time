@@ -157,7 +157,6 @@ struct CalendarExportView: View {
                         CalendarExportHeaderCard()
                         CalendarExportFilterCard(viewModel: viewModel)
                         CalendarExportFlightCountCard(viewModel: viewModel)
-                        CalendarExportActionCard(viewModel: viewModel)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
@@ -169,6 +168,17 @@ struct CalendarExportView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: viewModel.export) {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                        } else {
+                            Text("Export")
+                        }
+                    }
+                    .disabled(viewModel.flightCount == 0 || viewModel.isLoading)
                 }
             }
             .sheet(item: $viewModel.shareItem) { item in
@@ -430,43 +440,6 @@ private struct CalendarExportFlightCountCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.teal.opacity(0.3), lineWidth: 1)
         }
-    }
-}
-
-// MARK: - Action Card
-
-private struct CalendarExportActionCard: View {
-    let viewModel: CalendarExportViewModel
-
-    var body: some View {
-        Button(action: viewModel.export) {
-            HStack(spacing: 12) {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .tint(.white)
-                } else {
-                    Image(systemName: "square.and.arrow.up.fill")
-                        .font(.title3)
-                }
-
-                Text(viewModel.isLoading ? "Generating…" : "Export .ics File")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                viewModel.flightCount == 0
-                    ? Color.gray
-                    : Color.blue
-            )
-            .clipShape(.rect(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .disabled(viewModel.flightCount == 0 || viewModel.isLoading)
-        .animation(.easeInOut, value: viewModel.flightCount)
     }
 }
 

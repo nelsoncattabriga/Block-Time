@@ -10,6 +10,7 @@ import UIKit
 struct LogbookPDFCoverDrawer {
 
     let context: UIGraphicsPDFRendererContext
+    let title: String
     let pilotName: String
     let arn: String
     let dateRange: String
@@ -39,15 +40,18 @@ struct LogbookPDFCoverDrawer {
         let textWidth: CGFloat = page.width - 120
 
         let titleFont = UIFont(name: "TimesNewRomanPS-BoldMT", size: 28) ?? .boldSystemFont(ofSize: 28)
-        drawCentredText("PILOT LOGBOOK",
+        drawCentredText(title,
                         centreX: centreX, y: page.height / 2 - 80,
                         width: textWidth, font: titleFont, color: .black)
 
         ctx.setStrokeColor(UIColor.black.cgColor)
         ctx.setLineWidth(0.75)
         let ruleY = page.height / 2 - 46
-        ctx.move(to: CGPoint(x: centreX - 120, y: ruleY))
-        ctx.addLine(to: CGPoint(x: centreX + 120, y: ruleY))
+        let titleAttrs: [NSAttributedString.Key: Any] = [.font: titleFont]
+        let titleSize = (title as NSString).size(withAttributes: titleAttrs)
+        let ruleHalfWidth = titleSize.width / 2 + 8
+        ctx.move(to: CGPoint(x: centreX - ruleHalfWidth, y: ruleY))
+        ctx.addLine(to: CGPoint(x: centreX + ruleHalfWidth, y: ruleY))
         ctx.strokePath()
 
         let nameFont = UIFont(name: "TimesNewRomanPSMT", size: 16) ?? .systemFont(ofSize: 16)
@@ -102,6 +106,12 @@ struct LogbookPDFPageDrawer {
     let useHHMM: Bool
     /// Pre-resolved date strings keyed by "date|outTime|from|to"
     let flightToDate: [String: String]
+    /// Active column definitions — Standard callers pass LogbookPDFLayout.columns.
+    let columns: [ColumnDef]
+    /// Active column offsets — Standard callers pass LogbookPDFLayout.columnOffsets.
+    let columnOffsets: [Int: CGFloat]
+    /// Custom field definitions used by Training Record mode; empty for Standard.
+    let customFields: [CustomCounterDefinition]
 
     private let L = LogbookPDFLayout.self
 
@@ -168,12 +178,13 @@ struct LogbookPDFPageDrawer {
 
         // Row 1: group headers — merged groups span full height, others span only groupHeaderHeight
         for group in L.groupOrder {
-            let geo = L.groupGeometry(for: group)
+            let geo = L.groupGeometry(for: group, in: columns, offsets: columnOffsets)
+            guard geo.width > 0 else { continue }
             let isMerged = mergedHeaderGroups.contains(group)
             let height = isMerged ? totalHeight : L.groupHeaderHeight
             ctx.setFillColor(L.headerBg.cgColor)
             ctx.fill(CGRect(x: geo.x, y: groupTop, width: geo.width, height: height))
-            let label = L.groupTitles[group] ?? ""
+            let label = (group == .time && !customFields.isEmpty) ? "DETAILS" : (L.groupTitles[group] ?? "")
             drawTextVCentred(label,
                              in: CGRect(x: geo.x + 2, y: groupTop, width: geo.width - 4, height: height),
                              font: L.fontGroupHeader, color: L.headerText, alignment: .center)
@@ -181,12 +192,13 @@ struct LogbookPDFPageDrawer {
 
         // Row 2: leaf column labels — fill and label only for non-merged groups
         for group in L.groupOrder where !mergedHeaderGroups.contains(group) {
-            let geo = L.groupGeometry(for: group)
+            let geo = L.groupGeometry(for: group, in: columns, offsets: columnOffsets)
+            guard geo.width > 0 else { continue }
             ctx.setFillColor(L.headerBg.cgColor)
             ctx.fill(CGRect(x: geo.x, y: leafTop, width: geo.width, height: L.leafHeaderHeight))
         }
-        for col in L.columns where !mergedHeaderGroups.contains(col.group) {
-            guard let x = L.columnOffsets[col.id] else { continue }
+        for col in columns where !mergedHeaderGroups.contains(col.group) {
+            guard let x = columnOffsets[col.id] else { continue }
             drawTextVCentred(col.title,
                              in: CGRect(x: x + 1, y: leafTop, width: col.width - 2, height: L.leafHeaderHeight),
                              font: L.fontLeafHeader, color: L.headerText, alignment: .center)
@@ -213,8 +225,8 @@ struct LogbookPDFPageDrawer {
         let inset: CGFloat = 2
 
         func cellRect(_ colId: Int) -> CGRect? {
-            guard let x = L.columnOffsets[colId],
-                  let col = L.columns.first(where: { $0.id == colId }) else { return nil }
+            guard let x = columnOffsets[colId],
+                  let col = columns.first(where: { $0.id == colId }) else { return nil }
             return CGRect(x: x + inset, y: y, width: col.width - inset * 2, height: L.dataRowHeight)
         }
 
@@ -235,7 +247,7 @@ struct LogbookPDFPageDrawer {
             drawTextVCentred(flight.aircraftReg, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
         }
 
-        // Crew (cols 3, 4) — centred
+        // Crew (cols 3, 4) — centred; absent in Training Record (cellRect returns nil for missing ids)
         if let r = cellRect(3) {
             drawTextVCentred(flight.captainName, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
         }
@@ -259,10 +271,10 @@ struct LogbookPDFPageDrawer {
 
         // Remarks (col 8)
         if let r = cellRect(8), !flight.remarks.isEmpty {
-            drawTextVCentred(flight.remarks, in: r, font: L.fontDataRemarks, color: L.bodyText, alignment: .left, truncate: true)
+            drawTextVCentred(flight.remarks, in: r, font: L.fontDataRemarks, color: L.bodyText, alignment: .center, wrap: true)
         }
 
-        // Time columns (cols 9-16) — zero-suppress
+        // Standard time columns (cols 9–16) — zero-suppress
         let timeMap: [(Int, Double)] = [
             (9,  flight.blockTimeValue),
             (10, flight.nightTimeValue),
@@ -279,6 +291,16 @@ struct LogbookPDFPageDrawer {
             let text = useHHMM ? Self.decimalToHHMM(value) : String(format: "%.1f", value)
             drawTextVCentred(text, in: r, font: font, color: L.bodyText, alignment: .center)
         }
+
+        // Custom field columns (id >= 100) — Training Record mode only
+        for col in columns where col.id >= 100 {
+            let n = col.id - 100
+            guard n < customFields.count else { continue }
+            let def = customFields[n]
+            guard let raw = flight.counterEntries[def.columnIndex], !raw.isEmpty else { continue }
+            guard let r = cellRect(col.id) else { continue }
+            drawTextVCentred(raw, in: r, font: L.fontDataCell, color: L.bodyText, alignment: .center)
+        }
     }
 
     // MARK: - Footer
@@ -294,12 +316,16 @@ struct LogbookPDFPageDrawer {
             ("TOTALS TO DATE",  totalsToDate,   true),
         ]
 
-        // Box spans from just before col 9 (label area) to right edge
-        guard let col9X = L.columnOffsets[9],
-              let lastCol = L.columns.last,
-              let lastColX = L.columnOffsets[lastCol.id] else { return }
+        // Box spans from just before the first time-group column (label area) to right edge.
+        // In Standard mode the first time col is id 9; in Training Record it may be id 100 or 16.
+        let timeGroupCols = columns.filter { $0.group == .time }
+        guard let firstTimeCol = timeGroupCols.first,
+              let firstTimeColX = columnOffsets[firstTimeCol.id],
+              let lastCol = columns.last,
+              let lastColX = columnOffsets[lastCol.id] else { return }
+
         let labelAreaWidth: CGFloat = 100
-        let boxLeft  = col9X - labelAreaWidth
+        let boxLeft  = firstTimeColX - labelAreaWidth
         let boxRight = lastColX + lastCol.width
 
         // Fill box background
@@ -331,17 +357,27 @@ struct LogbookPDFPageDrawer {
             let labelFont = row.bold ? L.fontFooterTotal : L.fontFooterLabel
             let valueFont = row.bold ? L.fontFooterTotal : L.fontFooterValue
 
-            // Label centred in the label area, immediately left of col 9
+            // Label centred in the label area, immediately left of the first time column
             drawTextVCentred(row.label,
                              in: CGRect(x: boxLeft, y: y, width: labelAreaWidth, height: L.footerRowHeight),
                              font: labelFont, color: L.bodyText, alignment: .center)
 
-            for colId in 9...16 {
-                guard let col = L.columns.first(where: { $0.id == colId }),
-                      let x = L.columnOffsets[colId] else { continue }
-                let val = row.totals.formattedValue(for: colId, useHHMM: useHHMM)
+            // Iterate the actual time-group columns present in this layout
+            for col in timeGroupCols {
+                guard let x = columnOffsets[col.id] else { continue }
+                let val: String
+                if col.id >= 100 {
+                    // Custom field column
+                    let n = col.id - 100
+                    guard n < customFields.count else { continue }
+                    let def = customFields[n]
+                    val = row.totals.formattedCustomValue(columnIndex: def.columnIndex, type: def.type, useHHMM: useHHMM)
+                } else {
+                    val = row.totals.formattedValue(for: col.id, useHHMM: useHHMM)
+                }
                 guard !val.isEmpty else { continue }
-                let colFont = (colId == 9 || row.bold) ? L.fontFooterTotal : valueFont
+                let isFirstTime = col.id == firstTimeCol.id
+                let colFont = (isFirstTime || row.bold) ? L.fontFooterTotal : valueFont
                 drawTextVCentred(val,
                                  in: CGRect(x: x + 1, y: y, width: col.width - 2, height: L.footerRowHeight),
                                  font: colFont, color: L.bodyText, alignment: .center)
@@ -367,12 +403,12 @@ struct LogbookPDFPageDrawer {
         ctx.addLine(to: CGPoint(x: right, y: L.dataTop))
         ctx.strokePath()
 
-        // Separator between group header row and leaf header row — skip merged groups
+        // Separator between group header row and leaf header row — skip merged groups and zero-width groups
         ctx.setStrokeColor(L.gridLineThin.cgColor)
         ctx.setLineWidth(0.25)
         for group in L.groupOrder {
-            let geo = L.groupGeometry(for: group)
-            guard !mergedHeaderGroups.contains(group) else { continue }
+            let geo = L.groupGeometry(for: group, in: columns, offsets: columnOffsets)
+            guard !mergedHeaderGroups.contains(group), geo.width > 0 else { continue }
             ctx.move(to: CGPoint(x: geo.x, y: L.leafHeaderTop))
             ctx.addLine(to: CGPoint(x: geo.x + geo.width, y: L.leafHeaderTop))
         }
@@ -389,8 +425,9 @@ struct LogbookPDFPageDrawer {
         }
         ctx.strokePath()
 
-        // Internal footer row dividers — only within the totals box (col 9 onward)
-        let footerBoxLeft = (L.columnOffsets[9] ?? right) - 100
+        // Internal footer row dividers — only within the totals box (first time col onward)
+        let firstTimeCol = columns.first(where: { $0.group == .time })
+        let footerBoxLeft = (firstTimeCol.flatMap { columnOffsets[$0.id] } ?? right) - 100
         ctx.setStrokeColor(L.gridLineThin.cgColor)
         ctx.setLineWidth(0.25)
         for i in 1..<L.footerRowCount {
@@ -405,8 +442,8 @@ struct LogbookPDFPageDrawer {
         ctx.setStrokeColor(L.gridLineThin.cgColor)
         ctx.setLineWidth(0.25)
         var prevGroup: ColumnGroup? = nil
-        for col in L.columns {
-            guard let x = L.columnOffsets[col.id] else { continue }
+        for col in columns {
+            guard let x = columnOffsets[col.id] else { continue }
             let isGroupBoundary = col.group != prevGroup
             let isTimeCol = col.group == .time
             ctx.move(to: CGPoint(x: x, y: isGroupBoundary ? L.groupHeaderTop : L.leafHeaderTop))
@@ -418,7 +455,11 @@ struct LogbookPDFPageDrawer {
 
     // MARK: - Text Helpers
 
-    // Draws text vertically centred within rect, shrinking font to fit width if needed.
+    // Draws text vertically centred within rect.
+    // truncate=true: single line, tail-truncated.
+    // truncate=false, wrap=false: single line, shrink font to fit width.
+    // truncate=false, wrap=true: try single line at full size; if too wide, try 2-line wrap;
+    //   if 2-line wrap is too tall, shrink font until it fits within rect.height.
     private func drawTextVCentred(
         _ text: String,
         in rect: CGRect,
@@ -426,32 +467,80 @@ struct LogbookPDFPageDrawer {
         color: UIColor,
         alignment: NSTextAlignment = .center,
         truncate: Bool = false,
+        wrap: Bool = false,
         minFontSize: CGFloat = 4
     ) {
-        let style = NSMutableParagraphStyle()
-        style.alignment = alignment
-        style.lineBreakMode = truncate ? .byTruncatingTail : .byClipping
-
-        // Step font size down until text fits, stopping at minFontSize
-        var drawFont = font
-        if !truncate {
-            var size = font.pointSize
-            while size > minFontSize {
-                let testAttrs: [NSAttributedString.Key: Any] = [.font: drawFont]
-                let w = (text as NSString).size(withAttributes: testAttrs).width
-                if w <= rect.width { break }
-                size -= 0.5
-                drawFont = font.withSize(size)
-            }
+        let makeStyle: (NSLineBreakMode) -> NSMutableParagraphStyle = { mode in
+            let s = NSMutableParagraphStyle()
+            s.alignment = alignment
+            s.lineBreakMode = mode
+            return s
         }
 
+        if truncate {
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: font, .foregroundColor: color,
+                .paragraphStyle: makeStyle(.byTruncatingTail),
+            ]
+            let h = (text as NSString).size(withAttributes: attrs).height
+            let vOffset = max(0, (rect.height - h) / 2)
+            (text as NSString).draw(
+                in: CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: h),
+                withAttributes: attrs)
+            return
+        }
+
+        if wrap {
+            // Measure wrapped height for a given font size
+            func wrappedHeight(size: CGFloat) -> CGFloat {
+                let f = font.withSize(size)
+                let attrs: [NSAttributedString.Key: Any] = [
+                    .font: f, .foregroundColor: color,
+                    .paragraphStyle: makeStyle(.byWordWrapping),
+                ]
+                let bound = CGSize(width: rect.width, height: .greatestFiniteMagnitude)
+                return (text as NSString).boundingRect(
+                    with: bound, options: .usesLineFragmentOrigin,
+                    attributes: attrs, context: nil).height
+            }
+
+            // Find smallest font size that fits within rect.height, stepping down if needed
+            var size = font.pointSize
+            while size > minFontSize && wrappedHeight(size: size) > rect.height {
+                size -= 0.5
+            }
+
+            let drawFont = font.withSize(size)
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: drawFont, .foregroundColor: color,
+                .paragraphStyle: makeStyle(.byWordWrapping),
+            ]
+            let h = wrappedHeight(size: size)
+            let vOffset = max(0, (rect.height - h) / 2)
+            (text as NSString).draw(
+                in: CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: h),
+                withAttributes: attrs)
+            return
+        }
+
+        // Single-line shrink-to-fit
+        var drawFont = font
+        var size = font.pointSize
+        while size > minFontSize {
+            let w = (text as NSString).size(withAttributes: [.font: drawFont]).width
+            if w <= rect.width { break }
+            size -= 0.5
+            drawFont = font.withSize(size)
+        }
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: drawFont, .foregroundColor: color, .paragraphStyle: style,
+            .font: drawFont, .foregroundColor: color,
+            .paragraphStyle: makeStyle(.byClipping),
         ]
-        let textSize = (text as NSString).size(withAttributes: attrs)
-        let vOffset = max(0, (rect.height - textSize.height) / 2)
-        let drawRect = CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: textSize.height)
-        (text as NSString).draw(in: drawRect, withAttributes: attrs)
+        let h = (text as NSString).size(withAttributes: attrs).height
+        let vOffset = max(0, (rect.height - h) / 2)
+        (text as NSString).draw(
+            in: CGRect(x: rect.minX, y: rect.minY + vOffset, width: rect.width, height: h),
+            withAttributes: attrs)
     }
 
     private static func decimalToHHMM(_ v: Double) -> String {

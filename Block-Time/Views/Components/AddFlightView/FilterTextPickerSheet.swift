@@ -28,7 +28,7 @@ struct FilterTextPickerSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Search field
                 VStack(spacing: 12) {
@@ -117,7 +117,7 @@ struct FilterTextPickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     if !selectedValue.isEmpty {
                         Button("Clear") {
                             selectedValue = ""
@@ -127,7 +127,7 @@ struct FilterTextPickerSheet: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") {
                         HapticManager.shared.impact(.medium)
                         onDismiss()

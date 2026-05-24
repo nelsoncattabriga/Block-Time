@@ -56,6 +56,7 @@ class CloudKitSettingsSyncService {
         static let showSpInsSelector = "cloud_showSpInsSelector"
         static let logCustomCount = "cloud_logCustomCount"
         static let customCountLabel = "cloud_customCountLabel"
+        static let customCounterDefinitions = "cloud_customCounterDefinitions"
         static let pfAutoInstrumentMinutes = "cloud_pfAutoInstrumentMinutes"
         static let logbookDestination = "cloud_logbookDestination"
         static let displayFlightsInLocalTime = "cloud_displayFlightsInLocalTime"
@@ -168,7 +169,18 @@ class CloudKitSettingsSyncService {
             return
         }
 
+        let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
+
         DispatchQueue.main.async {
+            // Apply custom field definitions immediately regardless of rate limit.
+            if changedKeys.contains(CloudKeys.customCounterDefinitions),
+               let definitionsJSON = self.ubiquitousStore.string(forKey: CloudKeys.customCounterDefinitions),
+               let definitionsData = definitionsJSON.data(using: .utf8),
+               let cloudDefinitions = try? JSONDecoder().decode([CustomCounterDefinition].self, from: definitionsData),
+               cloudDefinitions != CustomCounterService.shared.definitions {
+                CustomCounterService.shared.replaceAll(cloudDefinitions)
+            }
+
             switch changeReason {
             case NSUbiquitousKeyValueStoreServerChange:
                 LogManager.shared.info("iCloud sync: Server change - syncing from cloud")
@@ -294,6 +306,10 @@ class CloudKitSettingsSyncService {
         ubiquitousStore.set(settings.showSpInsSelector, forKey: CloudKeys.showSpInsSelector)
         ubiquitousStore.set(settings.logCustomCount, forKey: CloudKeys.logCustomCount)
         ubiquitousStore.set(settings.customCountLabel, forKey: CloudKeys.customCountLabel)
+        if let definitionsData = try? JSONEncoder().encode(MainActor.assumeIsolated { CustomCounterService.shared.definitions }),
+           let definitionsJSON = String(data: definitionsData, encoding: .utf8) {
+            ubiquitousStore.set(definitionsJSON, forKey: CloudKeys.customCounterDefinitions)
+        }
         ubiquitousStore.set(settings.pfAutoInstrumentMinutes, forKey: CloudKeys.pfAutoInstrumentMinutes)
         ubiquitousStore.set(settings.logbookDestination.rawValue, forKey: CloudKeys.logbookDestination)
         ubiquitousStore.set(settings.displayFlightsInLocalTime, forKey: CloudKeys.displayFlightsInLocalTime)
@@ -479,6 +495,13 @@ class CloudKitSettingsSyncService {
            customCountLabel != localSettings.customCountLabel {
             settings.customCountLabel = customCountLabel
             changedKeys.insert("customCountLabel")
+        }
+        if let definitionsJSON = ubiquitousStore.string(forKey: CloudKeys.customCounterDefinitions),
+           let definitionsData = definitionsJSON.data(using: .utf8),
+           let cloudDefinitions = try? JSONDecoder().decode([CustomCounterDefinition].self, from: definitionsData),
+           cloudDefinitions != MainActor.assumeIsolated({ CustomCounterService.shared.definitions }) {
+            MainActor.assumeIsolated { CustomCounterService.shared.replaceAll(cloudDefinitions) }
+            changedKeys.insert("customCounterDefinitions")
         }
         if let showSpIns = ubiquitousStore.object(forKey: CloudKeys.showSpInsSelector) as? Bool,
            showSpIns != localSettings.showSpInsSelector {
