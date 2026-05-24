@@ -89,8 +89,9 @@ Phases completed: 0 / 7
 | 260524-hnc | Training Record PDF: dynamic layout, crew cols dropped, user-selectable custom fields (up to 7) | 2026-05-24 | 316569a | [260524-hnc-training-record-pdf-dynamic-layout-dropp](./quick/260524-hnc-training-record-pdf-dynamic-layout-dropp/) |
 | 260524-iw3 | Fix cover page rule line to match rendered title width (+8pt padding) | 2026-05-24 | c260347 | [260524-iw3-fix-cover-page-rule-line-to-match-title-](./quick/260524-iw3-fix-cover-page-rule-line-to-match-title-/) |
 | 260524-jai | Fix Flight Info widget stale Tomorrow label — use .after(nextMidnight) reload policy | 2026-05-24 | 5105bfd | [260524-jai-fix-widget-flight-info-mode-stale-tomorr](./quick/260524-jai-fix-widget-flight-info-mode-stale-tomorr/) |
+| 260524-krm | Add App Store update check to SplashScreenView (iTunes lookup, 24h cache, alert) | 2026-05-24 | c5e9e7b | [260524-krm-add-app-store-update-check-to-splashscre](./quick/260524-krm-add-app-store-update-check-to-splashscre/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-24 - Completed quick task 260524-jai: Fix widget Flight Info mode stale Tomorrow label
+Last activity: 2026-05-24 - Completed quick task 260524-krm: Add App Store update check to SplashScreenView
 Next action: Continue custom fields integration — PDF/print integration
