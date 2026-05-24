@@ -104,11 +104,9 @@ enum RowSlot {
 
 enum LogbookPDFPaginator {
 
-    // Builds ordered [RowSlot], filtering out positioning and unflown entries.
+    // Builds ordered [RowSlot] from pre-filtered flights (caller applies content/date filters).
     static nonisolated func buildSlots(from flights: [FlightSector]) -> [RowSlot] {
-        flights
-            .filter { !$0.isPositioning && ($0.blockTimeValue > 0 || $0.simTimeValue > 0) }
-            .map { .flight($0) }
+        flights.map { .flight($0) }
     }
 
     // Splits slots into pages of maxDataSlotsPerPage.
