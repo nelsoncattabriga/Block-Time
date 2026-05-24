@@ -86,8 +86,9 @@ Phases completed: 0 / 7
 | 260524-fyn | Rename PDFContentMode labels to Standard / + SIM INS / INS Record | 2026-05-24 | a963f31 | [260524-fyn-rename-pdfcontentmode-labels-in-logbookp](./quick/260524-fyn-rename-pdfcontentmode-labels-in-logbookp/) |
 | 260524-hb5 | Fix FlightSectorRow Sim/Flt label for INS|Simulator flights | 2026-05-24 | 80ab8f2 | [260524-hb5-fix-flightsectorrow-to-show-sim-for-ins-](./quick/260524-hb5-fix-flightsectorrow-to-show-sim-for-ins-/) |
 | 260524-hii | Fix airplane icon condition for INS|Simulator flights in FlightSectorRow | 2026-05-24 | 75c1c25 | [260524-hii-fix-airplane-icon-condition-in-flightsec](./quick/260524-hii-fix-airplane-icon-condition-in-flightsec/) |
+| 260524-hnc | Training Record PDF: dynamic layout, crew cols dropped, user-selectable custom fields (up to 7) | 2026-05-24 | 316569a | [260524-hnc-training-record-pdf-dynamic-layout-dropp](./quick/260524-hnc-training-record-pdf-dynamic-layout-dropp/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-24 - Fix airplane icon condition for INS|Simulator flights (260524-hii)
+Last activity: 2026-05-24 - Training Record PDF dynamic layout with custom fields (260524-hnc)
 Next action: Continue custom fields integration — PDF/print integration
