@@ -82,8 +82,9 @@ Phases completed: 0 / 7
 | 260524-do7 | Fix INS|Sim simInsTime fallback and flight dimming bugs | 2026-05-24 | 6e08dbf | [260524-do7-fix-ins-simulator-save-and-dimming-bugs](./quick/260524-do7-fix-ins-simulator-save-and-dimming-bugs/) |
 | 260524-dyl | Fix iPad FlightsSplitView scroll to newly saved flight | 2026-05-24 | 9d04bc8 | [260524-dyl-fix-ipad-flightssplitview-scroll-to-new-](./quick/260524-dyl-fix-ipad-flightssplitview-scroll-to-new-/) |
 | 260524-eml | Apply HH:MM input fixes to ModernDecimalTimeField (numberPad, 00:00, auto-colon, blur normalise) | 2026-05-24 | 6575178 | [260524-eml-apply-hh-mm-input-fixes-to-moderndecimal/](./quick/260524-eml-apply-hh-mm-input-fixes-to-moderndecimal/) |
+| 260524-f6d | Add PDFContentMode (allFlights / includeINS / instructorHoursOnly) to Print Logbook PDF export | 2026-05-24 | 47f3684 | [260524-f6d-add-pdfcontentmode-allflights-includeins/](./quick/260524-f6d-add-pdfcontentmode-allflights-includeins/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-24 - Apply HH:MM input fixes to ModernDecimalTimeField (260524-eml)
+Last activity: 2026-05-24 - Add PDFContentMode to Print Logbook export (260524-f6d)
 Next action: Continue custom fields integration — PDF/print integration
