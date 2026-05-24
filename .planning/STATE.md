@@ -85,8 +85,9 @@ Phases completed: 0 / 7
 | 260524-f6d | Add PDFContentMode (allFlights / includeINS / instructorHoursOnly) to Print Logbook PDF export | 2026-05-24 | 47f3684 | [260524-f6d-add-pdfcontentmode-allflights-includeins/](./quick/260524-f6d-add-pdfcontentmode-allflights-includeins/) |
 | 260524-fyn | Rename PDFContentMode labels to Standard / + SIM INS / INS Record | 2026-05-24 | a963f31 | [260524-fyn-rename-pdfcontentmode-labels-in-logbookp](./quick/260524-fyn-rename-pdfcontentmode-labels-in-logbookp/) |
 | 260524-hb5 | Fix FlightSectorRow Sim/Flt label for INS|Simulator flights | 2026-05-24 | 80ab8f2 | [260524-hb5-fix-flightsectorrow-to-show-sim-for-ins-](./quick/260524-hb5-fix-flightsectorrow-to-show-sim-for-ins-/) |
+| 260524-hii | Fix airplane icon condition for INS|Simulator flights in FlightSectorRow | 2026-05-24 | 75c1c25 | [260524-hii-fix-airplane-icon-condition-in-flightsec](./quick/260524-hii-fix-airplane-icon-condition-in-flightsec/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-24 - Fix FlightSectorRow Sim/Flt label for INS|Simulator flights (260524-hb5)
+Last activity: 2026-05-24 - Fix airplane icon condition for INS|Simulator flights (260524-hii)
 Next action: Continue custom fields integration — PDF/print integration
