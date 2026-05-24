@@ -146,23 +146,9 @@ enum LogbookPDFLayout {
         let fields = Array(customFields.prefix(7))
         let customCount = fields.count
 
-        // Remarks width uses freed crew space (170pt) first, then shrinks Remarks.
+        // Remarks fills all remaining space after fixed cols + custom cols.
         // Total available = 560pt (806 - 246 fixed, crew dropped).
-        // Remarks baseline = 176pt (Standard width). Crew freed = 170pt.
-        // 0 fields  → Remarks = 560 (entire available)
-        // 1-2 fields → custom cols eat crew space first; Remarks stays ≥ 346pt
-        // 3-7 fields → Remarks shrinks below 346, floor 50pt.
-        let customPt = CGFloat(customCount) * 44
-        let crewFreed: CGFloat = 170
-        let remarksBaseline: CGFloat = 176
-        let remarksWidth: CGFloat
-        if customCount == 0 {
-            remarksWidth = 560
-        } else if customPt <= crewFreed {
-            remarksWidth = 560 - customPt  // still generous, crew space absorbs it
-        } else {
-            remarksWidth = max(50, remarksBaseline - (customPt - crewFreed))
-        }
+        let remarksWidth: CGFloat = 560 - CGFloat(customCount) * 44
 
         var cols: [ColumnDef] = [
             ColumnDef(id: 0,  title: "DATE",    width:  46, alignment: .center, group: .date),
