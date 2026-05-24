@@ -18,7 +18,7 @@ enum PDFDateRangePreset: String, CaseIterable {
 
 enum PDFContentMode: String, CaseIterable {
     case allFlights          = "Standard"
-    case instructorHoursOnly = "TRNG Record"
+    case instructorHoursOnly = "Training Record"
 }
 
 // MARK: - Export View
