@@ -118,7 +118,7 @@ struct FlightsView: View {
                 guard !hasScrolledOnLaunch, !filteredFlightSectors.isEmpty else { return }
                 hasScrolledOnLaunch = true
                 let anchorID = filteredFlightSectors.first(where: {
-                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
                 })?.id ?? filteredFlightSectors.last?.id
                 if let id = anchorID {
                     Task { @MainActor in
@@ -130,7 +130,7 @@ struct FlightsView: View {
                 guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
                 hasScrolledOnLaunch = true
                 let anchorID = sectors.first(where: {
-                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
                 })?.id ?? sectors.last?.id
                 if let id = anchorID {
                     Task { @MainActor in
