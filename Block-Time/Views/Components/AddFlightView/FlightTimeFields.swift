@@ -167,8 +167,12 @@ struct ModernDecimalTimeField: View {
             if input.contains("."), let d = Double(input) {
                 return FlightSector.decimalToHHMM(d)
             }
-            // Allow digits and colon for HH:MM format
-            return input.filter { $0.isNumber || $0 == ":" }
+            // Allow digits and colon; auto-insert colon on exactly 4 digits without one
+            let digitsAndColon = input.filter { $0.isNumber || $0 == ":" }
+            if digitsAndColon.count == 4 && !digitsAndColon.contains(":") {
+                return "\(digitsAndColon.prefix(2)):\(digitsAndColon.suffix(2))"
+            }
+            return String(digitsAndColon.prefix(5))
         } else {
             // Allow digits, decimal point, and comma for decimal format
             var result = ""
@@ -189,21 +193,28 @@ struct ModernDecimalTimeField: View {
 
     private func formatOnBlur(_ input: String) -> String {
         if showAsHHMM {
+            // Normalise bare 4-digit entry (e.g. "0130" → "01:30")
+            let blurInput: String
+            if input.count == 4 && !input.contains(":") && input.allSatisfy(\.isNumber) {
+                blurInput = "\(input.prefix(2)):\(input.suffix(2))"
+            } else {
+                blurInput = input
+            }
             // Convert to HH:MM format
-            if input.contains(":") {
+            if blurInput.contains(":") {
                 // Already in HH:MM, validate and reformat
-                let components = input.split(separator: ":")
+                let components = blurInput.split(separator: ":")
                 if components.count == 2,
                    let hours = Int(components[0]),
                    let minutes = Int(components[1]),
                    hours >= 0, minutes >= 0, minutes < 60 {
                     return String(format: "%d:%02d", hours, minutes)
                 }
-            } else if let decimalValue = Double(input) {
+            } else if let decimalValue = Double(blurInput) {
                 // Convert decimal to HH:MM
                 return FlightSector.decimalToHHMM(decimalValue)
             }
-            return input.isEmpty ? "0:00" : input
+            return blurInput.isEmpty ? "0:00" : blurInput
         } else {
             // Format as decimal using the user's rounding mode
             let cleaned = input.replacingOccurrences(of: ",", with: ".")
@@ -265,9 +276,9 @@ struct ModernDecimalTimeField: View {
                             .foregroundColor(.gray)
                     }
                 } else {
-                    TextField(showAsHHMM ? "0:00" : "0.0", text: $editingText)
+                    TextField(showAsHHMM ? "00:00" : "0.0", text: $editingText)
                         .font(.subheadline.bold())
-                        .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad)
+                        .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : (showAsHHMM ? .numberPad : .decimalPad))
                         .focused($decimalFieldFocused)
                         .onChange(of: editingText) { _, newValue in
                             editingText = sanitize(newValue)
