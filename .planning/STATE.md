@@ -88,8 +88,9 @@ Phases completed: 0 / 7
 | 260524-hii | Fix airplane icon condition for INS|Simulator flights in FlightSectorRow | 2026-05-24 | 75c1c25 | [260524-hii-fix-airplane-icon-condition-in-flightsec](./quick/260524-hii-fix-airplane-icon-condition-in-flightsec/) |
 | 260524-hnc | Training Record PDF: dynamic layout, crew cols dropped, user-selectable custom fields (up to 7) | 2026-05-24 | 316569a | [260524-hnc-training-record-pdf-dynamic-layout-dropp](./quick/260524-hnc-training-record-pdf-dynamic-layout-dropp/) |
 | 260524-iw3 | Fix cover page rule line to match rendered title width (+8pt padding) | 2026-05-24 | c260347 | [260524-iw3-fix-cover-page-rule-line-to-match-title-](./quick/260524-iw3-fix-cover-page-rule-line-to-match-title-/) |
+| 260524-jai | Fix Flight Info widget stale Tomorrow label — use .after(nextMidnight) reload policy | 2026-05-24 | 5105bfd | [260524-jai-fix-widget-flight-info-mode-stale-tomorr](./quick/260524-jai-fix-widget-flight-info-mode-stale-tomorr/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-24 - Fix cover page rule line width (260524-iw3)
+Last activity: 2026-05-24 - Fix Flight Info widget stale Tomorrow label (260524-jai)
 Next action: Continue custom fields integration — PDF/print integration
