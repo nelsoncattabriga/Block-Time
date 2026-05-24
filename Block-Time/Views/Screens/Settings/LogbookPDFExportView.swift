@@ -321,7 +321,6 @@ struct LogbookPDFExportView: View {
     @ViewBuilder
     private var customFieldsPickerSection: some View {
         let defs = CustomCounterService.shared.definitions
-        let selectedCount = selectedCustomFields.count
 
         VStack(alignment: .leading, spacing: 10) {
             Text("Custom Fields")
@@ -333,21 +332,16 @@ struct LogbookPDFExportView: View {
                     .font(.footnote)
                     .foregroundColor(.secondary)
             } else {
-                Text("\(selectedCount) of 10 selected")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
                 ForEach(defs) { def in
                     let isSelected = isCustomFieldSelected(def)
-                    let atCap = selectedCount >= 10 && !isSelected
 
                     Button {
-                        if !atCap { toggleCustomField(def) }
+                        toggleCustomField(def)
                     } label: {
                         HStack {
                             Text(def.label)
                                 .font(.subheadline)
-                                .foregroundColor(atCap ? .secondary : .primary)
+                                .foregroundColor(.primary)
                             Spacer()
                             if isSelected {
                                 Image(systemName: "checkmark")
@@ -356,7 +350,6 @@ struct LogbookPDFExportView: View {
                         }
                         .contentShape(Rectangle())
                     }
-                    .disabled(atCap)
                     .buttonStyle(.plain)
                 }
             }
