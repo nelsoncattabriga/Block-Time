@@ -297,7 +297,10 @@ private struct FlightsListContent: View {
             .onChange(of: filteredFlightSectors) { _, sectors in
                 if pendingScrollToLatest, !sectors.isEmpty {
                     pendingScrollToLatest = false
-                    if let id = sectors.first?.id {
+                    let anchorID = sectors.first(where: {
+                        $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.isPositioning
+                    })?.id ?? sectors.last?.id
+                    if let id = anchorID {
                         Task { @MainActor in
                             proxy.scrollTo(id, anchor: .top)
                         }
