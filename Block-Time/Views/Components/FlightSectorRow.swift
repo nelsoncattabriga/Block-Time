@@ -258,7 +258,7 @@ struct FlightSectorRow: View, Equatable {
                         .foregroundColor(cachedIsFutureFlight ? .secondary : .blue.opacity(0.7))
 
                     // Only show airplane icon if not a SIM flight, or if SIM flight has airports
-                    if sector.simTimeValue == 0 || (!sector.fromAirport.isEmpty && !sector.toAirport.isEmpty) {
+                    if (sector.simTimeValue == 0 && sector.spInsTimeValue == 0) || (!sector.fromAirport.isEmpty && !sector.toAirport.isEmpty) {
                         Image(systemName: "airplane")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
