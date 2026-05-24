@@ -92,5 +92,5 @@ Phases completed: 0 / 7
 
 ## Session Continuity
 
-Last activity: 2026-05-24 - Fix Flight Info widget stale Tomorrow label (260524-jai)
+Last activity: 2026-05-24 - Completed quick task 260524-jai: Fix widget Flight Info mode stale Tomorrow label
 Next action: Continue custom fields integration — PDF/print integration
