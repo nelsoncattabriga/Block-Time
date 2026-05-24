@@ -18,8 +18,7 @@ enum PDFDateRangePreset: String, CaseIterable {
 
 enum PDFContentMode: String, CaseIterable {
     case allFlights          = "Standard"
-    case includeINSSessions  = "+ SIM INS"
-    case instructorHoursOnly = "INS Record"
+    case instructorHoursOnly = "TRNG Record"
 }
 
 // MARK: - Export View
@@ -43,7 +42,7 @@ struct LogbookPDFExportView: View {
     @AppStorage("logbookPDFCustomTo")     private var customToInterval: Double = 0
     @AppStorage("logbookPDFUseLocalDates") private var useLocalDates: Bool = true
     @AppStorage("logbookPDFUseHHMM")       private var useHHMM: Bool = false
-    @AppStorage("logbookPDFContentMode2")  private var contentModeRaw: String = PDFContentMode.allFlights.rawValue
+    @AppStorage("logbookPDFContentMode3")  private var contentModeRaw: String = PDFContentMode.allFlights.rawValue
     @AppStorage("showSpInsSelector")       private var showSpInsSelector: Bool = false
 
     private var datePreset: PDFDateRangePreset {
@@ -160,6 +159,26 @@ struct LogbookPDFExportView: View {
                 .frame(width: 110)
             }
 
+            // Content — only shown when Log Instructor Time is enabled
+            if showSpInsSelector {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Content")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Picker("Content", selection: $contentModeRaw) {
+                        ForEach(PDFContentMode.allCases, id: \.rawValue) { mode in
+                            Text(mode.rawValue).tag(mode.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: contentModeRaw) { _, _ in updateFlightCount() }
+                }
+                .padding()
+                .background(Color.brown.opacity(0.06))
+                .cornerRadius(12)
+            }
+
             // Date Range
             VStack(alignment: .leading, spacing: 10) {
                 Text("Date Range")
@@ -209,26 +228,6 @@ struct LogbookPDFExportView: View {
             .padding()
             .background(Color.brown.opacity(0.06))
             .cornerRadius(12)
-
-            // Content — only shown when Log Instructor Time is enabled
-            if showSpInsSelector {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Content")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Content", selection: $contentModeRaw) {
-                        ForEach(PDFContentMode.allCases, id: \.rawValue) { mode in
-                            Text(mode.rawValue).tag(mode.rawValue)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: contentModeRaw) { _, _ in updateFlightCount() }
-                }
-                .padding()
-                .background(Color.brown.opacity(0.06))
-                .cornerRadius(12)
-            }
 
             // Date Format + timezone
             VStack(alignment: .leading, spacing: 10) {
@@ -287,8 +286,6 @@ struct LogbookPDFExportView: View {
         switch contentMode {
         case .allFlights:
             return !f.isPositioning && (f.blockTimeValue > 0 || f.simTimeValue > 0)
-        case .includeINSSessions:
-            return !f.isPositioning && (f.blockTimeValue > 0 || f.simTimeValue > 0 || f.spInsTimeValue > 0)
         case .instructorHoursOnly:
             return f.spInsTimeValue > 0
         }
