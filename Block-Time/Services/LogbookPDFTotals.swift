@@ -10,10 +10,12 @@ import Foundation
 struct PageTotals: Sendable {
     nonisolated init(
         block: Double = 0, night: Double = 0, p1: Double = 0, p1us: Double = 0,
-        p2: Double = 0, instr: Double = 0, sim: Double = 0, spins: Double = 0
+        p2: Double = 0, instr: Double = 0, sim: Double = 0, spins: Double = 0,
+        customTotals: [Int: Double] = [:]
     ) {
         self.block = block; self.night = night; self.p1 = p1; self.p1us = p1us
         self.p2 = p2; self.instr = instr; self.sim = sim; self.spins = spins
+        self.customTotals = customTotals
     }
 
     var block: Double = 0
@@ -24,17 +26,25 @@ struct PageTotals: Sendable {
     var instr: Double = 0
     var sim: Double = 0
     var spins: Double = 0
+    /// Keyed by CustomCounterDefinition.columnIndex. Empty in Standard mode.
+    var customTotals: [Int: Double] = [:]
 
     static nonisolated func + (lhs: PageTotals, rhs: PageTotals) -> PageTotals {
-        PageTotals(
-            block:  lhs.block  + rhs.block,
-            night:  lhs.night  + rhs.night,
-            p1:     lhs.p1     + rhs.p1,
-            p1us:   lhs.p1us   + rhs.p1us,
-            p2:     lhs.p2     + rhs.p2,
-            instr:  lhs.instr  + rhs.instr,
-            sim:    lhs.sim    + rhs.sim,
-            spins:  lhs.spins  + rhs.spins
+        // Merge customTotals: union of keys, summing shared values.
+        var merged = lhs.customTotals
+        for (key, val) in rhs.customTotals {
+            merged[key, default: 0] += val
+        }
+        return PageTotals(
+            block:        lhs.block  + rhs.block,
+            night:        lhs.night  + rhs.night,
+            p1:           lhs.p1     + rhs.p1,
+            p1us:         lhs.p1us   + rhs.p1us,
+            p2:           lhs.p2     + rhs.p2,
+            instr:        lhs.instr  + rhs.instr,
+            sim:          lhs.sim    + rhs.sim,
+            spins:        lhs.spins  + rhs.spins,
+            customTotals: merged
         )
     }
 
@@ -47,6 +57,24 @@ struct PageTotals: Sendable {
         instr  += flight.instrumentTimeValue
         sim    += flight.simTimeValue
         spins  += flight.spInsTimeValue
+    }
+
+    /// Accumulates standard time fields AND custom field values from the flight.
+    /// Standard callers use accumulate(_:) which leaves customTotals untouched.
+    nonisolated mutating func accumulate(_ flight: FlightSector, customFields: [CustomCounterDefinition]) {
+        accumulate(flight)
+        for def in customFields {
+            guard def.type != .text else { continue }
+            guard let raw = flight.counterEntries[def.columnIndex], !raw.isEmpty else { continue }
+            let value: Double
+            if def.type == .time {
+                // HH:MM stored in counterEntries — convert to decimal
+                value = FlightSector.hhmmToDecimal(raw) ?? Double(raw) ?? 0
+            } else {
+                value = Double(raw) ?? 0
+            }
+            customTotals[def.columnIndex, default: 0] += value
+        }
     }
 
     // Returns formatted string for a given column id, blank when zero.
@@ -76,6 +104,24 @@ struct PageTotals: Sendable {
         case 15: return formatHHMM(sim)
         case 16: return formatHHMM(spins)
         default: return ""
+        }
+    }
+
+    /// Formats a custom-field total for footer display.
+    /// Text-type custom fields always return "" (no totalling).
+    nonisolated func formattedCustomValue(columnIndex: Int, type: CounterType, useHHMM: Bool) -> String {
+        guard type != .text else { return "" }
+        let value = customTotals[columnIndex] ?? 0
+        guard value > 0 else { return "" }
+        switch type {
+        case .time:
+            return useHHMM ? formatHHMM(value) : String(format: "%.1f", value)
+        case .decimal:
+            return String(format: "%.1f", value)
+        case .integer:
+            return formatInt(Int(value.rounded()))
+        case .text:
+            return ""
         }
     }
 
@@ -132,7 +178,12 @@ enum LogbookPDFPaginator {
 
     // Computes per-page totals and the running brought-forward for each page.
     // seed: career totals for flights prior to the rendered range (zero for full logbook).
-    static nonisolated func computeTotals(pages: [[RowSlot]], seed: PageTotals = PageTotals()) -> [(page: PageTotals, broughtForward: PageTotals)] {
+    // customFields: non-empty only for Training Record mode; threads custom accumulation.
+    static nonisolated func computeTotals(
+        pages: [[RowSlot]],
+        seed: PageTotals = PageTotals(),
+        customFields: [CustomCounterDefinition] = []
+    ) -> [(page: PageTotals, broughtForward: PageTotals)] {
         var result: [(page: PageTotals, broughtForward: PageTotals)] = []
         var runningTotal = seed
 
@@ -141,7 +192,11 @@ enum LogbookPDFPaginator {
             var pageTotals = PageTotals()
             for slot in page {
                 if case .flight(let f) = slot {
-                    pageTotals.accumulate(f)
+                    if customFields.isEmpty {
+                        pageTotals.accumulate(f)
+                    } else {
+                        pageTotals.accumulate(f, customFields: customFields)
+                    }
                 }
             }
             result.append((page: pageTotals, broughtForward: bf))
