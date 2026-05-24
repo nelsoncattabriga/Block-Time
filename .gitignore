@@ -17,3 +17,6 @@ Pods/
 
 # macOS
 .DS_Store
+
+# GSD agent worktrees (temporary, contain embedded git repos)
+.claude/worktrees/
