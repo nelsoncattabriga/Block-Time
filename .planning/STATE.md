@@ -80,8 +80,9 @@ Phases completed: 0 / 7
 | 260523-tux | Fix HH:MM mode input in FieldTimeField and BulkEditTimeField (numberPad, 00:00 placeholder, leading-zero display) | 2026-05-23 | b4cc346 | [260523-tux-fix-hh-mm-mode-input-in-fieldtimefield-a](./quick/260523-tux-fix-hh-mm-mode-input-in-fieldtimefield-a/) |
 | 260523-urt | Show custom counter fields by user-defined label in ImportMappingView | 2026-05-23 | 2e82238 | [260523-urt-show-custom-counter-fields-by-user-defin](./quick/260523-urt-show-custom-counter-fields-by-user-defin/) |
 | 260524-do7 | Fix INS|Sim simInsTime fallback and flight dimming bugs | 2026-05-24 | 6e08dbf | [260524-do7-fix-ins-simulator-save-and-dimming-bugs](./quick/260524-do7-fix-ins-simulator-save-and-dimming-bugs/) |
+| 260524-dyl | Fix iPad FlightsSplitView scroll to newly saved flight | 2026-05-24 | 9d04bc8 | [260524-dyl-fix-ipad-flightssplitview-scroll-to-new-](./quick/260524-dyl-fix-ipad-flightssplitview-scroll-to-new-/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-24 - Fix INS|Sim simInsTime fallback and dimming guard (260524-do7)
+Last activity: 2026-05-24 - Fix iPad FlightsSplitView scroll to newly saved flight (260524-dyl)
 Next action: Continue custom fields integration — PDF/print integration
