@@ -44,6 +44,7 @@ struct LogbookPDFExportView: View {
     @AppStorage("logbookPDFUseLocalDates") private var useLocalDates: Bool = true
     @AppStorage("logbookPDFUseHHMM")       private var useHHMM: Bool = false
     @AppStorage("logbookPDFContentMode2")  private var contentModeRaw: String = PDFContentMode.allFlights.rawValue
+    @AppStorage("showSpInsSelector")       private var showSpInsSelector: Bool = false
 
     private var datePreset: PDFDateRangePreset {
         PDFDateRangePreset(rawValue: datePresetRaw) ?? .all
@@ -113,7 +114,13 @@ struct LogbookPDFExportView: View {
                     PDFPreviewView(url: url)
                 }
             }
-            .onAppear { loadFlights() }
+            .onAppear {
+                if !showSpInsSelector { contentModeRaw = PDFContentMode.allFlights.rawValue }
+                loadFlights()
+            }
+            .onChange(of: showSpInsSelector) { _, enabled in
+                if !enabled { contentModeRaw = PDFContentMode.allFlights.rawValue }
+            }
         }
     }
 
@@ -203,23 +210,25 @@ struct LogbookPDFExportView: View {
             .background(Color.brown.opacity(0.06))
             .cornerRadius(12)
 
-            // Content
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Content")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            // Content — only shown when Log Instructor Time is enabled
+            if showSpInsSelector {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Content")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
-                Picker("Content", selection: $contentModeRaw) {
-                    ForEach(PDFContentMode.allCases, id: \.rawValue) { mode in
-                        Text(mode.rawValue).tag(mode.rawValue)
+                    Picker("Content", selection: $contentModeRaw) {
+                        ForEach(PDFContentMode.allCases, id: \.rawValue) { mode in
+                            Text(mode.rawValue).tag(mode.rawValue)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    .onChange(of: contentModeRaw) { _, _ in updateFlightCount() }
                 }
-                .pickerStyle(.segmented)
-                .onChange(of: contentModeRaw) { _, _ in updateFlightCount() }
+                .padding()
+                .background(Color.brown.opacity(0.06))
+                .cornerRadius(12)
             }
-            .padding()
-            .background(Color.brown.opacity(0.06))
-            .cornerRadius(12)
 
             // Date Format + timezone
             VStack(alignment: .leading, spacing: 10) {
