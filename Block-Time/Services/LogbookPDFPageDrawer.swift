@@ -181,7 +181,7 @@ struct LogbookPDFPageDrawer {
             let height = isMerged ? totalHeight : L.groupHeaderHeight
             ctx.setFillColor(L.headerBg.cgColor)
             ctx.fill(CGRect(x: geo.x, y: groupTop, width: geo.width, height: height))
-            let label = L.groupTitles[group] ?? ""
+            let label = (group == .time && !customFields.isEmpty) ? "DETAILS" : (L.groupTitles[group] ?? "")
             drawTextVCentred(label,
                              in: CGRect(x: geo.x + 2, y: groupTop, width: geo.width - 4, height: height),
                              font: L.fontGroupHeader, color: L.headerText, alignment: .center)
