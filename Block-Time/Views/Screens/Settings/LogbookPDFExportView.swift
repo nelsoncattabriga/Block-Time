@@ -17,9 +17,9 @@ enum PDFDateRangePreset: String, CaseIterable {
 // MARK: - Content Mode
 
 enum PDFContentMode: String, CaseIterable {
-    case allFlights          = "All Flights"
-    case includeINSSessions  = "Flights + INS"
-    case instructorHoursOnly = "Instructor Hours Only"
+    case allFlights          = "Standard"
+    case includeINSSessions  = "+ SIM INS"
+    case instructorHoursOnly = "INS Record"
 }
 
 // MARK: - Export View
@@ -43,7 +43,7 @@ struct LogbookPDFExportView: View {
     @AppStorage("logbookPDFCustomTo")     private var customToInterval: Double = 0
     @AppStorage("logbookPDFUseLocalDates") private var useLocalDates: Bool = true
     @AppStorage("logbookPDFUseHHMM")       private var useHHMM: Bool = false
-    @AppStorage("logbookPDFContentMode")   private var contentModeRaw: String = PDFContentMode.allFlights.rawValue
+    @AppStorage("logbookPDFContentMode2")  private var contentModeRaw: String = PDFContentMode.allFlights.rawValue
 
     private var datePreset: PDFDateRangePreset {
         PDFDateRangePreset(rawValue: datePresetRaw) ?? .all
