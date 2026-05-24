@@ -281,7 +281,7 @@ struct LogbookPDFExportView: View {
         case .includeINSSessions:
             return !f.isPositioning && (f.blockTimeValue > 0 || f.simTimeValue > 0 || f.spInsTimeValue > 0)
         case .instructorHoursOnly:
-            return f.isSpInsOnly
+            return f.spInsTimeValue > 0
         }
     }
 
