@@ -417,7 +417,7 @@ struct ModernRemarksField: View {
                     .foregroundColor(.blue)
                     .frame(width: 20)
 
-                Text(label)
+                Text(label.uppercased())
                     .font(.caption.bold())
                     .foregroundColor(.secondary)
             }

@@ -91,10 +91,9 @@ Phases completed: 0 / 7
 | 260524-jai | Fix Flight Info widget stale Tomorrow label — use .after(nextMidnight) reload policy | 2026-05-24 | 5105bfd | [260524-jai-fix-widget-flight-info-mode-stale-tomorr](./quick/260524-jai-fix-widget-flight-info-mode-stale-tomorr/) |
 | 260524-krm | Add App Store update check to SplashScreenView (iTunes lookup, 24h cache, alert) | 2026-05-24 | c5e9e7b | [260524-krm-add-app-store-update-check-to-splashscre](./quick/260524-krm-add-app-store-update-check-to-splashscre/) |
 | 260526-j09 | Fix custom fields code review issues (alert Bool logic, print removal, DateFormatter, toolbar, loggerDir, sleep) | 2026-05-26 | 79ec901 | [260526-j09-fix-custom-fields-code-review-issues-ale](./quick/260526-j09-fix-custom-fields-code-review-issues-ale/) |
-| 260526-jn2 | Add NSUndoManager single-level undo for delete-flight in Mac companion app | 2026-05-26 | 97e50d3 | [260526-jn2-add-undo-for-delete-in-mac-companion-app](./quick/260526-jn2-add-undo-for-delete-in-mac-companion-app/) |
-| 260526-k1c | Mac companion app custom fields parity (KVS sync, counter1-10, typed columns/controls) | 2026-05-26 | 0ba3950 | [260526-k1c-update-mac-companion-app-to-support-cust](./quick/260526-k1c-update-mac-companion-app-to-support-cust/) |
+| 260527-ddv | Fix ModernRemarksField label to use uppercased() for visual consistency | 2026-05-27 | ccc8ac8 | [260527-ddv-fix-modernremarksfield-label-to-use-uppe](./quick/260527-ddv-fix-modernremarksfield-label-to-use-uppe/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-26 - Completed quick task 260526-k1c: Mac companion app custom fields parity
-Next action: Continue Mac companion parity work
+Last activity: 2026-05-27 - Completed quick task 260527-ddv: Fix ModernRemarksField label uppercase
+Next action: Continue custom fields integration — PDF/print integration
