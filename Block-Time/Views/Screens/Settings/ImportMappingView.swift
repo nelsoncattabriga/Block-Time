@@ -209,9 +209,6 @@ struct ImportMappingView: View {
     }
 
     init(importData: ImportData, onImport: @escaping ([FieldMapping], ImportMode, [RegistrationTypeMapping], Bool) -> Void) {
-        print("🔍 ImportMappingView init started")
-        print("🔍 Row count: \(importData.rows.count)")
-        print("🔍 Header count: \(importData.headers.count)")
         self.importData = importData
         self.onImport = onImport
 
@@ -244,8 +241,7 @@ struct ImportMappingView: View {
     }
 
     var body: some View {
-        print("🔍 ImportMappingView body called")
-        return NavigationStack {
+        NavigationStack {
             Form {
 //                Section {
 //                    Text("Map columns from your import file to logbook fields")
@@ -441,13 +437,13 @@ struct ImportMappingView: View {
             .navigationTitle("Import Mapping")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Import") {
                         // Save current mapping for next time
                         let entries = fieldMappings.map { m in
@@ -567,7 +563,6 @@ struct ImportMappingView: View {
 
     // MARK: - Smart Field Detection
     private static func createInitialMappings(headers: [String]) -> (mappings: [FieldMapping], profileName: String?) {
-        print("🔍 createInitialMappings started with \(headers.count) headers")
         let logbookFields: [(String, String, Bool, Bool)] = [  // Added supportsMultiple
             ("Date", "Flight date", true, false),
             ("Flight Number", "Flight number", false, false),
@@ -1201,7 +1196,7 @@ struct ColumnPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if allowMultiple {
-                    ToolbarItem(placement: .navigationBarLeading) {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Clear All") {
                             selectedColumns.removeAll()
                         }
@@ -1209,7 +1204,7 @@ struct ColumnPickerView: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
@@ -1289,10 +1284,10 @@ struct RegistrationTypeMappingView: View {
             .navigationTitle("Aircraft Type Mapping")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
@@ -1399,11 +1394,11 @@ private struct ManageCustomTypesView: View {
             .navigationTitle("Manage Custom Types")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showingAddType = true
                     } label: {
