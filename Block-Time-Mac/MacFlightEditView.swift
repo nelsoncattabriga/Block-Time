@@ -99,7 +99,7 @@ struct MacFlightEditView: View {
             Button("Delete", role: .destructive) { commitDelete() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will permanently delete this flight. This cannot be undone.")
+            Text("This will delete this flight. You can undo this from the Edit menu (⌘Z).")
         }
         .onChange(of: timesInHHMM)    { reformatTimes() }
         .onChange(of: decimalRounding) { reformatTimes() }
@@ -300,8 +300,11 @@ struct MacFlightEditView: View {
 
     private func commitDelete() {
         guard case .edit(let row) = mode else { return }
+        // Capture the undo manager synchronously on the main actor before the
+        // panel is dismissed — the window may lose key status after onDismiss().
+        let undoManager = NSApp.keyWindow?.undoManager
         Task {
-            _ = await viewModel.deleteFlight(id: row.id)
+            _ = await viewModel.deleteFlight(id: row.id, undoManager: undoManager)
             onDismiss()
         }
     }

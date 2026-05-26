@@ -465,18 +465,54 @@ final class MacLogbookViewModel: ObservableObject {
         }
     }
 
-    func deleteFlight(id: UUID) async -> Bool {
+    func deleteFlight(id: UUID, undoManager: UndoManager? = nil) async -> Bool {
         let ctx = persistentContainer.viewContext
         let req = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
         req.predicate = NSPredicate(format: "id == %@", id as CVarArg)
         req.fetchLimit = 1
         guard let entity = (try? ctx.fetch(req))?.first else { return false }
+
+        // Capture snapshot before deletion for undo support.
+        let snapshotRow = flights.first(where: { $0.id == id })
+            ?? MacFlightRow(entity: entity)
+        guard let row = snapshotRow else { return false }
+        let snapshot = MacEditableFlight(from: row)
+
         ctx.delete(entity)
         do {
             try ctx.save()
             await reload()
+            // Register undo only after successful save.
+            undoManager?.registerUndo(withTarget: self) { vm in
+                Task { @MainActor in
+                    _ = await vm.reinsertFlight(snapshot)
+                }
+            }
+            undoManager?.setActionName("Delete Flight")
             return true
         } catch {
+            ctx.rollback()
+            return false
+        }
+    }
+
+    func reinsertFlight(_ sector: MacEditableFlight) async -> Bool {
+        let ctx = persistentContainer.viewContext
+        // Guard against re-inserting a flight that already exists.
+        let checkReq = NSFetchRequest<NSManagedObject>(entityName: "FlightEntity")
+        checkReq.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
+        checkReq.fetchLimit = 1
+        guard (try? ctx.fetch(checkReq))?.isEmpty == true else { return false }
+
+        let entity = NSEntityDescription.insertNewObject(forEntityName: "FlightEntity", into: ctx)
+        applyFields(sector, to: entity, ctx: ctx, isNew: true)
+        do {
+            try ctx.save()
+            print("[MacCoreData] Reinserted flight id=\(sector.id) via undo")
+            await reload()
+            return true
+        } catch {
+            print("[MacCoreData] Reinsert failed: \(error)")
             ctx.rollback()
             return false
         }
