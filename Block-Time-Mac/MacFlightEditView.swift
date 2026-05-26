@@ -39,8 +39,6 @@ struct MacFlightEditView: View {
     @AppStorage("showSpInsSelector")      private var showSpInsSelector = false
     @AppStorage("showSONameFields")       private var showSONameFields = false
     @AppStorage("logApproaches")          private var logApproaches = true
-    @AppStorage("logCustomCount")         private var logCustomCount = false
-    @AppStorage("customCountLabel")       private var customCountLabel = "Custom"
     @AppStorage("showTimesInHoursMinutes") private var timesInHHMM: Bool = true
     @AppStorage("decimalRoundingMode")    private var decimalRounding: String = "standard"
 
@@ -233,9 +231,10 @@ struct MacFlightEditView: View {
                 }
             }
 
-            if logCustomCount {
-                Section(customCountLabel) {
-                    intRow(customCountLabel, value: $draft.customCount)
+            let defs = MacCustomFieldService.shared.definitions.sorted { $0.columnIndex < $1.columnIndex }
+            if !defs.isEmpty {
+                Section("Custom Fields") {
+                    ForEach(defs) { def in customFieldRow(def) }
                 }
             }
 
@@ -278,6 +277,36 @@ struct MacFlightEditView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    @ViewBuilder
+    private func customFieldRow(_ def: CustomCounterDefinition) -> some View {
+        switch def.type {
+        case .integer:
+            intRow(def.label, value: intBinding(for: def.columnIndex))
+        case .decimal:
+            TextField(def.label, text: counterBinding(for: def.columnIndex))
+                .font(.system(.body, design: .monospaced))
+        case .time:
+            TextField(def.label, text: counterBinding(for: def.columnIndex))
+                .font(.system(.body, design: .monospaced))
+        case .text:
+            TextField(def.label, text: counterBinding(for: def.columnIndex))
+        }
+    }
+
+    private func counterBinding(for idx: Int) -> Binding<String> {
+        Binding(
+            get: { draft.counterValue(idx) },
+            set: { draft.setCounter(idx, value: $0) }
+        )
+    }
+
+    private func intBinding(for idx: Int) -> Binding<Int> {
+        Binding(
+            get: { Int(draft.counterValue(idx)) ?? 0 },
+            set: { draft.setCounter(idx, value: $0 > 0 ? "\($0)" : "") }
+        )
     }
 
     // MARK: - Actions
@@ -346,8 +375,6 @@ private struct EditEntryOptionsPopover: View {
     @AppStorage("pfAutoInstrumentMinutes")       private var pfAutoInstrumentMinutes: Int = 0
     @AppStorage("logApproaches")                 private var logApproaches: Bool = true
     @AppStorage("defaultApproachType")           private var defaultApproachType: String = ""
-    @AppStorage("logCustomCount")                private var logCustomCount: Bool = false
-    @AppStorage("customCountLabel")              private var customCountLabel: String = "Custom"
     @AppStorage("enterTimesInLocalTime")         private var enterTimesInLocalTime: Bool = false
     @AppStorage("showFullAircraftReg")           private var showFullAircraftReg: Bool = false
 
@@ -410,10 +437,6 @@ private struct EditEntryOptionsPopover: View {
                             Text("AIII").tag("AIII")
                             Text("NPA").tag("NPA")
                         }
-                    }
-                    Toggle("Custom Counter", isOn: $logCustomCount)
-                    if logCustomCount {
-                        TextField("Counter Label", text: $customCountLabel)
                     }
                 }
 
