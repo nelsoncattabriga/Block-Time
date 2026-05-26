@@ -9,9 +9,12 @@ import SwiftUI
 struct SplashScreenView: View {
     @Environment(ThemeService.self) private var themeService
     @Environment(PurchaseService.self) private var purchaseService
+    @Environment(\.openURL) private var openURL
     @State private var isActive = false
     @State private var scale: CGFloat = 0.7
     @State private var opacity: Double = 0.3
+    @State private var availableUpdateVersion: String? = nil
+    @State private var showUpdateAlert = false
 
     // Constants
     private enum Constants {
@@ -64,6 +67,16 @@ struct SplashScreenView: View {
                     Text(appVersion)
                         .font(.subheadline.bold())
                         .foregroundColor(.secondary)
+
+                    if availableUpdateVersion != nil {
+                        Text("Update Available")
+                            .font(.footnote)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 3)
+                            .background(Color.orange.opacity(0.8), in: Capsule())
+                    }
                 }
                 .scaleEffect(scale)
                 .opacity(opacity)
@@ -72,6 +85,19 @@ struct SplashScreenView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .background(themeService.getGradient())
+        .alert("Update Available", isPresented: $showUpdateAlert) {
+            Button("Update") {
+                if let url = URL(string: "https://apps.apple.com/app/id6758280518") {
+                    openURL(url)
+                }
+                withAnimation { isActive = true }
+            }
+            Button("Later", role: .cancel) {
+                withAnimation { isActive = true }
+            }
+        } message: {
+            Text("Version \(availableUpdateVersion ?? "") is available on the App Store.")
+        }
         .task {
             // Animate the splash content
             withAnimation(.easeIn(duration: Constants.animationDuration)) {
@@ -79,10 +105,17 @@ struct SplashScreenView: View {
                 opacity = 1.0
             }
 
-            // Wait, then transition to main view
-            try? await Task.sleep(nanoseconds: UInt64(Constants.initialDelay * 1_000_000_000))
-            withAnimation {
-                isActive = true
+            // Run update check concurrently with the splash delay so it adds no latency
+            async let updateCheck = AppUpdateService.checkForUpdate()
+            try? await Task.sleep(for: .seconds(Constants.initialDelay))
+            let newVersion = await updateCheck
+
+            if let newVersion {
+                availableUpdateVersion = newVersion
+                showUpdateAlert = true
+                // isActive intentionally NOT set here — alert gates entry
+            } else {
+                withAnimation { isActive = true }
             }
         }
         .onAppear {

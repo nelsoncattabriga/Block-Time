@@ -277,11 +277,11 @@ class AutomaticBackupService: ObservableObject {
                     throw BackupError.noDataToBackup
                 }
 
+                let flightSortFormatter = DateFormatter()
+                flightSortFormatter.dateFormat = "dd/MM/yyyy"
                 let sortedFlights = flights.sorted { flight1, flight2 in
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "dd/MM/yyyy"
-                    if let date1 = formatter.date(from: flight1.date),
-                       let date2 = formatter.date(from: flight2.date) {
+                    if let date1 = flightSortFormatter.date(from: flight1.date),
+                       let date2 = flightSortFormatter.date(from: flight2.date) {
                         return date1 < date2
                     }
                     return flight1.date < flight2.date
@@ -333,10 +333,8 @@ class AutomaticBackupService: ObservableObject {
             baseURL = iCloudURL
         }
 
-        // Create "BlockTime/Backups" subdirectory
-        let loggerDir = baseURL//.appendingPathComponent("Block-Time", isDirectory: true)
-        let backupDir = loggerDir.appendingPathComponent("Backups", isDirectory: true)
-
+        // Create "Backups" subdirectory
+        let backupDir = baseURL.appendingPathComponent("Backups", isDirectory: true)
 
         if !fileManager.fileExists(atPath: backupDir.path) {
             try fileManager.createDirectory(at: backupDir, withIntermediateDirectories: true)

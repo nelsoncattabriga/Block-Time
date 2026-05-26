@@ -115,8 +115,6 @@ struct ExportLogbookView: View {
 
         Task {
             do {
-                try await Task.sleep(nanoseconds: 300_000_000)
-
                 let flights = FlightDatabaseService.shared.fetchAllFlights()
 
                 guard !flights.isEmpty else {
@@ -127,10 +125,10 @@ struct ExportLogbookView: View {
                     return
                 }
 
+                let flightSortFormatter = DateFormatter()
+                flightSortFormatter.dateFormat = "dd/MM/yyyy"
                 let sortedFlights = flights.sorted { f1, f2 in
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "dd/MM/yyyy"
-                    if let d1 = formatter.date(from: f1.date), let d2 = formatter.date(from: f2.date) {
+                    if let d1 = flightSortFormatter.date(from: f1.date), let d2 = flightSortFormatter.date(from: f2.date) {
                         return d1 < d2
                     }
                     return f1.date < f2.date

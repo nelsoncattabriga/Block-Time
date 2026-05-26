@@ -15,6 +15,7 @@ struct BackupsView: View {
 
     // State
     @State private var showingResult = false
+    @State private var isSuccess = false
     @State private var resultMessage = ""
     @State private var isAutomaticBackupsExpanded = false
     @State private var showingManageBackups = false
@@ -49,7 +50,7 @@ struct BackupsView: View {
         )
         .navigationTitle("Backup & Sync")
         .navigationBarTitleDisplayMode(.inline)
-        .alert(resultMessage.contains("successfully") || resultMessage.contains("success") ? "Success" : "Error", isPresented: $showingResult) {
+        .alert(isSuccess ? "Success" : "Error", isPresented: $showingResult) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(resultMessage)
@@ -306,9 +307,11 @@ struct BackupsView: View {
             switch result {
             case .success:
                 resultMessage = "Backup created successfully"
+                isSuccess = true
                 showingResult = true
             case .failure(let error):
                 resultMessage = "Backup failed: \(error.localizedDescription)"
+                isSuccess = false
                 showingResult = true
             }
         }
@@ -382,6 +385,7 @@ private struct BackupDetailSheet: View {
     @State private var isRestoring = false
     @State private var showingShareSheet = false
     @State private var showingResultAlert = false
+    @State private var isSuccess = false
     @State private var resultMessage = ""
     @State private var selectedRestoreMode: ImportMode = .merge
     @State private var pendingBackupDefinitions: PendingDefinitions? = nil
@@ -590,11 +594,9 @@ private struct BackupDetailSheet: View {
             .sheet(isPresented: $showingShareSheet) {
                 ShareSheet(items: [backup.url])
             }
-            .alert(resultMessage.contains("successfully") || resultMessage.contains("success") || resultMessage.contains("Restored") || resultMessage.contains("Summary") ? "Success" : "Error", isPresented: $showingResultAlert) {
+            .alert(isSuccess ? "Success" : "Error", isPresented: $showingResultAlert) {
                 Button("OK", role: .cancel) {
-                    if resultMessage.contains("successfully") || resultMessage.contains("success") || resultMessage.contains("Restored") || resultMessage.contains("Summary") {
-                        dismiss()
-                    }
+                    if isSuccess { dismiss() }
                 }
             } message: {
                 Text(resultMessage)
@@ -673,6 +675,7 @@ private struct BackupDetailSheet: View {
                     message += "Failed to restore: \(importResult.failureCount) flights\n"
                 }
                 resultMessage = message
+                isSuccess = true
                 showingResultAlert = true
             case .failure(let error):
                 LogManager.shared.error("Restore failed: \(error.localizedDescription)")
@@ -681,6 +684,7 @@ private struct BackupDetailSheet: View {
                 } else {
                     resultMessage = "Restore failed: \(error.localizedDescription)"
                 }
+                isSuccess = false
                 showingResultAlert = true
             }
         }
@@ -753,6 +757,7 @@ struct ManageBackupsView: View {
     @State private var selectedRestoreMode: ImportMode = .merge
     @State private var isRestoring = false
     @State private var showingResultAlert = false
+    @State private var isSuccess = false
     @State private var resultMessage = ""
     @State private var pendingBackupDefinitions: PendingDefinitions? = nil
 
@@ -836,7 +841,7 @@ struct ManageBackupsView: View {
             )
             .presentationDetents([.height(500)])
         }
-        .alert(resultMessage.contains("successfully") || resultMessage.contains("success") || resultMessage.contains("Restored") || resultMessage.contains("Summary") ? "Success" : "Error", isPresented: $showingResultAlert) {
+        .alert(isSuccess ? "Success" : "Error", isPresented: $showingResultAlert) {
             Button("OK", role: .cancel) {
                 selectedExternalFile?.stopAccessingSecurityScopedResource()
                 selectedExternalFile = nil
@@ -1062,6 +1067,7 @@ struct ManageBackupsView: View {
                     message += "Failed to restore: \(importResult.failureCount) flights\n"
                 }
                 resultMessage = message
+                isSuccess = true
                 showingResultAlert = true
             case .failure(let error):
                 if (error as? ImportError) == .notLoggerFormat {
@@ -1069,6 +1075,7 @@ struct ManageBackupsView: View {
                 } else {
                     resultMessage = "Restore failed: \(error.localizedDescription)"
                 }
+                isSuccess = false
                 showingResultAlert = true
             }
         }
