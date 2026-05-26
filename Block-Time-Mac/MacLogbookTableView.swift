@@ -290,6 +290,7 @@ struct MacLogbookTableView: NSViewRepresentable {
     var localTime: Bool = false
     var useIATA: Bool = true
     var saveVersion: Int = 0
+    var definitionsVersion: Int = 0
 
     private var rowIDs: [UUID] { rows.map(\.id) }
 
@@ -418,15 +419,18 @@ struct MacLogbookTableView: NSViewRepresentable {
 
             splitView.rightTable.endUpdates()
             NSAnimationContext.endGrouping()
+            splitView.leftTable.reloadData()
+            splitView.rightTable.reloadData()
             splitView.needsLayout = true
         }
 
-        let needsReload = rowIDs        != c.lastRowIDs
-            || saveVersion  != c.lastSaveVersion
-            || hhmm         != c.lastHHMM
-            || rounding     != c.lastRounding
-            || localTime    != c.lastLocalTime
-            || useIATA      != c.lastUseIATA
+        let needsReload = rowIDs             != c.lastRowIDs
+            || saveVersion       != c.lastSaveVersion
+            || hhmm              != c.lastHHMM
+            || rounding          != c.lastRounding
+            || localTime         != c.lastLocalTime
+            || useIATA           != c.lastUseIATA
+            || definitionsVersion != c.lastDefinitionsVersion
         if needsReload {
             splitView.leftTable.reloadData()
             splitView.rightTable.reloadData()
@@ -435,12 +439,13 @@ struct MacLogbookTableView: NSViewRepresentable {
                 autofitColumns(splitView)
             }
         }
-        c.lastRowIDs      = rowIDs
-        c.lastSaveVersion = saveVersion
-        c.lastHHMM        = hhmm
-        c.lastRounding    = rounding
-        c.lastLocalTime   = localTime
-        c.lastUseIATA     = useIATA
+        c.lastRowIDs             = rowIDs
+        c.lastSaveVersion        = saveVersion
+        c.lastHHMM               = hhmm
+        c.lastRounding           = rounding
+        c.lastLocalTime          = localTime
+        c.lastUseIATA            = useIATA
+        c.lastDefinitionsVersion = definitionsVersion
 
         // Sync selection SwiftUI → tables (cheap, no cell recreation)
         var indexSet = IndexSet()
@@ -507,6 +512,7 @@ struct MacLogbookTableView: NSViewRepresentable {
         var lastRounding: String = "standard"
         var lastLocalTime: Bool = false
         var lastUseIATA: Bool = true
+        var lastDefinitionsVersion: Int = 0
         private var isSyncingScroll = false
         private var isSyncingSelection = false
 

@@ -77,7 +77,8 @@ struct MacLogbookView: View {
                     rounding: decimalRounding,
                     localTime: displayInLocalTime,
                     useIATA: useIATA,
-                    saveVersion: viewModel.saveVersion
+                    saveVersion: viewModel.saveVersion,
+                    definitionsVersion: customFieldService.definitions.count
                 )
             }
         }
