@@ -50,7 +50,16 @@ struct MacFlightRow: Identifiable {
     var isNPA: Bool
     var isRNP: Bool
     var isAIII: Bool
-    var customCount: Int
+    var counter1: String
+    var counter2: String
+    var counter3: String
+    var counter4: String
+    var counter5: String
+    var counter6: String
+    var counter7: String
+    var counter8: String
+    var counter9: String
+    var counter10: String
     var remarks: String
 
     enum RowAccent { case none, pax, sim, spIns, summary }
@@ -186,6 +195,22 @@ struct MacFlightRow: Identifiable {
     func p2Display(hhmm: Bool, rounding: String)         -> String { Self.formatTime(p2Time,         hhmm: hhmm, rounding: rounding) }
     func simDisplay(hhmm: Bool, rounding: String)        -> String { Self.formatTime(simTime,         hhmm: hhmm, rounding: rounding) }
     func spInsDisplay(hhmm: Bool, rounding: String)      -> String { Self.formatTime(spInsTime,       hhmm: hhmm, rounding: rounding) }
+
+    func counterValue(_ idx: Int) -> String {
+        switch idx {
+        case 1:  return counter1
+        case 2:  return counter2
+        case 3:  return counter3
+        case 4:  return counter4
+        case 5:  return counter5
+        case 6:  return counter6
+        case 7:  return counter7
+        case 8:  return counter8
+        case 9:  return counter9
+        case 10: return counter10
+        default: return ""
+        }
+    }
 }
 
 // MARK: - Mac Logbook ViewModel
@@ -333,6 +358,7 @@ final class MacLogbookViewModel: ObservableObject {
     private var context: NSManagedObjectContext { persistentContainer.viewContext }
 
     init() {
+        isSyncing = true
         let container = NSPersistentCloudKitContainer(name: "FlightDataModel")
 
         guard let description = container.persistentStoreDescriptions.first else {
@@ -367,6 +393,7 @@ final class MacLogbookViewModel: ObservableObject {
         isLoading = true
         await reload()
         isLoading = false
+        isSyncing = false
 
         NotificationCenter.default.addObserver(
             forName: .NSPersistentStoreRemoteChange,
@@ -569,7 +596,16 @@ final class MacLogbookViewModel: ObservableObject {
         entity.setValue(s.isNPA,               forKey: "isNPA")
         entity.setValue(s.isRNP,               forKey: "isRNP")
         entity.setValue(s.isAIII,              forKey: "isAIII")
-        entity.setValue(Int16(s.customCount),  forKey: "customCount")
+        entity.setValue(s.counter1.isEmpty  ? nil : s.counter1,  forKey: "counter1")
+        entity.setValue(s.counter2.isEmpty  ? nil : s.counter2,  forKey: "counter2")
+        entity.setValue(s.counter3.isEmpty  ? nil : s.counter3,  forKey: "counter3")
+        entity.setValue(s.counter4.isEmpty  ? nil : s.counter4,  forKey: "counter4")
+        entity.setValue(s.counter5.isEmpty  ? nil : s.counter5,  forKey: "counter5")
+        entity.setValue(s.counter6.isEmpty  ? nil : s.counter6,  forKey: "counter6")
+        entity.setValue(s.counter7.isEmpty  ? nil : s.counter7,  forKey: "counter7")
+        entity.setValue(s.counter8.isEmpty  ? nil : s.counter8,  forKey: "counter8")
+        entity.setValue(s.counter9.isEmpty  ? nil : s.counter9,  forKey: "counter9")
+        entity.setValue(s.counter10.isEmpty ? nil : s.counter10, forKey: "counter10")
         entity.setValue(Date(),                forKey: "modifiedAt")
     }
 
@@ -619,7 +655,16 @@ private extension MacFlightRow {
         self.nightTakeoffs      = Int(entity.value(forKey: "nightTakeoffs") as? Int16 ?? 0)
         self.dayLandings        = Int(entity.value(forKey: "dayLandings") as? Int16 ?? 0)
         self.nightLandings      = Int(entity.value(forKey: "nightLandings") as? Int16 ?? 0)
-        self.customCount        = Int(entity.value(forKey: "customCount") as? Int16 ?? 0)
+        self.counter1           = str("counter1")
+        self.counter2           = str("counter2")
+        self.counter3           = str("counter3")
+        self.counter4           = str("counter4")
+        self.counter5           = str("counter5")
+        self.counter6           = str("counter6")
+        self.counter7           = str("counter7")
+        self.counter8           = str("counter8")
+        self.counter9           = str("counter9")
+        self.counter10          = str("counter10")
 
         self.isPilotFlying      = flag("isPilotFlying")
         self.isPositioning      = flag("isPositioning")
@@ -680,7 +725,48 @@ struct MacEditableFlight: Equatable {
     var isNPA: Bool = false
     var isRNP: Bool = false
     var isAIII: Bool = false
-    var customCount: Int = 0
+    var counter1: String = ""
+    var counter2: String = ""
+    var counter3: String = ""
+    var counter4: String = ""
+    var counter5: String = ""
+    var counter6: String = ""
+    var counter7: String = ""
+    var counter8: String = ""
+    var counter9: String = ""
+    var counter10: String = ""
+
+    func counterValue(_ idx: Int) -> String {
+        switch idx {
+        case 1:  return counter1
+        case 2:  return counter2
+        case 3:  return counter3
+        case 4:  return counter4
+        case 5:  return counter5
+        case 6:  return counter6
+        case 7:  return counter7
+        case 8:  return counter8
+        case 9:  return counter9
+        case 10: return counter10
+        default: return ""
+        }
+    }
+
+    mutating func setCounter(_ idx: Int, value: String) {
+        switch idx {
+        case 1:  counter1  = value
+        case 2:  counter2  = value
+        case 3:  counter3  = value
+        case 4:  counter4  = value
+        case 5:  counter5  = value
+        case 6:  counter6  = value
+        case 7:  counter7  = value
+        case 8:  counter8  = value
+        case 9:  counter9  = value
+        case 10: counter10 = value
+        default: break
+        }
+    }
 
     static func empty() -> MacEditableFlight {
         var f = MacEditableFlight()
@@ -727,7 +813,16 @@ struct MacEditableFlight: Equatable {
         isNPA              = row.isNPA
         isRNP              = row.isRNP
         isAIII             = row.isAIII
-        customCount        = row.customCount
+        counter1           = row.counter1
+        counter2           = row.counter2
+        counter3           = row.counter3
+        counter4           = row.counter4
+        counter5           = row.counter5
+        counter6           = row.counter6
+        counter7           = row.counter7
+        counter8           = row.counter8
+        counter9           = row.counter9
+        counter10          = row.counter10
     }
 
     private init() {}
