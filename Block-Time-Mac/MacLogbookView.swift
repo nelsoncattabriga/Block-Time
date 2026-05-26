@@ -24,6 +24,7 @@ struct MacLogbookView: View {
     @State private var columnPrefs = ColumnPreferences()
     @State private var showingColumnManager = false
     @State private var showingViewOptions = false
+    @ObservedObject private var customFieldService = MacCustomFieldService.shared
 
     var body: some View {
         VStack(spacing: 0) {
