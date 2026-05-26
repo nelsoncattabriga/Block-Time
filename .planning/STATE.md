@@ -91,8 +91,9 @@ Phases completed: 0 / 7
 | 260524-jai | Fix Flight Info widget stale Tomorrow label — use .after(nextMidnight) reload policy | 2026-05-24 | 5105bfd | [260524-jai-fix-widget-flight-info-mode-stale-tomorr](./quick/260524-jai-fix-widget-flight-info-mode-stale-tomorr/) |
 | 260524-krm | Add App Store update check to SplashScreenView (iTunes lookup, 24h cache, alert) | 2026-05-24 | c5e9e7b | [260524-krm-add-app-store-update-check-to-splashscre](./quick/260524-krm-add-app-store-update-check-to-splashscre/) |
 | 260526-j09 | Fix custom fields code review issues (alert Bool logic, print removal, DateFormatter, toolbar, loggerDir, sleep) | 2026-05-26 | 79ec901 | [260526-j09-fix-custom-fields-code-review-issues-ale](./quick/260526-j09-fix-custom-fields-code-review-issues-ale/) |
+| 260526-jn2 | Add NSUndoManager single-level undo for delete-flight in Mac companion app | 2026-05-26 | 97e50d3 | [260526-jn2-add-undo-for-delete-in-mac-companion-app](./quick/260526-jn2-add-undo-for-delete-in-mac-companion-app/) |
 
 ## Session Continuity
 
-Last activity: 2026-05-26 - Completed quick task 260526-j09: Fix custom fields code review issues
+Last activity: 2026-05-26 - Completed quick task 260526-jn2: Add undo for delete in Mac companion app
 Next action: Continue custom fields integration — PDF/print integration
