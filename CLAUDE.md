@@ -8,7 +8,7 @@ Never remove any existing feature, button, logic, or behaviour without explicit 
 When something fails repeatedly, when Nelson has to re-explain, add a one-line bullet here. Keep each bullet under 15 words. No explanations. Only add things that will save time in future sessions.
 - Replace any `NavigationView` encountered with `NavigationStack` and update toolbar placements to `.topBar*`.
 - Previews using `ThemeService` child views must inject `.environment(ThemeService.shared)` or crash with SIGTRAP.
-- Always use `/gsd:quick` (or other GSD commands) and spawn agents for all tasks — never edit directly.
+- For simple single-file changes, edit inline. Use GSD for complex/multi-file tasks — ask first.
 
 ## Coding Standards
 
@@ -170,14 +170,12 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 <!-- GSD:workflow-start source:GSD defaults -->
 ## GSD Workflow Enforcement
 
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+For simple, single-file changes make edits inline directly. Reserve GSD commands for complex or multi-file tasks — ask for approval before using GSD.
 
-Use these entry points:
-- `/gsd:quick` for small fixes, doc updates, and ad-hoc tasks
+Use these entry points when GSD is appropriate:
+- `/gsd:quick` for multi-step fixes and ad-hoc tasks
 - `/gsd:debug` for investigation and bug fixing
 - `/gsd:execute-phase` for planned phase work
-
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
 
 <!-- GSD:profile-start -->
