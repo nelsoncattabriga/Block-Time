@@ -38,21 +38,12 @@ final class MacCustomFieldService: ObservableObject {
     private func loadFromLocal() {
         guard let data = UserDefaults.standard.data(forKey: localKey),
               let decoded = try? JSONDecoder().decode([CustomCounterDefinition].self, from: data)
-        else {
-            print("[MacCustomFieldService] loadFromLocal: nothing in UserDefaults")
-            return
-        }
-        print("[MacCustomFieldService] loadFromLocal: \(decoded.count) definitions: \(decoded.map(\.label))")
+        else { return }
         definitions = decoded
     }
 
     private func loadFromKVS() {
-        guard let defs = decodeKVS(), !defs.isEmpty else {
-            let raw = NSUbiquitousKeyValueStore.default.string(forKey: kvsKey)
-            print("[MacCustomFieldService] loadFromKVS: nothing — raw KVS value: \(raw ?? "nil")")
-            return
-        }
-        print("[MacCustomFieldService] loadFromKVS: \(defs.count) definitions: \(defs.map(\.label))")
+        guard let defs = decodeKVS(), !defs.isEmpty else { return }
         definitions = defs
         persistLocally(defs)
     }
@@ -70,15 +61,10 @@ final class MacCustomFieldService: ObservableObject {
     // MARK: - KVS change observer
 
     @objc private func kvStoreChanged(_ notification: Notification) {
-        let changedKeys = notification.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
-        print("[MacCustomFieldService] kvStoreChanged: keys=\(changedKeys)")
-        guard changedKeys.contains(kvsKey) else { return }
-
-        guard let defs = decodeKVS() else {
-            print("[MacCustomFieldService] kvStoreChanged: decode failed")
-            return
-        }
-        print("[MacCustomFieldService] kvStoreChanged: \(defs.count) definitions: \(defs.map(\.label))")
+        guard let changedKeys = notification.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String],
+              changedKeys.contains(kvsKey),
+              let defs = decodeKVS()
+        else { return }
         definitions = defs
         persistLocally(defs)
     }
