@@ -102,8 +102,8 @@ struct MacFlightEditView: View {
                     flightTypeSelector
                     flightInfoSection
                     aircraftSection
-                    timesAndPFSection
                     crewSection
+                    timesAndPFSection
                     if showSpInsSelector {
                         spInsSection
                     }

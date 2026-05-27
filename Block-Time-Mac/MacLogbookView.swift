@@ -271,6 +271,16 @@ private struct LogbookViewOptionsPopover: View {
             .frame(width: 300)
             // Shrink-wrap the form height
             .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            SettingsLink {
+                Text("Open Settings…")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.blue)
+            .padding(.vertical, 8)
         }
         .padding(.bottom, 8)
     }
