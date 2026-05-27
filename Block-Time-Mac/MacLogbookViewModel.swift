@@ -603,6 +603,95 @@ final class MacLogbookViewModel: ObservableObject {
         return (try? context.count(for: req)) ?? 0 > 0
     }
 
+    // MARK: - Online Flight Search
+
+    func searchFlight(flightNumber: String, date: String, airlinePrefix: String, includePrefix: Bool) async -> MacFlightSearchResult {
+        guard !flightNumber.isEmpty else { return .error("Enter a flight number first") }
+        guard !date.isEmpty else { return .error("Enter a flight date first") }
+
+        guard let faCode = flightNumber.toFlightAwareFormat(userAirlinePrefix: includePrefix ? nil : airlinePrefix) else {
+            return .error("Invalid flight number format")
+        }
+
+        let iataNumber = includePrefix ? flightNumber : airlinePrefix + flightNumber
+
+        let faResults = await fetchFromFlightAware(code: faCode, date: date)
+
+        let adbLocalDate: String
+        if let first = faResults.first {
+            adbLocalDate = AirportService.shared.convertToLocalDate(
+                utcDateString: first.flightDate,
+                utcTimeString: first.departureTime,
+                airportICAO: first.origin
+            )
+        } else {
+            adbLocalDate = date
+        }
+
+        let adbResults = await fetchFromAeroDataBox(flightNumber: iataNumber, localDate: adbLocalDate)
+        let merged = mergeFlightResults(flightAware: faResults, aeroDataBox: adbResults)
+
+        if merged.isEmpty { return .error("No flights found for this date") }
+        if merged.count == 1 { return .single(merged[0]) }
+        return .multiple(merged)
+    }
+
+    private func fetchFromFlightAware(code: String, date: String) async -> [FlightAwareData] {
+        do {
+            return try await FlightAwareService.shared.fetchFlightData(flightNumber: code, date: date)
+        } catch {
+            print("[MacSearch] FlightAware fetch failed: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    private func fetchFromAeroDataBox(flightNumber: String, localDate: String) async -> [FlightAwareData] {
+        return await AeroDataBoxService.shared.fetchFlightData(flightNumber: flightNumber, localDepartureDate: localDate)
+    }
+
+    private func mergeFlightResults(flightAware: [FlightAwareData], aeroDataBox: [FlightAwareData]) -> [FlightAwareData] {
+        if flightAware.isEmpty && aeroDataBox.isEmpty { return [] }
+        if flightAware.isEmpty { return aeroDataBox }
+        if aeroDataBox.isEmpty { return flightAware }
+
+        var merged: [FlightAwareData] = []
+        var matchedADB = Set<Int>()
+
+        for fa in flightAware {
+            if let adbIdx = aeroDataBox.firstIndex(where: { $0.origin == fa.origin && $0.destination == fa.destination }),
+               !matchedADB.contains(adbIdx) {
+                matchedADB.insert(adbIdx)
+                merged.append(hybridMerge(flightAware: fa, aeroDataBox: aeroDataBox[adbIdx]))
+            } else {
+                merged.append(fa)
+            }
+        }
+        for (idx, adb) in aeroDataBox.enumerated() where !matchedADB.contains(idx) {
+            merged.append(adb)
+        }
+        return merged
+    }
+
+    private func hybridMerge(flightAware fa: FlightAwareData, aeroDataBox adb: FlightAwareData) -> FlightAwareData {
+        var result = fa
+        if adb.departureIsActual && !fa.departureIsActual {
+            result.departureTime = adb.departureTime
+            result.departureIsActual = true
+        } else if adb.departureIsActual && fa.departureIsActual {
+            result.departureTime = adb.departureTime
+        }
+        if adb.arrivalIsActual && !fa.arrivalIsActual {
+            result.arrivalTime = adb.arrivalTime
+            result.arrivalIsActual = true
+        } else if adb.arrivalIsActual && fa.arrivalIsActual {
+            result.arrivalTime = adb.arrivalTime
+        }
+        if result.scheduledDepartureTime == nil, let std = adb.scheduledDepartureTime { result.scheduledDepartureTime = std }
+        if result.scheduledArrivalTime == nil, let sta = adb.scheduledArrivalTime { result.scheduledArrivalTime = sta }
+        if result.aircraftRegistration == nil, let reg = adb.aircraftRegistration { result.aircraftRegistration = reg }
+        return result
+    }
+
     private nonisolated func applyFields(_ s: MacEditableFlight, to entity: NSManagedObject, ctx: NSManagedObjectContext, isNew: Bool) {
         let fmt = DateFormatter()
         fmt.dateFormat = "dd/MM/yyyy"
@@ -884,4 +973,12 @@ struct MacEditableFlight: Equatable {
     }
 
     private init() {}
+}
+
+// MARK: - MacFlightSearchResult
+
+enum MacFlightSearchResult {
+    case single(FlightAwareData)
+    case multiple([FlightAwareData])
+    case error(String)
 }

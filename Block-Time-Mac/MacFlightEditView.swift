@@ -31,6 +31,10 @@ struct MacFlightEditView: View {
     @State private var original: MacEditableFlight
     @State private var showingDeleteConfirm = false
     @State private var saveError: String? = nil
+    @State private var isSearchingFlight = false
+    @State private var flightSearchError: String? = nil
+    @State private var flightSegments: [FlightAwareData] = []
+    @State private var showingSegmentPicker = false
 
     // Auto-calc state
     @State private var nightTimeDebounceTask: Task<Void, Never>? = nil
@@ -119,6 +123,13 @@ struct MacFlightEditView: View {
                 Text(err)
                     .font(.caption)
                     .foregroundStyle(.red)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+            }
+            if let err = flightSearchError {
+                Text(err)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
             }
@@ -225,6 +236,35 @@ struct MacFlightEditView: View {
             Divider()
             MacFormRow(label: "FLIGHT #") {
                 MacFlightNumberTextField(value: $draft.flightNumber)
+            }
+            Divider()
+            MacFormRow(label: "SEARCH") {
+                Button {
+                    Task { await runFlightSearch() }
+                } label: {
+                    HStack(spacing: 4) {
+                        if isSearchingFlight {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                                .frame(width: 14, height: 14)
+                        } else {
+                            Image(systemName: "magnifyingglass")
+                                .font(.caption)
+                        }
+                        Text(isSearchingFlight ? "Searching…" : "Online Search")
+                            .font(.subheadline)
+                    }
+                    .foregroundStyle(canSearchFlight ? .blue : .secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSearchFlight || isSearchingFlight)
+                .popover(isPresented: $showingSegmentPicker, arrowEdge: .trailing) {
+                    MacFlightSegmentPickerPopover(
+                        segments: flightSegments,
+                        onSelect: { applyFlightData($0) },
+                        onDismiss: { showingSegmentPicker = false }
+                    )
+                }
             }
             Divider()
             MacFormRow(label: "FROM") {
@@ -719,6 +759,61 @@ struct MacFlightEditView: View {
             get: { Int(draft.counterValue(idx)) ?? 0 },
             set: { draft.setCounter(idx, value: $0 > 0 ? "\($0)" : "") }
         )
+    }
+
+    // MARK: - Online Search
+
+    private var canSearchFlight: Bool {
+        !draft.flightNumber.isEmpty && !draft.date.isEmpty
+    }
+
+    private func runFlightSearch() async {
+        flightSearchError = nil
+        isSearchingFlight = true
+        let result = await viewModel.searchFlight(
+            flightNumber: draft.flightNumber,
+            date: draft.date,
+            airlinePrefix: UserDefaults.standard.string(forKey: "airlinePrefix") ?? "QF",
+            includePrefix: UserDefaults.standard.bool(forKey: "includeAirlinePrefixInFlightNumber")
+        )
+        isSearchingFlight = false
+        switch result {
+        case .single(let data):
+            applyFlightData(data)
+        case .multiple(let segments):
+            flightSegments = segments
+            showingSegmentPicker = true
+        case .error(let msg):
+            flightSearchError = msg
+        }
+    }
+
+    private func applyFlightData(_ data: FlightAwareData) {
+        showingSegmentPicker = false
+        flightSearchError = nil
+
+        draft.fromAirport = data.origin
+        draft.toAirport = data.destination
+        draft.outTime = data.departureTime
+        draft.inTime = data.arrivalTime
+
+        if let std = data.scheduledDepartureTime { draft.scheduledDeparture = std }
+        if let sta = data.scheduledArrivalTime { draft.scheduledArrival = sta }
+
+        if let reg = data.aircraftRegistration, !reg.isEmpty {
+            let showFullReg = UserDefaults.standard.bool(forKey: "showFullAircraftReg")
+            let formatted: String
+            if showFullReg {
+                formatted = reg
+            } else if let dash = reg.firstIndex(of: "-") {
+                formatted = String(reg[reg.index(after: dash)...])
+            } else {
+                formatted = reg
+            }
+            draft.aircraftReg = formatted
+        }
+
+        scheduleRecalculation()
     }
 
     // MARK: - Actions
