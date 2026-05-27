@@ -20,6 +20,7 @@ struct MacLogbookView: View {
     @AppStorage("useIATACodes")              private var useIATA: Bool = true
     @AppStorage("countSimInTotal")           private var countSimInTotal: Bool = false
     var onSyncingChanged: (Bool) -> Void = { _ in }
+    var isSyncing: Bool = false
 
     @State private var columnPrefs = ColumnPreferences()
     @State private var showingColumnManager = false
@@ -120,8 +121,8 @@ struct MacLogbookView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
 
-            // Left-aligned counts
             HStack(spacing: 16) {
+                // Left-aligned counts
                 Text("\(viewModel.displayedFlights.count) entries")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
@@ -131,10 +132,26 @@ struct MacLogbookView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                // Right-aligned sync status
+                HStack(spacing: 4) {
+                    if isSyncing {
+                        ProgressView()
+                            .scaleEffect(0.45)
+                            .frame(width: 8, height: 8)
+                        Text("Syncing…")
+                    } else {
+                        Circle()
+                            .fill(.green)
+                            .frame(width: 6, height: 6)
+                        Text("Synced")
+                    }
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 10)
         .background(.bar)
         .overlay(alignment: .top) {
             Divider()

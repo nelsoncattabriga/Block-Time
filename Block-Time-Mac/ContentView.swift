@@ -2,8 +2,7 @@
 //  ContentView.swift
 //  Block-Time-Mac
 //
-//  Root layout: sidebar + content column with a trailing detail panel
-//  that slides in for filter, edit, and add modes.
+//  Root layout: section picker in title bar, content + optional trailing detail panel.
 //
 
 import SwiftUI
@@ -18,10 +17,10 @@ enum MacSection: String, Hashable, CaseIterable {
 
     var icon: String {
         switch self {
-        case .logbook:   return "book.closed.fill"
-        case .dashboard: return "chart.bar.fill"
+        case .logbook:   return "airplane.departure"
+        case .dashboard: return "chart.xyaxis.line"
         case .map:       return "map.fill"
-        case .frms:      return "shield.fill"
+        case .frms:      return "clock.badge.checkmark"
         }
     }
 
@@ -63,45 +62,39 @@ struct MacRootView: View {
     @State private var isSyncing = false
     @State private var detailMode: MacDetailMode = .none
 
-    // Single logbook viewmodel lives here so edits trigger table reloads
     @StateObject private var logbookVM = MacLogbookViewModel()
 
-    private var panelIsVisible: Bool {
-        detailMode != .none
-    }
+    private var panelIsVisible: Bool { detailMode != .none }
 
     var body: some View {
-        NavigationSplitView {
-            MacSidebarView(selectedSection: $selectedSection, isSyncing: isSyncing)
-                .navigationSplitViewColumnWidth(200)
-        } detail: {
-            HStack(spacing: 0) {
-                MacContentAreaView(
-                    section: selectedSection,
-                    tableSelection: $tableSelection,
-                    showingFilter: $showingFilter,
-                    filterState: filterState,
-                    logbookVM: logbookVM,
-                    onRowsLoaded: { allLogbookRows = $0 },
-                    onSyncingChanged: { isSyncing = $0 }
-                )
+        HStack(spacing: 0) {
+            MacContentAreaView(
+                section: selectedSection,
+                tableSelection: $tableSelection,
+                showingFilter: $showingFilter,
+                filterState: filterState,
+                logbookVM: logbookVM,
+                onRowsLoaded: { allLogbookRows = $0 },
+                onSyncingChanged: { isSyncing = $0 },
+                isSyncing: isSyncing
+            )
 
-                if panelIsVisible {
-                    Divider()
-                    detailPanel
-                        .frame(width: 340)
-                        .transition(.move(edge: .trailing))
-                }
+            if panelIsVisible {
+                Divider()
+                detailPanel
+                    .frame(width: 340)
+                    .transition(.move(edge: .trailing))
             }
-            .animation(.easeInOut(duration: 0.18), value: panelIsVisible)
         }
-        .navigationSplitViewStyle(.balanced)
+        .animation(.easeInOut(duration: 0.18), value: panelIsVisible)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                sectionPicker
+            }
+        }
         .onChange(of: tableSelection) { _, newSel in
             guard selectedSection == .logbook else { return }
-            if showingFilter {
-                // Keep filter panel open; don't switch to edit
-                return
-            }
+            if showingFilter { return }
             if let selectedID = newSel.first {
                 detailMode = .edit(selectedID)
             } else {
@@ -122,6 +115,40 @@ struct MacRootView: View {
             tableSelection.removeAll()
         }
     }
+
+    // MARK: - Section picker (title bar)
+
+    private var sectionPicker: some View {
+        HStack(spacing: 2) {
+            ForEach(MacSection.allCases, id: \.self) { section in
+                Button {
+                    selectedSection = section
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: section.icon)
+                        Text(section.rawValue)
+                            .font(.subheadline)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        selectedSection == section
+                            ? section.color.opacity(0.15)
+                            : Color.clear
+                    )
+                    .foregroundStyle(selectedSection == section ? section.color : .secondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(.quaternary.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+
+    // MARK: - Helpers
 
     private func resolvedEditMode() -> MacDetailMode {
         if let id = tableSelection.first { return .edit(id) }
@@ -160,7 +187,6 @@ struct MacRootView: View {
                 }
                 .id(id)
             } else {
-                // Row deleted or not yet loaded
                 Text("Flight not found")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

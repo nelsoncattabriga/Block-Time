@@ -30,7 +30,6 @@ struct MacFlightEditView: View {
     @State private var draft: MacEditableFlight
     @State private var original: MacEditableFlight
     @State private var showingDeleteConfirm = false
-    @State private var showingEntryOptions = false
     @State private var saveError: String? = nil
 
     // Auto-calc state
@@ -148,17 +147,6 @@ struct MacFlightEditView: View {
                 .font(.headline)
                 .lineLimit(1)
             Spacer()
-            Button {
-                showingEntryOptions.toggle()
-            } label: {
-                Image(systemName: "gearshape")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Entry options")
-            .popover(isPresented: $showingEntryOptions, arrowEdge: .bottom) {
-                EditEntryOptionsPopover()
-            }
             Button("Cancel") { onDismiss() }
                 .keyboardShortcut(.escape, modifiers: [])
             Button("Save") { commitSave() }
@@ -1018,105 +1006,5 @@ struct MacTimeTextField: View {
               let h = Int(parts[0]), let m = Int(parts[1]),
               h < 24, m < 60 else { return input }
         return String(format: "%02d:%02d", h, m)
-    }
-}
-
-// MARK: - Edit Entry Options Popover
-
-private struct EditEntryOptionsPopover: View {
-    @AppStorage("flightTimePosition")            private var flightTimePosition: String = "Capt"
-    @AppStorage("foPilotFlyingCredit")           private var foPilotFlyingCredit: String = "P1US"
-    @AppStorage("defaultCaptainName")            private var defaultCaptainName: String = ""
-    @AppStorage("defaultCoPilotName")            private var defaultCoPilotName: String = ""
-    @AppStorage("defaultSOName")                 private var defaultSOName: String = ""
-    @AppStorage("showSONameFields")              private var showSONameFields: Bool = false
-    @AppStorage("showSpInsSelector")             private var showSpInsSelector: Bool = false
-    @AppStorage("defaultInstructionEnvironment") private var defaultInstructionEnv: String = "aircraft"
-    @AppStorage("pfAutoInstrumentMinutes")       private var pfAutoInstrumentMinutes: Int = 0
-    @AppStorage("logApproaches")                 private var logApproaches: Bool = true
-    @AppStorage("defaultApproachType")           private var defaultApproachType: String = ""
-    @AppStorage("enterTimesInLocalTime")         private var enterTimesInLocalTime: Bool = false
-    @AppStorage("showFullAircraftReg")           private var showFullAircraftReg: Bool = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Entry Options")
-                .font(.system(size: 13, weight: .semibold))
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-
-            Divider()
-
-            Form {
-                Section("Crew Position") {
-                    Picker("Log Flight Time As", selection: $flightTimePosition) {
-                        Text("Captain").tag("Capt")
-                        Text("First Officer").tag("F/O")
-                        Text("Second Officer").tag("S/O")
-                    }
-                    if flightTimePosition == "F/O" {
-                        Picker("Log PF Time As", selection: $foPilotFlyingCredit) {
-                            Text("ICUS").tag("P1US")
-                            Text("P2").tag("P2")
-                        }
-                    }
-                    switch flightTimePosition {
-                    case "F/O": TextField("Default F/O Name", text: $defaultCoPilotName)
-                    case "S/O": TextField("Default S/O Name", text: $defaultSOName)
-                    default:    TextField("Default Captain Name", text: $defaultCaptainName)
-                    }
-                    Toggle("Show S/O Name Fields", isOn: $showSONameFields)
-                }
-
-                Section("Logging") {
-                    Toggle("Log Instructor Time", isOn: $showSpInsSelector)
-                    if showSpInsSelector {
-                        Picker("Default Environment", selection: $defaultInstructionEnv) {
-                            Text("Aircraft").tag("aircraft")
-                            Text("Simulator").tag("simulator")
-                        }
-                    }
-                    Picker("Inst. Time When PF", selection: $pfAutoInstrumentMinutes) {
-                        Text("None").tag(0)
-                        Text("15 min").tag(15)
-                        Text("30 min").tag(30)
-                        Text("45 min").tag(45)
-                        Text("60 min").tag(60)
-                    }
-                    Toggle("Log Approaches", isOn: $logApproaches)
-                    if logApproaches {
-                        Picker("Default Approach", selection: $defaultApproachType) {
-                            Text("None").tag("")
-                            Text("ILS").tag("ILS")
-                            Text("GLS").tag("GLS")
-                            Text("RNP").tag("RNP")
-                            Text("AIII").tag("AIII")
-                            Text("NPA").tag("NPA")
-                        }
-                    }
-                }
-
-                Section("Aircraft") {
-                    Toggle("Full Registration (VH-ABC)", isOn: $showFullAircraftReg)
-                }
-
-                Section("Times") {
-                    Picker("Enter Times In", selection: $enterTimesInLocalTime) {
-                        Text("UTC").tag(false)
-                        Text("Local").tag(true)
-                    }
-                    if enterTimesInLocalTime {
-                        Text("Local time entry not yet supported on Mac — times will be treated as UTC.")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .frame(width: 300)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.bottom, 8)
     }
 }

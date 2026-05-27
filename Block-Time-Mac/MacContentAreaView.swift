@@ -15,6 +15,7 @@ struct MacContentAreaView: View {
     var logbookVM: MacLogbookViewModel
     var onRowsLoaded: ([MacFlightRow]) -> Void
     var onSyncingChanged: (Bool) -> Void = { _ in }
+    var isSyncing: Bool = false
 
     var body: some View {
         switch section {
@@ -25,7 +26,8 @@ struct MacContentAreaView: View {
                 showingFilter: $showingFilter,
                 filterState: filterState,
                 onRowsLoaded: onRowsLoaded,
-                onSyncingChanged: onSyncingChanged
+                onSyncingChanged: onSyncingChanged,
+                isSyncing: isSyncing
             )
         case .dashboard:
             MacSectionPlaceholder(section: section)
