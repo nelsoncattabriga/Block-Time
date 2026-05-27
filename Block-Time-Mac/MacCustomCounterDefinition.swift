@@ -15,6 +15,24 @@ enum CounterType: String, Codable, CaseIterable, Identifiable {
     case text
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .integer: return "Integer"
+        case .decimal: return "Decimal"
+        case .time:    return "Time"
+        case .text:    return "Text"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .integer: return "Whole numbers"
+        case .decimal: return "Shown as 1.5"
+        case .time:    return "Duration"
+        case .text:    return "Any text value"
+        }
+    }
 }
 
 struct CustomCounterDefinition: Codable, Identifiable, Hashable {

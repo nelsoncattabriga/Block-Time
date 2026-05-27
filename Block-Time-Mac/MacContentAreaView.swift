@@ -33,8 +33,6 @@ struct MacContentAreaView: View {
             MacSectionPlaceholder(section: section)
         case .frms:
             MacSectionPlaceholder(section: section)
-        case .settings:
-            MacSettingsView()
         }
     }
 }

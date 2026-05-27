@@ -2,8 +2,7 @@
 //  MacFlightEditView.swift
 //  Block-Time-Mac
 //
-//  Add / Edit flight panel. Reads UserDefaults settings (same keys as iOS).
-//  Local-time conversion is deferred — a banner warns the user if that mode is active.
+//  Add / Edit flight panel. Layout and auto-calculation behaviour mirrors the iOS app.
 //
 
 import SwiftUI
@@ -13,6 +12,12 @@ import SwiftUI
 enum MacFlightEditMode {
     case add
     case edit(MacFlightRow)
+}
+
+// MARK: - Flight type
+
+private enum MacFlightType {
+    case flight, positioning, sim
 }
 
 // MARK: - Main view
@@ -28,34 +33,48 @@ struct MacFlightEditView: View {
     @State private var showingEntryOptions = false
     @State private var saveError: String? = nil
 
-    private var isDirty: Bool {
-        switch mode {
-        case .add:   return true
-        case .edit:  return draft != original
-        }
-    }
+    // Auto-calc state
+    @State private var nightTimeDebounceTask: Task<Void, Never>? = nil
+    @State private var hasManuallyEditedTakeoffsLandings = false
+    @State private var selectedApproachType: String? = nil
 
-    @AppStorage("enterTimesInLocalTime")  private var enterTimesInLocalTime = false
-    @AppStorage("showSpInsSelector")      private var showSpInsSelector = false
-    @AppStorage("showSONameFields")       private var showSONameFields = false
-    @AppStorage("logApproaches")          private var logApproaches = true
+    private let timeCalc = MacTimeCalculationManager()
+
+    @AppStorage("enterTimesInLocalTime")   private var enterTimesInLocalTime = false
+    @AppStorage("showSpInsSelector")       private var showSpInsSelector = false
+    @AppStorage("showSONameFields")        private var showSONameFields = false
+    @AppStorage("logApproaches")           private var logApproaches = true
     @AppStorage("showTimesInHoursMinutes") private var timesInHHMM: Bool = true
-    @AppStorage("decimalRoundingMode")    private var decimalRounding: String = "standard"
+    @AppStorage("decimalRoundingMode")     private var decimalRounding: String = "standard"
+    @AppStorage("foPilotFlyingCredit")     private var foPilotFlyingCredit: String = "P1US"
+    @AppStorage("flightTimePosition")      private var flightTimePosition: String = "Capt"
+    @AppStorage("pfAutoInstrumentMinutes") private var pfAutoInstrumentMinutes: Int = 0
+    @AppStorage("defaultApproachType")     private var defaultApproachType: String = ""
+    @AppStorage("useIATACodes")            private var useIATACodes: Bool = true
+
+    @ObservedObject private var crewService = MacCrewNameService.shared
 
     private var isEditing: Bool {
         if case .edit = mode { return true }
         return false
     }
 
+    private var isDirty: Bool {
+        switch mode {
+        case .add:  return true
+        case .edit: return draft != original
+        }
+    }
+
     private var title: String {
         switch mode {
-        case .add:        return "New Flight"
+        case .add:         return "New Flight"
         case .edit(let r): return "Edit — \(r.flightNumber.isEmpty ? r.dateDisplay(localTime: false) : r.flightNumber)"
         }
     }
 
     init(mode: MacFlightEditMode, viewModel: MacLogbookViewModel, onDismiss: @escaping () -> Void) {
-        self.mode = mode
+        self.mode      = mode
         self.viewModel = viewModel
         self.onDismiss = onDismiss
         let hhmm     = UserDefaults.standard.bool(forKey: "showTimesInHoursMinutes")
@@ -77,13 +96,25 @@ struct MacFlightEditView: View {
             header
             Divider()
             ScrollView {
-                VStack(spacing: 0) {
+                VStack(spacing: 12) {
                     if enterTimesInLocalTime {
                         localTimeBanner
                     }
-                    formContent
+                    flightTypeSelector
+                    flightInfoSection
+                    aircraftSection
+                    timesAndPFSection
+                    crewSection
+                    if showSpInsSelector {
+                        spInsSection
+                    }
+                    customFieldsSection
+                    remarksSection
+                    if isEditing {
+                        deleteSection
+                    }
                 }
-                .padding(.bottom, 16)
+                .padding(12)
             }
             if let err = saveError {
                 Text(err)
@@ -99,8 +130,14 @@ struct MacFlightEditView: View {
         } message: {
             Text("This will delete this flight. You can undo this from the Edit menu (⌘Z).")
         }
-        .onChange(of: timesInHHMM)    { reformatTimes() }
-        .onChange(of: decimalRounding) { reformatTimes() }
+        .onChange(of: timesInHHMM)     { reformatTimes() }
+        .onChange(of: decimalRounding)  { reformatTimes() }
+        .onChange(of: draft.outTime)    { scheduleRecalculation() }
+        .onChange(of: draft.inTime)     { scheduleRecalculation() }
+        .onChange(of: draft.fromAirport) { scheduleRecalculation() }
+        .onChange(of: draft.toAirport)   { scheduleRecalculation() }
+        .onChange(of: draft.isPilotFlying) { onPilotFlyingChanged() }
+        .onChange(of: draft.isPositioning) { onPositioningChanged() }
     }
 
     // MARK: - Header
@@ -118,6 +155,7 @@ struct MacFlightEditView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Entry options")
             .popover(isPresented: $showingEntryOptions, arrowEdge: .bottom) {
                 EditEntryOptionsPopover()
             }
@@ -146,153 +184,539 @@ struct MacFlightEditView: View {
         }
         .padding(10)
         .background(Color.orange.opacity(0.08))
-        .overlay(alignment: .bottom) { Divider() }
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    // MARK: - Form content
+    // MARK: - Flight type selector (FLT / PAX / SIM)
 
-    private var formContent: some View {
-        Form {
-            Section("Flight Details") {
-                dateRow
-                TextField("Flight No.", text: $draft.flightNumber)
-                    .font(.system(.body, design: .monospaced))
-                TextField("DEP", text: $draft.fromAirport)
-                    .font(.system(.body, design: .monospaced))
-                    .onChange(of: draft.fromAirport) { _, v in
-                        draft.fromAirport = v.uppercased()
-                    }
-                TextField("ARR", text: $draft.toAirport)
-                    .font(.system(.body, design: .monospaced))
-                    .onChange(of: draft.toAirport) { _, v in
-                        draft.toAirport = v.uppercased()
-                    }
-                TextField("STD", text: $draft.scheduledDeparture)
-                    .font(.system(.body, design: .monospaced))
-                TextField("STA", text: $draft.scheduledArrival)
-                    .font(.system(.body, design: .monospaced))
-                TextField("OUT", text: $draft.outTime)
-                    .font(.system(.body, design: .monospaced))
-                TextField("IN", text: $draft.inTime)
-                    .font(.system(.body, design: .monospaced))
+    private var isSim: Bool { !draft.isPositioning && !draft.simTime.isEmpty }
+    private var isFlight: Bool { !draft.isPositioning && draft.simTime.isEmpty }
+
+    private var flightTypeSelector: some View {
+        HStack {
+            Text("FLIGHT INFO")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+            Spacer()
+            HStack(spacing: 0) {
+                typeButton("FLT", color: .blue,    active: isFlight,         action: { setFlightType(.flight) })
+                typeButton("PAX", color: .orange,  active: draft.isPositioning, action: { setFlightType(.positioning) })
+                typeButton("SIM", color: .purple,  active: isSim,            action: { setFlightType(.sim) })
             }
-
-            Section("Times") {
-                timeRow("Block",  text: $draft.blockTime)
-                timeRow("Night",  text: $draft.nightTime)
-                timeRow("Inst.",  text: $draft.instrumentTime)
-                timeRow("P1",     text: $draft.p1Time)
-                timeRow("ICUS",   text: $draft.p1usTime)
-                timeRow("P2",     text: $draft.p2Time)
-                timeRow("Sim",    text: $draft.simTime)
-                if showSpInsSelector {
-                    timeRow("Sp/Ins", text: $draft.spInsTime)
-                }
-            }
-
-            Section("Aircraft") {
-                TextField("Type", text: $draft.aircraftType)
-                    .font(.system(.body, design: .monospaced))
-                    .onChange(of: draft.aircraftType) { _, v in
-                        draft.aircraftType = v.uppercased()
-                    }
-                TextField("Reg", text: $draft.aircraftReg)
-                    .font(.system(.body, design: .monospaced))
-                    .onChange(of: draft.aircraftReg) { _, v in
-                        draft.aircraftReg = v.uppercased()
-                    }
-            }
-
-            Section("T/O & Ldg") {
-                intRow("Day T/O",    value: $draft.dayTakeoffs)
-                intRow("Night T/O",  value: $draft.nightTakeoffs)
-                intRow("Day Ldg",    value: $draft.dayLandings)
-                intRow("Night Ldg",  value: $draft.nightLandings)
-            }
-
-            Section("Crew") {
-                TextField("Captain", text: $draft.captainName)
-                TextField("F/O", text: $draft.foName)
-                if showSONameFields {
-                    TextField("S/O 1", text: $draft.so1Name)
-                    TextField("S/O 2", text: $draft.so2Name)
-                }
-            }
-
-            Section("Flags") {
-                Toggle("Pilot Flying", isOn: $draft.isPilotFlying)
-                Toggle("Positioning", isOn: $draft.isPositioning)
-                if logApproaches {
-                    Toggle("ILS",  isOn: $draft.isILS)
-                    Toggle("GLS",  isOn: $draft.isGLS)
-                    Toggle("NPA",  isOn: $draft.isNPA)
-                    Toggle("RNP",  isOn: $draft.isRNP)
-                    Toggle("AIII", isOn: $draft.isAIII)
-                }
-            }
-
-            let defs = MacCustomFieldService.shared.definitions.sorted { $0.columnIndex < $1.columnIndex }
-            if !defs.isEmpty {
-                Section("Custom Fields") {
-                    ForEach(defs) { def in customFieldRow(def) }
-                }
-            }
-
-            Section("Notes") {
-                TextField("Remarks", text: $draft.remarks, axis: .vertical)
-                    .lineLimit(3...6)
-            }
-
-            if isEditing {
-                Section {
-                    Button("Delete Flight", role: .destructive) {
-                        showingDeleteConfirm = true
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    // MARK: - Reusable rows
-
-    private var dateRow: some View {
-        TextField("Date", text: $draft.date)
-            .font(.system(.body, design: .monospaced))
-    }
-
-    private func timeRow(_ label: String, text: Binding<String>) -> some View {
-        TextField(label, text: text)
-            .font(.system(.body, design: .monospaced))
-    }
-
-    private func intRow(_ label: String, value: Binding<Int>) -> some View {
-        Stepper(value: value, in: 0...99) {
-            HStack {
-                Text(label)
-                Spacer()
-                Text("\(value.wrappedValue)")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(
+                        draft.isPositioning ? Color.orange : (isSim ? Color.purple : Color.blue),
+                        lineWidth: 2
+                    )
+            )
         }
     }
 
     @ViewBuilder
-    private func customFieldRow(_ def: CustomCounterDefinition) -> some View {
-        switch def.type {
-        case .integer:
-            intRow(def.label, value: intBinding(for: def.columnIndex))
-        case .decimal:
-            TextField(def.label, text: counterBinding(for: def.columnIndex))
-                .font(.system(.body, design: .monospaced))
-        case .time:
-            TextField(def.label, text: counterBinding(for: def.columnIndex))
-                .font(.system(.body, design: .monospaced))
-        case .text:
-            TextField(def.label, text: counterBinding(for: def.columnIndex))
+    private func typeButton(_ label: String, color: Color, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.subheadline.bold())
+                .foregroundStyle(active ? .white : .secondary)
+                .frame(width: 50, height: 30)
+                .background(active ? color : Color.clear)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Flight Info section
+
+    private var flightInfoSection: some View {
+        MacFormCard {
+            MacFormRow(label: "DATE") {
+                MacDatePickerField(dateString: $draft.date)
+            }
+            Divider()
+            MacFormRow(label: "FLIGHT #") {
+                MacFlightNumberTextField(value: $draft.flightNumber)
+            }
+            Divider()
+            MacFormRow(label: "FROM") {
+                TextField(useIATACodes ? "IATA" : "ICAO", text: airportDisplayBinding(icao: $draft.fromAirport))
+                    .font(.system(.body, design: .monospaced))
+                    .multilineTextAlignment(.trailing)
+            }
+            Divider()
+            MacFormRow(label: "TO") {
+                TextField(useIATACodes ? "IATA" : "ICAO", text: airportDisplayBinding(icao: $draft.toAirport))
+                    .font(.system(.body, design: .monospaced))
+                    .multilineTextAlignment(.trailing)
+            }
+            Divider()
+            MacFormRow(label: "STD") {
+                MacTimeTextField(value: $draft.scheduledDeparture)
+            }
+            Divider()
+            MacFormRow(label: "STA") {
+                MacTimeTextField(value: $draft.scheduledArrival)
+            }
+        }
+    }
+
+    // MARK: - Combined times + PF section
+
+    private var timesAndPFSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(enterTimesInLocalTime ? "FLIGHT TIMES (LOCAL)" : "FLIGHT TIMES (UTC)")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+
+            MacFormCard {
+                MacFormRow(label: "OUT") {
+                    MacTimeTextField(value: $draft.outTime)
+                }
+                Divider()
+                MacFormRow(label: "IN") {
+                    MacTimeTextField(value: $draft.inTime)
+                }
+                Divider()
+                MacFormRow(label: "BLOCK") {
+                    HStack(spacing: 4) {
+                        if blockIsAutoCalculated {
+                            Image(systemName: "wand.and.stars")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Auto-calculated")
+                        }
+                        TextField("0.00", text: $draft.blockTime)
+                            .font(.system(.body, design: .monospaced))
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(blockIsAutoCalculated ? .secondary : .primary)
+                    }
+                }
+                Divider()
+                MacFormRow(label: "NIGHT") {
+                    HStack(spacing: 4) {
+                        if nightIsAutoCalculated {
+                            Image(systemName: "wand.and.stars")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Auto-calculated")
+                        }
+                        TextField("0.00", text: $draft.nightTime)
+                            .font(.system(.body, design: .monospaced))
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(nightIsAutoCalculated ? .secondary : .primary)
+                    }
+                }
+            }
+
+            // PF / PM toggle + approach picker
+            MacFormCard {
+                HStack(spacing: 12) {
+                    HStack(spacing: 0) {
+                        pfButton("PF", active: draft.isPilotFlying, color: .green) {
+                            draft.isPilotFlying = true
+                            if !isEditing && logApproaches && !defaultApproachType.isEmpty {
+                                selectedApproachType = defaultApproachType
+                                applyApproachType(defaultApproachType)
+                            }
+                        }
+                        pfButton("PM", active: !draft.isPilotFlying, color: .gray) {
+                            draft.isPilotFlying = false
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(draft.isPilotFlying ? Color.green : Color.gray, lineWidth: 2)
+                    )
+
+                    Spacer()
+
+                    if logApproaches {
+                        approachPicker
+                    }
+                }
+                .padding(8)
+            }
+
+            // INST, SIM, P1, ICUS, P2 — auto-populated when PF is toggled
+            MacFormCard {
+                MacFormRow(label: "INST.") {
+                    TextField("0.00", text: $draft.instrumentTime)
+                        .font(.system(.body, design: .monospaced))
+                        .multilineTextAlignment(.trailing)
+                }
+                if !draft.isPositioning && !draft.simTime.isEmpty {
+                    Divider()
+                    MacFormRow(label: "SIM") {
+                        TextField("0.00", text: $draft.simTime)
+                            .font(.system(.body, design: .monospaced))
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+                Divider()
+                MacFormRow(label: "P1") {
+                    TextField("0.00", text: $draft.p1Time)
+                        .font(.system(.body, design: .monospaced))
+                        .multilineTextAlignment(.trailing)
+                }
+                Divider()
+                MacFormRow(label: "ICUS") {
+                    TextField("0.00", text: $draft.p1usTime)
+                        .font(.system(.body, design: .monospaced))
+                        .multilineTextAlignment(.trailing)
+                }
+                Divider()
+                MacFormRow(label: "P2") {
+                    TextField("0.00", text: $draft.p2Time)
+                        .font(.system(.body, design: .monospaced))
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+
+            // T/O & Ldg — only when PF
+            if draft.isPilotFlying {
+                Text("T/O & LDG")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+
+                MacFormCard {
+                    HStack(spacing: 12) {
+                        MacStepperRow(label: "Day T/O",   icon: "airplane.departure", value: $draft.dayTakeoffs,   onChanged: { hasManuallyEditedTakeoffsLandings = true })
+                        Divider()
+                        MacStepperRow(label: "Day LDG",   icon: "airplane.arrival",   value: $draft.dayLandings,   onChanged: { hasManuallyEditedTakeoffsLandings = true })
+                    }
+                    Divider()
+                    HStack(spacing: 12) {
+                        MacStepperRow(label: "Night T/O", icon: "moon.fill",           value: $draft.nightTakeoffs, onChanged: { hasManuallyEditedTakeoffsLandings = true })
+                        Divider()
+                        MacStepperRow(label: "Night LDG", icon: "moon.stars.fill",     value: $draft.nightLandings, onChanged: { hasManuallyEditedTakeoffsLandings = true })
+                    }
+                }
+            }
+        }
+    }
+
+    private var blockIsAutoCalculated: Bool {
+        !draft.outTime.isEmpty && !draft.inTime.isEmpty &&
+        timeCalc.isValidTimeHHmm(draft.outTime) && timeCalc.isValidTimeHHmm(draft.inTime)
+    }
+
+    private var nightIsAutoCalculated: Bool {
+        blockIsAutoCalculated && !draft.fromAirport.isEmpty && !draft.toAirport.isEmpty
+    }
+
+    @ViewBuilder
+    private func pfButton(_ label: String, active: Bool, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.subheadline.bold())
+                .foregroundStyle(active ? .white : .secondary)
+                .frame(width: 55, height: 30)
+                .background(active ? color : Color.clear)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Approach picker
+
+    private var approachPicker: some View {
+        HStack(spacing: 6) {
+            Text("APP")
+                .font(.subheadline.bold())
+                .foregroundStyle(.secondary)
+            Menu {
+                Button("NIL") { clearApproach() }
+                Divider()
+                ForEach(["ILS", "GLS", "RNP", "AIII", "NPA"], id: \.self) { type in
+                    Button(type) { applyApproachType(type); selectedApproachType = type }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(selectedApproachType ?? "NIL")
+                        .font(.footnote.bold())
+                        .foregroundStyle(selectedApproachType != nil ? .white : .secondary)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(selectedApproachType != nil ? .white : .secondary)
+                }
+                .frame(width: 64, height: 28)
+                .background(selectedApproachType != nil ? Color.orange.opacity(0.8) : Color.secondary.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .disabled(!draft.isPilotFlying)
+            .opacity(draft.isPilotFlying ? 1 : 0.5)
+        }
+    }
+
+    // MARK: - Aircraft section
+
+    private var aircraftSection: some View {
+        MacFormCard {
+            MacFormRow(label: "TYPE") {
+                TextField("", text: $draft.aircraftType)
+                    .font(.system(.body, design: .monospaced))
+                    .multilineTextAlignment(.trailing)
+                    .onChange(of: draft.aircraftType) { _, v in draft.aircraftType = v.uppercased() }
+            }
+            Divider()
+            MacAircraftRegPickerRow(registration: $draft.aircraftReg, aircraftType: $draft.aircraftType, viewModel: viewModel)
+        }
+    }
+
+    // MARK: - Crew section
+
+    private var crewSection: some View {
+        MacFormCard {
+            MacCrewNamePickerRow(
+                label: "CAPTAIN",
+                name: $draft.captainName,
+                savedNames: crewService.captainNames,
+                onSave: { crewService.addCaptainName($0) }
+            )
+            Divider()
+            MacCrewNamePickerRow(
+                label: "F/O",
+                name: $draft.foName,
+                savedNames: crewService.coPilotNames,
+                onSave: { crewService.addCoPilotName($0) }
+            )
+            if showSONameFields {
+                Divider()
+                MacCrewNamePickerRow(
+                    label: "S/O 1",
+                    name: $draft.so1Name,
+                    savedNames: crewService.soNames,
+                    onSave: { crewService.addSOName($0) }
+                )
+                Divider()
+                MacCrewNamePickerRow(
+                    label: "S/O 2",
+                    name: $draft.so2Name,
+                    savedNames: crewService.soNames,
+                    onSave: { crewService.addSOName($0) }
+                )
+            }
+        }
+    }
+
+    // MARK: - Sp/Ins section
+
+    private var spInsSection: some View {
+        MacFormCard {
+            MacFormRow(label: "SP/INS") {
+                TextField("0.00", text: $draft.spInsTime)
+                    .font(.system(.body, design: .monospaced))
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+    }
+
+    // MARK: - Custom fields section
+
+    @ViewBuilder
+    private var customFieldsSection: some View {
+        let defs = MacCustomFieldService.shared.definitions.sorted { $0.columnIndex < $1.columnIndex }
+        if !defs.isEmpty {
+            MacFormCard {
+                ForEach(Array(defs.enumerated()), id: \.element.id) { idx, def in
+                    if idx > 0 { Divider() }
+                    MacFormRow(label: def.label.uppercased()) {
+                        switch def.type {
+                        case .integer:
+                            let binding = intBinding(for: def.columnIndex)
+                            Stepper("\(binding.wrappedValue)", value: binding, in: 0...99)
+                                .labelsHidden()
+                        default:
+                            TextField("", text: counterBinding(for: def.columnIndex))
+                                .font(.system(.body, design: .monospaced))
+                                .multilineTextAlignment(.trailing)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Remarks section
+
+    private var remarksSection: some View {
+        MacFormCard {
+            MacFormRow(label: "REMARKS") {
+                TextField("", text: $draft.remarks, axis: .vertical)
+                    .lineLimit(3...6)
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+    }
+
+    // MARK: - Delete section
+
+    private var deleteSection: some View {
+        Button("Delete Flight", role: .destructive) {
+            showingDeleteConfirm = true
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+    }
+
+    // MARK: - Auto-calculation
+
+    private func scheduleRecalculation() {
+        guard !draft.isPositioning else { return }
+        nightTimeDebounceTask?.cancel()
+        nightTimeDebounceTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            recalculateNow()
+        }
+    }
+
+    @MainActor
+    private func recalculateNow() {
+        let out = draft.outTime.trimmingCharacters(in: .whitespacesAndNewlines)
+        let inT = draft.inTime.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard timeCalc.isValidTimeHHmm(out), timeCalc.isValidTimeHHmm(inT) else { return }
+
+        let blockTime = timeCalc.calculateFlightTime(outTime: out, inTime: inT)
+        draft.blockTime = MacFlightRow.formatTime(MacFlightRow.parseTime(blockTime), hhmm: timesInHHMM, rounding: decimalRounding)
+
+        if let context = timeCalc.buildCalculationContext(
+            fromAirport: draft.fromAirport, toAirport: draft.toAirport,
+            outTime: out, blockTime: blockTime, flightDate: draft.date
+        ) {
+            let night = timeCalc.calculateNightTime(using: context)
+            draft.nightTime = MacFlightRow.formatTime(MacFlightRow.parseTime(night), hhmm: timesInHHMM, rounding: decimalRounding)
+
+            if draft.isPilotFlying && !hasManuallyEditedTakeoffsLandings {
+                let (dayTO, nightTO, dayLdg, nightLdg) = timeCalc.calculateTakeoffsLandings(using: context)
+                draft.dayTakeoffs   = dayTO
+                draft.nightTakeoffs = nightTO
+                draft.dayLandings   = dayLdg
+                draft.nightLandings = nightLdg
+            }
+        }
+    }
+
+    private func onPilotFlyingChanged() {
+        if draft.isPilotFlying {
+            if !hasManuallyEditedTakeoffsLandings {
+                scheduleRecalculation()
+            }
+            autoFillTimesForPF()
+        } else {
+            // Clear approaches, T/O & Ldg, and auto-filled times when switching to PM
+            clearApproach()
+            if !hasManuallyEditedTakeoffsLandings {
+                draft.dayTakeoffs   = 0
+                draft.nightTakeoffs = 0
+                draft.dayLandings   = 0
+                draft.nightLandings = 0
+            }
+            clearAutoFilledTimes()
+        }
+    }
+
+    private func autoFillTimesForPF() {
+        guard !isEditing else { return }
+        let blockVal = MacFlightRow.parseTime(draft.blockTime)
+
+        // INST: pfAutoInstrumentMinutes / 60, only when PF and not sim
+        if pfAutoInstrumentMinutes > 0 {
+            let instHours = Double(pfAutoInstrumentMinutes) / 60.0
+            draft.instrumentTime = MacFlightRow.formatTime(instHours, hhmm: timesInHHMM, rounding: decimalRounding)
+        }
+
+        // P1/ICUS/P2 based on position setting — mirrors iOS selectedTimeCredit logic
+        switch flightTimePosition {
+        case "Capt":
+            // Captain always gets P1
+            draft.p1Time   = MacFlightRow.formatTime(blockVal, hhmm: timesInHHMM, rounding: decimalRounding)
+            draft.p1usTime = MacFlightRow.formatTime(0, hhmm: timesInHHMM, rounding: decimalRounding)
+            draft.p2Time   = MacFlightRow.formatTime(0, hhmm: timesInHHMM, rounding: decimalRounding)
+        case "F/O":
+            // F/O PF: use foPilotFlyingCredit setting (P1US = ICUS, or P2)
+            if foPilotFlyingCredit == "P1US" {
+                draft.p1Time   = MacFlightRow.formatTime(0, hhmm: timesInHHMM, rounding: decimalRounding)
+                draft.p1usTime = MacFlightRow.formatTime(blockVal, hhmm: timesInHHMM, rounding: decimalRounding)
+                draft.p2Time   = MacFlightRow.formatTime(0, hhmm: timesInHHMM, rounding: decimalRounding)
+            } else {
+                draft.p1Time   = MacFlightRow.formatTime(0, hhmm: timesInHHMM, rounding: decimalRounding)
+                draft.p1usTime = MacFlightRow.formatTime(0, hhmm: timesInHHMM, rounding: decimalRounding)
+                draft.p2Time   = MacFlightRow.formatTime(blockVal, hhmm: timesInHHMM, rounding: decimalRounding)
+            }
+        default:
+            // S/O or unknown — no time credit auto-fill
+            break
+        }
+    }
+
+    private func clearAutoFilledTimes() {
+        guard !isEditing else { return }
+        let zero = MacFlightRow.formatTime(0, hhmm: timesInHHMM, rounding: decimalRounding)
+        draft.instrumentTime = zero
+        draft.p1Time         = zero
+        draft.p1usTime       = zero
+        draft.p2Time         = zero
+    }
+
+    private func onPositioningChanged() {
+        if draft.isPositioning {
+            draft.blockTime  = ""
+            draft.nightTime  = ""
+            draft.isPilotFlying = false
+            clearApproach()
+        }
+    }
+
+    private func setFlightType(_ type: MacFlightType) {
+        switch type {
+        case .flight:
+            draft.isPositioning = false
+            draft.simTime = ""
+        case .positioning:
+            draft.isPositioning = true
+            draft.simTime = ""
+        case .sim:
+            draft.isPositioning = false
+            if draft.simTime.isEmpty { draft.simTime = draft.blockTime }
+        }
+    }
+
+    // MARK: - Approach helpers
+
+    private func applyApproachType(_ type: String) {
+        draft.isILS  = (type == "ILS")
+        draft.isGLS  = (type == "GLS")
+        draft.isNPA  = (type == "NPA")
+        draft.isRNP  = (type == "RNP")
+        draft.isAIII = (type == "AIII")
+    }
+
+    private func clearApproach() {
+        selectedApproachType = nil
+        draft.isILS  = false
+        draft.isGLS  = false
+        draft.isNPA  = false
+        draft.isRNP  = false
+        draft.isAIII = false
+    }
+
+    // MARK: - Bindings
+
+    /// Shows the stored ICAO in the user's preferred format (IATA or ICAO).
+    /// Converts back to ICAO on set so the draft always stores ICAO internally.
+    private func airportDisplayBinding(icao: Binding<String>) -> Binding<String> {
+        Binding(
+            get: { AirportService.shared.getDisplayCode(icao.wrappedValue, useIATA: useIATACodes) },
+            set: { icao.wrappedValue = AirportService.shared.convertToICAO($0) }
+        )
     }
 
     private func counterBinding(for idx: Int) -> Binding<String> {
@@ -313,24 +737,32 @@ struct MacFlightEditView: View {
 
     private func commitSave() {
         saveError = nil
+        // Trigger a final recalculation before saving (mirrors iOS onSave)
+        if !draft.isPositioning {
+            let times = timeCalc.recalculateTimes(
+                outTime: draft.outTime, inTime: draft.inTime,
+                fromAirport: draft.fromAirport, toAirport: draft.toAirport,
+                flightDate: draft.date,
+                isEditingMode: isEditing,
+                existingNightTime: draft.nightTime
+            )
+            if !times.blockTime.isEmpty {
+                draft.blockTime = MacFlightRow.formatTime(MacFlightRow.parseTime(times.blockTime), hhmm: timesInHHMM, rounding: decimalRounding)
+                draft.nightTime = MacFlightRow.formatTime(MacFlightRow.parseTime(times.nightTime), hhmm: timesInHHMM, rounding: decimalRounding)
+            }
+        }
         Task {
             let ok: Bool
             switch mode {
-            case .add:   ok = await viewModel.saveFlight(draft)
-            case .edit:  ok = await viewModel.updateFlight(draft)
+            case .add:  ok = await viewModel.saveFlight(draft)
+            case .edit: ok = await viewModel.updateFlight(draft)
             }
-            if ok {
-                onDismiss()
-            } else {
-                saveError = "Save failed. Please try again."
-            }
+            if ok { onDismiss() } else { saveError = "Save failed. Please try again." }
         }
     }
 
     private func commitDelete() {
         guard case .edit(let row) = mode else { return }
-        // Capture the undo manager synchronously on the main actor before the
-        // panel is dismissed — the window may lose key status after onDismiss().
         let undoManager = NSApp.keyWindow?.undoManager
         Task {
             _ = await viewModel.deleteFlight(id: row.id, undoManager: undoManager)
@@ -361,11 +793,239 @@ struct MacFlightEditView: View {
     }
 }
 
+// MARK: - MacFormCard
+
+struct MacFormCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - MacFormRow
+
+struct MacFormRow<Trailing: View>: View {
+    let label: String
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+                .frame(width: 70, alignment: .leading)
+            Spacer()
+            trailing
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+    }
+}
+
+// MARK: - MacStepperRow
+
+struct MacStepperRow: View {
+    let label: String
+    let icon: String
+    @Binding var value: Int
+    var onChanged: () -> Void
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+            Text(label)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+            Spacer()
+            Stepper(value: $value, in: 0...99) {
+                Text("\(value)")
+                    .font(.system(.body, design: .monospaced))
+                    .frame(width: 24, alignment: .trailing)
+            }
+            .onChange(of: value) { onChanged() }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+    }
+}
+
+// MARK: - MacDatePickerField
+
+struct MacDatePickerField: View {
+    @Binding var dateString: String
+
+    private static let storageFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.locale = Locale(identifier: "en_AU")
+        return f
+    }()
+
+    private static let displayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM yyyy"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.locale = Locale(identifier: "en_AU")
+        return f
+    }()
+
+    @State private var selectedDate: Date
+
+    init(dateString: Binding<String>) {
+        _dateString = dateString
+        let initial = Self.storageFormatter.date(from: dateString.wrappedValue) ?? Date()
+        _selectedDate = State(initialValue: initial)
+    }
+
+    var body: some View {
+        DatePicker(
+            "",
+            selection: $selectedDate,
+            displayedComponents: .date
+        )
+        .labelsHidden()
+        .datePickerStyle(.compact)
+        .environment(\.locale, Locale(identifier: "en_AU"))
+        .environment(\.timeZone, .gmt)
+        .onChange(of: selectedDate) { _, newDate in
+            dateString = Self.storageFormatter.string(from: newDate)
+        }
+        .onChange(of: dateString) { _, newString in
+            if let date = Self.storageFormatter.date(from: newString) {
+                selectedDate = date
+            }
+        }
+    }
+}
+
+// MARK: - MacFlightNumberTextField
+
+/// Flight number field that mirrors iOS formatting on blur:
+/// prepends the airline prefix if enabled, and applies/strips leading zeros per settings.
+struct MacFlightNumberTextField: View {
+    @Binding var value: String
+    @FocusState private var isFocused: Bool
+
+    @AppStorage("includeAirlinePrefixInFlightNumber") private var includePrefix: Bool = true
+    @AppStorage("airlinePrefix")                      private var airlinePrefix: String = "QF"
+    @AppStorage("includeLeadingZeroInFlightNumber")   private var includeLeadingZero: Bool = false
+
+    private var placeholder: String {
+        let number = includeLeadingZero ? "0430" : "430"
+        return includePrefix ? "\(airlinePrefix)\(number)" : number
+    }
+
+    var body: some View {
+        TextField(placeholder, text: $value)
+            .font(.system(.body, design: .monospaced))
+            .multilineTextAlignment(.trailing)
+            .onChange(of: value) { _, v in
+                value = v.uppercased()
+            }
+            .onChange(of: isFocused) { _, focused in
+                if !focused {
+                    value = formatFlightNumber(value)
+                }
+            }
+            .focused($isFocused)
+    }
+
+    private func formatFlightNumber(_ input: String) -> String {
+        guard !input.isEmpty else { return input }
+        var formatted = input
+
+        if includePrefix && !formatted.hasPrefix(airlinePrefix) {
+            formatted = airlinePrefix + formatted
+        }
+
+        if formatted.hasPrefix(airlinePrefix) {
+            let numeric = String(formatted.dropFirst(airlinePrefix.count))
+            let adjusted = includeLeadingZero ? padToFourDigits(numeric) : stripLeadingZeros(numeric)
+            return airlinePrefix + adjusted
+        } else {
+            return includeLeadingZero ? padToFourDigits(formatted) : stripLeadingZeros(formatted)
+        }
+    }
+
+    private func padToFourDigits(_ number: String) -> String {
+        let numericPrefix = number.prefix(while: { $0.isNumber })
+        let suffix = String(number.dropFirst(numericPrefix.count))
+        guard !numericPrefix.isEmpty else { return number }
+        let stripped = String(numericPrefix.drop(while: { $0 == "0" }))
+        let core = stripped.isEmpty ? "0" : stripped
+        let padded = String(repeating: "0", count: max(0, 4 - core.count)) + core
+        return padded + suffix
+    }
+
+    private func stripLeadingZeros(_ number: String) -> String {
+        let numericPrefix = number.prefix(while: { $0.isNumber })
+        let suffix = String(number.dropFirst(numericPrefix.count))
+        guard !numericPrefix.isEmpty else { return number }
+        let stripped = numericPrefix.drop(while: { $0 == "0" })
+        let result = stripped.isEmpty ? String(numericPrefix.last!) : String(stripped)
+        return result + suffix
+    }
+}
+
+// MARK: - MacTimeTextField
+
+/// HH:MM time entry field with auto-formatting: typing "2300" becomes "23:00" on the
+/// fourth digit, and leading zeros are padded on blur. Mirrors iOS ModernTimeField logic.
+struct MacTimeTextField: View {
+    @Binding var value: String
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        TextField("HH:MM", text: $value)
+            .font(.system(.body, design: .monospaced))
+            .multilineTextAlignment(.trailing)
+            .focused($isFocused)
+            .onChange(of: value) { _, newValue in
+                value = Self.applyFormatting(newValue)
+            }
+            .onChange(of: isFocused) { _, focused in
+                if !focused {
+                    value = Self.formatWithLeadingZeros(value)
+                }
+            }
+    }
+
+    private static func applyFormatting(_ input: String) -> String {
+        let filtered = input.filter { $0.isNumber || $0 == ":" }
+        if filtered.count == 4 && !filtered.contains(":") {
+            return "\(filtered.prefix(2)):\(filtered.suffix(2))"
+        }
+        return String(filtered.prefix(5))
+    }
+
+    private static func formatWithLeadingZeros(_ input: String) -> String {
+        guard input.contains(":") else { return input }
+        let parts = input.split(separator: ":", maxSplits: 1)
+        guard parts.count == 2,
+              let h = Int(parts[0]), let m = Int(parts[1]),
+              h < 24, m < 60 else { return input }
+        return String(format: "%02d:%02d", h, m)
+    }
+}
+
 // MARK: - Edit Entry Options Popover
 
 private struct EditEntryOptionsPopover: View {
-    @AppStorage("flightTimePosition")            private var flightTimePosition: String = "Captain"
-    @AppStorage("foPilotFlyingCredit")           private var foPilotFlyingCredit: String = "P1S"
+    @AppStorage("flightTimePosition")            private var flightTimePosition: String = "Capt"
+    @AppStorage("foPilotFlyingCredit")           private var foPilotFlyingCredit: String = "P1US"
     @AppStorage("defaultCaptainName")            private var defaultCaptainName: String = ""
     @AppStorage("defaultCoPilotName")            private var defaultCoPilotName: String = ""
     @AppStorage("defaultSOName")                 private var defaultSOName: String = ""
@@ -391,23 +1051,20 @@ private struct EditEntryOptionsPopover: View {
             Form {
                 Section("Crew Position") {
                     Picker("Log Flight Time As", selection: $flightTimePosition) {
-                        Text("Captain").tag("Captain")
-                        Text("First Officer").tag("FirstOfficer")
-                        Text("Second Officer").tag("SecondOfficer")
+                        Text("Captain").tag("Capt")
+                        Text("First Officer").tag("F/O")
+                        Text("Second Officer").tag("S/O")
                     }
-                    if flightTimePosition == "FirstOfficer" {
+                    if flightTimePosition == "F/O" {
                         Picker("Log PF Time As", selection: $foPilotFlyingCredit) {
-                            Text("ICUS").tag("P1S")
+                            Text("ICUS").tag("P1US")
                             Text("P2").tag("P2")
                         }
                     }
                     switch flightTimePosition {
-                    case "FirstOfficer":
-                        TextField("Default F/O Name", text: $defaultCoPilotName)
-                    case "SecondOfficer":
-                        TextField("Default S/O Name", text: $defaultSOName)
-                    default:
-                        TextField("Default Captain Name", text: $defaultCaptainName)
+                    case "F/O": TextField("Default F/O Name", text: $defaultCoPilotName)
+                    case "S/O": TextField("Default S/O Name", text: $defaultSOName)
+                    default:    TextField("Default Captain Name", text: $defaultCaptainName)
                     }
                     Toggle("Show S/O Name Fields", isOn: $showSONameFields)
                 }

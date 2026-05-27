@@ -29,8 +29,6 @@ struct MacDetailPanelView: View {
                     MacDetailPlaceholder(icon: "airplane.arrival", label: "Select an airport")
                 case .frms:
                     MacDetailPlaceholder(icon: "shield.fill", label: "FRMS Detail")
-                case .settings:
-                    EmptyView()
                 }
             }
         }

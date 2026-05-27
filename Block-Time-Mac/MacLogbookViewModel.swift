@@ -450,6 +450,7 @@ final class MacLogbookViewModel: ObservableObject {
         allFlights = rows
         applySort()
         saveVersion += 1
+        MacAircraftFleetService.shared.refresh(customAircraft: fetchCustomAircraft())
     }
 
     // MARK: Save / Update / Delete
@@ -543,6 +544,63 @@ final class MacLogbookViewModel: ObservableObject {
             ctx.rollback()
             return false
         }
+    }
+
+    // MARK: Aircraft CRUD
+
+    func fetchCustomAircraft() -> [MacAircraft] {
+        let req = NSFetchRequest<NSManagedObject>(entityName: "AircraftEntity")
+        req.sortDescriptors = [NSSortDescriptor(key: "registration", ascending: true)]
+        let entities = (try? context.fetch(req)) ?? []
+        return entities.compactMap { entity in
+            guard let reg  = entity.value(forKey: "registration") as? String,
+                  let type = entity.value(forKey: "type") as? String else { return nil }
+            return MacAircraft(customRegistration: reg, type: type)
+        }
+    }
+
+    func saveAircraft(_ aircraft: MacAircraft) -> Bool {
+        let check = NSFetchRequest<NSManagedObject>(entityName: "AircraftEntity")
+        check.predicate = NSPredicate(format: "id == %@", aircraft.id)
+        check.fetchLimit = 1
+        guard (try? context.count(for: check)) == 0 else { return false }
+        let entity = NSEntityDescription.insertNewObject(forEntityName: "AircraftEntity", into: context)
+        entity.setValue(aircraft.id,               forKey: "id")
+        entity.setValue(aircraft.registration,     forKey: "registration")
+        entity.setValue(aircraft.fullRegistration, forKey: "fullRegistration")
+        entity.setValue(aircraft.type,             forKey: "type")
+        entity.setValue(Date.now,                  forKey: "createdAt")
+        do {
+            try context.save()
+            MacAircraftFleetService.shared.refresh(customAircraft: fetchCustomAircraft())
+            return true
+        } catch {
+            context.rollback()
+            return false
+        }
+    }
+
+    func deleteAircraft(_ aircraft: MacAircraft) -> Bool {
+        let req = NSFetchRequest<NSManagedObject>(entityName: "AircraftEntity")
+        req.predicate = NSPredicate(format: "id == %@", aircraft.id)
+        req.fetchLimit = 1
+        guard let entity = (try? context.fetch(req))?.first else { return false }
+        context.delete(entity)
+        do {
+            try context.save()
+            MacAircraftFleetService.shared.refresh(customAircraft: fetchCustomAircraft())
+            return true
+        } catch {
+            context.rollback()
+            return false
+        }
+    }
+
+    func isCustomAircraft(_ aircraft: MacAircraft) -> Bool {
+        let req = NSFetchRequest<NSManagedObject>(entityName: "AircraftEntity")
+        req.predicate = NSPredicate(format: "id == %@", aircraft.id)
+        req.fetchLimit = 1
+        return (try? context.count(for: req)) ?? 0 > 0
     }
 
     private nonisolated func applyFields(_ s: MacEditableFlight, to entity: NSManagedObject, ctx: NSManagedObjectContext, isNew: Bool) {

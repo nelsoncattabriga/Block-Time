@@ -7,9 +7,20 @@ import SwiftUI
 
 @main
 struct Block_Time_MacApp: App {
+    @AppStorage("macAppearance") private var appearanceRaw: String = "system"
+
+    private var preferredColorScheme: ColorScheme? {
+        switch appearanceRaw {
+        case "light": return .light
+        case "dark":  return .dark
+        default:      return nil
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             MacRootView()
+                .preferredColorScheme(preferredColorScheme)
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified(showsTitle: true))
@@ -21,6 +32,24 @@ struct Block_Time_MacApp: App {
                 }
                 .keyboardShortcut("n", modifiers: .command)
             }
+        }
+
+        Settings {
+            TabView {
+                Tab("Crew & Ops", systemImage: "person.2.fill") {
+                    MacCrewSettingsView()
+                }
+                Tab("Flight Info", systemImage: "scribble.variable") {
+                    MacFlightInfoSettingsView()
+                }
+                Tab("FRMS", systemImage: "clock.badge.exclamationmark") {
+                    MacFRMSSettingsView()
+                }
+                Tab("Appearance", systemImage: "moonphase.first.quarter") {
+                    MacAppearanceSettingsView()
+                }
+            }
+            .frame(width: 520, height: 480)
         }
     }
 }

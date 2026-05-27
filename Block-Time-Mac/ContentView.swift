@@ -11,11 +11,10 @@ import SwiftUI
 // MARK: - Mac Section
 
 enum MacSection: String, Hashable, CaseIterable {
-    case logbook    = "Logbook"
-    case dashboard  = "Dashboard"
-    case map        = "Map"
-    case frms       = "FRMS"
-    case settings   = "Settings"
+    case logbook   = "Logbook"
+    case dashboard = "Dashboard"
+    case map       = "Map"
+    case frms      = "FRMS"
 
     var icon: String {
         switch self {
@@ -23,7 +22,6 @@ enum MacSection: String, Hashable, CaseIterable {
         case .dashboard: return "chart.bar.fill"
         case .map:       return "map.fill"
         case .frms:      return "shield.fill"
-        case .settings:  return "gearshape.fill"
         }
     }
 
@@ -33,7 +31,6 @@ enum MacSection: String, Hashable, CaseIterable {
         case .dashboard: return .orange
         case .map:       return .green
         case .frms:      return .purple
-        case .settings:  return .gray
         }
     }
 }
@@ -66,18 +63,8 @@ struct MacRootView: View {
     @State private var isSyncing = false
     @State private var detailMode: MacDetailMode = .none
 
-    @AppStorage("macAppearance") private var appearanceRaw: String = "system"
-
     // Single logbook viewmodel lives here so edits trigger table reloads
     @StateObject private var logbookVM = MacLogbookViewModel()
-
-    private var preferredColorScheme: ColorScheme? {
-        switch appearanceRaw {
-        case "light": return .light
-        case "dark":  return .dark
-        default:      return nil
-        }
-    }
 
     private var panelIsVisible: Bool {
         detailMode != .none
@@ -109,7 +96,6 @@ struct MacRootView: View {
             .animation(.easeInOut(duration: 0.18), value: panelIsVisible)
         }
         .navigationSplitViewStyle(.balanced)
-        .preferredColorScheme(preferredColorScheme)
         .onChange(of: tableSelection) { _, newSel in
             guard selectedSection == .logbook else { return }
             if showingFilter {
