@@ -72,7 +72,7 @@ struct AddFlightView: View {
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 if !viewModel.isEditingMode && !isInSplitView {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                    ToolbarItem(placement: .navigationBarLeading) {
                         Button("Cancel") {
                             dismiss()
                         }
