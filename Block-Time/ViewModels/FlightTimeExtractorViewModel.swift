@@ -1977,7 +1977,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
     private func originalTimeCreditType(_ sector: FlightSector) -> TimeCreditType {
         if (Double(sector.p1usTime) ?? 0) > 0 { return .p1us }
         if (Double(sector.p2Time) ?? 0) > 0 { return .p2 }
-        return .p1
+        if (Double(sector.p1Time) ?? 0) > 0 { return .p1 }
+        // No time logged (e.g. PAX/future flights) — use the same position-based default
+        // as loadFlightForEditing so selectedTimeCredit and originalTimeCreditType agree.
+        switch flightTimePosition {
+        case .captain: return .p1
+        case .firstOfficer, .secondOfficer: return .p2
+        }
     }
 
     // MARK: - Custom Counter Helpers
