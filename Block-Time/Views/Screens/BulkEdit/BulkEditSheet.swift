@@ -26,6 +26,7 @@ struct BulkEditSheet: View {
 
     @StateObject private var bulkEditViewModel: BulkEditViewModel
     @State private var showingDiscardAlert = false
+    @State private var showingInstructorConfirmAlert = false
     @State private var keyboardToolbar = KeyboardToolbarState()
 
     // MARK: - Initialization
@@ -104,6 +105,24 @@ struct BulkEditSheet: View {
                                 placeholder: viewModel.useIATACodes ? "e.g. MEL" : "e.g. YMML"
                             )
                         }
+                    }
+
+                    // Instructor Card (only when "Log Instructor Time" is enabled in Settings)
+                    if viewModel.showSpInsSelector {
+                        BulkEditInstructorCard(
+                            selectedFlights: selectedFlights,
+                            instructorType: $bulkEditViewModel.instructorType
+                        )
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(AppColors.insColor.opacity(0.2), lineWidth: 1)
+                        )
                     }
 
                     // Crew Card
@@ -256,14 +275,12 @@ struct BulkEditSheet: View {
                     // Operations Card
                     SectionCard(title: "Operations", icon: "slider.horizontal.3", color: .orange) {
                         VStack(spacing: 16) {
-                            // TODO: Flight Type toggle (FLT/PAX/SIM/INS) hidden — Save button
-                            // modification tracking has a Combine ordering bug with sequential
-                            // property writes. Revisit before shipping.
-//                            BulkEditFlightTypeToggle(
-//                                isPositioning: $bulkEditViewModel.isPositioning,
-//                                isSimulator: $bulkEditViewModel.isSimulator,
-//                                isSpIns: $bulkEditViewModel.isSpIns
-//                            )
+                            // FLT|PAX toggle hidden when all selected flights are SIM (not relevant)
+                            if !selectedFlights.allSatisfy({ $0.simTimeValue > 0 && $0.blockTimeValue < 0.01 }) {
+                                BulkEditFlightTypeToggle(
+                                    isPositioning: $bulkEditViewModel.isPositioning
+                                )
+                            }
 
                             BulkEditPilotRoleSegmentedPicker(
                                 fieldState: $bulkEditViewModel.isPilotFlying
@@ -414,6 +431,14 @@ struct BulkEditSheet: View {
             } message: {
                 Text("You have unsaved changes. Are you sure you want to discard them?")
             }
+            .alert(instructorAlertTitle, isPresented: $showingInstructorConfirmAlert) {
+                Button("Confirm", role: .destructive) {
+                    commitSave()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text(instructorConfirmMessage)
+            }
         }
     }
 
@@ -429,9 +454,43 @@ struct BulkEditSheet: View {
         }
     }
 
+    // MARK: - Computed
+
+    private var instructorAlertTitle: String {
+        if case .value(let t) = bulkEditViewModel.instructorType, t == .removeIns {
+            return "Remove INS Tag?"
+        }
+        return "Tag as INS?"
+    }
+
+    private var instructorConfirmMessage: String {
+        guard case .value(let insType) = bulkEditViewModel.instructorType else { return "" }
+        let alreadyINSCount = selectedFlights.filter { $0.spInsTimeValue > 0 }.count
+        switch insType {
+        case .removeIns:
+            let plural = alreadyINSCount == 1 ? "flight" : "flights"
+            return "\(alreadyINSCount) \(plural) will have the INS tag removed."
+        case .addIns:
+            let eligible = selectedFlights.count - alreadyINSCount
+            var msg = "\(eligible) flight\(eligible == 1 ? "" : "s") will be tagged as INS."
+            if alreadyINSCount > 0 {
+                msg += " \(alreadyINSCount) already INS will be skipped."
+            }
+            return msg
+        }
+    }
+
     // MARK: - Actions
 
     private func saveChanges() {
+        if case .value = bulkEditViewModel.instructorType {
+            showingInstructorConfirmAlert = true
+        } else {
+            commitSave()
+        }
+    }
+
+    private func commitSave() {
         let updates = bulkEditViewModel.applyChanges(to: selectedFlights)
         onSave(updates)
         HapticManager.shared.notification(.success)

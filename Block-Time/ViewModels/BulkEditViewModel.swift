@@ -41,6 +41,13 @@ class BulkEditViewModel: ObservableObject {
         case remove = "Remove"
     }
 
+    // MARK: - Instructor Tag Type Enum
+
+    enum InstructorTagType: Equatable {
+        case addIns
+        case removeIns
+    }
+
     // MARK: - Published Properties
 
     // Flight Date
@@ -110,6 +117,9 @@ class BulkEditViewModel: ObservableObject {
 
     // Remarks
     @Published var remarks: FieldState<String> = .notEdited
+
+    // Instructor
+    @Published var instructorType: FieldState<InstructorTagType> = .notEdited
 
     // Custom Counters (keyed by columnIndex 1-10)
     @Published var customCounterStates: [Int: FieldState<String>] = [:]
@@ -324,7 +334,8 @@ class BulkEditViewModel: ObservableObject {
             "nightLandings": nightLandings,
             "fromAirport": fromAirport,
             "toAirport": toAirport,
-            "remarks": remarks
+            "remarks": remarks,
+            "instructorType": instructorType
         ]
         // Store initial states for each custom counter independently
         for (columnIndex, state) in customCounterStates {
@@ -376,8 +387,12 @@ class BulkEditViewModel: ObservableObject {
         }
         .store(in: &cancellables)
 
+        // isPositioning and isSimulator are written sequentially by BulkEditFlightTypeToggle;
+        // defer to next run loop tick so all three writes complete before checking.
         Publishers.CombineLatest4(
-            $scheduledArrival, $isPilotFlying, $isPositioning, $isSimulator
+            $scheduledArrival, $isPilotFlying,
+            $isPositioning.receive(on: RunLoop.main).eraseToAnyPublisher(),
+            $isSimulator.receive(on: RunLoop.main).eraseToAnyPublisher()
         )
         .sink { [weak self] _ in
             self?.checkForModifications()
@@ -444,12 +459,21 @@ class BulkEditViewModel: ObservableObject {
             .store(in: &cancellables)
 
         Publishers.CombineLatest3(
-            $flightDate, $isSpIns, $spInsTime
+            $flightDate,
+            $isSpIns.receive(on: RunLoop.main).eraseToAnyPublisher(),
+            $spInsTime
         )
         .sink { [weak self] _ in
             self?.checkForModifications()
         }
         .store(in: &cancellables)
+
+        $instructorType
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.checkForModifications()
+            }
+            .store(in: &cancellables)
 
         $customCounterStates
             .receive(on: RunLoop.main)
@@ -504,6 +528,7 @@ class BulkEditViewModel: ObservableObject {
                           hasFieldBeenModified(flightDate, key: "flightDate") ||
                           hasFieldBeenModified(isSpIns, key: "isSpIns") ||
                           hasFieldBeenModified(spInsTime, key: "spInsTime") ||
+                          hasFieldBeenModified(instructorType, key: "instructorType") ||
                           counters.contains(where: { (col, state) in
                               let key = "customCounter_\(col)"
                               if initialStates[key] != nil {
@@ -625,8 +650,9 @@ class BulkEditViewModel: ObservableObject {
                 }
             }
 
-            // Handle Sp/Ins conversion, mirroring the isSimulator pattern above
-            if case .value(let isSp) = isSpIns {
+            // Handle Sp/Ins conversion, mirroring the isSimulator pattern above.
+            // Skip when instructor card is managing spInsTime directly.
+            if case .notEdited = instructorType, case .value(let isSp) = isSpIns {
                 if isSp {
                     // Converting to Sp/Ins: move blockTime to spInsTime, set blockTime to 0
                     let currentBlock = updated.blockTime
@@ -727,6 +753,32 @@ class BulkEditViewModel: ObservableObject {
 
             if case .value(let pos) = isPositioning {
                 updated.isPositioning = pos
+                if pos {
+                    // Mimic single-flight PAX behaviour — clear fields irrelevant to positioning
+                    updated.blockTime = "0.0"
+                    updated.nightTime = "0.0"
+                    updated.p1Time = "0.0"
+                    updated.p1usTime = "0.0"
+                    updated.p2Time = "0.0"
+                    updated.instrumentTime = "0.0"
+                    updated.spInsTime = "0.0"
+                    updated.aircraftReg = ""
+                    updated.aircraftType = ""
+                    updated.captainName = ""
+                    updated.foName = ""
+                    updated.so1Name = nil
+                    updated.so2Name = nil
+                    updated.isPilotFlying = false
+                    updated.dayTakeoffs = 0
+                    updated.nightTakeoffs = 0
+                    updated.dayLandings = 0
+                    updated.nightLandings = 0
+                    updated.isAIII = false
+                    updated.isRNP = false
+                    updated.isILS = false
+                    updated.isGLS = false
+                    updated.isNPA = false
+                }
             }
 
             // Handle approach type - convert single selection to individual booleans
@@ -796,6 +848,25 @@ class BulkEditViewModel: ObservableObject {
 
             if case .value(let rem) = remarks {
                 updated.remarks = rem
+            }
+
+            // Apply instructor tagging/removal
+            if case .value(let insType) = instructorType {
+                switch insType {
+                case .addIns:
+                    if updated.spInsTimeValue == 0 {
+                        // Per-flight: FLT copies blockTime, SIM copies simTime
+                        if updated.simTimeValue > 0 && updated.blockTimeValue < 0.01 {
+                            updated.spInsTime = updated.simTime
+                        } else {
+                            updated.spInsTime = updated.blockTime
+                        }
+                    }
+                case .removeIns:
+                    if updated.spInsTimeValue > 0 {
+                        updated.spInsTime = "0.0"
+                    }
+                }
             }
 
             // Write back custom counter values
