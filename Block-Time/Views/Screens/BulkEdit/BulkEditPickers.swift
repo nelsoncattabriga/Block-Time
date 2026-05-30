@@ -9,38 +9,13 @@ import SwiftUI
 
 struct BulkEditFlightTypeToggle: View {
     @Binding var isPositioning: BulkEditViewModel.FieldState<Bool>
-    @Binding var isSimulator: BulkEditViewModel.FieldState<Bool>
-    @Binding var isSpIns: BulkEditViewModel.FieldState<Bool>
 
-    enum FlightType {
-        case flight
-        case positioning
-        case simulator
-        case ins
-        case mixed
-    }
+    private enum FlightType { case flight, positioning, mixed }
 
     private var currentType: FlightType {
-        // Determine the current flight type based on field states
-        let posValue = isPositioning.displayValue
-        let simValue = isSimulator.displayValue
-        let spValue = isSpIns.displayValue
-
-        // If any field is mixed, the whole thing is mixed
-        if isPositioning.isMixed || isSimulator.isMixed || isSpIns.isMixed {
-            return .mixed
-        }
-
-        // Determine concrete type
-        if let sim = simValue, sim == true {
-            return .simulator
-        } else if let sp = spValue, sp == true {
-            return .ins
-        } else if let pos = posValue, pos == true {
-            return .positioning
-        } else {
-            return .flight
-        }
+        if isPositioning.isMixed { return .mixed }
+        if case .value(let pos) = isPositioning { return pos ? .positioning : .flight }
+        return .flight
     }
 
     var body: some View {
@@ -53,16 +28,13 @@ struct BulkEditFlightTypeToggle: View {
 
             if currentType == .mixed {
                 Button {
-                    // First tap on mixed sets to FLT
                     isPositioning = .value(false)
-                    isSimulator = .value(false)
-                    isSpIns = .value(false)
                     HapticManager.shared.impact(.light)
                 } label: {
                     Text("(Mixed)")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
@@ -72,75 +44,30 @@ struct BulkEditFlightTypeToggle: View {
                 }
             } else {
                 HStack(spacing: 0) {
-                    // FLT Button
                     Button(action: {
                         isPositioning = .value(false)
-                        isSimulator = .value(false)
-                        isSpIns = .value(false)
                         HapticManager.shared.impact(.light)
                     }) {
                         Text("FLT")
                             .font(.subheadline.bold())
-                            .foregroundColor(currentType == .flight ? .white : .secondary)
-                            .frame(width: 48, height: 28)
+                            .foregroundStyle(currentType == .flight ? .white : .secondary)
+                            .frame(width: 56, height: 28)
                             .background(currentType == .flight ? Color.blue : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
 
-                    Divider()
-                        .frame(height: 20)
+                    Divider().frame(height: 20)
 
-                    // PAX Button
                     Button(action: {
                         isPositioning = .value(true)
-                        isSimulator = .value(false)
-                        isSpIns = .value(false)
                         HapticManager.shared.impact(.light)
                     }) {
                         Text("PAX")
                             .font(.subheadline.bold())
-                            .foregroundColor(currentType == .positioning ? .white : .secondary)
-                            .frame(width: 48, height: 28)
+                            .foregroundStyle(currentType == .positioning ? .white : .secondary)
+                            .frame(width: 56, height: 28)
                             .background(currentType == .positioning ? Color.orange : Color(.secondarySystemBackground))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-
-                    Divider()
-                        .frame(height: 20)
-
-                    // SIM Button
-                    Button(action: {
-                        isPositioning = .value(false)
-                        isSimulator = .value(true)
-                        isSpIns = .value(false)
-                        HapticManager.shared.impact(.light)
-                    }) {
-                        Text("SIM")
-                            .font(.subheadline.bold())
-                            .foregroundColor(currentType == .simulator ? .white : .secondary)
-                            .frame(width: 48, height: 28)
-                            .background(currentType == .simulator ? Color.purple : Color(.secondarySystemBackground))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-
-                    Divider()
-                        .frame(height: 20)
-
-                    // INS Button
-                    Button(action: {
-                        isPositioning = .value(false)
-                        isSimulator = .value(false)
-                        isSpIns = .value(true)
-                        HapticManager.shared.impact(.light)
-                    }) {
-                        Text("INS")
-                            .font(.subheadline.bold())
-                            .foregroundColor(currentType == .ins ? .white : .secondary)
-                            .frame(width: 48, height: 28)
-                            .background(currentType == .ins ? Color.indigo : Color(.secondarySystemBackground))
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -155,6 +82,114 @@ struct BulkEditFlightTypeToggle: View {
         }
         .padding(.vertical, 4)
     }
+}
+
+// MARK: - BulkEditInstructorCard
+
+struct BulkEditInstructorCard: View {
+    let selectedFlights: [FlightSector]
+    @Binding var instructorType: BulkEditViewModel.FieldState<BulkEditViewModel.InstructorTagType>
+
+    private enum InsAction { case add, remove }
+
+    @State private var selectedAction: InsAction? = nil
+
+    private var alreadyINSCount: Int {
+        selectedFlights.filter { $0.spInsTimeValue > 0 }.count
+    }
+
+    private var eligibleCount: Int {
+        selectedFlights.filter { $0.spInsTimeValue == 0 }.count
+    }
+
+    private var allAlreadyINS: Bool {
+        alreadyINSCount == selectedFlights.count
+    }
+
+    private var canAdd: Bool { eligibleCount > 0 }
+    private var canRemove: Bool { alreadyINSCount > 0 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+
+            HStack {
+                Image(systemName: "person.wave.2")
+                    .foregroundStyle(AppColors.insColor)
+                Text("Instructor Time")
+                    .font(.body)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                HStack(spacing: 0) {
+                    actionButton(.add, label: "ADD", activeColor: AppColors.insColor, enabled: canAdd)
+                    Divider().frame(height: 20)
+                    actionButton(.remove, label: "REMOVE", activeColor: .red, enabled: canRemove)
+                }
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                )
+            }
+
+            // Context caption
+            if selectedAction == .add, canAdd {
+                if alreadyINSCount > 0 {
+                    Text("\(eligibleCount) of \(selectedFlights.count) will be tagged as INS — \(alreadyINSCount) already INS will be skipped.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("\(selectedFlights.count) flight\(selectedFlights.count == 1 ? "" : "s") will be tagged as INS on Save.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else if selectedAction == .remove {
+                if alreadyINSCount == 0 {
+                    Text("No selected flights are tagged as INS.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("\(alreadyINSCount) flight\(alreadyINSCount == 1 ? "" : "s") will have the INS tag removed on Save.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .onChange(of: selectedAction) { _, newAction in
+            switch newAction {
+            case .add:    instructorType = .value(.addIns)
+            case .remove: instructorType = .value(.removeIns)
+            case nil:     instructorType = .notEdited
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func actionButton(
+        _ action: InsAction,
+        label: String,
+        activeColor: Color,
+        enabled: Bool
+    ) -> some View {
+        let isSelected = selectedAction == action
+        Button(action: {
+            guard enabled else { return }
+            selectedAction = isSelected ? nil : action
+            HapticManager.shared.impact(.light)
+        }) {
+            Text(label)
+                .font(.subheadline.bold())
+                .foregroundStyle(isSelected ? .white : (enabled ? .secondary : Color(.tertiaryLabel)))
+                .frame(width: 72, height: 28)
+                .background(isSelected ? activeColor : Color(.secondarySystemBackground))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(!enabled)
+    }
+
 }
 
 // MARK: - BulkEditPilotRoleSegmentedPicker
