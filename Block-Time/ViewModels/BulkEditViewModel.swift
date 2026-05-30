@@ -346,145 +346,18 @@ class BulkEditViewModel: ObservableObject {
     // MARK: - Modification Tracking
 
     private func setupModificationTracking() {
-        // Monitor all published properties for changes
-        Publishers.CombineLatest4(
-            $aircraftReg, $aircraftType, $prefixOperation, $prefixValue
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        Publishers.CombineLatest(
-            $captainName, $foName
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        Publishers.CombineLatest4(
-            $so1Name, $so2Name, $blockTime, $nightTime
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        Publishers.CombineLatest4(
-            $p1Time, $p1usTime, $p2Time, $instrumentTime
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        Publishers.CombineLatest4(
-            $simTime, $outTime, $inTime, $scheduledDeparture
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        // isPositioning and isSimulator are written sequentially by BulkEditFlightTypeToggle;
-        // defer to next run loop tick so all three writes complete before checking.
-        Publishers.CombineLatest4(
-            $scheduledArrival, $isPilotFlying,
-            $isPositioning.receive(on: RunLoop.main).eraseToAnyPublisher(),
-            $isSimulator.receive(on: RunLoop.main).eraseToAnyPublisher()
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        Publishers.CombineLatest4(
-            $isAIII, $isRNP, $isILS, $selectedTimeCredit
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        $blockTimeRole
+        // Any @Published change fires objectWillChange before the property updates.
+        // Defer by one run loop tick so the new value is readable when we check.
+        objectWillChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.checkForModifications()
-            }
-            .store(in: &cancellables)
-
-        Publishers.CombineLatest3(
-            $isGLS, $isNPA, $selectedApproachType
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        Publishers.CombineLatest4(
-            $dayTakeoffs, $dayLandings, $nightTakeoffs, $nightLandings
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        Publishers.CombineLatest(
-            $regoPrefixOperation, $regoPrefixValue
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        Publishers.CombineLatest(
-            $fromAirport, $toAirport
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        $remarks
-            .sink { [weak self] _ in
-                self?.checkForModifications()
-            }
-            .store(in: &cancellables)
-
-        $isSpIns
-            .sink { [weak self] _ in
-                self?.checkForModifications()
-            }
-            .store(in: &cancellables)
-
-        Publishers.CombineLatest3(
-            $flightDate,
-            $isSpIns.receive(on: RunLoop.main).eraseToAnyPublisher(),
-            $spInsTime
-        )
-        .sink { [weak self] _ in
-            self?.checkForModifications()
-        }
-        .store(in: &cancellables)
-
-        $instructorType
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.checkForModifications()
-            }
-            .store(in: &cancellables)
-
-        $customCounterStates
-            .receive(on: RunLoop.main)
-            .sink { [weak self] newStates in
-                self?.checkForModifications(customStates: newStates)
             }
             .store(in: &cancellables)
     }
 
-    private func checkForModifications(customStates: [Int: FieldState<String>]? = nil) {
-        let counters = customStates ?? customCounterStates
+    private func checkForModifications() {
+        let counters = customCounterStates
         // Check if any field has been changed from its initial state
         hasModifications = hasFieldBeenModified(aircraftReg, key: "aircraftReg") ||
                           hasFieldBeenModified(aircraftType, key: "aircraftType") ||
