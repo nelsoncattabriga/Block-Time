@@ -2,7 +2,7 @@
 //  AppState.swift
 //  Block-Time
 //
-//  Created by Claude on 2026-01-25.
+//  
 //
 
 import Foundation
