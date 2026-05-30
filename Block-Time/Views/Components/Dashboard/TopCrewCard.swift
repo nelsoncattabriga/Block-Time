@@ -160,6 +160,8 @@ struct TopCrewCard: View {
             Text("\(index + 1)")
                 .font(.system(.caption, design: .rounded, weight: .bold))
                 .foregroundStyle(.white)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
                 .frame(width: 20, height: 20)
                 .background(rankColor(index).opacity(barOpacity(index)).gradient, in: Circle())
 
@@ -338,6 +340,8 @@ private struct CrewSheetView: View {
             Text("\(index + 1)")
                 .font(.system(.caption, design: .rounded, weight: .bold))
                 .foregroundStyle(.white)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
                 .frame(width: 20, height: 20)
                 .background(Color.purple.opacity(index < 3 ? 1.0 : 0.5).gradient, in: Circle())
 
