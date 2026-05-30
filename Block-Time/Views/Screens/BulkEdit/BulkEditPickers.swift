@@ -113,9 +113,9 @@ struct BulkEditInstructorCard: View {
         VStack(alignment: .leading, spacing: 8) {
 
             HStack {
-                Image(systemName: "person.wave.2")
+                Image(systemName: "person.wave.2.fill")
                     .foregroundStyle(AppColors.insColor)
-                Text("Instructor Time")
+                Text("Log As Instructor")
                     .font(.body)
                     .fontWeight(.medium)
 
