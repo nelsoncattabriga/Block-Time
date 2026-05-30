@@ -11,7 +11,6 @@ import SwiftUI
 private enum PunctualityPeriod: String, CaseIterable {
     case oneMonth     = "1M"
     case twelveMonths = "12M"
-    
 }
 
 private struct PunctualityStats {
@@ -21,6 +20,8 @@ private struct PunctualityStats {
     var medianDelayedMin: Double = 0
     var mostDelayedRoute: String = ""
     var mostDelayedRoutePct: Double = 0
+    var bestOTPRoute: String = ""
+    var bestOTPRoutePct: Double = 0
 
     var onTimePct: Double  { totalWithData > 0 ? Double(onTime)  / Double(totalWithData) : 0 }
     var delayedPct: Double { totalWithData > 0 ? Double(delayed) / Double(totalWithData) : 0 }
@@ -34,11 +35,21 @@ private struct PunctualityStats {
     static let empty = PunctualityStats()
 }
 
+private struct FlightDelay: Identifiable {
+    let id = UUID()
+    let route: String
+    let date: String
+    let delayMin: Int
+}
+
 struct PunctualityCard: View {
     @AppStorage("punctualityCard_period") private var period: PunctualityPeriod = .twelveMonths
+    @AppStorage("punctualityCard_viewMode") private var showDetail: Bool = false
     @AppStorage("useIATACodes") private var useIATACodes: Bool = true
     @State private var depStats: PunctualityStats = .empty
     @State private var arrStats: PunctualityStats = .empty
+    @State private var depDelays: [FlightDelay] = []
+    @State private var arrDelays: [FlightDelay] = []
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     private var hasAnyData: Bool { depStats.totalWithData > 0 || arrStats.totalWithData > 0 }
@@ -55,6 +66,13 @@ struct PunctualityCard: View {
                 .fixedSize()
             }
 
+            Picker("View", selection: $showDetail) {
+                Text("Summary").tag(false)
+                Text("Details").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .animation(.spring(response: 0.35), value: showDetail)
+
             if !hasAnyData {
                 ContentUnavailableView(
                     "No Schedule Data",
@@ -62,12 +80,20 @@ struct PunctualityCard: View {
                     description: Text("Log STD/OUT and STA/IN times to see OTP stats")
                 )
                 .frame(height: 120)
+            } else if showDetail {
+                VStack(spacing: 14) {
+                    delayDetailSection(label: "Departures", delays: depDelays)
+                    Divider()
+                    delayDetailSection(label: "Arrivals", delays: arrDelays)
+                }
+                .transition(.opacity)
             } else {
                 VStack(spacing: 14) {
                     punctualityColumn(label: "Departures", stats: depStats)
                     Divider()
                     punctualityColumn(label: "Arrivals", stats: arrStats)
                 }
+                .transition(.opacity)
             }
         }
         .padding(16)
@@ -75,6 +101,8 @@ struct PunctualityCard: View {
         .onAppear { loadStats() }
         .onChange(of: period) { loadStats() }
     }
+
+    // MARK: - Summary view
 
     @ViewBuilder
     private func punctualityColumn(label: String, stats: PunctualityStats) -> some View {
@@ -88,10 +116,26 @@ struct PunctualityCard: View {
                     .iPadScaledFont(.caption, phoneFont: .subheadline)
                     .foregroundStyle(.secondary)
             } else {
-                Text(label)
-                    .iPadScaledFont(.caption, phoneFont: .subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(label)
+                        .iPadScaledFont(.caption, phoneFont: .subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                    if stats.delayed > 0 && sizeClass != .regular {
+                        Text("·")
+                            .iPadScaledFont(.caption2, phoneFont: .footnote)
+                            .foregroundStyle(.secondary)
+                        Text("Avg Delay")
+                            .iPadScaledFont(.caption2, phoneFont: .footnote)
+                            .foregroundStyle(.secondary)
+                        Text("\(Int(stats.medianDelayedMin)) min")
+                            .iPadScaledFont(.caption2, phoneFont: .footnote)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
                 HStack(alignment: .center, spacing: 10) {
                     Text(String(format: "%.0f%%", stats.onTimePct * 100))
@@ -107,28 +151,55 @@ struct PunctualityCard: View {
                     }
                 }
 
-                if stats.delayed > 0 {
+                let showDelayed = !stats.mostDelayedRoute.isEmpty
+                let showBest    = !stats.bestOTPRoute.isEmpty
+                let isCompact   = sizeClass != .regular
+                if showDelayed || showBest {
                     HStack(spacing: 4) {
                         Spacer()
-                        Text("Avg Delay")
-                            .iPadScaledFont(.caption2, phoneFont: .footnote)
-                            .foregroundStyle(.secondary)
-                        Text("\(Int(stats.medianDelayedMin)) min")
-                            .iPadScaledFont(.caption2, phoneFont: .footnote)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.red)
-                        if !stats.mostDelayedRoute.isEmpty {
+                        if showBest {
+                            if !isCompact {
+                                Text("Best OTP")
+                                    .iPadScaledFont(.caption2, phoneFont: .footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text(stats.bestOTPRoute)
+                                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.green)
+                            Text(String(format: "%.0f%%", stats.bestOTPRoutePct * 100))
+                                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.green)
+                        }
+                        if showDelayed && showBest {
                             Text("·")
                                 .iPadScaledFont(.caption2, phoneFont: .footnote)
                                 .foregroundStyle(.secondary)
-                            Text("Most Delayed")
-                                .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                .foregroundStyle(.secondary)
-                            Text("\(stats.mostDelayedRoute)")
+                        }
+                        if showDelayed {
+                            if !isCompact {
+                                Text("Worst OTP")
+                                    .iPadScaledFont(.caption2, phoneFont: .footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text(stats.mostDelayedRoute)
                                 .iPadScaledFont(.caption2, phoneFont: .footnote)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.red)
                             Text(String(format: "%.0f%%", stats.mostDelayedRoutePct * 100))
+                                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.red)
+                        }
+                        if !isCompact && stats.delayed > 0 {
+                            Text("·")
+                                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                                .foregroundStyle(.secondary)
+                            Text("Avg Delay")
+                                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                                .foregroundStyle(.secondary)
+                            Text("\(Int(stats.medianDelayedMin)) min")
                                 .iPadScaledFont(.caption2, phoneFont: .footnote)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.red)
@@ -162,6 +233,67 @@ struct PunctualityCard: View {
         .clipShape(Capsule())
     }
 
+    // MARK: - Detail view
+
+    @ViewBuilder
+    private func delayDetailSection(label: String, delays: [FlightDelay]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .iPadScaledFont(.caption, phoneFont: .subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+
+            if delays.isEmpty {
+                Text("No delays recorded")
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                let maxDelay = Double(delays.first?.delayMin ?? 1)
+                VStack(spacing: 6) {
+                    ForEach(delays) { item in
+                        delayRow(item: item, maxDelay: maxDelay)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func delayRow(item: FlightDelay, maxDelay: Double) -> some View {
+        HStack(spacing: 10) {
+            Text(item.route)
+                .font(.system(sizeClass == .regular ? .body : .footnote, design: .monospaced, weight: .bold))
+                .foregroundStyle(.primary)
+                .fixedSize()
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.secondary.opacity(0.1))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.red.opacity(0.75).gradient)
+                        .frame(width: geo.size.width * CGFloat(Double(item.delayMin) / maxDelay))
+                }
+            }
+            .frame(height: 12)
+            .frame(minWidth: 40, maxWidth: .infinity)
+
+            Text(item.date)
+                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize()
+
+            Text("+\(item.delayMin)m")
+                .iPadScaledFont(.caption, phoneFont: .footnote)
+                .fontWeight(.bold)
+                .foregroundStyle(.red)
+                .fixedSize()
+        }
+    }
+
+    // MARK: - Data loading
+
     private func loadStats() {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
@@ -178,8 +310,10 @@ struct PunctualityCard: View {
             flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
         }
 
-        depStats = compute(flights: flights, scheduled: \.scheduledDeparture, actual: \.outTime)
-        arrStats = compute(flights: flights, scheduled: \.scheduledArrival,   actual: \.inTime)
+        let (dStats, dDelays) = compute(flights: flights, scheduled: \.scheduledDeparture, actual: \.outTime)
+        let (aStats, aDelays) = compute(flights: flights, scheduled: \.scheduledArrival,   actual: \.inTime)
+        depStats  = dStats;  depDelays  = dDelays
+        arrStats  = aStats;  arrDelays  = aDelays
     }
 
     private func minutesFromHHMM(_ s: String) -> Int? {
@@ -195,10 +329,16 @@ struct PunctualityCard: View {
         flights: [FlightSector],
         scheduled: KeyPath<FlightSector, String>,
         actual: KeyPath<FlightSector, String>
-    ) -> PunctualityStats {
+    ) -> (PunctualityStats, [FlightDelay]) {
         var result = PunctualityStats()
         var delayedMinutes: [Int] = []
         var routeCounts: [String: (total: Int, delayed: Int, display: String)] = [:]
+        var allDelays: [FlightDelay] = []
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateFormat = "d MMM"
 
         for f in flights {
             guard let sMin = minutesFromHHMM(f[keyPath: scheduled]),
@@ -220,6 +360,14 @@ struct PunctualityCard: View {
                 result.delayed += 1
                 delayedMinutes.append(delayMin)
                 routeCounts[key] = (existing.total + 1, existing.delayed + 1, existing.display)
+
+                let displayDate: String
+                if let d = dateFormatter.date(from: f.date) {
+                    displayDate = displayFormatter.string(from: d)
+                } else {
+                    displayDate = f.date
+                }
+                allDelays.append(FlightDelay(route: "\(from)-\(to)", date: displayDate, delayMin: delayMin))
             } else {
                 result.onTime += 1
                 routeCounts[key] = (existing.total + 1, existing.delayed, existing.display)
@@ -234,14 +382,19 @@ struct PunctualityCard: View {
                 : Double(sorted[mid])
         }
 
-        // Most statistically delayed route — minimum 3 sectors to qualify
-        if let worst = routeCounts.values
-            .filter({ $0.total >= 3 })
-            .max(by: { Double($0.delayed) / Double($0.total) < Double($1.delayed) / Double($1.total) }) {
+        let qualified = routeCounts.values.filter { $0.total >= 3 }
+
+        if let worst = qualified.max(by: { Double($0.delayed) / Double($0.total) < Double($1.delayed) / Double($1.total) }) {
             result.mostDelayedRoute = worst.display
             result.mostDelayedRoutePct = Double(worst.delayed) / Double(worst.total)
         }
 
-        return result
+        if let best = qualified.max(by: { Double($0.total - $0.delayed) / Double($0.total) < Double($1.total - $1.delayed) / Double($1.total) }) {
+            result.bestOTPRoute = best.display
+            result.bestOTPRoutePct = Double(best.total - best.delayed) / Double(best.total)
+        }
+
+        let topDelays = Array(allDelays.sorted { $0.delayMin > $1.delayMin }.prefix(5))
+        return (result, topDelays)
     }
 }
