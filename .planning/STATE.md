@@ -1,11 +1,28 @@
+---
+gsd_state_version: 1.0
+milestone: v2.0
+milestone_name: "## Phases"
+current_phase: —
+status: unknown
+last_updated: "2026-05-31T11:35:56.134Z"
+last_activity: "2026-05-27 - Completed quick task 260527-ddv: Fix ModernRemarksField label uppercase"
+progress:
+  total_phases: 9
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 1
+---
+
 # Block-Time v2.0 — Project State
 
 ## Status
+
 Phase: Not started
 Current phase: —
 Last updated: 2026-05-07
 
 ## Project Reference
+
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** A pilot's logbook must be accurate and never lose data
@@ -30,9 +47,11 @@ Phases completed: 0 / 7
 ## Accumulated Context
 
 ### Key Decisions (logged at phase transitions)
+
 - (none yet)
 
 ### Critical Reminders
+
 - FOUND-01 (VersionedSchema) and FOUND-02 (App Group URL) must be done before any TestFlight build — no exceptions
 - Migration (FOUND-09/10/11) must be proven against a real production .sqlite file, not just in-memory tests
 - CloudKit schema must be deployed to Production (CloudKit Console) before App Store submission — Phase 7 checklist item
@@ -41,9 +60,11 @@ Phases completed: 0 / 7
 - CloudKit record type name must match v1 CD_FlightEntity — verify in CloudKit Console before any Production schema change
 
 ### Open Questions
+
 - (none yet)
 
 ### Blockers
+
 - (none yet)
 
 ### Quick Tasks Completed
@@ -92,6 +113,7 @@ Phases completed: 0 / 7
 | 260524-krm | Add App Store update check to SplashScreenView (iTunes lookup, 24h cache, alert) | 2026-05-24 | c5e9e7b | [260524-krm-add-app-store-update-check-to-splashscre](./quick/260524-krm-add-app-store-update-check-to-splashscre/) |
 | 260526-j09 | Fix custom fields code review issues (alert Bool logic, print removal, DateFormatter, toolbar, loggerDir, sleep) | 2026-05-26 | 79ec901 | [260526-j09-fix-custom-fields-code-review-issues-ale](./quick/260526-j09-fix-custom-fields-code-review-issues-ale/) |
 | 260527-ddv | Fix ModernRemarksField label to use uppercased() for visual consistency | 2026-05-27 | ccc8ac8 | [260527-ddv-fix-modernremarksfield-label-to-use-uppe](./quick/260527-ddv-fix-modernremarksfield-label-to-use-uppe/) |
+| Phase 09-crew-contact-feature P01 | 1min | 2 tasks | 3 files |
 
 ## Session Continuity
 

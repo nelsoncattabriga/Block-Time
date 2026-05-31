@@ -136,7 +136,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Core Data model version 2 + CrewContactService
+- [x] 09-01-PLAN.md — Core Data model version 2 + CrewContactService
 - [ ] 09-02-PLAN.md — CrewContactSheet view + ModernCrewField ⓘ button
 - [ ] 09-03-PLAN.md — CSV backup export + restore for #CONTACTS: line
 
