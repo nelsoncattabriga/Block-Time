@@ -274,6 +274,7 @@ struct PersonalCrewSettingsView: View {
                 ModernDefaultCrewNamesCard(viewModel: viewModel)
                 ModernOpsDataCard(viewModel: viewModel)
                 ModernCustomFieldsCard()
+                ModernCrewNotesCard()
 
                 Spacer(minLength: 20)
             }
@@ -713,6 +714,68 @@ private struct ModernCustomFieldsCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.blue.opacity(0.2), lineWidth: 1)
         )
+    }
+}
+
+private struct ModernCrewNotesCard: View {
+    @State private var showManage = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "note.text")
+                    .foregroundStyle(.blue)
+                    .font(.title3)
+
+                Text("Crew Notes")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+            }
+
+            HStack(spacing: 12) {
+                Image(systemName: "person.text.rectangle")
+                    .foregroundStyle(.blue)
+                    .frame(width: 20)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Saved Notes")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+
+                    Text("View and edit notes for crew members")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+
+                Spacer()
+
+                Button("Manage") {
+                    showManage = true
+                }
+                .font(.subheadline)
+                .foregroundStyle(.blue)
+            }
+            .padding(12)
+            .background(Color(.systemGray6).opacity(0.5))
+            .clipShape(.rect(cornerRadius: 8))
+        }
+        .padding(16)
+        .background(.thinMaterial)
+        .clipShape(.rect(cornerRadius: 12))
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+        )
+        .navigationDestination(isPresented: $showManage) {
+            CrewNotesManageView()
+        }
     }
 }
 
