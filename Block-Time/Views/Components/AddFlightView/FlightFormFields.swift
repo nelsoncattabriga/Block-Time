@@ -326,6 +326,16 @@ struct ModernCrewField: View {
 
             Spacer()
 
+            if isDisabled {
+                Image(systemName: "lock.fill")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            } else {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             if !isDisabled {
                 Button {
                     activeSheet = .contact
@@ -336,16 +346,6 @@ struct ModernCrewField: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 .disabled(value.isEmpty)
-            }
-
-            if isDisabled {
-                Image(systemName: "lock.fill")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            } else {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
         }
         .padding(12)

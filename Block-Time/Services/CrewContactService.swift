@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import CoreData
+@preconcurrency import CoreData
 import Observation
 
 // MARK: - CrewContactBackup
@@ -31,27 +31,19 @@ final class CrewContactService {
 
     /// Returns all crew contacts sorted by name ascending.
     func fetchAll() -> [CrewContactEntity] {
+        let context = FlightDatabaseService.shared.viewContext
         let request: NSFetchRequest<CrewContactEntity> = CrewContactEntity.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-
-        var results: [CrewContactEntity] = []
-        FlightDatabaseService.shared.viewContext.performAndWait {
-            results = (try? FlightDatabaseService.shared.viewContext.fetch(request)) ?? []
-        }
-        return results
+        return context.performAndWait { (try? context.fetch(request)) ?? [] }
     }
 
     /// Finds a contact by name (case-insensitive). Returns nil if not found.
     func fetchContact(name: String) -> CrewContactEntity? {
+        let context = FlightDatabaseService.shared.viewContext
         let request: NSFetchRequest<CrewContactEntity> = CrewContactEntity.fetchRequest()
         request.predicate = NSPredicate(format: "name ==[c] %@", name)
         request.fetchLimit = 1
-
-        var result: CrewContactEntity?
-        FlightDatabaseService.shared.viewContext.performAndWait {
-            result = (try? FlightDatabaseService.shared.viewContext.fetch(request))?.first
-        }
-        return result
+        return context.performAndWait { (try? context.fetch(request))?.first }
     }
 
     /// Creates or updates a contact. If a contact with this name exists, updates notes.
