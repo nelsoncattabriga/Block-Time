@@ -863,43 +863,57 @@ class FileImportService {
             }
             if needsSecurity { url.stopAccessingSecurityScopedResource() }
 
-            // Check for #DEFINITIONS: prefix line
-            let lines = rawContent.components(separatedBy: .newlines)
-            if let firstLine = lines.first, firstLine.hasPrefix("#DEFINITIONS:") {
-                // Extract definitions from the first line
-                var extractedDefinitions: [CustomCounterDefinition]? = nil
-                let json = String(firstLine.dropFirst("#DEFINITIONS:".count))
-                if let data = json.data(using: .utf8),
-                   let defs = try? JSONDecoder().decode([CustomCounterDefinition].self, from: data) {
-                    extractedDefinitions = defs
-                    LogManager.shared.info("Extracted \(defs.count) counter definition(s) from backup")
+            // Strip all #-prefix metadata lines (supports #DEFINITIONS: and #CONTACTS: and any future additions)
+            var remainingLines = rawContent.components(separatedBy: .newlines)
+            var extractedDefinitions: [CustomCounterDefinition]? = nil
+            var extractedContacts: [CrewContactBackup]? = nil
+
+            while let first = remainingLines.first, first.hasPrefix("#") {
+                if first.hasPrefix("#DEFINITIONS:") {
+                    let json = String(first.dropFirst("#DEFINITIONS:".count))
+                    if let data = json.data(using: .utf8),
+                       let defs = try? JSONDecoder().decode([CustomCounterDefinition].self, from: data) {
+                        extractedDefinitions = defs
+                        LogManager.shared.info("Extracted \(defs.count) counter definition(s) from backup")
+                    }
+                } else if first.hasPrefix("#CONTACTS:") {
+                    let json = String(first.dropFirst("#CONTACTS:".count))
+                    if let data = json.data(using: .utf8),
+                       let contacts = try? JSONDecoder().decode([CrewContactBackup].self, from: data) {
+                        extractedContacts = contacts
+                        LogManager.shared.info("Extracted \(contacts.count) crew contact(s) from backup")
+                    }
                 }
+                remainingLines.removeFirst()
+            }
 
-                // Write content minus the #DEFINITIONS: line to a temp file for parsing
-                let remainder = lines.dropFirst().joined(separator: "\n")
-                let tempURL = FileManager.default.temporaryDirectory
-                    .appendingPathComponent(UUID().uuidString + ".csv")
-                try remainder.write(to: tempURL, atomically: true, encoding: .utf8)
-                defer { try? FileManager.default.removeItem(at: tempURL) }
+            // Write stripped content (no #-prefix lines) to temp file for CSV parsing
+            let remainder = remainingLines.joined(separator: "\n")
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString + ".csv")
+            try remainder.write(to: tempURL, atomically: true, encoding: .utf8)
+            defer { try? FileManager.default.removeItem(at: tempURL) }
 
-                let importData = try parseFile(url: tempURL, forceSecurityScoping: false)
-                LogManager.shared.info("Successfully parsed file: \(importData.rows.count) rows")
-                LogManager.shared.info("   Headers: \(importData.headers.prefix(6).joined(separator: ", "))")
+            let importData = try parseFile(url: tempURL, forceSecurityScoping: false)
+            LogManager.shared.info("Successfully parsed file: \(importData.rows.count) rows")
+            LogManager.shared.info("   Headers: \(importData.headers.prefix(6).joined(separator: ", "))")
 
-                guard isLoggerExportFormat(headers: importData.headers) else {
-                    LogManager.shared.info("File is not in Block-Time export format")
-                    completion(.failure(ImportError.notLoggerFormat))
-                    return
-                }
+            guard isLoggerExportFormat(headers: importData.headers) else {
+                LogManager.shared.info("File is not in Block-Time export format")
+                completion(.failure(ImportError.notLoggerFormat))
+                return
+            }
 
-                LogManager.shared.info("Detected Block-Time export format")
-                let mappings = createLoggerFieldMapping(headers: importData.headers)
-                LogManager.shared.info("Created \(mappings.count) field mappings")
-                LogManager.shared.info("Starting import with mode: \(mode)")
+            LogManager.shared.info("Detected Block-Time export format")
+            let mappings = createLoggerFieldMapping(headers: importData.headers)
+            LogManager.shared.info("Created \(mappings.count) field mappings")
+            LogManager.shared.info("Starting import with mode: \(mode)")
 
-                importFlights(from: importData, mapping: mappings, mode: mode) { result in
-                    if case .success = result, let defs = extractedDefinitions {
-                        DispatchQueue.main.async {
+            importFlights(from: importData, mapping: mappings, mode: mode) { result in
+                if case .success = result {
+                    DispatchQueue.main.async {
+                        // Restore counter definitions (existing logic — unchanged)
+                        if let defs = extractedDefinitions {
                             switch definitionsBehavior {
                             case .replaceAll:
                                 CustomCounterService.shared.replaceAllAndSync(defs)
@@ -911,27 +925,24 @@ class FileImportService {
                                 break
                             }
                         }
+                        // Restore crew contacts — merge: keep longer notes
+                        if let contacts = extractedContacts {
+                            for contact in contacts {
+                                guard !contact.name.isEmpty else { continue }
+                                if let existing = CrewContactService.shared.fetchContact(name: contact.name) {
+                                    if contact.notes.count > (existing.notes?.count ?? 0) {
+                                        CrewContactService.shared.upsert(name: contact.name, notes: contact.notes)
+                                    }
+                                    // else keep existing — no-op
+                                } else {
+                                    CrewContactService.shared.upsert(name: contact.name, notes: contact.notes)
+                                }
+                            }
+                        }
                     }
-                    completion(result)
                 }
-                return
+                completion(result)
             }
-
-            // No #DEFINITIONS: line — original path (old backup format)
-            let importData = try parseFile(url: url, forceSecurityScoping: !skipSecurityScoping)
-            LogManager.shared.info("Successfully parsed file: \(importData.rows.count) rows")
-            LogManager.shared.info("   Headers: \(importData.headers.prefix(6).joined(separator: ", "))")
-
-            guard isLoggerExportFormat(headers: importData.headers) else {
-                LogManager.shared.info("File is not in Block-Time export format")
-                throw ImportError.notLoggerFormat
-            }
-
-            LogManager.shared.info("Detected Block-Time export format")
-            let mappings = createLoggerFieldMapping(headers: importData.headers)
-            LogManager.shared.info("Created \(mappings.count) field mappings")
-            LogManager.shared.info("Starting import with mode: \(mode)")
-            importFlights(from: importData, mapping: mappings, mode: mode, completion: completion)
 
         } catch {
             completion(.failure(error))
@@ -1255,7 +1266,7 @@ class FileImportService {
     }
 
     /// Thread-safe overload: caller supplies pre-captured definitions (use when calling from a background thread).
-    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition], useLabelsAsHeaders: Bool = false, writeDefinitionsHeader: Bool = true) -> String {
+    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition], crewContacts: [CrewContactBackup] = [], useLabelsAsHeaders: Bool = false, writeDefinitionsHeader: Bool = true) -> String {
         let definitions = definitions.sorted { $0.columnIndex < $1.columnIndex }
 
         // Prepend #DEFINITIONS: line if any counters are configured (backup only)
@@ -1265,6 +1276,14 @@ class FileImportService {
            let data = try? JSONEncoder().encode(definitions),
            let json = String(data: data, encoding: .utf8) {
             result += "#DEFINITIONS:\(json)\n"
+        }
+
+        // Append #CONTACTS: line if any crew contacts are recorded
+        if writeDefinitionsHeader,
+           !crewContacts.isEmpty,
+           let data = try? JSONEncoder().encode(crewContacts),
+           let json = String(data: data, encoding: .utf8) {
+            result += "#CONTACTS:\(json)\n"
         }
 
         // Build header row, append Counter1…CounterN
