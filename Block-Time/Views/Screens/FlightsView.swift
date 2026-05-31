@@ -120,7 +120,12 @@ struct FlightsView: View {
                 scrollToLastCompleted(in: filteredFlightSectors, proxy: proxy)
             }
             .onChange(of: filteredFlightSectors) { _, sectors in
-                guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
+                guard !sectors.isEmpty else { return }
+                if isFilterActive {
+                    proxy.scrollTo(sectors.first?.id, anchor: .top)
+                    return
+                }
+                guard !hasScrolledOnLaunch else { return }
                 hasScrolledOnLaunch = true
                 scrollToLastCompleted(in: sectors, proxy: proxy)
             }

@@ -288,12 +288,17 @@ private struct FlightsListContent: View {
                 scrollToLastCompleted(in: filteredFlightSectors, proxy: proxy)
             }
             .onChange(of: filteredFlightSectors) { _, sectors in
-                if pendingScrollToLatest, !sectors.isEmpty {
+                guard !sectors.isEmpty else { return }
+                if pendingScrollToLatest {
                     pendingScrollToLatest = false
                     scrollToLastCompleted(in: sectors, proxy: proxy)
                     return
                 }
-                guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
+                if isFilterActive {
+                    proxy.scrollTo(sectors.first?.id, anchor: .top)
+                    return
+                }
+                guard !hasScrolledOnLaunch else { return }
                 hasScrolledOnLaunch = true
                 scrollToLastCompleted(in: sectors, proxy: proxy)
             }
