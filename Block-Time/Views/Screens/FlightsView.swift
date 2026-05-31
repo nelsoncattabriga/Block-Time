@@ -117,26 +117,12 @@ struct FlightsView: View {
             .onAppear {
                 guard !hasScrolledOnLaunch, !filteredFlightSectors.isEmpty else { return }
                 hasScrolledOnLaunch = true
-                let anchorID = filteredFlightSectors.first(where: {
-                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
-                })?.id ?? filteredFlightSectors.last?.id
-                if let id = anchorID {
-                    Task { @MainActor in
-                        proxy.scrollTo(id, anchor: .top)
-                    }
-                }
+                scrollToLastCompleted(in: filteredFlightSectors, proxy: proxy)
             }
             .onChange(of: filteredFlightSectors) { _, sectors in
                 guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
                 hasScrolledOnLaunch = true
-                let anchorID = sectors.first(where: {
-                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
-                })?.id ?? sectors.last?.id
-                if let id = anchorID {
-                    Task { @MainActor in
-                        proxy.scrollTo(id, anchor: .top)
-                    }
-                }
+                scrollToLastCompleted(in: sectors, proxy: proxy)
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightAdded)) { _ in
                 hasScrolledOnLaunch = false
@@ -662,6 +648,20 @@ struct FlightsView: View {
             selectedFlights.insert(sector.id)
         }
         .id(sector.id)
+    }
+
+    private func scrollToLastCompleted(in sectors: [FlightSector], proxy: ScrollViewProxy) {
+        let today = Calendar.current.startOfDay(for: Date())
+        guard let completedIndex = sectors.firstIndex(where: {
+            guard let date = $0.parsedDate else { return false }
+            return date <= today && ($0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning)
+        }) else {
+            if let id = sectors.last?.id { proxy.scrollTo(id, anchor: .top) }
+            return
+        }
+        // Scroll to the next future flight if one exists, so the user sees upcoming context.
+        let scrollIndex = completedIndex > 0 ? completedIndex - 1 : completedIndex
+        proxy.scrollTo(sectors[scrollIndex].id, anchor: .top)
     }
 
     @MainActor
