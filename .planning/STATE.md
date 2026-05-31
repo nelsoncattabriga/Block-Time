@@ -113,10 +113,11 @@ Phases completed: 0 / 7
 | 260524-krm | Add App Store update check to SplashScreenView (iTunes lookup, 24h cache, alert) | 2026-05-24 | c5e9e7b | [260524-krm-add-app-store-update-check-to-splashscre](./quick/260524-krm-add-app-store-update-check-to-splashscre/) |
 | 260526-j09 | Fix custom fields code review issues (alert Bool logic, print removal, DateFormatter, toolbar, loggerDir, sleep) | 2026-05-26 | 79ec901 | [260526-j09-fix-custom-fields-code-review-issues-ale](./quick/260526-j09-fix-custom-fields-code-review-issues-ale/) |
 | 260527-ddv | Fix ModernRemarksField label to use uppercased() for visual consistency | 2026-05-27 | ccc8ac8 | [260527-ddv-fix-modernremarksfield-label-to-use-uppe](./quick/260527-ddv-fix-modernremarksfield-label-to-use-uppe/) |
+| 260601-a73 | Add Crew Notes management UI to Settings (list + edit views, card in Crew & Ops Data) | 2026-06-01 | 54d3628 | [260601-a73-add-crew-notes-management-ui-to-settings](./quick/260601-a73-add-crew-notes-management-ui-to-settings/) |
 | Phase 09-crew-contact-feature P01 | 1min | 2 tasks | 3 files |
 | Phase 09-crew-contact-feature P03 | 5 min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last activity: 2026-05-27 - Completed quick task 260527-ddv: Fix ModernRemarksField label uppercase
+Last activity: 2026-06-01 - Completed quick task 260601-a73: Add Crew Notes management UI to Settings
 Next action: Continue custom fields integration — PDF/print integration
