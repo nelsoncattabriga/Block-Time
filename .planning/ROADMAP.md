@@ -128,6 +128,20 @@ Plans:
 
 ---
 
+### Phase 9: Crew Contact Feature
+
+**Goal:** Pilots can attach free-form notes to crew members via an ⓘ button on each crew field in Add/Edit Flight, with contacts persisted to Core Data, synced via CloudKit, and backed up in the existing CSV backup format.
+**Requirements:** CREW-01
+**Depends on:** None (standalone v1 feature addition)
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Core Data model version 2 + CrewContactService
+- [ ] 09-02-PLAN.md — CrewContactSheet view + ModernCrewField ⓘ button
+- [ ] 09-03-PLAN.md — CSV backup export + restore for #CONTACTS: line
+
+---
+
 ## Progress Table
 
 | Phase | Plans Complete | Status | Completed |
@@ -139,3 +153,4 @@ Plans:
 | 5. Widgets & Extensions | 0/? | Not started | - |
 | 6. Export & Settings | 0/? | Not started | - |
 | 7. Mac + Pre-release | 0/? | Not started | - |
+| 9. Crew Contact Feature | 0/3 | Not started | - |
