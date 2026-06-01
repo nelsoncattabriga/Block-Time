@@ -244,13 +244,16 @@ class FlightDatabaseService: ObservableObject {
             LogManager.shared.debug("CloudKit: Disabling sync for bulk operation")
             description.cloudKitContainerOptions = nil
 
-            // Save context to ensure all pending changes are persisted locally
+            // Save context to ensure all pending changes are persisted locally.
+            // Disable undo registration — this is a housekeeping save, not a user action.
             if viewContext.hasChanges {
+                viewContext.undoManager?.disableUndoRegistration()
                 do {
                     try viewContext.save()
                 } catch {
                     LogManager.shared.error("Error saving context before disabling CloudKit: \(error)")
                 }
+                viewContext.undoManager?.enableUndoRegistration()
             }
         }
 
@@ -270,13 +273,16 @@ class FlightDatabaseService: ObservableObject {
                 containerIdentifier: "iCloud.com.thezoolab.blocktime"
             )
 
-            // Save context to trigger sync of any changes made while disabled
+            // Save context to trigger sync of any changes made while disabled.
+            // Disable undo registration — this is a housekeeping save, not a user action.
             if viewContext.hasChanges {
+                viewContext.undoManager?.disableUndoRegistration()
                 do {
                     try viewContext.save()
                 } catch {
                     LogManager.shared.error("Error saving context after enabling CloudKit: \(error)")
                 }
+                viewContext.undoManager?.enableUndoRegistration()
             }
         }
     }
