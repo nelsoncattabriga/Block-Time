@@ -255,7 +255,7 @@ struct FlightsView: View {
                     .font(.subheadline)
                     .foregroundColor(.orange)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("\u{21A9} \(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
+                    Text("\(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.primary)
                     Text("History clears when app closes")
