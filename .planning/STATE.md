@@ -115,8 +115,9 @@ Phases completed: 0 / 7
 | 260527-ddv | Fix ModernRemarksField label to use uppercased() for visual consistency | 2026-05-27 | ccc8ac8 | [260527-ddv-fix-modernremarksfield-label-to-use-uppe](./quick/260527-ddv-fix-modernremarksfield-label-to-use-uppe/) |
 | 260601-a73 | Add Crew Notes management UI to Settings (list + edit views, card in Crew & Ops Data) | 2026-06-01 | 54d3628 | [260601-a73-add-crew-notes-management-ui-to-settings](./quick/260601-a73-add-crew-notes-management-ui-to-settings/) |
 | 260601-etg | Merge three crew name lists into single savedCrewNames unified list | 2026-06-01 | aa6015f | [260601-etg-merge-crew-name-lists-into-single-savedc](./quick/260601-etg-merge-crew-name-lists-into-single-savedc/) |
+| 260601-rdn | Add undo/redo bar to flights list views (NSUndoManager on viewContext) | 2026-06-01 | cccb7ad | [260601-rdn-add-undo-redo-bar-to-flights-list-views](./quick/260601-rdn-add-undo-redo-bar-to-flights-list-views/) |
 
 ## Session Continuity
 
-Last activity: 2026-06-01 - Completed quick task 260601-etg: Merge crew name lists into single savedCrewNames
+Last activity: 2026-06-01 - Completed quick task 260601-rdn: Add undo/redo bar to flights list views
 Next action: Continue custom fields integration — PDF/print integration
