@@ -50,7 +50,7 @@ struct ApproachTypesCard: View {
                 )
                 .frame(height: 120)
             } else {
-                VStack(spacing: 10) {
+                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                     ForEach(data) { item in
                         approachRow(item: item)
                     }
@@ -109,11 +109,12 @@ struct ApproachTypesCard: View {
 
     @ViewBuilder
     private func approachRow(item: NDApproachTypeStat) -> some View {
-        HStack(spacing: 10) {
+        GridRow {
             Text(item.typeName)
                 .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.bold)
                 .foregroundStyle(item.color)
-                .frame(width: 36, alignment: .leading)
+                .fixedSize()
+                .gridColumnAlignment(.leading)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -127,7 +128,6 @@ struct ApproachTypesCard: View {
                 }
             }
             .frame(height: 16)
-            .layoutPriority(-1)
 
             HStack(spacing: 4) {
                 Text("\(item.count)")
@@ -136,6 +136,7 @@ struct ApproachTypesCard: View {
                     .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
             }
             .fixedSize()
+            .gridColumnAlignment(.trailing)
         }
     }
 }
