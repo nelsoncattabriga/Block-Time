@@ -56,6 +56,7 @@ class LogbookImportService {
             var successCount = 0
             var failureCount = 0
 
+            databaseService.disableUndoManager()
             for sector in flightSectors {
                 if databaseService.saveFlight(sector) {
                     successCount += 1
@@ -63,8 +64,7 @@ class LogbookImportService {
                     failureCount += 1
                 }
             }
-
-            // Database service observers will automatically post debounced .flightDataChanged notification
+            databaseService.enableUndoManager()
 
             return .success(LogbookImportResult(successCount: successCount, failureCount: failureCount))
 
@@ -102,6 +102,7 @@ class LogbookImportService {
             var successCount = 0
             var failureCount = 0
 
+            databaseService.disableUndoManager()
             for sector in flightSectors {
                 if databaseService.saveFlight(sector) {
                     successCount += 1
@@ -109,8 +110,7 @@ class LogbookImportService {
                     failureCount += 1
                 }
             }
-
-            // Database service observers will automatically post debounced .flightDataChanged notification
+            databaseService.enableUndoManager()
 
             return .success(LogbookImportResult(successCount: successCount, failureCount: failureCount))
 
