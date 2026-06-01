@@ -13,6 +13,8 @@ struct CrewContactSheet: View {
     let onDismiss: () -> Void
 
     @State private var notes: String = ""
+    @State private var contactExists = false
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -24,6 +26,13 @@ struct CrewContactSheet: View {
                     TextEditor(text: $notes)
                         .frame(minHeight: 120)
                         .font(.body)
+                }
+                if contactExists {
+                    Section {
+                        Button("Delete Note", role: .destructive) {
+                            showDeleteConfirm = true
+                        }
+                    }
                 }
             }
             .navigationTitle("Crew Contact")
@@ -41,7 +50,18 @@ struct CrewContactSheet: View {
                 }
             }
             .onAppear {
-                notes = CrewContactService.shared.fetchContact(name: name)?.notes ?? ""
+                let contact = CrewContactService.shared.fetchContact(name: name)
+                notes = contact?.notes ?? ""
+                contactExists = contact != nil
+            }
+            .confirmationDialog("Delete note for \(name)?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    CrewContactService.shared.delete(name: name)
+                    onDismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This cannot be undone.")
             }
         }
     }

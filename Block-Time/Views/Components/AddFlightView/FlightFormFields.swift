@@ -341,7 +341,7 @@ struct ModernCrewField: View {
                     activeSheet = .contact
                 } label: {
                     Image(systemName: "info.circle")
-                        .font(.subheadline)
+                        .font(.headline)
                         .foregroundColor(value.isEmpty ? Color.secondary.opacity(0.4) : .blue)
                 }
                 .buttonStyle(PlainButtonStyle())
