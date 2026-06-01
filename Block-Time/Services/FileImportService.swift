@@ -253,11 +253,10 @@ class FileImportService {
         DispatchQueue.global(qos: .userInitiated).async {
             let databaseService = FlightDatabaseService.shared
 
-            // Disable CloudKit sync and undo manager for large imports
+            // Disable CloudKit sync for large imports to avoid background task timeouts
             var cloudKitWasEnabled = false
             DispatchQueue.main.sync {
                 cloudKitWasEnabled = databaseService.disableCloudKitSync()
-                databaseService.disableUndoManager()
             }
 
             // Delete all if replace mode - with proper cleanup
@@ -369,13 +368,12 @@ class FileImportService {
                 mergeProposals: mergeProposals
             )
 
-            // Re-enable CloudKit sync and undo manager after import
-            DispatchQueue.main.sync {
-                if cloudKitWasEnabled {
+            // Re-enable CloudKit sync if it was previously enabled
+            if cloudKitWasEnabled {
+                DispatchQueue.main.sync {
                     databaseService.enableCloudKitSync()
-                    LogManager.shared.info("Import complete. CloudKit will now sync \(successCount) flights in the background.")
                 }
-                databaseService.enableUndoManager()
+                LogManager.shared.info("Import complete. CloudKit will now sync \(successCount) flights in the background.")
             }
 
             DispatchQueue.main.async {
