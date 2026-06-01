@@ -21,21 +21,28 @@ private enum CrewPeriod: String, CaseIterable {
 }
 
 private enum CrewRoleFilter: String, CaseIterable {
-    case all     = "All"
-    case captain = "Capt"
-    case fo      = "FO"
-    case so      = "SO"
+    case all     = "ALL"
+    case captain = "CPT"
+    case fo      = "F/O"
+    case so      = "S/O"
+}
+
+private enum CrewDisplayMode: String, CaseIterable {
+    case hours   = "HRS"
+    case sectors = "FLTS"
 }
 
 private struct CrewFrequency: Identifiable {
     let id = UUID()
     var name: String
+    var hours: Double
     var sectors: Int
 }
 
 struct TopCrewCard: View {
     @AppStorage("crewFrequencyCard_period") private var period: CrewPeriod = .twelveMonths
     @AppStorage("topCrewCard_role") private var roleFilter: CrewRoleFilter = .all
+    @AppStorage("topCrewCard_displayMode") private var displayMode: CrewDisplayMode = .sectors
     @State private var crew: [CrewFrequency] = []
     @State private var isExpanded: Bool = false
     @State private var showSheet: Bool = false
@@ -43,37 +50,58 @@ struct TopCrewCard: View {
     private static let collapsedCount = 5
     private static let expandedCount  = 10
 
+    private var sorted: [CrewFrequency] {
+        displayMode == .hours
+            ? crew.sorted { $0.hours > $1.hours }
+            : crew.sorted { $0.sectors > $1.sectors }
+    }
+
     private var visible: [CrewFrequency] {
-        if isExpanded { return Array(crew.prefix(Self.expandedCount)) }
-        return Array(crew.prefix(Self.collapsedCount))
+        if isExpanded { return Array(sorted.prefix(Self.expandedCount)) }
+        return Array(sorted.prefix(Self.collapsedCount))
     }
 
-    private var maxSectors: Double {
-        Double(visible.map { $0.sectors }.max() ?? 1)
+    private var maxValue: Double {
+        let top = isExpanded ? Array(sorted.prefix(Self.expandedCount)) : Array(sorted.prefix(Self.collapsedCount))
+        return displayMode == .hours
+            ? (top.map { $0.hours }.max() ?? 1)
+            : Double(top.map { $0.sectors }.max() ?? 1)
     }
 
-    private var needsExpandButton: Bool { crew.count > Self.collapsedCount }
-    private var needsSheetButton:  Bool { isExpanded && crew.count > Self.expandedCount }
+    private var needsExpandButton: Bool { sorted.count > Self.collapsedCount }
+    private var needsSheetButton:  Bool { isExpanded && sorted.count > Self.expandedCount }
     @State private var nameColumnWidth: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Top Crew", icon: "person.2.fill", iconColor: .purple) {
-                Picker("Period", selection: $period) {
-                    ForEach(CrewPeriod.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+                HStack(spacing: 4) {
+                    Menu {
+                        ForEach(CrewRoleFilter.allCases, id: \.self) { option in
+                            Button(option.rawValue) { roleFilter = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: roleFilter.rawValue)
+                    }
+
+                    Menu {
+                        ForEach(CrewDisplayMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { displayMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: displayMode.rawValue)
+                    }
+
+                    Menu {
+                        ForEach(CrewPeriod.allCases, id: \.self) { option in
+                            Button(option.rawValue) { period = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: period.rawValue)
                     }
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
-
-            Picker("Role", selection: $roleFilter) {
-                ForEach(CrewRoleFilter.allCases, id: \.self) {
-                    Text($0.rawValue).tag($0)
-                }
-            }
-            .pickerStyle(.segmented)
 
             if crew.isEmpty {
                 VStack(spacing: 8) {
@@ -96,6 +124,7 @@ struct TopCrewCard: View {
                     }
                 }
                 .onPreferenceChange(MaxWidthKey.self) { nameColumnWidth = $0 }
+                .animation(.spring(response: 0.4), value: displayMode)
                 .animation(.spring(response: 0.4), value: isExpanded)
 
                 if needsExpandButton {
@@ -110,7 +139,7 @@ struct TopCrewCard: View {
         .onChange(of: period) { loadCrew() }
         .onChange(of: roleFilter) { loadCrew() }
         .sheet(isPresented: $showSheet) {
-            CrewSheetView(period: period, roleFilter: roleFilter)
+            CrewSheetView(period: period, roleFilter: roleFilter, displayMode: displayMode)
         }
     }
 
@@ -184,17 +213,28 @@ struct TopCrewCard: View {
                         .fill(Color.secondary.opacity(0.1))
                     RoundedRectangle(cornerRadius: 3)
                         .fill(rankColor(index).opacity(barOpacity(index)).gradient)
-                        .frame(width: geo.size.width * CGFloat(Double(member.sectors) / maxSectors))
-                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: member.sectors)
+                        .frame(width: geo.size.width * CGFloat(
+                            displayMode == .hours
+                                ? member.hours / maxValue
+                                : Double(member.sectors) / maxValue
+                        ))
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: displayMode)
                 }
             }
             .frame(height: 12)
             .frame(minWidth: 60, maxWidth: .infinity)
 
-            Text("\(member.sectors)")
-                .iPadScaledFont(.caption, phoneFont: .footnote)
-                .fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            if displayMode == .hours {
+                Text(String(format: "%.0f", member.hours))
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("\(member.sectors)")
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -216,30 +256,30 @@ struct TopCrewCard: View {
             flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
         }
 
-        var counts: [String: (name: String, n: Int)] = [:]
+        var counts: [String: (name: String, hours: Double, n: Int)] = [:]
 
-        func tally(key: String, name: String) {
+        func tally(key: String, name: String, blockTime: Double) {
             let trimmed = name.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty, trimmed.lowercased() != "self" else { return }
-            counts[key] = (trimmed, (counts[key]?.n ?? 0) + 1)
+            counts[key] = (trimmed, (counts[key]?.hours ?? 0) + blockTime, (counts[key]?.n ?? 0) + 1)
         }
 
         for f in flights {
+            let bt = Double(f.blockTime) ?? 0
             if roleFilter == .all || roleFilter == .captain {
-                tally(key: f.captainName, name: f.captainName)
+                tally(key: f.captainName, name: f.captainName, blockTime: bt)
             }
             if roleFilter == .all || roleFilter == .fo {
-                tally(key: "FO_\(f.foName)", name: f.foName)
+                tally(key: "FO_\(f.foName)", name: f.foName, blockTime: bt)
             }
             if roleFilter == .all || roleFilter == .so {
-                if let n = f.so1Name { tally(key: "SO1_\(n)", name: n) }
-                if let n = f.so2Name { tally(key: "SO2_\(n)", name: n) }
+                if let n = f.so1Name { tally(key: "SO1_\(n)", name: n, blockTime: bt) }
+                if let n = f.so2Name { tally(key: "SO2_\(n)", name: n, blockTime: bt) }
             }
         }
 
         crew = counts.values
-            .sorted { $0.n > $1.n }
-            .map { CrewFrequency(name: $0.name, sectors: $0.n) }
+            .map { CrewFrequency(name: $0.name, hours: $0.hours, sectors: $0.n) }
     }
 
     private func rankColor(_ index: Int) -> Color {
@@ -265,35 +305,62 @@ private struct CrewSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var period: CrewPeriod
     @State private var roleFilter: CrewRoleFilter
+    @State private var displayMode: CrewDisplayMode
     @State private var crew: [CrewFrequency] = []
     @State private var nameColumnWidth: CGFloat = 0
 
-    init(period: CrewPeriod, roleFilter: CrewRoleFilter) {
+    init(period: CrewPeriod, roleFilter: CrewRoleFilter, displayMode: CrewDisplayMode) {
         _period = State(initialValue: period)
         _roleFilter = State(initialValue: roleFilter)
+        _displayMode = State(initialValue: displayMode)
     }
 
-    private var maxSectors: Double {
-        Double(crew.map { $0.sectors }.max() ?? 1)
+    private var sorted: [CrewFrequency] {
+        displayMode == .hours
+            ? crew.sorted { $0.hours > $1.hours }
+            : crew.sorted { $0.sectors > $1.sectors }
+    }
+
+    private var maxValue: Double {
+        displayMode == .hours
+            ? (sorted.map { $0.hours }.max() ?? 1)
+            : Double(sorted.map { $0.sectors }.max() ?? 1)
+    }
+
+    @ViewBuilder
+    private var filterRow: some View {
+        HStack(spacing: 4) {
+            Menu {
+                ForEach(CrewRoleFilter.allCases, id: \.self) { option in
+                    Button(option.rawValue) { roleFilter = option }
+                }
+            } label: {
+                CardFilterChip(title: roleFilter.rawValue)
+            }
+            Menu {
+                ForEach(CrewDisplayMode.allCases, id: \.self) { option in
+                    Button(option.rawValue) { displayMode = option }
+                }
+            } label: {
+                CardFilterChip(title: displayMode.rawValue)
+            }
+            Menu {
+                ForEach(CrewPeriod.allCases, id: \.self) { option in
+                    Button(option.rawValue) { period = option }
+                }
+            } label: {
+                CardFilterChip(title: period.rawValue)
+            }
+            Spacer()
+        }
+        .tint(.primary)
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Picker("Period", selection: $period) {
-                        ForEach(CrewPeriod.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    Picker("Role", selection: $roleFilter) {
-                        ForEach(CrewRoleFilter.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    filterRow
 
                     if crew.isEmpty {
                         VStack(spacing: 8) {
@@ -311,11 +378,12 @@ private struct CrewSheetView: View {
                         .padding(.vertical, 24)
                     } else {
                         VStack(spacing: 8) {
-                            ForEach(Array(crew.enumerated()), id: \.element.id) { index, member in
+                            ForEach(Array(sorted.enumerated()), id: \.element.id) { index, member in
                                 sheetRow(index: index, member: member)
                             }
                         }
                         .onPreferenceChange(MaxWidthKey.self) { nameColumnWidth = $0 }
+                        .animation(.spring(response: 0.4), value: displayMode)
                         .animation(.spring(response: 0.4), value: roleFilter)
                     }
                 }
@@ -332,6 +400,7 @@ private struct CrewSheetView: View {
         .onAppear { loadCrew() }
         .onChange(of: period) { loadCrew() }
         .onChange(of: roleFilter) { loadCrew() }
+        .onChange(of: displayMode) { loadCrew() }
     }
 
     @ViewBuilder
@@ -364,16 +433,28 @@ private struct CrewSheetView: View {
                         .fill(Color.secondary.opacity(0.1))
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color.purple.opacity(index < 3 ? 1.0 : 0.5).gradient)
-                        .frame(width: geo.size.width * CGFloat(Double(member.sectors) / maxSectors))
+                        .frame(width: geo.size.width * CGFloat(
+                            displayMode == .hours
+                                ? member.hours / maxValue
+                                : Double(member.sectors) / maxValue
+                        ))
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: displayMode)
                 }
             }
             .frame(height: 12)
             .frame(minWidth: 60, maxWidth: .infinity)
 
-            Text("\(member.sectors)")
-                .iPadScaledFont(.caption, phoneFont: .footnote)
-                .fontWeight(.bold)
-                .foregroundStyle(.secondary)
+            if displayMode == .hours {
+                Text(String(format: "%.0f", member.hours))
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("\(member.sectors)")
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -395,29 +476,29 @@ private struct CrewSheetView: View {
             flights = FlightDatabaseService.shared.fetchFlights(from: formatter.string(from: start), to: endDate)
         }
 
-        var counts: [String: (name: String, n: Int)] = [:]
+        var counts: [String: (name: String, hours: Double, n: Int)] = [:]
 
-        func tally(key: String, name: String) {
+        func tally(key: String, name: String, blockTime: Double) {
             let trimmed = name.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty, trimmed.lowercased() != "self" else { return }
-            counts[key] = (trimmed, (counts[key]?.n ?? 0) + 1)
+            counts[key] = (trimmed, (counts[key]?.hours ?? 0) + blockTime, (counts[key]?.n ?? 0) + 1)
         }
 
         for f in flights {
+            let bt = Double(f.blockTime) ?? 0
             if roleFilter == .all || roleFilter == .captain {
-                tally(key: f.captainName, name: f.captainName)
+                tally(key: f.captainName, name: f.captainName, blockTime: bt)
             }
             if roleFilter == .all || roleFilter == .fo {
-                tally(key: "FO_\(f.foName)", name: f.foName)
+                tally(key: "FO_\(f.foName)", name: f.foName, blockTime: bt)
             }
             if roleFilter == .all || roleFilter == .so {
-                if let n = f.so1Name { tally(key: "SO1_\(n)", name: n) }
-                if let n = f.so2Name { tally(key: "SO2_\(n)", name: n) }
+                if let n = f.so1Name { tally(key: "SO1_\(n)", name: n, blockTime: bt) }
+                if let n = f.so2Name { tally(key: "SO2_\(n)", name: n, blockTime: bt) }
             }
         }
 
         crew = counts.values
-            .sorted { $0.n > $1.n }
-            .map { CrewFrequency(name: $0.name, sectors: $0.n) }
+            .map { CrewFrequency(name: $0.name, hours: $0.hours, sectors: $0.n) }
     }
 }
