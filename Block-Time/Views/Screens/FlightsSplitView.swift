@@ -207,7 +207,6 @@ private struct FlightsListContent: View {
     @State private var hasScrolledOnLaunch = false
     @State private var pendingScrollToLatest = false
     @State private var undoCount: Int = 0
-    @State private var canRedo: Bool = false
     @State private var undoDescription: String? = nil
 
     // Cached date formatter for performance
@@ -553,7 +552,6 @@ private struct FlightsListContent: View {
 
     private func refreshUndoState() {
         undoCount = FlightDatabaseService.shared.undoableChangeCount
-        canRedo = FlightDatabaseService.shared.canRedo
         undoDescription = FlightDatabaseService.shared.lastUndoDescription
     }
 
@@ -575,24 +573,6 @@ private struct FlightsListContent: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                if canRedo {
-                    Button {
-                        HapticManager.shared.impact(.light)
-                        FlightDatabaseService.shared.redoLastChange()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            refreshUndoState()
-                        }
-                    } label: {
-                        Text("Redo")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(Color.gray)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
                 Button {
                     HapticManager.shared.impact(.light)
                     FlightDatabaseService.shared.undoLastChange()
