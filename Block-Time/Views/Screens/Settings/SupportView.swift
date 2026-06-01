@@ -23,6 +23,8 @@ struct SupportView: View {
     @State private var uuidRegenerationMessage = ""
     @State private var showingGhostFlightAlert = false
     @State private var ghostFlightMessage = ""
+    @State private var showingResetCrewNamesConfirm = false
+    @State private var resetCrewNamesMessage: String?
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
@@ -167,6 +169,35 @@ struct SupportView: View {
                                     Image(systemName: "chevron.right")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
+                                }
+                                .padding(12)
+                                .background(Color(.systemGray6).opacity(0.5))
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+
+                            // Reset Crew Names
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                showingResetCrewNamesConfirm = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "person.2.slash")
+                                        .foregroundColor(.orange)
+                                        .frame(width: 20)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Reset Crew Names")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+
+                                        Text("Clear saved names and rebuild from logbook")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
                                 }
                                 .padding(12)
                                 .background(Color(.systemGray6).opacity(0.5))
@@ -385,6 +416,19 @@ struct SupportView: View {
                     } message: {
                         Text("This will recalculate block times from OUT and IN times for all regular flights. Use this to fix data imported from other sources or ensure consistency. SIM and PAX flights will be skipped. This operation cannot be undone.")
                     }
+                    .confirmationDialog("Reset Crew Names?", isPresented: $showingResetCrewNamesConfirm, titleVisibility: .visible) {
+                        Button("Reset", role: .destructive) {
+                            resetCrewNamesFromLogbook()
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("This will clear all saved crew names and rebuild the list from your logbook. Any manually added names not linked to a flight will be removed.")
+                    }
+                    .alert("Crew Names Reset", isPresented: Binding(get: { resetCrewNamesMessage != nil }, set: { if !$0 { resetCrewNamesMessage = nil } })) {
+                        Button("OK", role: .cancel) { resetCrewNamesMessage = nil }
+                    } message: {
+                        Text(resetCrewNamesMessage ?? "")
+                    }
                 }
 
                 Spacer(minLength: 20)
@@ -434,6 +478,22 @@ struct SupportView: View {
                 }
             }
         }
+    }
+    private func resetCrewNamesFromLogbook() {
+        let db = FlightDatabaseService.shared
+        let uds = UserDefaultsService()
+
+        let captains = db.getAllCaptainNames()
+        let fos = db.getAllFONames()
+        let sos = db.getAllSONames()
+        let rebuilt = Array(Set(captains + fos + sos)).sorted()
+
+        var settings = uds.loadSettings()
+        settings.savedCrewNames = rebuilt
+        uds.saveSettings(settings)
+
+        resetCrewNamesMessage = "Rebuilt \(rebuilt.count) crew name\(rebuilt.count == 1 ? "" : "s") from your logbook."
+        HapticManager.shared.notification(.success)
     }
 }
 
