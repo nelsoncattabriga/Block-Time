@@ -210,15 +210,12 @@ class FlightDatabaseService: ObservableObject {
     /// Builds a short undo description for a single flight sector.
     private func undoDescription(verb: String, for sector: FlightSector, includeDate: Bool) -> String {
         let route = "\(sector.fromAirport)-\(sector.toAirport)"
-        var parts: [String] = [verb]
-        if !sector.flightNumber.trimmingCharacters(in: .whitespaces).isEmpty {
-            parts.append(sector.flightNumber.trimmingCharacters(in: .whitespaces))
-        }
+        let fltNo = sector.flightNumber.trimmingCharacters(in: .whitespaces)
+        var parts: [String] = [verb, fltNo.isEmpty ? route : fltNo]
         if includeDate {
             let day = shortDay(from: sector.date)
             if !day.isEmpty { parts.append("\(day) UTC") }
         }
-        parts.append(route)
         return parts.joined(separator: " · ")
     }
 
