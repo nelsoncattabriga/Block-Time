@@ -206,6 +206,8 @@ private struct FlightsListContent: View {
     @State private var cachedTotalHours: Double = 0.0
     @State private var hasScrolledOnLaunch = false
     @State private var pendingScrollToLatest = false
+    @State private var undoCount: Int = 0
+    @State private var canRedo: Bool = false
 
     // Cached date formatter for performance
     private let dateFormatter: DateFormatter = {
@@ -548,6 +550,76 @@ private struct FlightsListContent: View {
         .padding(.top, safeAreaTopInset)
     }
 
+    private func refreshUndoState() {
+        undoCount = FlightDatabaseService.shared.undoableChangeCount
+        canRedo = FlightDatabaseService.shared.canRedo
+    }
+
+    @ViewBuilder
+    private var undoBar: some View {
+        if undoCount > 0 {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.uturn.backward.circle.fill")
+                    .font(.subheadline)
+                    .foregroundColor(.orange)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("\u{21A9} \(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.primary)
+                    Text("History clears when app closes")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if canRedo {
+                    Button {
+                        HapticManager.shared.impact(.light)
+                        FlightDatabaseService.shared.redoLastChange()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            refreshUndoState()
+                        }
+                    } label: {
+                        Text("Redo")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(Color.gray)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                Button {
+                    HapticManager.shared.impact(.light)
+                    FlightDatabaseService.shared.undoLastChange()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        refreshUndoState()
+                    }
+                } label: {
+                    Text("Undo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Color.orange)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.orange.opacity(0.4), lineWidth: 1)
+            )
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             customToolbar
@@ -560,6 +632,7 @@ private struct FlightsListContent: View {
                 flightCountHeader
                     .background(Color.clear)
                 filterStatusBanner
+                undoBar
                 flightListContent
             }
         }
@@ -568,6 +641,7 @@ private struct FlightsListContent: View {
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelectMode)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedFlightsForDeletion.count)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: undoCount)
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea(.container, edges: .top)
         .fullScreenCover(isPresented: $showingPaywall) {
@@ -625,10 +699,14 @@ private struct FlightsListContent: View {
                 viewModel.exitEditingMode()
             }
             Task { await loadFlights() }
+            refreshUndoState()
             if AppState.shared.pendingAddFlight {
                 AppState.shared.pendingAddFlight = false
                 isAddingNewFlight = true
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name.NSManagedObjectContextDidSave)) { _ in
+            refreshUndoState()
         }
         .onReceive(NotificationCenter.default.publisher(for: .openAddFlight)) { _ in
             isAddingNewFlight = true
@@ -663,6 +741,7 @@ private struct FlightsListContent: View {
                     }
                 }
             }
+            refreshUndoState()
         }
         .onChange(of: refreshTrigger) { _, _ in
             Task { await loadFlights() }
@@ -686,7 +765,7 @@ private struct FlightsListContent: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This action cannot be undone.")
+            Text("This will delete the selected entries.")
         }
         .alert(bulkDuplicateAlertTitle, isPresented: $showingBulkDuplicateAlert) {
             Button("Duplicate") {
