@@ -5,7 +5,7 @@ milestone_name: "## Phases"
 current_phase: —
 status: unknown
 last_updated: "2026-05-31T11:38:45.080Z"
-last_activity: "2026-05-27 - Completed quick task 260527-ddv: Fix ModernRemarksField label uppercase"
+last_activity: "2026-06-01 - Completed quick task 260601-rdn: Add undo/redo bar to flights list views"
 progress:
   total_phases: 9
   completed_phases: 0
