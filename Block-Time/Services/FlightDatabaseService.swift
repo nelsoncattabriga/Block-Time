@@ -1084,41 +1084,25 @@ class FlightDatabaseService: ObservableObject {
         var duplicateCount = 0
         var mergeProposals: [MergeProposal] = []
 
-        viewContext.performAndWait {
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+
+        context.performAndWait {
             LogManager.shared.info("Database: Starting batch save of \(sectors.count) flights")
 
-            // Step 1: Get all IDs from sectors to check for UUID-based duplicates in ONE query
-            let sectorIDs = sectors.map { $0.id }
-            LogManager.shared.info("Checking \(sectorIDs.count) UUIDs for duplicates")
-            LogManager.shared.info("   First few UUIDs to check: \(sectorIDs.prefix(3).map { $0.uuidString })")
+            // DateFormatter is not thread-safe — create a local instance for this background context
+            let localDateFormatter: DateFormatter = {
+                let f = DateFormatter()
+                f.dateFormat = "dd/MM/yyyy"
+                f.locale = Locale(identifier: "en_US_POSIX")
+                f.timeZone = TimeZone(secondsFromGMT: 0)
+                return f
+            }()
 
-            let checkRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-            checkRequest.predicate = NSPredicate(format: "id IN %@", sectorIDs)
-            checkRequest.propertiesToFetch = ["id", "aircraftType", "aircraftReg"]
-
-            // Maps UUID → existing entity so we can patch blank fields on UUID-matched duplicates
+            // Steps 1 + 2: Single fetch of all existing flights to build all duplicate indexes.
+            // Replaces the previous "id IN [N UUIDs]" query which hangs SQLite at large N.
             var existingByID = [UUID: FlightEntity]()
             var existingIDs = Set<UUID>()
-            do {
-                let existingFlights = try viewContext.fetch(checkRequest)
-                for entity in existingFlights {
-                    guard let id = entity.id else { continue }
-                    existingByID[id] = entity
-                    existingIDs.insert(id)
-                }
-                LogManager.shared.info("Found \(existingIDs.count) existing flights by UUID in database")
-                if !existingIDs.isEmpty {
-                    LogManager.shared.info("   First few existing UUIDs: \(existingIDs.prefix(3).map { $0.uuidString })")
-                }
-            } catch {
-                LogManager.shared.error("Error checking for duplicates: \(error.localizedDescription)")
-                duplicateCount = 0
-                failureCount = sectors.count
-                return
-            }
-
-            // Step 2: Build a content-based duplicate check for flights not caught by UUID
-            // This catches flights that are the same but have different UUIDs (e.g., from backup restore)
             var contentBasedDuplicates = Set<String>()
             // Fuzzy map for WebCIS imports (no flight number): keyed on "date|from|to".
             // Reg is intentionally excluded — the user may have entered the wrong reg manually,
@@ -1132,19 +1116,24 @@ class FlightDatabaseService: ObservableObject {
             var simDuplicates = Set<String>()
             do {
                 let allFlightsRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-                allFlightsRequest.propertiesToFetch = ["date", "flightNumber", "fromAirport", "toAirport", "aircraftReg", "aircraftType", "blockTime", "simTime"]
-                let allFlights = try viewContext.fetch(allFlightsRequest)
+                allFlightsRequest.propertiesToFetch = ["id", "date", "flightNumber", "fromAirport", "toAirport", "aircraftReg", "aircraftType", "simTime"]
+                let allFlights = try context.fetch(allFlightsRequest)
 
                 for flight in allFlights {
+                    // Build UUID duplicate index
+                    if let id = flight.id {
+                        existingByID[id] = flight
+                        existingIDs.insert(id)
+                    }
+
                     guard let date = flight.date,
                           let fromAirport = flight.fromAirport,
                           let toAirport = flight.toAirport
                     else { continue }
                     let aircraftReg = flight.aircraftReg ?? ""
-
                     let flightNumber = flight.flightNumber ?? ""
                     let aircraftType = flight.aircraftType ?? ""
-                    let dateString = dateFormatter.string(from: date)
+                    let dateString = localDateFormatter.string(from: date)
                     let signature = "\(dateString)|\(flightNumber)|\(fromAirport)|\(toAirport)|\(aircraftReg)|\(aircraftType)"
                     contentBasedDuplicates.insert(signature)
 
@@ -1155,7 +1144,7 @@ class FlightDatabaseService: ObservableObject {
                     let normTo   = AirportService.shared.convertToICAO(toAirport)
                     for dayOffset in [-1, 0, 1] {
                         if let offsetDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: date) {
-                            let d = dateFormatter.string(from: offsetDate)
+                            let d = localDateFormatter.string(from: offsetDate)
                             fuzzyDuplicates["\(d)|\(normFrom)|\(normTo)"] = flight.objectID
                         }
                     }
@@ -1167,16 +1156,17 @@ class FlightDatabaseService: ObservableObject {
                     if !simTime.isEmpty, simTime != "0.00", simTime != "0.0", simTime != "0" {
                         for dayOffset in [-1, 0, 1] {
                             if let offsetDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: date) {
-                                let d = dateFormatter.string(from: offsetDate)
+                                let d = localDateFormatter.string(from: offsetDate)
                                 simDuplicates.insert("\(d)|\(simTime)")
                             }
                         }
                     }
                 }
-                LogManager.shared.info("Built content signature map with \(contentBasedDuplicates.count) unique flights, \(fuzzyDuplicates.count) fuzzy entries, \(simDuplicates.count) sim entries")
+                LogManager.shared.info("Found \(existingIDs.count) existing flights by UUID, \(contentBasedDuplicates.count) content signatures, \(fuzzyDuplicates.count) fuzzy entries, \(simDuplicates.count) sim entries")
             } catch {
-                LogManager.shared.error("Error building content-based duplicate check: \(error.localizedDescription)")
-                // Continue without content-based checking if it fails
+                LogManager.shared.error("Error building duplicate indexes: \(error.localizedDescription)")
+                failureCount = sectors.count
+                return
             }
 
             // Step 3: Create all flight entities without saving
@@ -1241,7 +1231,7 @@ class FlightDatabaseService: ObservableObject {
                     let normTo   = AirportService.shared.convertToICAO(sector.toAirport)
                     let fuzzyKey = "\(sector.date)|\(normFrom)|\(normTo)"
                     if let existingObjectID = fuzzyDuplicates[fuzzyKey],
-                       let existing = try? viewContext.existingObject(with: existingObjectID) as? FlightEntity {
+                       let existing = try? context.existingObject(with: existingObjectID) as? FlightEntity {
                         let incomingReg  = sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines)
                         let incomingType = sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines)
                         let existingType = (existing.aircraftType ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1292,12 +1282,12 @@ class FlightDatabaseService: ObservableObject {
                 }
 
                 // Parse and validate date
-                guard let parsedDate = dateFormatter.date(from: sector.date) else {
+                guard let parsedDate = localDateFormatter.date(from: sector.date) else {
                     failureCount += 1
                     continue
                 }
 
-                let flight = FlightEntity(context: viewContext)
+                let flight = FlightEntity(context: context)
                 flight.id = sector.id
                 flight.date = parsedDate
                 flight.flightNumber = sector.flightNumber
@@ -1347,8 +1337,8 @@ class FlightDatabaseService: ObservableObject {
 
             // Step 4: Save ALL flights in ONE operation
             do {
-                if viewContext.hasChanges {
-                    try viewContext.save()
+                if context.hasChanges {
+                    try context.save()
                     LogManager.shared.info("Database: Successfully saved \(successCount) flights")
                 } else {
                     LogManager.shared.debug("Database: No changes to save")
@@ -1360,7 +1350,7 @@ class FlightDatabaseService: ObservableObject {
                 LogManager.shared.info("   Failures: \(failureCount)")
 
             } catch {
-                viewContext.rollback()
+                context.rollback()
                 LogManager.shared.error("Database: Batch save failed - \(error.localizedDescription)")
                 failureCount = sectors.count
                 successCount = 0

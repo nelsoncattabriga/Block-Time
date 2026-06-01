@@ -345,19 +345,17 @@ class FileImportService {
             var importSessionID: UUID? = nil
             var mergeProposals: [MergeProposal] = []
 
-            DispatchQueue.main.sync {
-                let result = databaseService.saveFlightsBatch(flights)
-                successCount = result.successCount
-                let dbFailures = result.failureCount
-                duplicateCount = result.duplicateCount
-                importSessionID = result.sessionID
-                mergeProposals = result.mergeProposals
+            let batchResult = databaseService.saveFlightsBatch(flights)
+            successCount = batchResult.successCount
+            let dbFailures = batchResult.failureCount
+            duplicateCount = batchResult.duplicateCount
+            importSessionID = batchResult.sessionID
+            mergeProposals = batchResult.mergeProposals
 
-                // Track database failures (NOT duplicates) in the import result
-                if dbFailures > 0 {
-                    failureCount += dbFailures
-                    failureReasons["Database save failed (invalid data)", default: 0] += dbFailures
-                }
+            // Track database failures (NOT duplicates) in the import result
+            if dbFailures > 0 {
+                failureCount += dbFailures
+                failureReasons["Database save failed (invalid data)", default: 0] += dbFailures
             }
 
             let result = ImportResult(

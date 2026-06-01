@@ -485,10 +485,8 @@ class MigrationImportService {
         }
 
         // Use the database service's batch save with duplicate detection
-        let result = await MainActor.run {
-            updateProgress(.importingFlights, current: flights.count, total: flights.count, message: "Saving flights to database...")
-            return databaseService.saveFlightsBatch(flightSectors)
-        }
+        updateProgress(.importingFlights, current: flights.count, total: flights.count, message: "Saving flights to database...")
+        let result = databaseService.saveFlightsBatch(flightSectors)
         // result.mergeProposals intentionally ignored — migration imports restore the user's own data
 
         LogManager.shared.info(" Import complete: \(result.successCount) saved, \(result.duplicateCount) duplicates skipped, \(result.failureCount) failed")
