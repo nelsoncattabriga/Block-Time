@@ -75,6 +75,7 @@ struct FlightsView: View {
     @State private var showingSpreadsheet = false
     @State private var undoCount: Int = 0
     @State private var canRedo: Bool = false
+    @State private var undoDescription: String? = nil
 
     // Device-dependent corner radius for action buttons
     private var actionButtonCornerRadius: CGFloat {
@@ -245,6 +246,7 @@ struct FlightsView: View {
     private func refreshUndoState() {
         undoCount = FlightDatabaseService.shared.undoableChangeCount
         canRedo = FlightDatabaseService.shared.canRedo
+        undoDescription = FlightDatabaseService.shared.lastUndoDescription
     }
 
     @ViewBuilder
@@ -255,9 +257,11 @@ struct FlightsView: View {
                     .font(.subheadline)
                     .foregroundColor(.orange)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("\(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
+                    Text(undoDescription ?? "\(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("History clears when app closes")
                         .font(.footnote)
                         .foregroundColor(.secondary)
