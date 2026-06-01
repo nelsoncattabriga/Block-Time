@@ -786,7 +786,7 @@ private struct FlightsListContent: View {
                 }
             }
         } message: {
-            Text("This will permanently delete all flights from this import. This cannot be undone.")
+            Text("This will permanently delete all flights from this import.")
         }
         .sheet(isPresented: $showingBulkEditSheet) {
             let flights = filteredFlightSectors.filter { selectedFlightsForDeletion.contains($0.id) }

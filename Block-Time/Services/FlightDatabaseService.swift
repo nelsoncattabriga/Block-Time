@@ -1507,12 +1507,15 @@ class FlightDatabaseService: ObservableObject {
             request.predicate = NSPredicate(format: "importSessionID == %@", sessionID as CVarArg)
             guard let flights = try? viewContext.fetch(request) else { return }
             deletedCount = flights.count
+            viewContext.undoManager?.beginUndoGrouping()
             for flight in flights {
                 viewContext.delete(flight)
             }
             try? viewContext.save()
+            viewContext.undoManager?.endUndoGrouping()
         }
         if deletedCount > 0 {
+            undoableChangeCount += 1
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             }

@@ -581,7 +581,7 @@ struct FlightsView: View {
                     }
                 }
             } message: {
-                Text("This will permanently delete all flights from this import. This cannot be undone.")
+                Text("This will permanently delete all flights from this import.")
             }
             .alert(deleteFlightAlertTitle,
                    isPresented: $showingDeleteAlert,
