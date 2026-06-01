@@ -273,8 +273,8 @@ struct PersonalCrewSettingsView: View {
             VStack(spacing: 16) {
                 ModernDefaultCrewNamesCard(viewModel: viewModel)
                 ModernOpsDataCard(viewModel: viewModel)
-                ModernCustomFieldsCard()
                 ModernCrewNotesCard()
+                ModernCustomFieldsCard()
 
                 Spacer(minLength: 20)
             }
@@ -718,8 +718,6 @@ private struct ModernCustomFieldsCard: View {
 }
 
 private struct ModernCrewNotesCard: View {
-    @State private var showManage = false
-
     var body: some View {
         VStack(spacing: 16) {
             HStack {
@@ -735,35 +733,22 @@ private struct ModernCrewNotesCard: View {
                 Spacer()
             }
 
-            HStack(spacing: 12) {
-                Image(systemName: "person.text.rectangle")
-                    .foregroundStyle(.blue)
-                    .frame(width: 20)
+            NavigationLink(destination: CrewNotesManageView()) {
+                HStack(spacing: 12) {
+                    Image(systemName: "person.text.rectangle")
+                        .foregroundStyle(.blue)
+                        .frame(width: 20)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Saved Notes")
+                    Text("Edit Notes")
                         .font(.subheadline)
-                        .fontWeight(.medium)
                         .foregroundStyle(.primary)
 
-                    Text("View and edit notes for crew members")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                    Spacer()
                 }
-
-                Spacer()
-
-                Button("Manage") {
-                    showManage = true
-                }
-                .font(.subheadline)
-                .foregroundStyle(.blue)
+                .padding(12)
+                .background(Color(.systemGray6).opacity(0.5))
+                .clipShape(.rect(cornerRadius: 8))
             }
-            .padding(12)
-            .background(Color(.systemGray6).opacity(0.5))
-            .clipShape(.rect(cornerRadius: 8))
         }
         .padding(16)
         .background(.thinMaterial)
@@ -773,9 +758,6 @@ private struct ModernCrewNotesCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.blue.opacity(0.2), lineWidth: 1)
         )
-        .navigationDestination(isPresented: $showManage) {
-            CrewNotesManageView()
-        }
     }
 }
 
