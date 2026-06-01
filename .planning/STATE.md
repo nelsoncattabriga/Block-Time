@@ -116,8 +116,9 @@ Phases completed: 0 / 7
 | 260601-a73 | Add Crew Notes management UI to Settings (list + edit views, card in Crew & Ops Data) | 2026-06-01 | 54d3628 | [260601-a73-add-crew-notes-management-ui-to-settings](./quick/260601-a73-add-crew-notes-management-ui-to-settings/) |
 | 260601-etg | Merge three crew name lists into single savedCrewNames unified list | 2026-06-01 | aa6015f | [260601-etg-merge-crew-name-lists-into-single-savedc](./quick/260601-etg-merge-crew-name-lists-into-single-savedc/) |
 | 260601-rdn | Add undo/redo bar to flights list views (NSUndoManager on viewContext) | 2026-06-01 | cccb7ad | [260601-rdn-add-undo-redo-bar-to-flights-list-views](./quick/260601-rdn-add-undo-redo-bar-to-flights-list-views/) |
+| 260601-sx6 | Add human-readable undo descriptions to the undo bar | 2026-06-01 | f1c599a | [260601-sx6-add-human-readable-undo-descriptions-to-](./quick/260601-sx6-add-human-readable-undo-descriptions-to-/) |
 
 ## Session Continuity
 
-Last activity: 2026-06-01 - Completed quick task 260601-rdn: Add undo/redo bar to flights list views
+Last activity: 2026-06-01 - Completed quick task 260601-sx6: Add human-readable undo descriptions to the undo bar
 Next action: Continue custom fields integration — PDF/print integration
