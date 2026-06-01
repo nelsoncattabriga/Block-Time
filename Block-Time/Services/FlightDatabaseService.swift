@@ -148,6 +148,7 @@ class FlightDatabaseService: ObservableObject {
 
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        container.viewContext.undoManager = UndoManager()
 
         #if DEBUG
         LogManager.shared.debug("CloudKit Schema: Auto-initialization ENABLED (Development)")
@@ -174,6 +175,57 @@ class FlightDatabaseService: ObservableObject {
     
     var viewContext: NSManagedObjectContext {
         return persistentContainer.viewContext
+    }
+
+    // MARK: - Undo / Redo
+
+    var canUndo: Bool { viewContext.undoManager?.canUndo ?? false }
+    var canRedo: Bool { viewContext.undoManager?.canRedo ?? false }
+
+    /// Number of grouped, undoable changes currently on the stack.
+    /// NSUndoManager exposes no public count, so we track it ourselves.
+    private(set) var undoableChangeCount: Int = 0
+
+    @discardableResult
+    func undoLastChange() -> Bool {
+        guard let undoManager = viewContext.undoManager, undoManager.canUndo else { return false }
+        var ok = false
+        viewContext.performAndWait {
+            undoManager.undo()
+            do {
+                try viewContext.save()
+                ok = true
+            } catch {
+                LogManager.shared.error("Undo save failed: \(error.localizedDescription)")
+                viewContext.rollback()
+            }
+        }
+        if ok {
+            undoableChangeCount = max(0, undoableChangeCount - 1)
+            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+        }
+        return ok
+    }
+
+    @discardableResult
+    func redoLastChange() -> Bool {
+        guard let undoManager = viewContext.undoManager, undoManager.canRedo else { return false }
+        var ok = false
+        viewContext.performAndWait {
+            undoManager.redo()
+            do {
+                try viewContext.save()
+                ok = true
+            } catch {
+                LogManager.shared.error("Redo save failed: \(error.localizedDescription)")
+                viewContext.rollback()
+            }
+        }
+        if ok {
+            undoableChangeCount += 1
+            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+        }
+        return ok
     }
 
     // MARK: - CloudKit Sync Control
@@ -304,10 +356,14 @@ class FlightDatabaseService: ObservableObject {
             }
 
             do {
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
                 success = true
                 LogManager.shared.info("Flight saved successfully: \(sector.flightNumberFormatted) \(sector.fromAirport)-\(sector.toAirport) on \(sector.date)")
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 viewContext.rollback()
                 LogManager.shared.error("Error saving flight: \(error.localizedDescription)")
             }
@@ -374,10 +430,14 @@ class FlightDatabaseService: ObservableObject {
                     flight.setCounter(columnIndex, value: value)
                 }
 
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
                 success = true
 
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 viewContext.rollback()
                 LogManager.shared.error("Database: Error updating flight - \(error.localizedDescription)")
             }
@@ -666,10 +726,14 @@ class FlightDatabaseService: ObservableObject {
             // Note: createdAt is preserved from original scheduled flight
 
             do {
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
                 LogManager.shared.info("Successfully updated scheduled flight with actual ACARS data")
                 success = true
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 LogManager.shared.error("Error updating scheduled flight: \(error.localizedDescription)")
                 viewContext.rollback()
             }
@@ -966,17 +1030,21 @@ class FlightDatabaseService: ObservableObject {
                 }
 
                 viewContext.delete(flight)
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
                 success = true
 
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 LogManager.shared.error("Database: Error deleting flight - \(error.localizedDescription)")
             }
         }
 
         return success
     }
-    
+
     /// Delete multiple flights
     func deleteFlights(_ sectors: [FlightSector]) -> Bool {
         var success = false
@@ -989,16 +1057,20 @@ class FlightDatabaseService: ObservableObject {
             do {
                 let flights = try viewContext.fetch(request)
                 flights.forEach { viewContext.delete($0) }
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
                 success = true
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 LogManager.shared.error("Database: Error deleting flights - \(error.localizedDescription)")
             }
         }
 
         return success
     }
-    
+
     /// Duplicate multiple flights, assigning each a new UUID and today's createdAt
     @discardableResult
     func duplicateFlights(_ sectors: [FlightSector]) -> Int {
