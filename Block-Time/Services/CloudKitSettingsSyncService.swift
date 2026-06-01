@@ -74,6 +74,7 @@ class CloudKitSettingsSyncService {
         static let recentAirports = "cloud_recentAirports"
         static let selectedFleetID = "cloud_selectedFleetID"
         static let lastSyncTimestamp = "cloud_lastSyncTimestamp"
+        static let savedCrewNames = "cloud_savedCrewNames"
 
         // Backup settings
         static let backupIsEnabled = "cloud_backupIsEnabled"
@@ -301,6 +302,7 @@ class CloudKitSettingsSyncService {
         ubiquitousStore.set(settings.showFullAircraftReg, forKey: CloudKeys.showFullAircraftReg)
         ubiquitousStore.set(settings.savedCaptainNames, forKey: CloudKeys.savedCaptainNames)
         ubiquitousStore.set(settings.savedCoPilotNames, forKey: CloudKeys.savedCoPilotNames)
+        ubiquitousStore.set(settings.savedCrewNames, forKey: CloudKeys.savedCrewNames)
         ubiquitousStore.set(settings.savePhotosToLibrary, forKey: CloudKeys.savePhotosToLibrary)
         ubiquitousStore.set(settings.showSONameFields, forKey: CloudKeys.showSONameFields)
         ubiquitousStore.set(settings.showSpInsSelector, forKey: CloudKeys.showSpInsSelector)
@@ -475,6 +477,11 @@ class CloudKitSettingsSyncService {
            savedCoPilotNames != localSettings.savedCoPilotNames {
             settings.savedCoPilotNames = savedCoPilotNames
             changedKeys.insert("savedCoPilotNames")
+        }
+        if let savedCrewNames = ubiquitousStore.array(forKey: CloudKeys.savedCrewNames) as? [String],
+           savedCrewNames != localSettings.savedCrewNames {
+            settings.savedCrewNames = savedCrewNames
+            changedKeys.insert("savedCrewNames")
         }
         if let savePhotos = ubiquitousStore.object(forKey: CloudKeys.savePhotosToLibrary) as? Bool,
            savePhotos != localSettings.savePhotosToLibrary {

@@ -95,6 +95,7 @@ struct MigrationSettings: Codable {
     let showFullAircraftReg: Bool?
     let savedCaptainNames: [String]?
     let savedCoPilotNames: [String]?
+    let savedCrewNames: [String]?
     let savePhotosToLibrary: Bool?
     let showSONameFields: Bool?
     let logCustomCount: Bool?
@@ -570,6 +571,9 @@ class MigrationImportService {
         }
         if let savedCoPilotNames = settings.savedCoPilotNames {
             ubiquitousStore.set(savedCoPilotNames, forKey: "cloud_savedCoPilotNames")
+        }
+        if let savedCrewNames = settings.savedCrewNames {
+            ubiquitousStore.set(savedCrewNames, forKey: "cloud_savedCrewNames")
         }
         if let savePhotosToLibrary = settings.savePhotosToLibrary {
             ubiquitousStore.set(savePhotosToLibrary, forKey: "cloud_savePhotosToLibrary")
