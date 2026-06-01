@@ -1367,6 +1367,10 @@ class FlightDatabaseService: ObservableObject {
                 flight.createdAt = batchBaseTime.addingTimeInterval(Double(sectorIndex) * 0.001)
                 flight.modifiedAt = Date()
 
+                for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                    flight.setCounter(columnIndex, value: value)
+                }
+
                 successCount += 1
             }
 
