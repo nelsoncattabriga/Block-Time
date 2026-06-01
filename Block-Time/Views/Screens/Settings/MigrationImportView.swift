@@ -549,8 +549,8 @@ struct MigrationImportView: View {
                     // Store the temp file URL (we own this, no security scoping needed)
                     DispatchQueue.main.async {
                         self.selectedFileURL = tempFile
-                        LogManager.shared.info("📁 Selected migration file: \(url.lastPathComponent)")
-                        LogManager.shared.debug("📁 Copied to temp: \(tempFile.path)")
+                        LogManager.shared.info(" Selected migration file: \(url.lastPathComponent)")
+                        LogManager.shared.debug(" Copied to temp: \(tempFile.path)")
                     }
 
                 } catch {
@@ -575,8 +575,8 @@ struct MigrationImportView: View {
 
     // Handle preselected file URL (from "Open in Block-Time" share sheet)
     private func handlePreselectedFile(url: URL) {
-        LogManager.shared.info("📁 Handling preselected migration file: \(url.lastPathComponent)")
-        LogManager.shared.debug("📁 File URL path: \(url.path)")
+        LogManager.shared.info(" Handling preselected migration file: \(url.lastPathComponent)")
+        LogManager.shared.debug(" File URL path: \(url.path)")
 
         // Try to start accessing security-scoped resource
         // Note: This may return false if the file doesn't need scoping (e.g., already in app container)
@@ -604,7 +604,7 @@ struct MigrationImportView: View {
 
             // Store the temp file URL (we own this, no security scoping needed)
             selectedFileURL = tempFile
-            LogManager.shared.info("✅ Preselected file copied to temp: \(tempFile.path)")
+            LogManager.shared.info(" Preselected file copied to temp: \(tempFile.path)")
 
         } catch {
             importError = "Failed to prepare migration file: \(error.localizedDescription)"
@@ -644,11 +644,11 @@ struct MigrationImportView: View {
                 case .success(let summary):
                     importSummary = summary
                     importComplete = true
-                    LogManager.shared.info("✅ Migration import completed successfully")
+                    LogManager.shared.info(" Migration import completed successfully")
 
                 case .failure(let error):
                     importError = error.localizedDescription
-                    LogManager.shared.error("❌ Migration import failed: \(error)")
+                    LogManager.shared.error(" Migration import failed: \(error)")
                 }
             }
         }
@@ -660,9 +660,9 @@ struct MigrationImportView: View {
         if url.path.hasPrefix(tempDir) {
             do {
                 try FileManager.default.removeItem(at: url)
-                LogManager.shared.debug("🗑️ Cleaned up temp file: \(url.lastPathComponent)")
+                LogManager.shared.debug(" Cleaned up temp file: \(url.lastPathComponent)")
             } catch {
-                LogManager.shared.warning("⚠️ Failed to cleanup temp file: \(error)")
+                LogManager.shared.warning(" Failed to cleanup temp file: \(error)")
             }
         }
     }

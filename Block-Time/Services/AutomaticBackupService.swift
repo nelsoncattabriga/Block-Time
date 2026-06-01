@@ -358,7 +358,7 @@ class AutomaticBackupService: ObservableObject {
 
         let fileURL = backupDir.appendingPathComponent(filename)
 
-        LogManager.shared.info("💾 Writing backup file to: \(fileURL.path)")
+        LogManager.shared.info(" Writing backup file to: \(fileURL.path)")
 
         // Write file
         try csvString.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -453,7 +453,7 @@ class AutomaticBackupService: ObservableObject {
             let backupsToDelete = backups.dropFirst(settings.maxBackupsToKeep)
             for backup in backupsToDelete {
                 try fileManager.removeItem(at: backup.url)
-                LogManager.shared.info("🗑️ Deleted old backup: \(backup.url.lastPathComponent)")
+                LogManager.shared.info(" Deleted old backup: \(backup.url.lastPathComponent)")
             }
         }
     }

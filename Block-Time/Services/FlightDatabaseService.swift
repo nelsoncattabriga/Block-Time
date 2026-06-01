@@ -162,11 +162,11 @@ class FlightDatabaseService: ObservableObject {
             }
         }
         #else
-        LogManager.shared.info("CloudKit Schema: Auto-initialization DISABLED (Production)")
-        LogManager.shared.info("IMPORTANT: Schema must be manually deployed to Production via CloudKit Console")
-        LogManager.shared.info("   1. Open CloudKit Console: https://icloud.developer.apple.com/dashboard")
-        LogManager.shared.info("   2. Select 'iCloud.com.thezoolab.blocktime' container")
-        LogManager.shared.info("   3. Deploy Development schema to Production environment")
+        LogManager.shared.debug("CloudKit Schema: Auto-initialization DISABLED (Production)")
+        LogManager.shared.debug("IMPORTANT: Schema must be manually deployed to Production via CloudKit Console")
+        LogManager.shared.debug("   1. Open CloudKit Console: https://icloud.developer.apple.com/dashboard")
+        LogManager.shared.debug("   2. Select 'iCloud.com.thezoolab.blocktime' container")
+        LogManager.shared.debug("   3. Deploy Development schema to Production environment")
         #endif
 
         return container
@@ -485,32 +485,11 @@ class FlightDatabaseService: ObservableObject {
         var result: FlightEntity?
 
         viewContext.performAndWait {
-            LogManager.shared.debug("Database: Searching for scheduled flight")
-            LogManager.shared.info("   Search criteria:")
-            LogManager.shared.info("   - Date: \(date)")
-            LogManager.shared.info("   - Flight: \(flightNumber)")
-            LogManager.shared.info("   - Route: \(fromAirport)-\(toAirport)")
+            LogManager.shared.debug("Database: Searching for scheduled flight  \(flightNumber) \(fromAirport)-\(toAirport) on \(date)")
 
             guard let searchDate = dateFormatter.date(from: date) else {
-                LogManager.shared.info("Invalid date format for scheduled flight search: \(date)")
+                LogManager.shared.warning("Invalid date format for scheduled flight search: \(date)")
                 return
-            }
-
-            LogManager.shared.info("   - Parsed UTC Date: \(searchDate)")
-
-            // First, let's fetch ALL flights on this date to see what's in the database
-            let debugRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-            debugRequest.predicate = NSPredicate(format: "date == %@", searchDate as NSDate)
-
-            do {
-                let allFlightsOnDate = try viewContext.fetch(debugRequest)
-                LogManager.shared.info("   📋 Found \(allFlightsOnDate.count) flight(s) on \(date):")
-                for flight in allFlightsOnDate {
-                    let blockVal = flight.blockTime ?? "nil"
-                    LogManager.shared.info("      • \(flight.flightNumber ?? "?") \(flight.fromAirport ?? "?")-\(flight.toAirport ?? "?") blockTime='\(blockVal)'")
-                }
-            } catch {
-                LogManager.shared.error("   Error fetching flights for debug: \(error)")
             }
 
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
@@ -519,8 +498,6 @@ class FlightDatabaseService: ObservableObject {
             // e.g., "QF521" -> "521", "0521" -> "521"
             let numericFlightNumber = flightNumber.replacingOccurrences(of: "^[A-Z]{2}", with: "", options: .regularExpression)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "0"))
-
-            LogManager.shared.info("   - Numeric flight number (for matching): \(numericFlightNumber)")
 
             // Match on: date, route, AND flexible flight number matching
             // A scheduled/future flight is identified by empty OUT/IN times (hasn't been flown yet)
@@ -540,11 +517,10 @@ class FlightDatabaseService: ObservableObject {
                     LogManager.shared.info("Found scheduled flight to replace: \(scheduledFlight.flightNumber ?? "?") -> updating to \(flightNumber)")
                     result = scheduledFlight
                 } else {
-                    LogManager.shared.info("No scheduled flight found matching ALL criteria")
-                    LogManager.shared.info("   Tried matching flight numbers: '\(flightNumber)' OR '\(numericFlightNumber)'")
+                    LogManager.shared.debug("No scheduled flight found: \(flightNumber) OR \(numericFlightNumber) on \(date)")
                 }
             } catch {
-                LogManager.shared.info("Error searching for scheduled flight: \(error.localizedDescription)")
+                LogManager.shared.error("Error searching for scheduled flight: \(error.localizedDescription)")
             }
         }
 
@@ -557,13 +533,10 @@ class FlightDatabaseService: ObservableObject {
         var result: FlightEntity?
 
         viewContext.performAndWait {
-            LogManager.shared.debug("Database: Searching for scheduled flight by date and flight number only")
-            LogManager.shared.info("   Search criteria:")
-            LogManager.shared.info("   - Date: \(date)")
-            LogManager.shared.info("   - Flight: \(flightNumber)")
+            LogManager.shared.debug("Database: Searching for scheduled flight by date+flight  \(flightNumber) on \(date)")
 
             guard let searchDate = dateFormatter.date(from: date) else {
-                LogManager.shared.info("Invalid date format for scheduled flight search: \(date)")
+                LogManager.shared.warning("Invalid date format for scheduled flight search: \(date)")
                 return
             }
 
@@ -583,14 +556,12 @@ class FlightDatabaseService: ObservableObject {
             do {
                 let flights = try viewContext.fetch(request)
                 if flights.count == 1 {
-                    // Exactly one match - safe to use
-                    LogManager.shared.info("✈️ Found unique scheduled flight match: \(flights[0].flightNumber ?? "?")")
+                    LogManager.shared.info(" Found unique scheduled flight match: \(flights[0].flightNumber ?? "?")")
                     result = flights[0]
                 } else if flights.count > 1 {
-                    // Multiple matches - ambiguous, don't use
-                    LogManager.shared.info("⚠️ Found \(flights.count) scheduled flights matching date/flight number - too ambiguous for pre-fill")
+                    LogManager.shared.debug(" \(flights.count) scheduled flights match date/flight number  too ambiguous for pre-fill")
                 } else {
-                    LogManager.shared.info("ℹ️ No scheduled flight found matching date and flight number")
+                    LogManager.shared.debug("No scheduled flight found for \(flightNumber) on \(date)")
                 }
             } catch {
                 LogManager.shared.error("Error searching for scheduled flight: \(error.localizedDescription)")
@@ -682,13 +653,13 @@ class FlightDatabaseService: ObservableObject {
             if !actualData.scheduledDeparture.isEmpty {
                 scheduledFlight.scheduledDeparture = actualData.scheduledDeparture
             } else if let existingSTD = scheduledFlight.scheduledDeparture, !existingSTD.isEmpty {
-                LogManager.shared.info("ℹ️ Preserving original STD: \(existingSTD)")
+                LogManager.shared.info(" Preserving original STD: \(existingSTD)")
             }
 
             if !actualData.scheduledArrival.isEmpty {
                 scheduledFlight.scheduledArrival = actualData.scheduledArrival
             } else if let existingSTA = scheduledFlight.scheduledArrival, !existingSTA.isEmpty {
-                LogManager.shared.info("ℹ️ Preserving original STA: \(existingSTA)")
+                LogManager.shared.info(" Preserving original STA: \(existingSTA)")
             }
 
             scheduledFlight.modifiedAt = Date()
@@ -1225,7 +1196,7 @@ class FlightDatabaseService: ObservableObject {
                         // Auto-fill blank aircraftType — no conflict, no user review needed
                         if !incomingType.isEmpty && existingType.isEmpty {
                             existing.aircraftType = incomingType
-                            LogManager.shared.info("✏️ Auto-filled blank aircraftType: \(displayDate) \(displayRoute) → \(incomingType)")
+                            LogManager.shared.info(" Auto-filled blank aircraftType: \(displayDate) \(displayRoute)  \(incomingType)")
                         } else if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
@@ -1248,7 +1219,7 @@ class FlightDatabaseService: ObservableObject {
                         }
                     }
                     duplicateCount += 1
-                    LogManager.shared.info("⊘ Skipping duplicate (UUID match): \(sector.date) \(sector.flightNumber) \(sector.aircraftReg) (UUID: \(sector.id))")
+                    LogManager.shared.debug(" Skipping duplicate (UUID match): \(sector.date) \(sector.flightNumber) \(sector.aircraftReg)")
                     continue
                 }
 
@@ -1256,7 +1227,7 @@ class FlightDatabaseService: ObservableObject {
                 let signature = "\(sector.date)|\(sector.flightNumber)|\(sector.fromAirport)|\(sector.toAirport)|\(sector.aircraftReg)|\(sector.aircraftType)"
                 if contentBasedDuplicates.contains(signature) {
                     duplicateCount += 1
-                    LogManager.shared.info("⊘ Skipping duplicate (content match): \(sector.date) \(sector.flightNumber) \(sector.aircraftType)-\(sector.aircraftReg) (different UUID: \(sector.id))")
+                    LogManager.shared.debug(" Skipping duplicate (content match): \(sector.date) \(sector.flightNumber) \(sector.aircraftType)-\(sector.aircraftReg)")
                     continue
                 }
 
@@ -1290,7 +1261,7 @@ class FlightDatabaseService: ObservableObject {
                         // Auto-fill blank aircraftType — no conflict, no user review needed
                         if !incomingType.isEmpty && existingType.isEmpty {
                             existing.aircraftType = incomingType
-                            LogManager.shared.info("✏️ Auto-filled blank aircraftType (fuzzy): \(displayDate) \(displayRoute) → \(incomingType)")
+                            LogManager.shared.info(" Auto-filled blank aircraftType (fuzzy): \(displayDate) \(displayRoute)  \(incomingType)")
                         } else if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
@@ -1302,7 +1273,7 @@ class FlightDatabaseService: ObservableObject {
                             ))
                         }
                         duplicateCount += 1
-                        LogManager.shared.info("⊘ Skipping duplicate (fuzzy match): \(sector.date) \(sector.fromAirport)→\(sector.toAirport) [\(normFrom)→\(normTo)]")
+                        LogManager.shared.debug(" Skipping duplicate (fuzzy match): \(sector.date) \(sector.fromAirport)\(sector.toAirport)")
                         continue
                     }
                 }
@@ -1315,7 +1286,7 @@ class FlightDatabaseService: ObservableObject {
                     let simKey = "\(sector.date)|\(incomingSimTime)"
                     if simDuplicates.contains(simKey) {
                         duplicateCount += 1
-                        LogManager.shared.info("⊘ Skipping duplicate (sim match): \(sector.date) sim=\(incomingSimTime)")
+                        LogManager.shared.debug(" Skipping duplicate (sim match): \(sector.date) sim=\(incomingSimTime)")
                         continue
                     }
                 }
@@ -1384,8 +1355,8 @@ class FlightDatabaseService: ObservableObject {
                 }
 
                 LogManager.shared.info("Batch save summary:")
-                LogManager.shared.info("   ✓ Success: \(successCount)")
-                LogManager.shared.info("   ⊘ Duplicates: \(duplicateCount)")
+                LogManager.shared.info("    Success: \(successCount)")
+                LogManager.shared.info("    Duplicates: \(duplicateCount)")
                 LogManager.shared.info("   Failures: \(failureCount)")
 
             } catch {
@@ -1421,7 +1392,7 @@ class FlightDatabaseService: ObservableObject {
                 }
                 entity.modifiedAt = Date()
                 appliedCount += 1
-                LogManager.shared.info("✎ Applied merge: \(proposal.flightDate) \(proposal.route) \(proposal.fieldName): '\(proposal.oldValue)' → '\(proposal.newValue)'")
+                LogManager.shared.info(" Applied merge: \(proposal.flightDate) \(proposal.route) \(proposal.fieldName): '\(proposal.oldValue)'  '\(proposal.newValue)'")
             }
             if viewContext.hasChanges {
                 do {
@@ -1565,7 +1536,7 @@ class FlightDatabaseService: ObservableObject {
                        let currentCreatedAt = flight.createdAt,
                        currentCreatedAt < existingCreatedAt {
                         // Current flight is older, delete the existing one and keep this
-                        LogManager.shared.info("⊘ Duplicate detected - keeping older flight (created: \(currentCreatedAt))")
+                        LogManager.shared.info(" Duplicate detected - keeping older flight (created: \(currentCreatedAt))")
                         LogManager.shared.info("   Flight: \(duplicateDescription)")
                         viewContext.delete(existingFlight)
                         newUUIDMap[newUUID] = flight
@@ -1574,7 +1545,7 @@ class FlightDatabaseService: ObservableObject {
                         updatedCount += 1
                     } else {
                         // Existing flight is older, delete current
-                        LogManager.shared.info("⊘ Duplicate detected - keeping older flight (existing)")
+                        LogManager.shared.info(" Duplicate detected - keeping older flight (existing)")
                         LogManager.shared.info("   Flight: \(duplicateDescription)")
                         viewContext.delete(flight)
                         duplicatesRemoved += 1
@@ -1587,7 +1558,7 @@ class FlightDatabaseService: ObservableObject {
                     updatedCount += 1
 
                     if oldUUID != newUUID {
-                        LogManager.shared.info("✓ Updated UUID for \(dateString) \(flightNumber)")
+                        LogManager.shared.info(" Updated UUID for \(dateString) \(flightNumber)")
                     }
                 }
             }
@@ -1596,13 +1567,13 @@ class FlightDatabaseService: ObservableObject {
             if viewContext.hasChanges {
                 try viewContext.save()
                 LogManager.shared.info("Database: UUID regeneration complete:")
-                LogManager.shared.info("   • Updated: \(updatedCount) flights")
-                LogManager.shared.info("   • Removed duplicates: \(duplicatesRemoved)")
+                LogManager.shared.info("    Updated: \(updatedCount) flights")
+                LogManager.shared.info("    Removed duplicates: \(duplicatesRemoved)")
 
                 if !duplicatesList.isEmpty {
-                    LogManager.shared.info("   📋 Duplicates removed:")
+                    LogManager.shared.info("    Duplicates removed:")
                     for duplicate in duplicatesList {
-                        LogManager.shared.info("      • \(duplicate)")
+                        LogManager.shared.info("       \(duplicate)")
                     }
                 }
 
@@ -1612,7 +1583,7 @@ class FlightDatabaseService: ObservableObject {
                     NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             } else {
-                LogManager.shared.info("ℹ️ No changes needed")
+                LogManager.shared.info(" No changes needed")
             }
 
             return (updatedCount, duplicatesRemoved, duplicatesList)
@@ -1663,12 +1634,12 @@ class FlightDatabaseService: ObservableObject {
                     // Verify both values are identical (expected for this bug)
                     // If different, might be a different issue - log warning and skip
                     if abs(simValue - blockValue) > 0.01 {
-                        LogManager.shared.warning("⚠️ Skipping flight with different block/sim times: \(description)")
+                        LogManager.shared.warning(" Skipping flight with different block/sim times: \(description)")
                         continue
                     }
 
                     // Fix: Set blockTime to 0.0, keep simTime
-                    LogManager.shared.info("Migrating: \(description) → block:0.0 sim:\(simTime)")
+                    LogManager.shared.info("Migrating: \(description)  block:0.0 sim:\(simTime)")
                     flight.blockTime = "0.0"
                     flight.modifiedAt = Date()
 
@@ -1679,7 +1650,7 @@ class FlightDatabaseService: ObservableObject {
                 // Save all changes in one transaction
                 if viewContext.hasChanges {
                     try viewContext.save()
-                    LogManager.shared.info("✓ Successfully migrated \(migratedCount) simulator flights")
+                    LogManager.shared.info(" Successfully migrated \(migratedCount) simulator flights")
                 }
 
             } catch {
@@ -1761,7 +1732,7 @@ class FlightDatabaseService: ObservableObject {
                 viewContext.rollback()
             }
         }
-        LogManager.shared.info("migrateLegacyCustomCounterToColumn1: copied customCount → counter1 on \(migratedCount) flights")
+        LogManager.shared.info("migrateLegacyCustomCounterToColumn1: copied customCount  counter1 on \(migratedCount) flights")
         return migratedCount
     }
 
@@ -1790,7 +1761,7 @@ class FlightDatabaseService: ObservableObject {
             try viewContext.save()
             return (flights.count, "Updated \(flights.count) flight(s) from A321 → A21N.")
         } catch {
-            LogManager.shared.error("A321→A21N migration failed: \(error.localizedDescription)")
+            LogManager.shared.error("A321A21N migration failed: \(error.localizedDescription)")
             return (0, "Migration failed: \(error.localizedDescription)")
         }
     }
@@ -1850,7 +1821,7 @@ class FlightDatabaseService: ObservableObject {
                 let toKeep = sortedFlights.first!
                 let toDelete = sortedFlights.dropFirst()
 
-                                LogManager.shared.debug("   ✓ Keeping flight created at: \(toKeep.createdAt ?? Date()) (UUID: \(toKeep.id?.uuidString ?? "unknown"))")
+                                LogManager.shared.debug("    Keeping flight created at: \(toKeep.createdAt ?? Date()) (UUID: \(toKeep.id?.uuidString ?? "unknown"))")
 
                 for duplicate in toDelete {
                                     LogManager.shared.debug("   Deleting duplicate created at: \(duplicate.createdAt ?? Date()) (UUID: \(duplicate.id?.uuidString ?? "unknown"))")
@@ -2985,7 +2956,7 @@ class FlightDatabaseService: ObservableObject {
 
         // Debug separator
         LogManager.shared.debug("CloudKit: Extraction complete - Found \(individualErrors.count) individual errors")
-                        LogManager.shared.debug("═══════════════════════════════════════════════════════\n")
+                        LogManager.shared.debug("\n")
 
         return DetailedSyncError(
             timestamp: Date(),
@@ -3085,15 +3056,15 @@ class FlightDatabaseService: ObservableObject {
 
     @objc private func handleAppDidEnterBackground() {
         isAppInBackground = true
-        LogManager.shared.debug("FlightDatabaseService: App entered background — notifications suppressed")
+        LogManager.shared.debug("FlightDatabaseService: App entered background  notifications suppressed")
     }
 
     @objc private func handleAppDidBecomeActive() {
         isAppInBackground = false
-        LogManager.shared.debug("FlightDatabaseService: App became active — isAppInBackground cleared")
+        LogManager.shared.debug("FlightDatabaseService: App became active  isAppInBackground cleared")
         if pendingDataChanged {
             pendingDataChanged = false
-            LogManager.shared.info("FlightDatabaseService: Posting deferred .flightDataChanged (background→foreground)")
+            LogManager.shared.info("FlightDatabaseService: Posting deferred .flightDataChanged (backgroundforeground)")
             NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             Task { @MainActor in
                 WidgetDataWriter.shared.updateWidgetSnapshot()
@@ -3294,7 +3265,7 @@ class FlightDatabaseService: ObservableObject {
                     NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             } catch {
-                LogManager.shared.error("CloudKit dedup: Failed to save — \(error.localizedDescription)")
+                LogManager.shared.error("CloudKit dedup: Failed to save  \(error.localizedDescription)")
             }
         }
     }
@@ -3374,7 +3345,7 @@ class FlightDatabaseService: ObservableObject {
 
     /// Clear simulated errors and restore normal state
     func clearSimulatedErrors() {
-                        LogManager.shared.debug("🧪 Clearing simulated errors")
+                        LogManager.shared.debug(" Clearing simulated errors")
 
         DispatchQueue.main.async {
             self.lastSyncError = nil
@@ -3390,7 +3361,7 @@ class FlightDatabaseService: ObservableObject {
     /// Skips simulator flights (simTime > 0) and positioning flights (isPositioning = true)
     /// - Returns: Tuple of (successCount, skippedCount, errorCount)
     func recalculateAllBlockTimes() -> (success: Int, skipped: Int, errors: Int) {
-        LogManager.shared.info("🔄 Starting recalculation of all block times")
+        LogManager.shared.info(" Starting recalculation of all block times")
 
         let context = persistentContainer.viewContext
         let fetchRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
@@ -3410,7 +3381,7 @@ class FlightDatabaseService: ObservableObject {
 
         do {
             let flights = try context.fetch(fetchRequest)
-            LogManager.shared.info("📊 Found \(flights.count) regular flights with OUT/IN times to recalculate (excluding SIM and PAX)")
+            LogManager.shared.info(" Found \(flights.count) regular flights with OUT/IN times to recalculate (excluding SIM and PAX)")
 
             let timeCalculationManager = TimeCalculationManager()
 
@@ -3437,12 +3408,12 @@ class FlightDatabaseService: ObservableObject {
 
                     // Log if value changed
                     if oldBlockTime != newBlockTime {
-                        LogManager.shared.debug("✏️ Updated flight \(flight.flightNumber ?? "?"): \(oldBlockTime) → \(newBlockTime)")
+                        LogManager.shared.debug(" Updated flight \(flight.flightNumber ?? "?"): \(oldBlockTime)  \(newBlockTime)")
                     }
 
                     successCount += 1
                 } else {
-                    LogManager.shared.warning("⚠️ Failed to calculate block time for flight \(flight.flightNumber ?? "?")")
+                    LogManager.shared.warning(" Failed to calculate block time for flight \(flight.flightNumber ?? "?")")
                     errorCount += 1
                 }
             }
@@ -3450,13 +3421,13 @@ class FlightDatabaseService: ObservableObject {
             // Save all changes
             if context.hasChanges {
                 try context.save()
-                LogManager.shared.info("✅ Block time recalculation complete: \(successCount) updated, \(skippedCount) skipped, \(errorCount) errors")
+                LogManager.shared.info(" Block time recalculation complete: \(successCount) updated, \(skippedCount) skipped, \(errorCount) errors")
             } else {
-                LogManager.shared.info("ℹ️ No changes needed - all block times already correct")
+                LogManager.shared.info(" No changes needed - all block times already correct")
             }
 
         } catch {
-            LogManager.shared.error("❌ Failed to recalculate block times: \(error.localizedDescription)")
+            LogManager.shared.error(" Failed to recalculate block times: \(error.localizedDescription)")
             errorCount += 1
         }
 

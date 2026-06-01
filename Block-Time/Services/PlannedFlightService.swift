@@ -76,7 +76,7 @@ class PlannedFlightService {
             dateFormatter.dateFormat = "dd/MM/yyyy"
             let dateString = dateFormatter.string(from: parsedFlight.date)
 
-            LogManager.shared.debug("\n✈️  Processing: \(parsedFlight.flightNumber) on \(dateString) (\(parsedFlight.departureAirport)-\(parsedFlight.arrivalAirport))")
+            LogManager.shared.debug("\n  Processing: \(parsedFlight.flightNumber) on \(dateString) (\(parsedFlight.departureAirport)-\(parsedFlight.arrivalAirport))")
 
             // Check if this flight already exists (query for each flight individually)
             let existingFlights = try await findExistingFlights(for: [parsedFlight])
@@ -113,7 +113,7 @@ class PlannedFlightService {
             }
         }
 
-                    LogManager.shared.debug("\n📈 Import Summary:")
+                    LogManager.shared.debug("\n Import Summary:")
                     LogManager.shared.debug("   Imported: \(imported)")
                     LogManager.shared.debug("    Duplicates: \(duplicates)")
                     LogManager.shared.debug("   Errors: \(errors)")
@@ -304,7 +304,7 @@ class PlannedFlightService {
                existingFlightNum == parsedFlightNum &&
                existing.fromAirport == departureICAO &&
                existing.toAirport == arrivalICAO {
-                            LogManager.shared.debug("      ✓ MATCH FOUND - this is a duplicate!")
+                            LogManager.shared.debug("       MATCH FOUND - this is a duplicate!")
                 return true
             }
         }
@@ -345,7 +345,7 @@ class PlannedFlightService {
             localTimeString: localOutTime,
             airportICAO: departureICAO
         )
-                    LogManager.shared.debug("   ⏰ STD conversion: Local '\(localOutTime)' -> UTC '\(utcOutTime)'")
+                    LogManager.shared.debug("    STD conversion: Local '\(localOutTime)' -> UTC '\(utcOutTime)'")
 
         // For arrival time, we need to calculate the local arrival date first
         // (it might be next day if flight crosses midnight)
@@ -367,7 +367,7 @@ class PlannedFlightService {
             localTimeString: localInTime,
             airportICAO: arrivalICAO
         )
-                    LogManager.shared.debug("   ⏰ STA conversion: Local '\(localInTime)' -> UTC '\(utcInTime)'")
+                    LogManager.shared.debug("    STA conversion: Local '\(localInTime)' -> UTC '\(utcInTime)'")
 
         // Convert departure date from local to UTC
         let utcDateString = airportService.convertFromLocalToUTCDate(

@@ -114,7 +114,7 @@ struct Block_TimeApp: App {
 
         // Check if it's a migration file
         if fileExtension == "blocktime" {
-            LogManager.shared.info("📥 Received .blocktime migration file: \(url.lastPathComponent)")
+            LogManager.shared.info("Received .blocktime migration file: \(url.lastPathComponent)")
             appState.isHandlingFileImport = true
             incomingMigrationURL = url
             return

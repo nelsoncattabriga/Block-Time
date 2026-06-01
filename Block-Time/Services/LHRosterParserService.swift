@@ -84,7 +84,7 @@ class LHRosterParserService {
         // Extract header information
         let pilotInfo = extractPilotInfo(from: lines)
 
-                LogManager.shared.debug("📋 Extracted pilot info:")
+                LogManager.shared.debug(" Extracted pilot info:")
                 LogManager.shared.debug("   Name: \(pilotInfo.name)")
                 LogManager.shared.debug("   Staff: \(pilotInfo.staffNumber)")
                 LogManager.shared.debug("   BP: \(pilotInfo.bidPeriod)")
@@ -106,7 +106,7 @@ class LHRosterParserService {
 
         // Extract pattern definitions
         let patterns = extractPatternDefinitions(from: lines)
-                LogManager.shared.debug("✈️  Found \(patterns.count) pattern definitions:")
+                LogManager.shared.debug("  Found \(patterns.count) pattern definitions:")
         for (code, pattern) in patterns {
                     LogManager.shared.debug("   - \(code): \(pattern.flights.count) flights")
         }
@@ -118,7 +118,7 @@ class LHRosterParserService {
             pilotInfo: pilotInfo
         )
 
-                LogManager.shared.debug("🎯 Total flights extracted: \(flights.count)")
+                LogManager.shared.debug(" Total flights extracted: \(flights.count)")
 
         // Sort flights by date and departure time to ensure correct chronological order
         let sortedFlights = flights.sorted { flight1, flight2 in
@@ -167,7 +167,7 @@ class LHRosterParserService {
                     let matched = String(line[match])
                     if let bpMatch = matched.range(of: #"\d+"#, options: .regularExpression) {
                         bidPeriod = String(matched[bpMatch])
-                                LogManager.shared.debug("📋 Detected bid period: \(bidPeriod)")
+                                LogManager.shared.debug(" Detected bid period: \(bidPeriod)")
                     }
                 }
             }
@@ -312,7 +312,7 @@ class LHRosterParserService {
                         let isStandby = dutyCode.hasPrefix("SFL")
 
                         if dutyCode.count < 3 || dutyCode == "AL" || dutyCode == "SR" || dutyCode.hasPrefix("SIM") || dutyCode.hasPrefix("HFC") || dutyCode.hasPrefix("EP") || isGroundTrainingDay || isStandby {
-                                    LogManager.shared.debug("   ⏭️  Skipping non-flight duty: \(dutyCode)")
+                                    LogManager.shared.debug("     Skipping non-flight duty: \(dutyCode)")
                             continue
                         }
 
@@ -382,7 +382,7 @@ class LHRosterParserService {
                 // Save previous pattern if exists
                 if let pattern = currentPattern, !currentFlights.isEmpty {
                     patterns[pattern] = PatternDefinition(code: pattern, flights: currentFlights)
-                            LogManager.shared.debug("✈️  Pattern \(pattern): \(currentFlights.count) flights")
+                            LogManager.shared.debug("  Pattern \(pattern): \(currentFlights.count) flights")
                 }
 
                 // Extract new pattern code - handle both formats
@@ -410,7 +410,7 @@ class LHRosterParserService {
         // Save last pattern
         if let pattern = currentPattern, !currentFlights.isEmpty {
             patterns[pattern] = PatternDefinition(code: pattern, flights: currentFlights)
-                    LogManager.shared.debug("✈️  Pattern \(pattern): \(currentFlights.count) flights")
+                    LogManager.shared.debug("  Pattern \(pattern): \(currentFlights.count) flights")
         }
 
         return patterns
@@ -456,7 +456,7 @@ class LHRosterParserService {
         // Skip ground training or non-flight services (same departure/arrival airport)
         let airports = sectors.components(separatedBy: "/")
         if airports.count == 2 && airports[0] == airports[1] {
-                    LogManager.shared.debug("      ⏭️  Skipping ground training/non-flight service: \(sectors)")
+                    LogManager.shared.debug("        Skipping ground training/non-flight service: \(sectors)")
             return nil
         }
 
@@ -545,7 +545,7 @@ class LHRosterParserService {
 
             if entry.dutyCode == currentDutyCode && daysBetween <= 1 {
                 // Continue the current trip
-                        LogManager.shared.debug("      ➡️  Continuing same trip")
+                        LogManager.shared.debug("        Continuing same trip")
                 previousDate = entry.date
             } else {
                 // End current trip and start a new one
@@ -560,7 +560,7 @@ class LHRosterParserService {
                 currentDutyCode = entry.dutyCode
                 tripStartDate = entry.date
                 previousDate = entry.date
-                        LogManager.shared.debug("      🆕 Starting new trip: \(currentDutyCode) on \(formatDate(tripStartDate))")
+                        LogManager.shared.debug("       Starting new trip: \(currentDutyCode) on \(formatDate(tripStartDate))")
             }
         }
 
@@ -587,10 +587,10 @@ class LHRosterParserService {
         // Group consecutive duty entries with the same duty code into trips
         let trips = groupDutyEntriesIntoTrips(dutyEntries)
 
-                LogManager.shared.debug("📦 Grouped \(dutyEntries.count) duty entries into \(trips.count) trips")
+                LogManager.shared.debug(" Grouped \(dutyEntries.count) duty entries into \(trips.count) trips")
 
         for trip in trips {
-                    LogManager.shared.debug("\n🔎 Looking for pattern for trip: \(trip.dutyCode)")
+                    LogManager.shared.debug("\n Looking for pattern for trip: \(trip.dutyCode)")
 
             // Find pattern definition for this duty code
             guard let pattern = findPattern(for: trip.dutyCode, in: patterns) else {
@@ -600,7 +600,7 @@ class LHRosterParserService {
             }
 
                     LogManager.shared.debug("   Found pattern: \(pattern.code)")
-                    LogManager.shared.debug("📋 Processing trip \(trip.dutyCode) from \(formatDate(trip.startDate)) to \(formatDate(trip.endDate)) with pattern \(pattern.code)")
+                    LogManager.shared.debug(" Processing trip \(trip.dutyCode) from \(formatDate(trip.startDate)) to \(formatDate(trip.endDate)) with pattern \(pattern.code)")
 
             // Create flights for each flight in the pattern
             for (flightIndex, patternFlight) in pattern.flights.enumerated() {
@@ -705,7 +705,7 @@ class LHRosterParserService {
             }
 
             let calculatedDate = calendar.date(byAdding: .day, value: daysToAdd, to: patternStartDate)
-                    LogManager.shared.debug("      First flight: pattern start \(formatDate(patternStartDate)) (weekday \(startWeekday)) + \(daysToAdd) days → \(calculatedDate.map { formatDate($0) } ?? "nil") for day \(dayOfWeek) (weekday \(targetWeekday))")
+                    LogManager.shared.debug("      First flight: pattern start \(formatDate(patternStartDate)) (weekday \(startWeekday)) + \(daysToAdd) days  \(calculatedDate.map { formatDate($0) } ?? "nil") for day \(dayOfWeek) (weekday \(targetWeekday))")
             return calculatedDate
         }
 
@@ -727,17 +727,17 @@ class LHRosterParserService {
         if targetWeekday == previousWeekday {
             // Same weekday = same date (multiple flights on same day)
             daysToAdd = 0
-                    LogManager.shared.debug("      Flight \(flightIndex): same day as previous (\(dayOfWeek)) → \(formatDate(previousDate))")
+                    LogManager.shared.debug("      Flight \(flightIndex): same day as previous (\(dayOfWeek))  \(formatDate(previousDate))")
         } else if targetWeekday > previousWeekday {
             // Later in the same week (e.g., FR→MO = 3 days)
             daysToAdd = targetWeekday - previousWeekday
             let calculatedDate = calendar.date(byAdding: .day, value: daysToAdd, to: previousDate)
-                    LogManager.shared.debug("      Flight \(flightIndex): \(previousFlight.dayOfWeek) (weekday \(previousWeekday)) → \(dayOfWeek) (weekday \(targetWeekday)) = +\(daysToAdd) days → \(calculatedDate.map { formatDate($0) } ?? "nil")")
+                    LogManager.shared.debug("      Flight \(flightIndex): \(previousFlight.dayOfWeek) (weekday \(previousWeekday))  \(dayOfWeek) (weekday \(targetWeekday)) = +\(daysToAdd) days  \(calculatedDate.map { formatDate($0) } ?? "nil")")
         } else {
             // Earlier in the week = next week (e.g., TU→FR wraps to next week)
             daysToAdd = 7 - previousWeekday + targetWeekday
             let calculatedDate = calendar.date(byAdding: .day, value: daysToAdd, to: previousDate)
-                    LogManager.shared.debug("      Flight \(flightIndex): \(previousFlight.dayOfWeek) (weekday \(previousWeekday)) → \(dayOfWeek) (weekday \(targetWeekday)) = +\(daysToAdd) days (next week) → \(calculatedDate.map { formatDate($0) } ?? "nil")")
+                    LogManager.shared.debug("      Flight \(flightIndex): \(previousFlight.dayOfWeek) (weekday \(previousWeekday))  \(dayOfWeek) (weekday \(targetWeekday)) = +\(daysToAdd) days (next week)  \(calculatedDate.map { formatDate($0) } ?? "nil")")
         }
 
         return calendar.date(byAdding: .day, value: daysToAdd, to: previousDate)

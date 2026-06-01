@@ -296,10 +296,10 @@ class MigrationImportService {
                     completion(.success(summary))
                 }
 
-                LogManager.shared.info("✅ Migration completed successfully: \(flightsImported) flights, \(aircraftImported) aircraft")
+                LogManager.shared.info(" Migration completed successfully: \(flightsImported) flights, \(aircraftImported) aircraft")
 
             } catch {
-                LogManager.shared.error("❌ Migration failed: \(error.localizedDescription)")
+                LogManager.shared.error(" Migration failed: \(error.localizedDescription)")
                 await MainActor.run {
                     if let migrationError = error as? MigrationImportError {
                         completion(.failure(migrationError))
@@ -395,18 +395,18 @@ class MigrationImportService {
 
         // Validate metadata matches actual data (warnings only, not fatal)
         if package.flights.count != package.metadata.flightCount {
-            LogManager.shared.warning("⚠️ Flight count mismatch: metadata says \(package.metadata.flightCount), found \(package.flights.count)")
+            LogManager.shared.warning(" Flight count mismatch: metadata says \(package.metadata.flightCount), found \(package.flights.count)")
         }
 
         if package.aircraft.count != package.metadata.aircraftCount {
-            LogManager.shared.warning("⚠️ Aircraft count mismatch: metadata says \(package.metadata.aircraftCount), found \(package.aircraft.count)")
+            LogManager.shared.warning(" Aircraft count mismatch: metadata says \(package.metadata.aircraftCount), found \(package.aircraft.count)")
         }
     }
 
     // MARK: - Clear Existing Data
 
     private func clearExistingData() async throws {
-        LogManager.shared.info("🗑️ Clearing existing data...")
+        LogManager.shared.info(" Clearing existing data...")
 
         // Clear all flights
         _ = databaseService.clearAllFlights()
@@ -422,7 +422,7 @@ class MigrationImportService {
             }
         }
 
-        LogManager.shared.info("✅ Existing data cleared")
+        LogManager.shared.info(" Existing data cleared")
     }
 
     // MARK: - Import Flights
@@ -430,7 +430,7 @@ class MigrationImportService {
     private func importFlights(_ flights: [MigrationFlight]) async throws -> Int {
         guard !flights.isEmpty else { return 0 }
 
-        LogManager.shared.info("📥 Importing \(flights.count) flights...")
+        LogManager.shared.info(" Importing \(flights.count) flights...")
 
         // Convert MigrationFlight objects to FlightSector objects
         let flightSectors: [FlightSector] = flights.enumerated().map { index, migrationFlight in
@@ -491,7 +491,7 @@ class MigrationImportService {
         }
         // result.mergeProposals intentionally ignored — migration imports restore the user's own data
 
-        LogManager.shared.info("✅ Import complete: \(result.successCount) saved, \(result.duplicateCount) duplicates skipped, \(result.failureCount) failed")
+        LogManager.shared.info(" Import complete: \(result.successCount) saved, \(result.duplicateCount) duplicates skipped, \(result.failureCount) failed")
 
         // Return successful count (not including duplicates)
         return result.successCount
@@ -502,7 +502,7 @@ class MigrationImportService {
     private func importAircraft(_ aircraft: [MigrationAircraft]) async throws -> Int {
         guard !aircraft.isEmpty else { return 0 }
 
-        LogManager.shared.info("📥 Importing \(aircraft.count) aircraft...")
+        LogManager.shared.info(" Importing \(aircraft.count) aircraft...")
 
         let importedCount = await MainActor.run { () -> Int in
             var count = 0
@@ -520,21 +520,21 @@ class MigrationImportService {
                 if AircraftFleetService.shared.saveAircraft(aircraftToSave) {
                     count += 1
                 } else {
-                    LogManager.shared.warning("⚠️ Failed to import aircraft: \(migrationAircraft.registration)")
+                    LogManager.shared.warning(" Failed to import aircraft: \(migrationAircraft.registration)")
                 }
             }
 
             return count
         }
 
-        LogManager.shared.info("✅ Imported \(importedCount) aircraft")
+        LogManager.shared.info(" Imported \(importedCount) aircraft")
         return importedCount
     }
 
     // MARK: - Restore Settings
 
     private func restoreSettings(_ settings: MigrationSettings) async -> Bool {
-        LogManager.shared.info("⚙️ Restoring settings to iCloud...")
+        LogManager.shared.info(" Restoring settings to iCloud...")
 
         let ubiquitousStore = NSUbiquitousKeyValueStore.default
 
@@ -674,9 +674,9 @@ class MigrationImportService {
         let synced = ubiquitousStore.synchronize()
 
         if synced {
-            LogManager.shared.info("✅ Settings synced to iCloud")
+            LogManager.shared.info(" Settings synced to iCloud")
         } else {
-            LogManager.shared.warning("⚠️ iCloud sync may have failed, settings saved locally")
+            LogManager.shared.warning(" iCloud sync may have failed, settings saved locally")
         }
 
         return true
@@ -685,7 +685,7 @@ class MigrationImportService {
     // MARK: - Restore Preferences
 
     private func restorePreferences(_ preferences: MigrationPreferences) -> Bool {
-        LogManager.shared.info("⚙️ Restoring UserDefaults preferences...")
+        LogManager.shared.info(" Restoring UserDefaults preferences...")
 
         let defaults = UserDefaults.standard
 
@@ -705,7 +705,7 @@ class MigrationImportService {
             defaults.set(decimalRoundingMode, forKey: "decimalRoundingMode")
         }
 
-        LogManager.shared.info("✅ UserDefaults preferences restored")
+        LogManager.shared.info(" UserDefaults preferences restored")
 
         return true
     }
@@ -722,8 +722,8 @@ class MigrationImportService {
         UserDefaults.standard.set(true, forKey: "loggerMigrationCompleted")
         UserDefaults.standard.set(Date(), forKey: "loggerMigrationDate")
 
-        LogManager.shared.info("✅ Migration finalized")
-        LogManager.shared.info("ℹ️  Settings are in iCloud and will sync when Settings screens are accessed")
+        LogManager.shared.info(" Migration finalized")
+        LogManager.shared.info("  Settings are in iCloud and will sync when Settings screens are accessed")
     }
 
     // MARK: - Helper Functions

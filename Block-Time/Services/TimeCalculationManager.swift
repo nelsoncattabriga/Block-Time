@@ -383,7 +383,7 @@ extension TimeCalculationManager {
             blockTime: blockTime,
             flightDate: flightDate
         ) {
-            LogManager.shared.debug("⚡️ recalculateTimes: Using CACHED context for night time calculation")
+            LogManager.shared.debug(" recalculateTimes: Using CACHED context for night time calculation")
             let nightTime = calculateNightTime(using: context)
             return (blockTime, nightTime)
         } else {

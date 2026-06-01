@@ -85,7 +85,7 @@ class FileImportService {
             create: false
         ) {
             if path.hasPrefix(appDocuments.path) {
-                LogManager.shared.info("📁 File is in app's local Documents directory")
+                LogManager.shared.info(" File is in app's local Documents directory")
                 return true
             }
         }
@@ -96,7 +96,7 @@ class FileImportService {
             return true
         }
 
-        LogManager.shared.info("🔐 File is in external location, will use security-scoped access")
+        LogManager.shared.info(" File is in external location, will use security-scoped access")
         return false
     }
 
@@ -138,12 +138,12 @@ class FileImportService {
     /// Parse CSV content that may contain newlines within quoted fields
     /// This is more robust than splitting by newlines first
     private func parseCSVRows(content: String, delimiter: String) -> [[String]] {
-        LogManager.shared.info("🔍 parseCSVRows started, content length: \(content.count)")
+        LogManager.shared.info(" parseCSVRows started, content length: \(content.count)")
 
         // Strip BOM if present
         var cleanedContent = content
         if cleanedContent.hasPrefix("\u{FEFF}") {
-            LogManager.shared.info("🔍 Stripping UTF-8 BOM")
+            LogManager.shared.info(" Stripping UTF-8 BOM")
             cleanedContent.removeFirst()
         }
 
@@ -192,18 +192,18 @@ class FileImportService {
             rows.append(fields)
         }
 
-        LogManager.shared.info("🔍 parseCSVRows completed: \(rows.count) rows total")
+        LogManager.shared.info(" parseCSVRows completed: \(rows.count) rows total")
         if rows.count > 0 {
-            LogManager.shared.info("🔍 Row 1: \(rows[0].count) fields")
+            LogManager.shared.info(" Row 1: \(rows[0].count) fields")
         }
         if rows.count > 1 {
-            LogManager.shared.info("🔍 Row 2: \(rows[1].count) fields")
+            LogManager.shared.info(" Row 2: \(rows[1].count) fields")
         }
         if rows.count > 2 {
-            LogManager.shared.info("🔍 Row 3: \(rows[2].count) fields")
+            LogManager.shared.info(" Row 3: \(rows[2].count) fields")
         }
         if !rows.isEmpty {
-            LogManager.shared.info("🔍 First row has \(rows[0].count) fields")
+            LogManager.shared.info(" First row has \(rows[0].count) fields")
         }
 
         return rows
@@ -1171,14 +1171,14 @@ class FileImportService {
     private func createLoggerFieldMapping(headers: [String]) -> [FieldMapping] {
         var mappings: [FieldMapping] = []
 
-        LogManager.shared.info("🗺️ Creating Block-Time field mapping from headers:")
+        LogManager.shared.info(" Creating Block-Time field mapping from headers:")
         LogManager.shared.info("   Headers: \(headers)")
 
         for header in headers {
             let headerLower = header.lowercased()
 
             if headerLower == "date" {
-                LogManager.shared.info("   ✓ Mapping 'Date' from column '\(header)'")
+                LogManager.shared.info("    Mapping 'Date' from column '\(header)'")
                 mappings.append(FieldMapping(logbookField: "Date", logbookFieldDescription: "Date", sourceColumn: header, isRequired: true))
             } else if headerLower == "flight number" {
                 mappings.append(FieldMapping(logbookField: "Flight Number", logbookFieldDescription: "Flight Number", sourceColumn: header, isRequired: true))
@@ -1926,7 +1926,7 @@ class FileImportService {
             }
 
             if simCount > 0 {
-                LogManager.shared.info("🔧 PilotLog pre-process: moved time_total → sim_time for \(simCount) simulator row(s)")
+                LogManager.shared.info(" PilotLog pre-process: moved time_total  sim_time for \(simCount) simulator row(s)")
             }
             return (outHeaders, outRows)
         }
@@ -2005,7 +2005,7 @@ func resolveIntraImportCollisions(_ sectors: [FlightSector]) -> [FlightSector] {
             // Subsequent occurrence — rehash with collision suffix
             let collisionString = "\(base)-collision-\(count)"
             if let newID = UUID(uuidString: collisionString.md5UUID()) {
-                LogManager.shared.info("Intra-import UUID collision resolved: \(sector.date) \(sector.flightNumber) → collision-\(count)")
+                LogManager.shared.info("Intra-import UUID collision resolved: \(sector.date) \(sector.flightNumber)  collision-\(count)")
                 let updated = FlightSector(
                     id: newID,
                     date: sector.date, flightNumber: sector.flightNumber,

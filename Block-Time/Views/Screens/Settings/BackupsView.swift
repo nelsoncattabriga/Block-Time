@@ -623,8 +623,8 @@ private struct BackupDetailSheet: View {
 
     private func performRestore() {
         LogManager.shared.info("performRestore called")
-        LogManager.shared.info("📁 Backup URL: \(backup.url.path)")
-        LogManager.shared.info("🔀 Restore mode: \(selectedRestoreMode)")
+        LogManager.shared.info(" Backup URL: \(backup.url.path)")
+        LogManager.shared.info(" Restore mode: \(selectedRestoreMode)")
 
         if selectedRestoreMode == .replace {
             // Replace mode: always overwrite definitions — no conflict check needed
@@ -644,17 +644,17 @@ private struct BackupDetailSheet: View {
            !CustomCounterService.shared.definitions.isEmpty,
            backupDefs != CustomCounterService.shared.definitions {
             // Conflict: backup has definitions that differ from device — ask user
-            LogManager.shared.info("Definition conflict detected — showing conflict sheet")
+            LogManager.shared.info("Definition conflict detected  showing conflict sheet")
             pendingBackupDefinitions = PendingDefinitions(definitions: backupDefs)
         } else {
-            LogManager.shared.info("No conflict — proceeding with mergeIfEmpty")
+            LogManager.shared.info("No conflict  proceeding with mergeIfEmpty")
             executeRestore(definitionsBehavior: .mergeIfEmpty)
         }
     }
 
     private func executeRestore(definitionsBehavior: DefinitionsBehavior) {
         isRestoring = true
-        LogManager.shared.info("📖 Calling quickRestoreFromBackup...")
+        LogManager.shared.info(" Calling quickRestoreFromBackup...")
         FileImportService.shared.quickRestoreFromBackup(
             url: backup.url,
             mode: selectedRestoreMode,
@@ -688,7 +688,7 @@ private struct BackupDetailSheet: View {
                 showingResultAlert = true
             }
         }
-        LogManager.shared.info("📤 quickRestoreFromBackup call initiated (async)")
+        LogManager.shared.info(" quickRestoreFromBackup call initiated (async)")
     }
 
     private func deleteBackup() {

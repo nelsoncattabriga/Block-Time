@@ -244,7 +244,7 @@ class CloudKitSettingsSyncService {
         } else {
             // No local modifications tracked - download from cloud if available
             if cloudTimestamp != nil {
-//                LogManager.shared.info("📥 No local modifications tracked - syncing FROM cloud")
+//                LogManager.shared.info(" No local modifications tracked - syncing FROM cloud")
                 syncFromCloud()
             } else {
                 LogManager.shared.debug("iCloud sync: No cloud or local data to sync")
@@ -256,7 +256,7 @@ class CloudKitSettingsSyncService {
     func markLocalModification() {
         localModificationDate = Date()
         UserDefaults.standard.set(localModificationDate, forKey: localModificationDateKey)
-//        LogManager.shared.info("📝 Local settings modification recorded at \(localModificationDate!)")
+//        LogManager.shared.info(" Local settings modification recorded at \(localModificationDate!)")
     }
 
     /// Upload current settings to iCloud
