@@ -220,7 +220,7 @@ private struct CompactLayoutView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("This action cannot be undone.")
+                Text("This will permanently delete this flight entry.")
             }
         }
     }
