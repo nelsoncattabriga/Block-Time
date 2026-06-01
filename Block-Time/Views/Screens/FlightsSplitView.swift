@@ -208,6 +208,7 @@ private struct FlightsListContent: View {
     @State private var pendingScrollToLatest = false
     @State private var undoCount: Int = 0
     @State private var canRedo: Bool = false
+    @State private var undoDescription: String? = nil
 
     // Cached date formatter for performance
     private let dateFormatter: DateFormatter = {
@@ -553,6 +554,7 @@ private struct FlightsListContent: View {
     private func refreshUndoState() {
         undoCount = FlightDatabaseService.shared.undoableChangeCount
         canRedo = FlightDatabaseService.shared.canRedo
+        undoDescription = FlightDatabaseService.shared.lastUndoDescription
     }
 
     @ViewBuilder
@@ -563,9 +565,11 @@ private struct FlightsListContent: View {
                     .font(.subheadline)
                     .foregroundColor(.orange)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("\(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
+                    Text(undoDescription ?? "\(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("History clears when app closes")
                         .font(.footnote)
                         .foregroundColor(.secondary)
