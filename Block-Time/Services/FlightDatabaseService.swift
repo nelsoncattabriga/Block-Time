@@ -228,6 +228,27 @@ class FlightDatabaseService: ObservableObject {
         return ok
     }
 
+    // MARK: - Undo Manager Control
+
+    /// Temporarily disable the undo manager during large batch imports to prevent main-thread stall
+    /// when Core Data merges thousands of changes into viewContext.
+    /// - Returns: True if undo manager was active before disabling
+    @discardableResult
+    func disableUndoManager() -> Bool {
+        let wasEnabled = viewContext.undoManager != nil
+        if wasEnabled {
+            viewContext.undoManager = nil
+            LogManager.shared.debug("UndoManager: Disabled for batch operation")
+        }
+        return wasEnabled
+    }
+
+    /// Re-enable the undo manager after a batch import completes.
+    func enableUndoManager() {
+        viewContext.undoManager = UndoManager()
+        LogManager.shared.debug("UndoManager: Re-enabled after batch operation")
+    }
+
     // MARK: - CloudKit Sync Control
 
     /// Temporarily disable CloudKit sync for bulk operations
