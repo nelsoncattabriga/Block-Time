@@ -131,7 +131,7 @@ struct BulkEditSheet: View {
                             BulkEditCrewField(
                                 label: "Captain",
                                 fieldState: $bulkEditViewModel.captainName,
-                                savedNames: viewModel.savedCaptainNames,
+                                savedNames: viewModel.savedCrewNames,
                                 recentNames: viewModel.recentCaptainNames,
                                 onNameAdded: viewModel.addCaptainName,
                                 onNameRemoved: viewModel.removeCaptainName,
@@ -141,7 +141,7 @@ struct BulkEditSheet: View {
                             BulkEditCrewField(
                                 label: "F/O",
                                 fieldState: $bulkEditViewModel.foName,
-                                savedNames: viewModel.savedCoPilotNames,
+                                savedNames: viewModel.savedCrewNames,
                                 recentNames: viewModel.recentCoPilotNames,
                                 onNameAdded: viewModel.addCoPilotName,
                                 onNameRemoved: viewModel.removeCoPilotName,
@@ -151,7 +151,7 @@ struct BulkEditSheet: View {
                             BulkEditOptionalCrewField(
                                 label: "S/O1",
                                 fieldState: $bulkEditViewModel.so1Name,
-                                savedNames: viewModel.savedSONames,
+                                savedNames: viewModel.savedCrewNames,
                                 recentNames: viewModel.recentSONames,
                                 onNameAdded: viewModel.addSOName,
                                 onNameRemoved: viewModel.removeSOName,
@@ -161,7 +161,7 @@ struct BulkEditSheet: View {
                             BulkEditOptionalCrewField(
                                 label: "S/O2",
                                 fieldState: $bulkEditViewModel.so2Name,
-                                savedNames: viewModel.savedSONames,
+                                savedNames: viewModel.savedCrewNames,
                                 recentNames: viewModel.recentSONames,
                                 onNameAdded: viewModel.addSOName,
                                 onNameRemoved: viewModel.removeSOName,

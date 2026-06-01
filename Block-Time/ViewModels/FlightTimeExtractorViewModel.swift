@@ -197,10 +197,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var selectedFleetID = "B737"  // Selected fleet for filtering
     @Published var decimalRoundingMode: RoundingMode = .standard  // Rounding mode for decimal times
 
-    // Saved crew names
-    @Published var savedCaptainNames: [String] = []
-    @Published var savedCoPilotNames: [String] = []
-    @Published var savedSONames: [String] = []  // Shared list for both SO 1 and SO 2
+    // Saved crew names — unified list shared across all roles
+    @Published var savedCrewNames: [String] = []
 
     // Recent crew names
     @Published var recentCaptainNames: [String] = []
@@ -442,7 +440,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             logbookDestination = settings.logbookDestination
         }
 
-        savedSONames = settings.savedSONames
         defaultCaptainName = settings.defaultCaptainName
         defaultCoPilotName = settings.defaultCoPilotName
         defaultSOName = settings.defaultSOName
@@ -453,8 +450,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
         airlinePrefix = settings.airlinePrefix
         isCustomAirlinePrefix = settings.isCustomAirlinePrefix
         showFullAircraftReg = settings.showFullAircraftReg
-        savedCaptainNames = settings.savedCaptainNames
-        savedCoPilotNames = settings.savedCoPilotNames
         savePhotosToLibrary = settings.savePhotosToLibrary  // NEW SETTING LOAD
         showSONameFields = settings.showSONameFields  // Load SO fields visibility setting
         logCustomCount = settings.logCustomCount
@@ -504,8 +499,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             switch key {
             case "logbookDestination":
                 logbookDestination = settings.logbookDestination
-            case "savedSONames":
-                savedSONames = settings.savedSONames
             case "defaultCaptainName":
                 defaultCaptainName = settings.defaultCaptainName
             case "defaultCoPilotName":
@@ -526,10 +519,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 isCustomAirlinePrefix = settings.isCustomAirlinePrefix
             case "showFullAircraftReg":
                 showFullAircraftReg = settings.showFullAircraftReg
-            case "savedCaptainNames":
-                savedCaptainNames = settings.savedCaptainNames
-            case "savedCoPilotNames":
-                savedCoPilotNames = settings.savedCoPilotNames
+            case "savedCrewNames":
+                savedCrewNames = settings.savedCrewNames
             case "savePhotosToLibrary":
                 savePhotosToLibrary = settings.savePhotosToLibrary
             case "showSONameFields":
@@ -656,7 +647,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
     }
     func addSOName(_ name: String) {
-        savedSONames = userDefaultsService.addSOName(name)
+        savedCrewNames = userDefaultsService.addSOName(name)
     }
     
     func updateSO1Name(_ value: String) {
@@ -1478,41 +1469,36 @@ class FlightTimeExtractorViewModel: ObservableObject {
     // MARK: - Crew Name Management (unchanged)
 
     func addCaptainName(_ name: String) {
-        savedCaptainNames = userDefaultsService.addCaptainName(name)
+        savedCrewNames = userDefaultsService.addCaptainName(name)
     }
 
     func addCoPilotName(_ name: String) {
-        savedCoPilotNames = userDefaultsService.addCoPilotName(name)
+        savedCrewNames = userDefaultsService.addCoPilotName(name)
     }
 
     func removeCaptainName(_ name: String) {
-        savedCaptainNames = userDefaultsService.removeCaptainName(name)
+        savedCrewNames = userDefaultsService.removeCaptainName(name)
     }
 
     func removeCoPilotName(_ name: String) {
-        savedCoPilotNames = userDefaultsService.removeCoPilotName(name)
+        savedCrewNames = userDefaultsService.removeCoPilotName(name)
     }
 
     func removeSOName(_ name: String) {
-        savedSONames = userDefaultsService.removeSOName(name)
+        savedCrewNames = userDefaultsService.removeSOName(name)
     }
 
     func reloadSavedCrewNames() {
         let settings = userDefaultsService.loadSettings()
         let databaseService = FlightDatabaseService.shared
 
-        // Merge UserDefaults saved names with database crew names
-        let userCaptainNames = Set(settings.savedCaptainNames)
+        // Merge unified saved crew names with all database crew names
+        let userCrewNames = Set(settings.savedCrewNames)
         let dbCaptainNames = Set(databaseService.getAllCaptainNames())
-        savedCaptainNames = Array(userCaptainNames.union(dbCaptainNames)).sorted()
-
-        let userCoPilotNames = Set(settings.savedCoPilotNames)
         let dbFONames = Set(databaseService.getAllFONames())
-        savedCoPilotNames = Array(userCoPilotNames.union(dbFONames)).sorted()
-
-        let userSONames = Set(settings.savedSONames)
         let dbSONames = Set(databaseService.getAllSONames())
-        savedSONames = Array(userSONames.union(dbSONames)).sorted()
+        let allDBNames = dbCaptainNames.union(dbFONames).union(dbSONames)
+        savedCrewNames = Array(userCrewNames.union(allDBNames)).sorted()
     }
     
     // MARK: - Add to internal Logbook
