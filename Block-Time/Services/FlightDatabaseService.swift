@@ -1284,16 +1284,29 @@ class FlightDatabaseService: ObservableObject {
     /// Callers that own the undo-suspension lifecycle (e.g. batch import) must call
     /// suspendUndoForBatchImport() before this and resumeUndoAfterBatchImport() after —
     /// this function does NOT touch the undo manager to avoid mismatched enable/disable calls.
+    ///
+    /// Uses NSBatchDeleteRequest so that no FlightEntity objects are loaded into viewContext.
+    /// Loading 7000+ objects then saving them leaves the viewContext with an open SQLite read
+    /// transaction, which blocks the WAL checkpoint during the subsequent saveFlightsBatch and
+    /// causes an indefinite hang (NSSQLCore.m:2706). The batch delete operates at the SQL layer
+    /// and bypasses the object graph entirely. viewContext.reset() is called afterward to merge
+    /// the batch result into the in-memory graph and release any residual read lock.
     func clearAllFlights() -> Bool {
         var success = false
 
         viewContext.performAndWait {
-            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            let fetchRequest: NSFetchRequest<NSFetchRequestResult> = FlightEntity.fetchRequest()
+            let batchDelete = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+            batchDelete.resultType = .resultTypeCount
 
             do {
-                let flights = try viewContext.fetch(request)
-                flights.forEach { viewContext.delete($0) }
-                try viewContext.save()
+                let result = try viewContext.execute(batchDelete) as? NSBatchDeleteResult
+                let deletedCount = result?.result as? Int ?? 0
+                LogManager.shared.debug("Database: NSBatchDeleteRequest removed \(deletedCount) flights")
+
+                // Reset the context so its in-memory object graph reflects the SQL-level deletion
+                // and the SQLite read transaction is released before the caller proceeds.
+                viewContext.reset()
 
                 LogManager.shared.debug("FlightDatabaseService: Posting .flightDataChanged (clearAllFlights)")
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
@@ -1397,6 +1410,106 @@ class FlightDatabaseService: ObservableObject {
             } catch {
                 LogManager.shared.error("Error building duplicate indexes: \(error.localizedDescription)")
                 failureCount = sectors.count
+                return
+            }
+
+            // Step 3a (fast path): If the store is empty (all duplicate indexes are empty),
+            // use NSBatchInsertRequest. This operates at the SQL layer — it does NOT create
+            // NSManagedObjects, does NOT trigger KVO, and does NOT grow the WAL the same way
+            // per-object inserts do. In replace mode (after clearAllFlights), the duplicate
+            // indexes are always empty, so this path always fires for restores. This avoids
+            // the CloudKit mirroring delegate read-lock conflict that blocks WAL checkpoint
+            // when per-object saves hit the ~8 MB WAL threshold.
+            if existingIDs.isEmpty && contentBasedDuplicates.isEmpty {
+                LogManager.shared.info("Database: Store is empty — using NSBatchInsertRequest for \(sectors.count) flights")
+                let batchBaseTime = Date()
+                var dictionaries: [[String: Any]] = []
+                dictionaries.reserveCapacity(sectors.count)
+                for (sectorIndex, sector) in sectors.enumerated() {
+                    guard let parsedDate = localDateFormatter.date(from: sector.date) else {
+                        failureCount += 1
+                        continue
+                    }
+                    var dict: [String: Any] = [
+                        "id":                 sector.id as NSUUID,
+                        "date":               parsedDate,
+                        "flightNumber":       sector.flightNumber,
+                        "aircraftReg":        sector.aircraftReg,
+                        "aircraftType":       sector.aircraftType,
+                        "fromAirport":        sector.fromAirport,
+                        "toAirport":          sector.toAirport,
+                        "captainName":        sector.captainName,
+                        "foName":             sector.foName,
+                        "so1Name":            sector.so1Name as Any,
+                        "so2Name":            sector.so2Name as Any,
+                        "blockTime":          sector.blockTime,
+                        "nightTime":          sector.nightTime,
+                        "p1Time":             sector.p1Time,
+                        "p1usTime":           sector.p1usTime,
+                        "p2Time":             sector.p2Time,
+                        "instrumentTime":     sector.instrumentTime,
+                        "simTime":            sector.simTime,
+                        "isPilotFlying":      sector.isPilotFlying,
+                        "isPositioning":      sector.isPositioning,
+                        "isAIII":             sector.isAIII,
+                        "isRNP":              sector.isRNP,
+                        "isILS":              sector.isILS,
+                        "isGLS":              sector.isGLS,
+                        "isNPA":              sector.isNPA,
+                        "remarks":            sector.remarks,
+                        "dayTakeoffs":        Int16(sector.dayTakeoffs),
+                        "dayLandings":        Int16(sector.dayLandings),
+                        "nightTakeoffs":      Int16(sector.nightTakeoffs),
+                        "nightLandings":      Int16(sector.nightLandings),
+                        "outTime":            sector.outTime,
+                        "inTime":             sector.inTime,
+                        "scheduledDeparture": sector.scheduledDeparture,
+                        "scheduledArrival":   sector.scheduledArrival,
+                        "importSessionID":    sessionID as NSUUID,
+                        "importedAt":         Date(),
+                        "createdAt":          batchBaseTime.addingTimeInterval(Double(sectorIndex) * 0.001),
+                        "modifiedAt":         Date(),
+                    ]
+                    // spInsTime: only store non-zero values
+                    let spIns = sector.spInsTime
+                    if !spIns.isEmpty && spIns != "0.00" && spIns != "0.0" {
+                        dict["spInsTime"] = spIns
+                    }
+                    // counter1–counter10: only store non-empty values
+                    for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                        switch columnIndex {
+                        case 1:  dict["counter1"]  = value
+                        case 2:  dict["counter2"]  = value
+                        case 3:  dict["counter3"]  = value
+                        case 4:  dict["counter4"]  = value
+                        case 5:  dict["counter5"]  = value
+                        case 6:  dict["counter6"]  = value
+                        case 7:  dict["counter7"]  = value
+                        case 8:  dict["counter8"]  = value
+                        case 9:  dict["counter9"]  = value
+                        case 10: dict["counter10"] = value
+                        default: break
+                        }
+                    }
+                    dictionaries.append(dict)
+                }
+
+                let batchInsert = NSBatchInsertRequest(entityName: "FlightEntity", objects: dictionaries)
+                batchInsert.resultType = .count
+                do {
+                    let result = try context.execute(batchInsert) as? NSBatchInsertResult
+                    let insertedCount = result?.result as? Int ?? 0
+                    LogManager.shared.info("Database: NSBatchInsertRequest inserted \(insertedCount) flights (failures: \(failureCount))")
+                    successCount = insertedCount
+                } catch {
+                    LogManager.shared.error("Database: NSBatchInsertRequest failed — \(error.localizedDescription)")
+                    failureCount = sectors.count
+                    successCount = 0
+                }
+                LogManager.shared.info("Batch save summary:")
+                LogManager.shared.info("    Success: \(successCount)")
+                LogManager.shared.info("    Duplicates: \(duplicateCount)")
+                LogManager.shared.info("   Failures: \(failureCount)")
                 return
             }
 
