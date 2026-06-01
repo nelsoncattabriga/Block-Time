@@ -262,6 +262,34 @@ class FlightDatabaseService: ObservableObject {
         return ok
     }
 
+    // MARK: - Undo Manager Control (batch operations)
+
+    /// Suspend undo registration and auto-merge for bulk imports/restores.
+    /// Disabling automaticallyMergesChangesFromParent prevents the viewContext from
+    /// synchronously processing background-context saves mid-batch, which combined with
+    /// an active NSUndoManager causes a mutual wait between the background performAndWait
+    /// and the main-thread merge.
+    func suspendUndoForBatchImport() {
+        viewContext.automaticallyMergesChangesFromParent = false
+        viewContext.undoManager?.disableUndoRegistration()
+        LogManager.shared.debug("UndoManager: registration suspended for batch import")
+    }
+
+    /// Resume undo registration and auto-merge after a bulk import/restore.
+    /// Resets viewContext so it re-reads the store fresh (no merge = no undo pollution),
+    /// then re-enables auto-merge and clears the undo stack.
+    func resumeUndoAfterBatchImport() {
+        // Reset the viewContext so it picks up batch-saved data on the next fetch
+        // without going through the undo manager's merge path.
+        viewContext.reset()
+        viewContext.automaticallyMergesChangesFromParent = true
+        viewContext.undoManager?.enableUndoRegistration()
+        viewContext.undoManager?.removeAllActions()
+        undoableChangeCount = 0
+        undoDescriptions.removeAll()
+        LogManager.shared.debug("UndoManager: registration resumed and stack cleared after batch import")
+    }
+
     // MARK: - CloudKit Sync Control
 
     /// Temporarily disable CloudKit sync for bulk operations
@@ -278,16 +306,15 @@ class FlightDatabaseService: ObservableObject {
             LogManager.shared.debug("CloudKit: Disabling sync for bulk operation")
             description.cloudKitContainerOptions = nil
 
-            // Save context to ensure all pending changes are persisted locally.
-            // Disable undo registration — this is a housekeeping save, not a user action.
+            // Save any pending viewContext changes before disabling CloudKit.
+            // Undo registration is NOT toggled here — callers that need undo protection
+            // manage it themselves (e.g. suspendUndoForBatchImport / clearAllFlights).
             if viewContext.hasChanges {
-                viewContext.undoManager?.disableUndoRegistration()
                 do {
                     try viewContext.save()
                 } catch {
                     LogManager.shared.error("Error saving context before disabling CloudKit: \(error)")
                 }
-                viewContext.undoManager?.enableUndoRegistration()
             }
         }
 
@@ -307,16 +334,14 @@ class FlightDatabaseService: ObservableObject {
                 containerIdentifier: "iCloud.com.thezoolab.blocktime"
             )
 
-            // Save context to trigger sync of any changes made while disabled.
-            // Disable undo registration — this is a housekeeping save, not a user action.
+            // Save any pending viewContext changes to trigger CloudKit sync.
+            // Undo registration is NOT toggled here — callers manage it themselves.
             if viewContext.hasChanges {
-                viewContext.undoManager?.disableUndoRegistration()
                 do {
                     try viewContext.save()
                 } catch {
                     LogManager.shared.error("Error saving context after enabling CloudKit: \(error)")
                 }
-                viewContext.undoManager?.enableUndoRegistration()
             }
         }
     }
@@ -1251,6 +1276,16 @@ class FlightDatabaseService: ObservableObject {
     func clearAllFlights() -> Bool {
         var success = false
 
+        // Suspend undo registration — deleting thousands of objects would register
+        // thousands of undo actions and cause the undo manager to hang.
+        viewContext.undoManager?.disableUndoRegistration()
+        defer {
+            viewContext.undoManager?.enableUndoRegistration()
+            viewContext.undoManager?.removeAllActions()
+            undoableChangeCount = 0
+            undoDescriptions.removeAll()
+        }
+
         viewContext.performAndWait {
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
 
@@ -1259,7 +1294,6 @@ class FlightDatabaseService: ObservableObject {
                 flights.forEach { viewContext.delete($0) }
                 try viewContext.save()
 
-                // Post notification to update all views
                 LogManager.shared.debug("FlightDatabaseService: Posting .flightDataChanged (clearAllFlights)")
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
 

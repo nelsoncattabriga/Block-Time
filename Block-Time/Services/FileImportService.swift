@@ -253,9 +253,13 @@ class FileImportService {
         DispatchQueue.global(qos: .userInitiated).async {
             let databaseService = FlightDatabaseService.shared
 
-            // Disable CloudKit sync for large imports to avoid background task timeouts
+            // Disable CloudKit sync and undo registration for large imports.
+            // suspendUndoForBatchImport MUST run first — disableCloudKitSync reconfigures
+            // the store and can trigger viewContext merges that deadlock if auto-merge
+            // and the undo manager are still active when the background fetch runs.
             var cloudKitWasEnabled = false
             DispatchQueue.main.sync {
+                databaseService.suspendUndoForBatchImport()
                 cloudKitWasEnabled = databaseService.disableCloudKitSync()
             }
 
@@ -267,6 +271,12 @@ class FileImportService {
                 // Give Core Data time to process the deletions
                 Thread.sleep(forTimeInterval: 0.5)
             }
+
+            // Give Core Data time to release the store coordinator lock after the
+            // CloudKit store reconfiguration and any preceding delete. The lock is
+            // released well before full CloudKit sync completes, so a short fixed
+            // drain is sufficient and avoids waiting for the entire iCloud export.
+            Thread.sleep(forTimeInterval: 2.0)
 
             // Create column index mapping
             let columnMapping = self.createColumnMapping(
@@ -368,12 +378,13 @@ class FileImportService {
                 mergeProposals: mergeProposals
             )
 
-            // Re-enable CloudKit sync if it was previously enabled
-            if cloudKitWasEnabled {
-                DispatchQueue.main.sync {
+            // Re-enable CloudKit sync and undo registration
+            DispatchQueue.main.sync {
+                if cloudKitWasEnabled {
                     databaseService.enableCloudKitSync()
+                    LogManager.shared.info("Import complete. CloudKit will now sync \(successCount) flights in the background.")
                 }
-                LogManager.shared.info("Import complete. CloudKit will now sync \(successCount) flights in the background.")
+                databaseService.resumeUndoAfterBatchImport()
             }
 
             DispatchQueue.main.async {
