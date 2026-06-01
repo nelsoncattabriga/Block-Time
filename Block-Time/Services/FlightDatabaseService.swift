@@ -186,6 +186,37 @@ class FlightDatabaseService: ObservableObject {
     /// NSUndoManager exposes no public count, so we track it ourselves.
     private(set) var undoableChangeCount: Int = 0
 
+    /// Human-readable labels for each entry on the undo stack, in the same order.
+    private var undoDescriptions: [String] = []
+
+    /// The label for the most recent undoable action, or nil when the stack is empty.
+    var lastUndoDescription: String? { undoDescriptions.last }
+
+    /// "d MMM" formatter used only for undo description short-date strings.
+    private static let shortDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        return f
+    }()
+
+    /// Returns a short "d MMM" string (e.g. "14 May") from a "dd/MM/yyyy" date string, or "" on failure.
+    private func shortDay(from ddMMYYYY: String) -> String {
+        guard let date = dateFormatter.date(from: ddMMYYYY) else { return "" }
+        return FlightDatabaseService.shortDayFormatter.string(from: date)
+    }
+
+    /// Builds a short undo description for a single flight sector.
+    private func undoDescription(verb: String, for sector: FlightSector, includeDate: Bool) -> String {
+        let route = "\(sector.fromAirport)-\(sector.toAirport)"
+        if includeDate {
+            let day = shortDay(from: sector.date)
+            return day.isEmpty ? "\(verb) \(route)" : "\(verb) \(route) · \(day)"
+        }
+        return "\(verb) \(route)"
+    }
+
     @discardableResult
     func undoLastChange() -> Bool {
         guard let undoManager = viewContext.undoManager, undoManager.canUndo else { return false }
@@ -202,6 +233,7 @@ class FlightDatabaseService: ObservableObject {
         }
         if ok {
             undoableChangeCount = max(0, undoableChangeCount - 1)
+            if !undoDescriptions.isEmpty { undoDescriptions.removeLast() }
             NotificationCenter.default.post(name: .flightDataChanged, object: nil)
         }
         return ok
@@ -290,7 +322,7 @@ class FlightDatabaseService: ObservableObject {
     // MARK: - CRUD Operations
     
     /// Save a new flight sector to the database
-    func saveFlight(_ sector: FlightSector) -> Bool {
+    func saveFlight(_ sector: FlightSector, actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -366,6 +398,8 @@ class FlightDatabaseService: ObservableObject {
                 try viewContext.save()
                 viewContext.undoManager?.endUndoGrouping()
                 undoableChangeCount += 1
+                let saveDesc = actionDescription ?? undoDescription(verb: "Added", for: sector, includeDate: true)
+                undoDescriptions.append(saveDesc)
                 success = true
                 LogManager.shared.info("Flight saved successfully: \(sector.flightNumberFormatted) \(sector.fromAirport)-\(sector.toAirport) on \(sector.date)")
             } catch {
@@ -379,7 +413,7 @@ class FlightDatabaseService: ObservableObject {
     }
 
     /// Update an existing flight sector
-    func updateFlight(_ sector: FlightSector) -> Bool {
+    func updateFlight(_ sector: FlightSector, actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -440,6 +474,8 @@ class FlightDatabaseService: ObservableObject {
                 try viewContext.save()
                 viewContext.undoManager?.endUndoGrouping()
                 undoableChangeCount += 1
+                let updateDesc = actionDescription ?? undoDescription(verb: "Edited", for: sector, includeDate: false)
+                undoDescriptions.append(updateDesc)
                 success = true
 
             } catch {
@@ -643,7 +679,7 @@ class FlightDatabaseService: ObservableObject {
     ///   - scheduledFlight: The scheduled FlightEntity to update
     ///   - actualData: The FlightSector with actual flight data
     /// - Returns: True if update succeeded, false otherwise
-    func updateScheduledFlightWithActualData(_ scheduledFlight: FlightEntity, actualData: FlightSector) -> Bool {
+    func updateScheduledFlightWithActualData(_ scheduledFlight: FlightEntity, actualData: FlightSector, actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -736,6 +772,8 @@ class FlightDatabaseService: ObservableObject {
                 try viewContext.save()
                 viewContext.undoManager?.endUndoGrouping()
                 undoableChangeCount += 1
+                let scheduledDesc = actionDescription ?? undoDescription(verb: "Edited", for: actualData, includeDate: false)
+                undoDescriptions.append(scheduledDesc)
                 LogManager.shared.info("Successfully updated scheduled flight with actual ACARS data")
                 success = true
             } catch {
@@ -1021,7 +1059,7 @@ class FlightDatabaseService: ObservableObject {
     }
     
     /// Delete a flight sector
-    func deleteFlight(_ sector: FlightSector) -> Bool {
+    func deleteFlight(_ sector: FlightSector, actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -1040,6 +1078,8 @@ class FlightDatabaseService: ObservableObject {
                 try viewContext.save()
                 viewContext.undoManager?.endUndoGrouping()
                 undoableChangeCount += 1
+                let deleteDesc = actionDescription ?? undoDescription(verb: "Deleted", for: sector, includeDate: true)
+                undoDescriptions.append(deleteDesc)
                 success = true
 
             } catch {
@@ -1052,7 +1092,7 @@ class FlightDatabaseService: ObservableObject {
     }
 
     /// Delete multiple flights
-    func deleteFlights(_ sectors: [FlightSector]) -> Bool {
+    func deleteFlights(_ sectors: [FlightSector], actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -1067,6 +1107,8 @@ class FlightDatabaseService: ObservableObject {
                 try viewContext.save()
                 viewContext.undoManager?.endUndoGrouping()
                 undoableChangeCount += 1
+                let bulkDeleteDesc = actionDescription ?? "Deleted \(sectors.count) \(sectors.count == 1 ? "flight" : "flights")"
+                undoDescriptions.append(bulkDeleteDesc)
                 success = true
             } catch {
                 viewContext.undoManager?.endUndoGrouping()
@@ -1506,7 +1548,7 @@ class FlightDatabaseService: ObservableObject {
     /// Deletes all flights belonging to a specific import session.
     /// - Returns: Number of flights deleted.
     @discardableResult
-    func deleteImportSession(_ sessionID: UUID) -> Int {
+    func deleteImportSession(_ sessionID: UUID, actionDescription: String? = nil) -> Int {
         var deletedCount = 0
         viewContext.performAndWait {
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
@@ -1522,6 +1564,8 @@ class FlightDatabaseService: ObservableObject {
         }
         if deletedCount > 0 {
             undoableChangeCount += 1
+            let importDesc = actionDescription ?? "Deleted import batch"
+            undoDescriptions.append(importDesc)
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             }
