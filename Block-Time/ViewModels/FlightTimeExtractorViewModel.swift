@@ -1617,7 +1617,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         )
                     LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), p2Time=\(newFlight.p2Time)")
 
-        if databaseService.saveFlight(newFlight, actionDescription: "Added \(newFlight.fromAirport)-\(newFlight.toAirport)") {
+        if databaseService.saveFlight(newFlight, actionDescription: nil) {
                         LogManager.shared.debug("DEBUG: Saved sector with instrumentTime=\(newFlight.instrumentTime)")
             statusMessage = "Flight saved to logbook!"
             statusColor = .green
@@ -1930,7 +1930,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         )
 
         let databaseService = FlightDatabaseService.shared
-        let success = databaseService.updateFlight(updatedFlight, actionDescription: "Edited \(updatedFlight.fromAirport)-\(updatedFlight.toAirport)")
+        let success = databaseService.updateFlight(updatedFlight, actionDescription: nil)
 
         if success {
             statusMessage = "Flight updated successfully!"
@@ -2236,7 +2236,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         )
 
         let databaseService = FlightDatabaseService.shared
-        let success = databaseService.deleteFlight(tempSector, actionDescription: "Deleted \(tempSector.fromAirport)-\(tempSector.toAirport)")
+        let success = databaseService.deleteFlight(tempSector, actionDescription: nil)
 
         if success {
             HapticManager.shared.notification(.success)
@@ -2867,7 +2867,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 counterEntries: isPositioning ? [:] : currentCounterEntries()
             )
 
-            if databaseService.updateScheduledFlightWithActualData(scheduledFlight, actualData: actualFlightData, actionDescription: "Edited \(actualFlightData.fromAirport)-\(actualFlightData.toAirport)") {
+            if databaseService.updateScheduledFlightWithActualData(scheduledFlight, actualData: actualFlightData, actionDescription: nil) {
                             LogManager.shared.debug("Successfully updated scheduled flight with ACARS data")
                 statusMessage = "Flight updated from roster to actual!"
                 statusColor = .green
@@ -2923,7 +2923,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             )
                         LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), isSimulator=\(isSimulator), simTime=\(newFlight.simTime), blockTime=\(newFlight.blockTime), p2Time=\(newFlight.p2Time)")
 
-            if databaseService.saveFlight(newFlight, actionDescription: "Added \(newFlight.fromAirport)-\(newFlight.toAirport)") {
+            if databaseService.saveFlight(newFlight, actionDescription: nil) {
                             LogManager.shared.debug("DEBUG: Saved sector successfully with instrumentTime=\(newFlight.instrumentTime)")
                 statusMessage = "Flight saved to logbook!"
                 statusColor = .green

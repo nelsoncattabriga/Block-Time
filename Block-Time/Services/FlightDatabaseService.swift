@@ -210,11 +210,16 @@ class FlightDatabaseService: ObservableObject {
     /// Builds a short undo description for a single flight sector.
     private func undoDescription(verb: String, for sector: FlightSector, includeDate: Bool) -> String {
         let route = "\(sector.fromAirport)-\(sector.toAirport)"
+        var parts: [String] = [verb]
+        if !sector.flightNumber.trimmingCharacters(in: .whitespaces).isEmpty {
+            parts.append(sector.flightNumber.trimmingCharacters(in: .whitespaces))
+        }
         if includeDate {
             let day = shortDay(from: sector.date)
-            return day.isEmpty ? "\(verb) \(route)" : "\(verb) \(route) · \(day)"
+            if !day.isEmpty { parts.append("\(day) UTC") }
         }
-        return "\(verb) \(route)"
+        parts.append(route)
+        return parts.joined(separator: " · ")
     }
 
     @discardableResult
@@ -474,7 +479,7 @@ class FlightDatabaseService: ObservableObject {
                 try viewContext.save()
                 viewContext.undoManager?.endUndoGrouping()
                 undoableChangeCount += 1
-                let updateDesc = actionDescription ?? undoDescription(verb: "Edited", for: sector, includeDate: false)
+                let updateDesc = actionDescription ?? undoDescription(verb: "Edited", for: sector, includeDate: true)
                 undoDescriptions.append(updateDesc)
                 success = true
 
@@ -772,7 +777,7 @@ class FlightDatabaseService: ObservableObject {
                 try viewContext.save()
                 viewContext.undoManager?.endUndoGrouping()
                 undoableChangeCount += 1
-                let scheduledDesc = actionDescription ?? undoDescription(verb: "Edited", for: actualData, includeDate: false)
+                let scheduledDesc = actionDescription ?? undoDescription(verb: "Edited", for: actualData, includeDate: true)
                 undoDescriptions.append(scheduledDesc)
                 LogManager.shared.info("Successfully updated scheduled flight with actual ACARS data")
                 success = true
@@ -1122,10 +1127,10 @@ class FlightDatabaseService: ObservableObject {
     /// Duplicate multiple flights, assigning each a new UUID and today's createdAt
     @discardableResult
     func duplicateFlights(_ sectors: [FlightSector]) -> Int {
+        viewContext.undoManager?.beginUndoGrouping()
         var savedCount = 0
         for sector in sectors {
-            var copy = sector
-            copy = FlightSector(
+            let copy = FlightSector(
                 id: UUID(),
                 date: sector.date,
                 flightNumber: sector.flightNumber,
@@ -1163,12 +1168,86 @@ class FlightDatabaseService: ObservableObject {
                 scheduledArrival: sector.scheduledArrival,
                 counterEntries: sector.counterEntries
             )
-            if saveFlight(copy) { savedCount += 1 }
+            if saveFlightRaw(copy) { savedCount += 1 }
         }
+        viewContext.undoManager?.endUndoGrouping()
         if savedCount > 0 {
+            let desc = savedCount == 1 ? "Duplicated 1 flight" : "Duplicated \(savedCount) flights"
+            undoDescriptions.append(desc)
+            undoableChangeCount += 1
             NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+        } else {
+            viewContext.undoManager?.undoNestedGroup()
         }
         return savedCount
+    }
+
+    /// Inserts a flight into viewContext without wrapping in its own undo group or touching the description stack.
+    /// Used by duplicateFlights, which manages its own single outer undo group.
+    private func saveFlightRaw(_ sector: FlightSector) -> Bool {
+        var success = false
+        viewContext.performAndWait {
+            let checkRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            checkRequest.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
+            checkRequest.fetchLimit = 1
+            do {
+                let existing = try viewContext.fetch(checkRequest)
+                guard existing.isEmpty else { return }
+            } catch {
+                LogManager.shared.error("Error checking for duplicate flight: \(error.localizedDescription)")
+                return
+            }
+            let flight = FlightEntity(context: viewContext)
+            flight.id = sector.id
+            guard let parsedDate = dateFormatter.date(from: sector.date) else { return }
+            flight.date = parsedDate
+            flight.flightNumber = sector.flightNumber
+            flight.aircraftReg = sector.aircraftReg
+            flight.aircraftType = sector.aircraftType
+            flight.fromAirport = sector.fromAirport
+            flight.toAirport = sector.toAirport
+            flight.captainName = sector.captainName
+            flight.foName = sector.foName
+            flight.so1Name = sector.so1Name
+            flight.so2Name = sector.so2Name
+            flight.blockTime = sector.blockTime
+            flight.nightTime = sector.nightTime
+            flight.p1Time = sector.p1Time
+            flight.p1usTime = sector.p1usTime
+            flight.p2Time = sector.p2Time
+            flight.instrumentTime = sector.instrumentTime
+            flight.simTime = sector.simTime
+            flight.spInsTime = sector.spInsTime.isEmpty || sector.spInsTime == "0.00" || sector.spInsTime == "0.0" ? nil : sector.spInsTime
+            flight.isPilotFlying = sector.isPilotFlying
+            flight.isPositioning = sector.isPositioning
+            flight.isAIII = sector.isAIII
+            flight.isRNP = sector.isRNP
+            flight.isILS = sector.isILS
+            flight.isGLS = sector.isGLS
+            flight.isNPA = sector.isNPA
+            flight.safeRemarks = sector.remarks
+            flight.dayTakeoffs = Int16(sector.dayTakeoffs)
+            flight.dayLandings = Int16(sector.dayLandings)
+            flight.nightTakeoffs = Int16(sector.nightTakeoffs)
+            flight.nightLandings = Int16(sector.nightLandings)
+            flight.outTime = sector.outTime
+            flight.inTime = sector.inTime
+            flight.scheduledDeparture = sector.scheduledDeparture
+            flight.scheduledArrival = sector.scheduledArrival
+            flight.createdAt = Date()
+            flight.modifiedAt = Date()
+            for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                flight.setCounter(columnIndex, value: value)
+            }
+            do {
+                try viewContext.save()
+                success = true
+            } catch {
+                viewContext.rollback()
+                LogManager.shared.error("Error duplicating flight: \(error.localizedDescription)")
+            }
+        }
+        return success
     }
 
     /// Delete all flight entries from the database
