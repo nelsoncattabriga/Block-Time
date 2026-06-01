@@ -549,7 +549,9 @@ struct ImportExportView: View {
     }
 
     private func deleteAllFlights() {
+        FlightDatabaseService.shared.suspendUndoForBatchImport()
         let success = FlightDatabaseService.shared.clearAllFlights()
+        FlightDatabaseService.shared.resumeUndoAfterBatchImport()
         if success {
             resultMessage = "All flights have been successfully deleted."
         } else {

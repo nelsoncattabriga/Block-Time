@@ -1283,7 +1283,9 @@ private struct ModernDataImportCard: View {
                 .alert("Delete All Logbook Data", isPresented: $showingDeleteWarning) {
                     Button("Cancel", role: .cancel) { }
                     Button("Delete", role: .destructive) {
+                        FlightDatabaseService.shared.suspendUndoForBatchImport()
                         let success = FlightDatabaseService.shared.clearAllFlights()
+                        FlightDatabaseService.shared.resumeUndoAfterBatchImport()
                         if success {
                             deleteResultMessage = "All flights have been deleted."
                         } else {

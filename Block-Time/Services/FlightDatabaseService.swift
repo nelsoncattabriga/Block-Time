@@ -272,6 +272,11 @@ class FlightDatabaseService: ObservableObject {
     func suspendUndoForBatchImport() {
         viewContext.automaticallyMergesChangesFromParent = false
         viewContext.undoManager?.disableUndoRegistration()
+        isBatchImporting = true
+        // Release all in-memory objects so the viewContext holds no SQLite read locks
+        // during the upcoming batch save. Without this, the background context's WAL
+        // checkpoint blocks on the viewContext reader, causing the save to hang.
+        viewContext.reset()
         LogManager.shared.debug("UndoManager: registration suspended for batch import")
     }
 
@@ -287,7 +292,10 @@ class FlightDatabaseService: ObservableObject {
         viewContext.undoManager?.removeAllActions()
         undoableChangeCount = 0
         undoDescriptions.removeAll()
+        isBatchImporting = false
         LogManager.shared.debug("UndoManager: registration resumed and stack cleared after batch import")
+        // One debounced notification after the batch completes so the UI refreshes once.
+        postDebouncedFlightDataChangedNotification()
     }
 
     // MARK: - CloudKit Sync Control
@@ -1272,19 +1280,12 @@ class FlightDatabaseService: ObservableObject {
         return success
     }
 
-    /// Delete all flight entries from the database
+    /// Delete all flight entries from the database.
+    /// Callers that own the undo-suspension lifecycle (e.g. batch import) must call
+    /// suspendUndoForBatchImport() before this and resumeUndoAfterBatchImport() after —
+    /// this function does NOT touch the undo manager to avoid mismatched enable/disable calls.
     func clearAllFlights() -> Bool {
         var success = false
-
-        // Suspend undo registration — deleting thousands of objects would register
-        // thousands of undo actions and cause the undo manager to hang.
-        viewContext.undoManager?.disableUndoRegistration()
-        defer {
-            viewContext.undoManager?.enableUndoRegistration()
-            viewContext.undoManager?.removeAllActions()
-            undoableChangeCount = 0
-            undoDescriptions.removeAll()
-        }
 
         viewContext.performAndWait {
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
@@ -1399,7 +1400,12 @@ class FlightDatabaseService: ObservableObject {
                 return
             }
 
-            // Step 3: Create all flight entities without saving
+            // Step 3: Create all flight entities, saving every 500 to keep WAL size small.
+            // Core Data's PostSaveMaintenance triggers wal_checkpoint(TRUNCATE) once the WAL
+            // exceeds ~8 MB. A single save of 7000+ rows blows past that threshold and the
+            // checkpoint blocks on the still-open write transaction, causing a visible hang.
+            // Saving in chunks keeps each WAL segment small so checkpoints complete immediately.
+            let chunkSize = 500
             let batchBaseTime = Date()
             for (sectorIndex, sector) in sectors.enumerated() {
                 // Check UUID-based duplicate first
@@ -1563,9 +1569,22 @@ class FlightDatabaseService: ObservableObject {
                 }
 
                 successCount += 1
+
+                // Flush every chunkSize inserts to keep WAL pages small
+                if successCount % chunkSize == 0, context.hasChanges {
+                    do {
+                        try context.save()
+                    } catch {
+                        context.rollback()
+                        LogManager.shared.error("Database: Chunk save failed at \(successCount) - \(error.localizedDescription)")
+                        failureCount = sectors.count
+                        successCount = 0
+                        return
+                    }
+                }
             }
 
-            // Step 4: Save ALL flights in ONE operation
+            // Step 4: Save any remaining flights not caught by the chunk boundary
             do {
                 if context.hasChanges {
                     try context.save()
