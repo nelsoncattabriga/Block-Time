@@ -62,7 +62,7 @@ struct ImportExportView: View {
     @State private var showingPDFExport = false
 
     // Migration import state
-    @State private var showingMigrationImport = false
+//    @State private var showingMigrationImport = false
 
     // Aircraft Summary state
     @State private var showingAircraftSummary = false
@@ -260,11 +260,11 @@ struct ImportExportView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showingMigrationImport) {
-            MigrationImportView()
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
+//        .sheet(isPresented: $showingMigrationImport) {
+//            MigrationImportView()
+//                .presentationDetents([.large])
+//                .presentationDragIndicator(.visible)
+//        }
     }
 
     // MARK: - Import / Export Card

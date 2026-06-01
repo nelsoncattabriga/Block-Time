@@ -22,7 +22,7 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showingOnboarding = false
     @State private var showingOnboardingFlow = false
-    @State private var showingMigrationImport = false
+//    @State private var showingMigrationImport = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(PurchaseService.self) private var purchaseService
 
@@ -79,10 +79,10 @@ struct MainTabView: View {
         .sheet(isPresented: $showingOnboarding) {
             OnboardingWelcomeView(
                 onImportFromLogger: {
-                    showingOnboarding = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showingMigrationImport = true
-                    }
+//                    showingOnboarding = false
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+//                        showingMigrationImport = true
+//                    }
                 },
                 onSetupManually: {
                     showingOnboarding = false
@@ -100,17 +100,17 @@ struct MainTabView: View {
             )
             .interactiveDismissDisabled()
         }
-        .sheet(isPresented: $showingMigrationImport) {
-            MigrationImportView(
-                preselectedFileURL: nil,
-                onComplete: {
-                    userDefaultsService.onboardingCompleted = true
-                    showingMigrationImport = false
-                },
-                isOnboarding: true
-            )
-            .interactiveDismissDisabled()
-        }
+//        .sheet(isPresented: $showingMigrationImport) {
+//            MigrationImportView(
+//                preselectedFileURL: nil,
+//                onComplete: {
+//                    userDefaultsService.onboardingCompleted = true
+//                    showingMigrationImport = false
+//                },
+//                isOnboarding: true
+//            )
+//            .interactiveDismissDisabled()
+//        }
         .onReceive(NotificationCenter.default.publisher(for: .reviewImportSession)) { _ in
             // Switch to Logbook tab — FlightsSplitView will pick up the notification once visible
             selectedTab = 0
