@@ -451,86 +451,85 @@ class FlightDatabaseService: ObservableObject {
     ///   - updates: Dictionary mapping flight UUIDs to updated FlightSector objects
     /// - Returns: True if all updates succeeded, false otherwise
     func updateFlightsBulk(_ updates: [UUID: FlightSector]) async -> Bool {
-        let context = persistentContainer.newBackgroundContext()
-        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        var success = false
 
-        do {
-            try await context.perform {
-                // Local formatter — DateFormatter is not thread-safe, must not share with main thread
-                let formatter = DateFormatter()
-                formatter.dateFormat = "dd/MM/yyyy"
-                formatter.locale = Locale(identifier: "en_US_POSIX")
-                formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        await MainActor.run {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "dd/MM/yyyy"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
 
+            viewContext.performAndWait {
                 let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
                 request.predicate = NSPredicate(format: "id IN %@", Array(updates.keys))
 
-                let flights = try context.fetch(request)
-                LogManager.shared.info("Database: Bulk updating \(flights.count) flights")
+                do {
+                    let flights = try viewContext.fetch(request)
+                    LogManager.shared.info("Database: Bulk updating \(flights.count) flights")
 
-                for flight in flights {
-                    guard let id = flight.id,
-                          let updatedSector = updates[id] else { continue }
+                    viewContext.undoManager?.beginUndoGrouping()
+                    for flight in flights {
+                        guard let id = flight.id,
+                              let updatedSector = updates[id] else { continue }
 
-                    flight.date = formatter.date(from: updatedSector.date)
-                    flight.flightNumber = updatedSector.flightNumber
-                    flight.aircraftReg = updatedSector.aircraftReg
-                    flight.aircraftType = updatedSector.aircraftType
-                    flight.fromAirport = updatedSector.fromAirport
-                    flight.toAirport = updatedSector.toAirport
-                    flight.captainName = updatedSector.captainName
-                    flight.foName = updatedSector.foName
-                    flight.so1Name = updatedSector.so1Name
-                    flight.so2Name = updatedSector.so2Name
-                    flight.blockTime = updatedSector.blockTime
-                    flight.nightTime = updatedSector.nightTime
-                    flight.p1Time = updatedSector.p1Time
-                    flight.p1usTime = updatedSector.p1usTime
-                    flight.p2Time = updatedSector.p2Time
-                    flight.instrumentTime = updatedSector.instrumentTime
-                    flight.simTime = updatedSector.simTime
-                    flight.spInsTime = updatedSector.spInsTime.isEmpty || updatedSector.spInsTime == "0.00" || updatedSector.spInsTime == "0.0" ? nil : updatedSector.spInsTime
-                    flight.isPilotFlying = updatedSector.isPilotFlying
-                    flight.isPositioning = updatedSector.isPositioning
-                    flight.isAIII = updatedSector.isAIII
-                    flight.isRNP = updatedSector.isRNP
-                    flight.isILS = updatedSector.isILS
-                    flight.isGLS = updatedSector.isGLS
-                    flight.isNPA = updatedSector.isNPA
-                    flight.safeRemarks = updatedSector.remarks
-                    flight.dayTakeoffs = Int16(updatedSector.dayTakeoffs)
-                    flight.dayLandings = Int16(updatedSector.dayLandings)
-                    flight.nightTakeoffs = Int16(updatedSector.nightTakeoffs)
-                    flight.nightLandings = Int16(updatedSector.nightLandings)
-                    flight.outTime = updatedSector.outTime
-                    flight.inTime = updatedSector.inTime
-                    flight.scheduledDeparture = updatedSector.scheduledDeparture
-                    flight.scheduledArrival = updatedSector.scheduledArrival
-                    flight.modifiedAt = Date()
+                        flight.date = formatter.date(from: updatedSector.date)
+                        flight.flightNumber = updatedSector.flightNumber
+                        flight.aircraftReg = updatedSector.aircraftReg
+                        flight.aircraftType = updatedSector.aircraftType
+                        flight.fromAirport = updatedSector.fromAirport
+                        flight.toAirport = updatedSector.toAirport
+                        flight.captainName = updatedSector.captainName
+                        flight.foName = updatedSector.foName
+                        flight.so1Name = updatedSector.so1Name
+                        flight.so2Name = updatedSector.so2Name
+                        flight.blockTime = updatedSector.blockTime
+                        flight.nightTime = updatedSector.nightTime
+                        flight.p1Time = updatedSector.p1Time
+                        flight.p1usTime = updatedSector.p1usTime
+                        flight.p2Time = updatedSector.p2Time
+                        flight.instrumentTime = updatedSector.instrumentTime
+                        flight.simTime = updatedSector.simTime
+                        flight.spInsTime = updatedSector.spInsTime.isEmpty || updatedSector.spInsTime == "0.00" || updatedSector.spInsTime == "0.0" ? nil : updatedSector.spInsTime
+                        flight.isPilotFlying = updatedSector.isPilotFlying
+                        flight.isPositioning = updatedSector.isPositioning
+                        flight.isAIII = updatedSector.isAIII
+                        flight.isRNP = updatedSector.isRNP
+                        flight.isILS = updatedSector.isILS
+                        flight.isGLS = updatedSector.isGLS
+                        flight.isNPA = updatedSector.isNPA
+                        flight.safeRemarks = updatedSector.remarks
+                        flight.dayTakeoffs = Int16(updatedSector.dayTakeoffs)
+                        flight.dayLandings = Int16(updatedSector.dayLandings)
+                        flight.nightTakeoffs = Int16(updatedSector.nightTakeoffs)
+                        flight.nightLandings = Int16(updatedSector.nightLandings)
+                        flight.outTime = updatedSector.outTime
+                        flight.inTime = updatedSector.inTime
+                        flight.scheduledDeparture = updatedSector.scheduledDeparture
+                        flight.scheduledArrival = updatedSector.scheduledArrival
+                        flight.modifiedAt = Date()
 
-                    // Clear all counter columns then write current values
-                    for i in 1...10 { flight.setCounter(i, value: nil) }
-                    for (columnIndex, value) in updatedSector.counterEntries where !value.isEmpty {
-                        flight.setCounter(columnIndex, value: value)
+                        // Clear all counter columns then write current values
+                        for i in 1...10 { flight.setCounter(i, value: nil) }
+                        for (columnIndex, value) in updatedSector.counterEntries where !value.isEmpty {
+                            flight.setCounter(columnIndex, value: value)
+                        }
                     }
+
+                    try viewContext.save()
+                    viewContext.undoManager?.endUndoGrouping()
+                    undoableChangeCount += 1
+                    LogManager.shared.info("Database: Successfully bulk updated \(flights.count) flights")
+                    success = true
+                } catch {
+                    viewContext.undoManager?.endUndoGrouping()
+                    LogManager.shared.error("Database: Bulk update failed - \(error.localizedDescription)")
                 }
-
-                // Single transaction for all records
-                try context.save()
-                LogManager.shared.info("Database: Successfully bulk updated \(flights.count) flights")
             }
 
-            // viewContext merges automatically (automaticallyMergesChangesFromParent = true)
-            // Post notification on main thread so observers update correctly
-            await MainActor.run {
-                NotificationCenter.default.post(name: .flightDataChanged, object: nil)
-            }
-            return true
-
-        } catch {
-            LogManager.shared.error("Database: Bulk update failed - \(error.localizedDescription)")
-            return false
+            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
         }
+
+        return success
     }
 
     /// Find a scheduled flight (with zero block time) matching the given flight parameters
