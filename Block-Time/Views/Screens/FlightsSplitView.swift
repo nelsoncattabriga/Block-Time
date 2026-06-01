@@ -736,6 +736,7 @@ private struct FlightsListContent: View {
                 if let selectedId = selectedFlightId {
                     if let updatedFlight = filteredFlightSectors.first(where: { $0.id == selectedId }) {
                         selectedFlight = updatedFlight
+                        viewModel.loadFlightForEditing(updatedFlight)
                     } else {
                         selectedFlight = nil
                     }
