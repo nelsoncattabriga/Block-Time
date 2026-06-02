@@ -85,11 +85,11 @@ struct AverageMetricCard: View {
 
     private var formattedValue: String {
         if shouldStackVertically {
-            let sectorsText = String(format: "%.0f Sectors", averageSectors)
+            let sectorsText = String(format: "%.0f Flights", averageSectors)
             let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
             return "\(hoursText) | \(sectorsText)"
         } else {
-            let sectorsText = String(format: "%.0f sectors", averageSectors)
+            let sectorsText = String(format: "%.0f flights", averageSectors)
             let hoursText = showTimesInHoursMinutes ? FlightSector.decimalToHHMM(averageHours) : String(format: "%.1f hrs", averageHours)
             return "\(hoursText) | \(sectorsText)"
         }
