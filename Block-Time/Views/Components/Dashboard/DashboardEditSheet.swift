@@ -59,11 +59,9 @@ struct DashboardEditSheet: View {
                     )
                 }
 
-                // ── Available pool (grouped by category, alphabetical within) ──
+                // ── Available pool (grouped by category, custom order within) ──
                 ForEach(DashboardCardID.Category.allCases, id: \.self) { category in
-                    let cards = availablePool
-                        .filter { $0.category == category }
-                        .sorted { $0.displayName < $1.displayName }
+                    let cards = sortedCards(availablePool.filter { $0.category == category }, in: category)
                     if !cards.isEmpty {
                         Section(category.rawValue) {
                             ForEach(cards, id: \.self) { card in
@@ -128,6 +126,19 @@ struct DashboardEditSheet: View {
     private func refreshEditMode() {
         editMode = .inactive
         Task { @MainActor in editMode = .active }
+    }
+
+    private func sortedCards(_ cards: [DashboardCardID], in category: DashboardCardID.Category) -> [DashboardCardID] {
+        switch category {
+        case .timeStats:
+            let order: [DashboardCardID] = [.totalTime, .picTime, .icusTime, .insTime, .instrumentTime, .nightTime, .simTime]
+            return cards.sorted { (order.firstIndex(of: $0) ?? 999) < (order.firstIndex(of: $1) ?? 999) }
+        case .recency:
+            let order: [DashboardCardID] = [.aiiiRecency, .recentActivity28, .recentActivity30, .recentActivity365, .recentActivity7, .pfRecency, .takeoffRecency, .landingRecency]
+            return cards.sorted { (order.firstIndex(of: $0) ?? 999) < (order.firstIndex(of: $1) ?? 999) }
+        default:
+            return cards.sorted { $0.displayName < $1.displayName }
+        }
     }
 
     private func availableRow(_ card: DashboardCardID) -> some View {

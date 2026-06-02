@@ -489,7 +489,7 @@ private struct ModernDefaultCrewNamesCard: View {
 
                 ModernToggleRow(
                     title: "Log Instructor Time",
-                    subtitle: "Log SIM & FLT Instructor Times",
+                    subtitle: "Log Trainer / Instructor Time",
                     isOn: Binding(
                         get: { viewModel.showSpInsSelector },
                         set: { viewModel.updateShowSpInsSelector($0) }
@@ -516,7 +516,7 @@ private struct ModernDefaultCrewNamesCard: View {
     @ViewBuilder
     private var instructionEnvironmentPicker: some View {
         let caption: String = viewModel.defaultInstructionEnvironment == .simulator
-            ? "Sim instruction hours are tracked but do not count towards totals."
+            ? "Sim instruction hours counted separately from SIM time."
             : "Aircraft instruction hours counted as P1 time by default."
         VStack(alignment: .leading, spacing: 6) {
             Text("Default instruction environment")
@@ -938,7 +938,7 @@ private struct ModernFormatOptionsCard: View {
                 
                 ModernToggleRow(
                     title: "Count SIM in Total",
-                    subtitle: "Include SIM time in Totals",
+                    subtitle: "Include SIM time in Total Time",
                     isOn: Binding(
                         get: { viewModel.countSimInTotal },
                         set: { viewModel.updateCountSimInTotal($0) }
