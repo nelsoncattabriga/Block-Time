@@ -9,9 +9,9 @@ import SwiftUI
 import Charts
 
 private enum PFMonths: String, CaseIterable {
-    case three  = "3M"
-    case six    = "6M"
-    case twelve = "12M"
+    case three  = "3 Months"
+    case six    = "6 Months"
+    case twelve = "12 Months"
     var intValue: Int {
         switch self { case .three: return 3; case .six: return 6; case .twelve: return 12 }
     }

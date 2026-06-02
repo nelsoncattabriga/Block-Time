@@ -9,8 +9,8 @@
 import SwiftUI
 
 private enum PunctualityPeriod: String, CaseIterable {
-    case oneMonth     = "1M"
-    case twelveMonths = "12M"
+    case oneMonth     = "1 Month"
+    case twelveMonths = "12 Months"
 }
 
 private enum PunctualityViewMode: String, CaseIterable {

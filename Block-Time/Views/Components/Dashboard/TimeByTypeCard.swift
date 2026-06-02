@@ -10,7 +10,7 @@ import Charts
 
 private enum FleetDisplayMode: String, CaseIterable {
     case hours = "Hours"
-    case sectors = "Sectors"
+    case sectors = "Flights"
 }
 
 private enum FleetGroupMode: String, CaseIterable {
@@ -124,7 +124,7 @@ struct TimeByTypeCard: View {
                     Chart(Array(chartData.enumerated()), id: \.element.id) { index, item in
                         SectorMark(
                             angle: .value(
-                                displayMode == .hours ? "Hours" : "Sectors",
+                                displayMode == .hours ? "Hours" : "Flights",
                                 displayMode == .hours ? item.hours : Double(item.sectors)
                             ),
                             innerRadius: .ratio(0.60),

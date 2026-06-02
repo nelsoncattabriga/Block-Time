@@ -8,14 +8,14 @@
 import SwiftUI
 
 private enum RegPeriod: String, CaseIterable {
-    case oneMonth     = "1M"
-    case twelveMonths = "12M"
+    case oneMonth     = "1 Month"
+    case twelveMonths = "12 Months"
     case all          = "ALL"
 }
 
 private enum RegDisplayMode: String, CaseIterable {
     case hours   = "Hours"
-    case sectors = "Sectors"
+    case sectors = "Flights"
 }
 
 struct TopRegistrationsCard: View {
@@ -207,10 +207,10 @@ struct TopRegistrationsCard: View {
             .frame(minWidth: 60, maxWidth: .infinity)
 
             if displayMode == .hours {
-                Text(String(format: "%.0f hrs", reg.hours))
+                Text(String(format: "%.0f", reg.hours))
                     .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             } else {
-                Text("\(reg.sectors) sectors")
+                Text("\(reg.sectors)")
                     .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             }
         }
@@ -342,10 +342,10 @@ private struct RegistrationsSheetView: View {
             .frame(minWidth: 60, maxWidth: .infinity)
 
             if displayMode == .hours {
-                Text(String(format: "%.0f hrs", reg.hours))
+                Text(String(format: "%.0f", reg.hours))
                     .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             } else {
-                Text("\(reg.sectors) sectors")
+                Text("\(reg.sectors)")
                     .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             }
         }

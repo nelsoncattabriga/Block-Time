@@ -12,8 +12,8 @@ import SwiftUI
 // MARK: - Period
 
 private enum HeatmapPeriod: String, CaseIterable {
-    case twentyEightDays = "28D"
-    case fiftyFiveDays   = "56D"
+    case twentyEightDays = "28 Days"
+    case fiftyFiveDays   = "56 Days"
     case fiveYears       = "5Y"
 }
 

@@ -10,12 +10,12 @@ import Charts
 
 private enum DisplayMode: String, CaseIterable {
     case hours = "Hours"
-    case sectors = "Sectors"
+    case sectors = "Flights"
 }
 
 private enum ChartMonths: String, CaseIterable, RawRepresentable {
-    case six = "6M"
-    case twelve = "12M"
+    case six = "6 Months"
+    case twelve = "12 Months"
     case fiveYear = "5Y"
     var intValue: Int {
         switch self { case .six: return 6; case .twelve: return 12; case .fiveYear: return 60 }
@@ -83,7 +83,7 @@ struct FlyingActivityChartCard: View {
                 Chart(chartData) { item in
                     BarMark(
                         x: .value("Month", item.month, unit: .month),
-                        y: .value(displayMode == .hours ? "Hours" : "Sectors", item.value)
+                        y: .value(displayMode == .hours ? "Hours" : "Flights", item.value)
                     )
                     .foregroundStyle(displayMode == .hours ? Color.blue.gradient : Color.teal.gradient)
                     .cornerRadius(3)

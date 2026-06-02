@@ -15,8 +15,8 @@ private struct MaxWidthKey: PreferenceKey {
 }
 
 private enum CrewPeriod: String, CaseIterable {
-    case oneMonth     = "1M"
-    case twelveMonths = "12M"
+    case oneMonth     = "1 Month"
+    case twelveMonths = "12 Months"
     case all          = "ALL"
 }
 
@@ -28,8 +28,8 @@ private enum CrewRoleFilter: String, CaseIterable {
 }
 
 private enum CrewDisplayMode: String, CaseIterable {
-    case hours   = "HRS"
-    case sectors = "FLTS"
+    case hours   = "Hours"
+    case sectors = "Flights"
 }
 
 private struct CrewFrequency: Identifiable {
