@@ -54,7 +54,7 @@ struct DashboardEditSheet: View {
                     .onDelete { config.removeDetailCard(at: $0) }
                 } header: {
                     Label(
-                        isIPad ? "Detail Pane" : "Cards",
+                        isIPad ? "Detail Pane" : "Selected For Display",
                         systemImage: isIPad ? "rectangle.righthalf.inset.filled" : "square.grid.2x2"
                     )
                 }
