@@ -59,11 +59,16 @@ struct DashboardEditSheet: View {
                     )
                 }
 
-                // ── Available pool ─────────────────────────────────────────
-                if !availablePool.isEmpty {
-                    Section("Available") {
-                        ForEach(availablePool, id: \.self) { card in
-                            availableRow(card)
+                // ── Available pool (grouped by category, alphabetical within) ──
+                ForEach(DashboardCardID.Category.allCases, id: \.self) { category in
+                    let cards = availablePool
+                        .filter { $0.category == category }
+                        .sorted { $0.displayName < $1.displayName }
+                    if !cards.isEmpty {
+                        Section(category.rawValue) {
+                            ForEach(cards, id: \.self) { card in
+                                availableRow(card)
+                            }
                         }
                     }
                 }

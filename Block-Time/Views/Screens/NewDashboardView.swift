@@ -15,6 +15,7 @@ struct NewDashboardView: View {
     @State private var viewModel = NewDashboardViewModel()
     @State private var config = DashboardConfiguration()
     @State private var showingEditSheet = false
+    @AppStorage("dashboardNudgeDismissed") private var nudgeDismissed = false
     @Environment(ThemeService.self) private var themeService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -60,7 +61,10 @@ struct NewDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showingEditSheet = true } label: {
+                    Button {
+                        nudgeDismissed = true
+                        showingEditSheet = true
+                    } label: {
                         Image(systemName: "slider.horizontal.3")
                     }
                 }
@@ -123,7 +127,10 @@ struct NewDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showingEditSheet = true } label: {
+                    Button {
+                        nudgeDismissed = true
+                        showingEditSheet = true
+                    } label: {
                         Image(systemName: "slider.horizontal.3")
                     }
                 }
@@ -147,6 +154,9 @@ struct NewDashboardView: View {
     @ViewBuilder
     private var detailCards: some View {
         VStack(spacing: 16) {
+            if !nudgeDismissed {
+                customiseNudge
+            }
             ForEach(config.detailCards, id: \.self) { card in
                 DashboardCardView(
                     cardID: card,
@@ -155,5 +165,56 @@ struct NewDashboardView: View {
                 )
             }
         }
+    }
+
+    private var customiseNudge: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "slider.horizontal.3")
+                .foregroundStyle(.secondary)
+            Text("Tap the sliders icon to customise.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Button {
+                nudgeDismissed = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Customise Nudge") {
+    ZStack {
+        Color(.systemGroupedBackground).ignoresSafeArea()
+        VStack(spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "slider.horizontal.3")
+                    .foregroundStyle(.secondary)
+                Text("Tap the sliders icon to customise.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Button { } label: {
+                    Image(systemName: "xmark")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Dismiss")
+            }
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 16)
+
+            Spacer()
+        }
+        .padding(.top, 16)
     }
 }

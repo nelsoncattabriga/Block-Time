@@ -237,6 +237,40 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         }
     }
 
+    // MARK: - Category
+
+    enum Category: String, CaseIterable {
+        case frms            = "FRMS"
+        case timeStats       = "Time & Stats"
+        case recency         = "Recency"
+        case charts          = "Charts & Analysis"
+        case routesAirports  = "Routes, Airports & Fleet"
+        case other           = "Other"
+    }
+
+    var category: Category {
+        if customCounterColumnIndex != nil { return .other }
+        switch rawValue {
+        case "frmsFlightTime", "frmsDutyTime", "frmsRestWindow",
+             "frmsLimitsGauge", "frmsRollingLine":
+            return .frms
+        case "totalTime", "picTime", "icusTime", "nightTime",
+             "instrumentTime", "simTime", "insTime":
+            return .timeStats
+        case "recentActivity7", "recentActivity28", "recentActivity30", "recentActivity365",
+             "pfRecency", "aiiiRecency", "takeoffRecency", "landingRecency":
+            return .recency
+        case "activityChart", "timeByType", "pfRatioChart", "workRateHeatmap",
+             "crewFrequency", "averageMetric":
+            return .charts
+        case "takeoffLanding", "approachTypes", "topRoutes", "topRegistrations",
+             "airportStats", "aircraftTypeTime":
+            return .routesAirports
+        default:
+            return .other
+        }
+    }
+
     /// Advisory hint: this card was designed to look good at sidebar (narrow) widths.
     var sidebarHint: Bool {
         // Custom counter cards are sidebar-friendly
