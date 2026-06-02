@@ -110,7 +110,7 @@ struct PFRatioCard: View {
                 statChip(label: "Average PF", value: String(format: "%.0f%%", averagePF * 100), color: .blue)
                 Spacer()
                 let totalSectors = filtered.reduce(0) { $0 + $1.totalSectors }
-                statChip(label: "Flights", value: "\(totalSectors)", color: .secondary)
+                statChip(label: "Flights", value: "\(totalSectors)", color: .blue)
             }
         }
         .padding(16)
