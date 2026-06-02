@@ -13,6 +13,8 @@ struct DashboardEditSheet: View {
     @Bindable var config: DashboardConfiguration
     @Environment(\.dismiss) private var dismiss
 
+    @State private var sidebarCards: [DashboardCardID] = []
+    @State private var detailCards: [DashboardCardID] = []
     @State private var cardToAdd: DashboardCardID? = nil
     @State private var editMode: EditMode = .active
     @AppStorage("showSpInsSelector") private var showSpInsSelector: Bool = false
@@ -20,8 +22,10 @@ struct DashboardEditSheet: View {
     private var isIPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
     private var availablePool: [DashboardCardID] {
-        let pool = isIPad ? config.availableCards : config.availableForPhone
-        return pool.filter {
+        let used = Set(sidebarCards + detailCards)
+        let all = isIPad ? config.availableCards : config.availableForPhone
+        return all.filter {
+            !used.contains($0) &&
             ($0 != .customCount || !CustomCounterService.shared.definitions.isEmpty) &&
             ($0 != .insTime || showSpInsSelector)
         }
@@ -33,11 +37,17 @@ struct DashboardEditSheet: View {
                 // ── Sidebar section (iPad only) ────────────────────────────
                 if isIPad {
                     Section {
-                        ForEach(config.sidebarCards, id: \.self) { card in
+                        ForEach(sidebarCards, id: \.self) { card in
                             cardRow(card, location: "Sidebar")
                         }
-                        .onMove { config.moveSidebarCard(from: $0, to: $1) }
-                        .onDelete { config.removeSidebarCard(at: $0) }
+                        .onMove { offsets, dest in
+                            sidebarCards.move(fromOffsets: offsets, toOffset: dest)
+                            config.moveSidebarCard(from: offsets, to: dest)
+                        }
+                        .onDelete { offsets in
+                            sidebarCards.remove(atOffsets: offsets)
+                            config.removeSidebarCard(at: offsets)
+                        }
                     } header: {
                         Label("Sidebar", systemImage: "sidebar.left")
                     } footer: {
@@ -47,11 +57,17 @@ struct DashboardEditSheet: View {
 
                 // ── Detail / main cards ────────────────────────────────────
                 Section {
-                    ForEach(config.detailCards, id: \.self) { card in
+                    ForEach(detailCards, id: \.self) { card in
                         cardRow(card, location: isIPad ? "Detail Pane" : nil)
                     }
-                    .onMove { config.moveDetailCard(from: $0, to: $1) }
-                    .onDelete { config.removeDetailCard(at: $0) }
+                    .onMove { offsets, dest in
+                        detailCards.move(fromOffsets: offsets, toOffset: dest)
+                        config.moveDetailCard(from: offsets, to: dest)
+                    }
+                    .onDelete { offsets in
+                        detailCards.remove(atOffsets: offsets)
+                        config.removeDetailCard(at: offsets)
+                    }
                 } header: {
                     Label(
                         isIPad ? "Detail Pane" : "Selected For Display",
@@ -72,6 +88,10 @@ struct DashboardEditSheet: View {
                 }
             }
             .environment(\.editMode, $editMode)
+            .onAppear {
+                sidebarCards = config.sidebarCards
+                detailCards  = config.detailCards
+            }
             .navigationTitle("Customise Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -90,11 +110,13 @@ struct DashboardEditSheet: View {
                 if let card = cardToAdd {
                     Button("Sidebar") {
                         config.addToSidebar(card)
+                        sidebarCards = config.sidebarCards
                         cardToAdd = nil
                         refreshEditMode()
                     }
                     Button("Detail Pane") {
                         config.addToDetail(card)
+                        detailCards = config.detailCards
                         cardToAdd = nil
                         refreshEditMode()
                     }
@@ -147,6 +169,7 @@ struct DashboardEditSheet: View {
                 cardToAdd = card
             } else {
                 config.addToDetailFromPhone(card)
+                detailCards = config.detailCards
                 refreshEditMode()
             }
         } label: {
