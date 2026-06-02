@@ -42,7 +42,7 @@ struct RecentActivityCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "\(days) Day\(days == 1 ? "" : "s")", icon: "calendar", iconColor: .teal) {
+            CardHeader(title: "\(days) Day\(days == 1 ? "" : "s")", icon: "calendar", iconColor: .green) {
                 Image(systemName: "slider.horizontal.3")
                     .imageScale(.small)
                     .foregroundStyle(progressColor.opacity(0.7))

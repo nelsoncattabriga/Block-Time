@@ -210,11 +210,11 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "recentActivity7",
              "recentActivity28",
              "recentActivity30",
-             "recentActivity365": return .teal
-        case "pfRecency":         return .teal
-        case "aiiiRecency":       return .teal
-        case "takeoffRecency":    return .teal
-        case "landingRecency":    return .teal
+             "recentActivity365": return .green
+        case "pfRecency":         return .green
+        case "aiiiRecency":       return .green
+        case "takeoffRecency":    return .green
+        case "landingRecency":    return .green
         // Charts / analysis
         case "activityChart":     return .purple
         case "timeByType":        return .purple
@@ -230,7 +230,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "airportStats":      return .indigo
         case "aircraftTypeTime":  return .indigo
         // Other
-        case "punctuality":       return .green
+        case "punctuality":       return .red
         case "careerMilestones":  return .yellow
         case "customCount":       return .teal
         default:                  return .gray

@@ -38,7 +38,7 @@ struct RecencyCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: displayTitle, icon: "calendar.badge.clock", iconColor: .teal) {
+            CardHeader(title: displayTitle, icon: "calendar.badge.clock", iconColor: .green) {
                 Image(systemName: statusIcon)
                     .foregroundStyle(recencyStatus.color)
                     .font(.headline)
