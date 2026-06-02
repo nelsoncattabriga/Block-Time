@@ -112,13 +112,13 @@ struct DashboardEditSheet: View {
                         config.addToSidebar(card)
                         sidebarCards = config.sidebarCards
                         cardToAdd = nil
-                        refreshEditMode()
+                        reactivateEditMode()
                     }
                     Button("Detail Pane") {
                         config.addToDetail(card)
                         detailCards = config.detailCards
                         cardToAdd = nil
-                        refreshEditMode()
+                        reactivateEditMode()
                     }
                     Button("Cancel", role: .cancel) { cardToAdd = nil }
                 }
@@ -145,9 +145,11 @@ struct DashboardEditSheet: View {
         }
     }
 
-    private func refreshEditMode() {
+    private func reactivateEditMode() {
         editMode = .inactive
-        Task { @MainActor in editMode = .active }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            editMode = .active
+        }
     }
 
     private func sortedCards(_ cards: [DashboardCardID], in category: DashboardCardID.Category) -> [DashboardCardID] {
@@ -170,7 +172,7 @@ struct DashboardEditSheet: View {
             } else {
                 config.addToDetailFromPhone(card)
                 detailCards = config.detailCards
-                refreshEditMode()
+                reactivateEditMode()
             }
         } label: {
             HStack(spacing: 12) {
