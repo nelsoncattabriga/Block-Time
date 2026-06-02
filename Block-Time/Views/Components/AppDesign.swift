@@ -55,6 +55,7 @@ struct CardFilterChip: View {
             .padding(.horizontal, 7)
             .padding(.vertical, 5)
             .background(.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+            .transaction { $0.animation = nil }
     }
 }
 
