@@ -11,8 +11,8 @@ import SwiftUI
 
 struct NewDashboardView: View {
     var frmsViewModel: FRMSViewModel
+    var viewModel: NewDashboardViewModel
 
-    @State private var viewModel = NewDashboardViewModel()
     @State private var config = DashboardConfiguration()
     @State private var showingEditSheet = false
     @AppStorage("dashboardNudgeDismissed") private var nudgeDismissed = false
@@ -25,17 +25,17 @@ struct NewDashboardView: View {
 
     /// Loads dashboard data and FRMS cumulative totals concurrently.
     private func loadAll() async {
-        // FRMS loads first so its duties are available for the rolling chart
-        await triggerFRMSLoadIfNeeded()
-        await viewModel.load(duties: frmsViewModel.dutiesLast365Days)
-    }
-
-    @MainActor
-    private func triggerFRMSLoadIfNeeded() async {
-        guard frmsViewModel.cumulativeTotals == nil, !frmsViewModel.isLoading else { return }
+        guard frmsViewModel.cumulativeTotals == nil, !frmsViewModel.isLoading else {
+            await viewModel.load(duties: frmsViewModel.dutiesLast365Days)
+            return
+        }
         let raw      = UserDefaults.standard.string(forKey: "flightTimePosition") ?? ""
         let position = FlightTimePosition(rawValue: raw) ?? .captain
-        await frmsViewModel.refreshFlightData(crewPosition: position, ignoresCooldown: true)
+        async let frmsLoad: Void = frmsViewModel.refreshFlightData(crewPosition: position, ignoresCooldown: true)
+        async let dashLoad: Void = viewModel.load(duties: [])
+        _ = await (frmsLoad, dashLoad)
+        // Reload dashboard now that FRMS duties are available for the rolling chart
+        await viewModel.load(duties: frmsViewModel.dutiesLast365Days)
     }
 
     var body: some View {
@@ -91,7 +91,10 @@ struct NewDashboardView: View {
         .sheet(isPresented: $showingEditSheet) {
             DashboardEditSheet(config: config)
         }
-        .task { await loadAll() }
+        .task {
+            guard !viewModel.hasLoadedOnce else { return }
+            await loadAll()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             Task { await loadAll() }
         }
@@ -139,7 +142,10 @@ struct NewDashboardView: View {
                 DashboardEditSheet(config: config)
             }
         }
-        .task { await loadAll() }
+        .task {
+            guard !viewModel.hasLoadedOnce else { return }
+            await loadAll()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             Task { await loadAll() }
         }

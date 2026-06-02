@@ -36,6 +36,14 @@ struct FRMSRollingLineCard: View {
     @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes = false
     @Environment(\.horizontalSizeClass) private var sizeClass
 
+    // Cached derived state — recomputed only when data or selectedLimit changes
+    @State private var actualPoints: [NDFRMSRollingPoint] = []
+    @State private var projectedPoints: [NDFRMSRollingPoint] = []
+    @State private var currentTotal: Double = 0
+    @State private var peakProjected: Double = 0
+    @State private var hasProjected: Bool = false
+    @State private var cachedSeries: NDFRMSRollingSeries = NDFRMSRollingData.empty.flight28d
+
     private var series: NDFRMSRollingSeries {
         switch selectedLimit {
         case .flight7:   return data.flight7d ?? data.flight28d
@@ -46,40 +54,34 @@ struct FRMSRollingLineCard: View {
         }
     }
 
-    private var actualPoints: [NDFRMSRollingPoint] {
-        series.points.filter { !$0.isProjected }
+    private func recompute() {
+        let s = series
+        cachedSeries = s
+        let actual = s.points.filter { !$0.isProjected }
+        let future = s.points.filter { $0.isProjected }
+        actualPoints = actual
+        projectedPoints = actual.last.map { [$0] + future } ?? future
+        hasProjected = !future.isEmpty
+        currentTotal = actual.last?.total ?? 0
+        peakProjected = projectedPoints.map(\.total).max() ?? 0
     }
-
-    private var projectedPoints: [NDFRMSRollingPoint] {
-        // Include the last actual point as the join so the lines connect
-        let last = actualPoints.last
-        let future = series.points.filter { $0.isProjected }
-        if let last { return [last] + future }
-        return future
-    }
-
-    private var hasProjected: Bool { series.points.contains { $0.isProjected } }
-
-    private var currentTotal: Double { actualPoints.last?.total ?? 0 }
-    private var peakProjected: Double { projectedPoints.map(\.total).max() ?? 0 }
 
     private var yMax: Double {
-        let dataMax = series.points.map(\.total).max() ?? 0
-        return max(dataMax, series.limit) * 1.05
+        let dataMax = cachedSeries.points.map(\.total).max() ?? 0
+        return max(dataMax, cachedSeries.limit) * 1.05
     }
 
-    // Color for the current total
     private var statusColor: Color {
-        let r = series.limit > 0 ? currentTotal / series.limit : 0
+        let r = cachedSeries.limit > 0 ? currentTotal / cachedSeries.limit : 0
         if r >= 1.0 { return .red }
-        if r >= series.warnAt / series.limit { return .orange }
+        if r >= cachedSeries.warnAt / cachedSeries.limit { return .orange }
         return .blue
     }
 
     private var projectedColor: Color {
-        let r = series.limit > 0 ? peakProjected / series.limit : 0
+        let r = cachedSeries.limit > 0 ? peakProjected / cachedSeries.limit : 0
         if r >= 1.0 { return .red }
-        if r >= series.warnAt / series.limit { return .orange }
+        if r >= cachedSeries.warnAt / cachedSeries.limit { return .orange }
         return .teal
     }
 
@@ -102,7 +104,7 @@ struct FRMSRollingLineCard: View {
                 }
             }
 
-            if series.points.isEmpty {
+            if cachedSeries.points.isEmpty {
                 ContentUnavailableView("No Data", systemImage: "chart.line.uptrend.xyaxis")
                     .frame(height: 180)
             } else {
@@ -114,6 +116,9 @@ struct FRMSRollingLineCard: View {
         }
         .padding(16)
         .appCardStyle()
+        .onAppear { recompute() }
+        .onChange(of: selectedLimit) { recompute() }
+        .onChange(of: data.flight28d.points.count + data.flight365d.points.count + data.duty7d.points.count) { recompute() }
     }
 
     // MARK: - Limit helpers
@@ -168,20 +173,20 @@ struct FRMSRollingLineCard: View {
         Chart {
             // Warning zone band
             RectangleMark(
-                xStart: .value("Start", series.chartStart),
-                xEnd: .value("End", series.chartEnd),
-                yStart: .value("Warn", series.warnAt),
-                yEnd: .value("Limit", series.limit)
+                xStart: .value("Start", cachedSeries.chartStart),
+                xEnd: .value("End", cachedSeries.chartEnd),
+                yStart: .value("Warn", cachedSeries.warnAt),
+                yEnd: .value("Limit", cachedSeries.limit)
             )
             .foregroundStyle(Color.orange.opacity(0.06))
 
             // Limit line
-            RuleMark(y: .value("Limit", series.limit))
+            RuleMark(y: .value("Limit", cachedSeries.limit))
                 .foregroundStyle(Color.red.opacity(0.6))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
 
             // Warning threshold line
-            RuleMark(y: .value("Warn", series.warnAt))
+            RuleMark(y: .value("Warn", cachedSeries.warnAt))
                 .foregroundStyle(Color.orange.opacity(0.5))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 4]))
 
@@ -232,7 +237,7 @@ struct FRMSRollingLineCard: View {
                         .foregroundStyle(.secondary)
                 }
         }
-        .chartXScale(domain: series.chartStart...series.chartEnd)
+        .chartXScale(domain: cachedSeries.chartStart...cachedSeries.chartEnd)
         .chartXAxis {
             AxisMarks(values: .stride(by: xAxisStride, count: xAxisStrideCount)) { value in
                 AxisGridLine()

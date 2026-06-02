@@ -35,20 +35,27 @@ struct FlyingActivityChartCard: View {
     @AppStorage("flyingActivityCard_displayMode") private var displayMode: DisplayMode = .hours
     @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes = false
 
-    private var filtered: [NDMonthlyActivity] {
-        let cutoff = Calendar.current.date(byAdding: .month, value: -chartMonths.intValue, to: Date()) ?? Date()
-        return data.filter { $0.month >= cutoff }
-    }
+    @State private var chartData: [ChartBar] = []
+    @State private var axisCount: Int = 1
+    @State private var totalValue: Double = 0
+    @State private var avgValue: Double = 0
 
-    private var chartData: [ChartBar] {
-        filtered.map { item in
+    private var axisStride: Calendar.Component { .month }
+
+    private func recompute() {
+        let cutoff = Calendar.current.date(byAdding: .month, value: -chartMonths.intValue, to: Date()) ?? Date()
+        let filtered = data.filter { $0.month >= cutoff }
+        axisCount = filtered.count > 18 ? 3 : 1
+        chartData = filtered.map { item in
             let value = displayMode == .hours ? item.blockHours : Double(item.sectorCount)
             return ChartBar(month: item.month, value: value)
         }
+        let total = displayMode == .hours
+            ? filtered.reduce(0) { $0 + $1.blockHours }
+            : Double(filtered.reduce(0) { $0 + $1.sectorCount })
+        totalValue = total
+        avgValue = filtered.isEmpty ? 0 : total / Double(filtered.count)
     }
-
-    private var axisStride: Calendar.Component { .month }
-    private var axisCount: Int { filtered.count > 18 ? 3 : 1 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -72,7 +79,7 @@ struct FlyingActivityChartCard: View {
                 .tint(.primary)
             }
 
-            if filtered.isEmpty {
+            if chartData.isEmpty {
                 ContentUnavailableView(
                     "No Activity",
                     systemImage: "airplane",
@@ -106,29 +113,28 @@ struct FlyingActivityChartCard: View {
                 .animation(.spring(response: 0.4), value: displayMode)
             }
 
-            // Summary row
-            if !filtered.isEmpty {
+            if !chartData.isEmpty {
                 if displayMode == .hours {
-                    let totalBlock = filtered.reduce(0) { $0 + $1.blockHours }
-                    let avg = totalBlock / Double(filtered.count)
                     HStack {
-                        summaryChip(label: "Monthly Avg", value: formatHours(avg), color: .blue)
+                        summaryChip(label: "Monthly Avg", value: formatHours(avgValue), color: .blue)
                         Spacer()
-                        summaryChip(label: "Period Total", value: formatHours(totalBlock), color: .blue)
+                        summaryChip(label: "Period Total", value: formatHours(totalValue), color: .blue)
                     }
                 } else {
-                    let totalSectors = filtered.reduce(0) { $0 + $1.sectorCount }
-                    let avg = Double(totalSectors) / Double(filtered.count)
                     HStack {
-                        summaryChip(label: "Monthly Avg", value: String(format: "%.0f flights", avg), color: .blue)
+                        summaryChip(label: "Monthly Avg", value: String(format: "%.0f flights", avgValue), color: .blue)
                         Spacer()
-                        summaryChip(label: "Period Total", value: "\(totalSectors) flights", color: .blue)
+                        summaryChip(label: "Period Total", value: "\(Int(totalValue)) flights", color: .blue)
                     }
                 }
             }
         }
         .padding(16)
         .appCardStyle()
+        .onAppear { recompute() }
+        .onChange(of: chartMonths) { recompute() }
+        .onChange(of: displayMode) { recompute() }
+        .onChange(of: data.count) { recompute() }
     }
 
     private func formatHours(_ h: Double) -> String {

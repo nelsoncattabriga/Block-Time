@@ -17,6 +17,7 @@ struct MainTabView: View {
     @StateObject private var viewModel = FlightTimeExtractorViewModel()
     @StateObject private var flightsFilterViewModel = FlightsFilterViewModel()
     @State private var frmsViewModel = FRMSViewModel()
+    @State private var dashboardViewModel = NewDashboardViewModel()
     @StateObject private var userDefaultsService = UserDefaultsService()
     @ObservedObject private var appState = AppState.shared
     @State private var selectedTab = 0
@@ -52,7 +53,7 @@ struct MainTabView: View {
                 }
                 .tag(0)
 
-            NewDashboardView(frmsViewModel: frmsViewModel)
+            NewDashboardView(frmsViewModel: frmsViewModel, viewModel: dashboardViewModel)
                 .tabItem {
                     Image(systemName: "chart.xyaxis.line")
                     Text("Dashboard")
@@ -74,7 +75,6 @@ struct MainTabView: View {
                 }
                 .badge(settingsTabBadge)
                 .tag(3)
-
         }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingWelcomeView(
