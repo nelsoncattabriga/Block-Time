@@ -20,7 +20,7 @@ struct TakeoffLandingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "T/O & LDGs", icon: "airplane") {
+            CardHeader(title: "T/O & LDGs", icon: "airplane", iconColor: .indigo) {
                 Menu {
                     ForEach(TLPeriod.allCases, id: \.self) { option in
                         Button(option.rawValue) { period = option }

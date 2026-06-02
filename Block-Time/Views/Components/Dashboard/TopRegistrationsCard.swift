@@ -51,7 +51,7 @@ struct TopRegistrationsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Top Registrations", icon: "airplane") {
+            CardHeader(title: "Top Registrations", icon: "airplane", iconColor: .indigo) {
                 HStack(spacing: 4) {
                     Menu {
                         ForEach(RegPeriod.allCases, id: \.self) { option in

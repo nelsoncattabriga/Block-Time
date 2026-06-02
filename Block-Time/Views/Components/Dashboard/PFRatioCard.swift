@@ -34,7 +34,7 @@ struct PFRatioCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "PF Ratio", icon: "chart.line.uptrend.xyaxis") {
+            CardHeader(title: "PF Ratio", icon: "chart.line.uptrend.xyaxis", iconColor: .purple) {
                 Menu {
                     ForEach(PFMonths.allCases, id: \.self) { option in
                         Button(option.rawValue) { pfMonths = option }

@@ -212,7 +212,7 @@ struct SpInsTimeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Instructor Time", icon: "person.wave.2")
+            CardHeader(title: "Instructor Time", icon: "person.wave.2", iconColor: AppColors.insColor)
 
             VStack(alignment: .leading, spacing: 10) {
                 // Total — large primary value

@@ -86,7 +86,7 @@ struct FRMSRollingLineCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
 
-            CardHeader(title: "FRMS Rolling Total", icon: "chart.line.uptrend.xyaxis") {
+            CardHeader(title: "FRMS Rolling Total", icon: "chart.line.uptrend.xyaxis", iconColor: .orange) {
                 Menu {
                     ForEach(availableLimits, id: \.self) { option in
                         Button(label(for: option)) { selectedLimit = option }

@@ -13,7 +13,7 @@ struct FRMSFlightStripCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "FRMS Flight Times", icon: "clock.badge.checkmark")
+            CardHeader(title: "FRMS Flight Times", icon: "clock.badge.checkmark", iconColor: .orange)
 
             HStack(spacing: 0) {
                 if let max7d = data.max7d {

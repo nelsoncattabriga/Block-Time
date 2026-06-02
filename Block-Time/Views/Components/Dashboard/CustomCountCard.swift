@@ -23,7 +23,7 @@ struct CustomCountCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: label, icon: "person.2.fill") {
+            CardHeader(title: label, icon: "person.2.fill", iconColor: .teal) {
                 Picker("Period", selection: $period) {
                     ForEach(CCPeriod.allCases, id: \.self) {
                         Text($0.rawValue).tag($0)

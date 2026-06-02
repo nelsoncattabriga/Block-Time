@@ -74,7 +74,7 @@ struct TopCrewCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Top Crew", icon: "person.2.fill") {
+            CardHeader(title: "Top Crew", icon: "person.2.fill", iconColor: .purple) {
                 HStack(spacing: 4) {
                     Menu {
                         ForEach(CrewRoleFilter.allCases, id: \.self) { option in

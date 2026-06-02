@@ -142,7 +142,7 @@ struct AverageMetricCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: displayTitle, icon: "chart.line.uptrend.xyaxis") {
+            CardHeader(title: displayTitle, icon: "chart.line.uptrend.xyaxis", iconColor: .purple) {
                 if !isEditMode {
                     Button {
                         showingConfig = true

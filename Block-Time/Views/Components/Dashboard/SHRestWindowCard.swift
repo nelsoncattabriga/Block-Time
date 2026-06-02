@@ -16,7 +16,7 @@ struct SHRestWindowCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "FRMS Rest", icon: "bed.double.fill")
+            CardHeader(title: "FRMS Rest", icon: "bed.double.fill", iconColor: .orange)
 
             if frmsViewModel.isLoading {
                 loadingView

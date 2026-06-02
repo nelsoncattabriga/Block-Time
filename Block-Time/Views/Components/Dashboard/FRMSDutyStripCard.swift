@@ -19,7 +19,7 @@ struct FRMSDutyStripCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "FRMS Duty Times", icon: "briefcase.fill")
+            CardHeader(title: "FRMS Duty Times", icon: "briefcase.fill", iconColor: .orange)
 
             if frmsViewModel.isLoading {
                 HStack(spacing: 6) {

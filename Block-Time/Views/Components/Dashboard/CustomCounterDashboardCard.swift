@@ -43,7 +43,8 @@ struct CustomCounterDashboardCard: View {
             // Header
             CardHeader(
                 title: definition?.label ?? "Field",
-                icon: iconForType(definition?.type)
+                icon: iconForType(definition?.type),
+                iconColor: colorForType(definition?.type)
             ) {
                 Picker("Period", selection: Binding(
                     get: { CCIPeriod(rawValue: periodRaw) ?? .twelveMonths },

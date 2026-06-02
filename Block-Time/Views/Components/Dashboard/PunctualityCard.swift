@@ -61,7 +61,7 @@ struct PunctualityCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "OTP Stats", icon: "clock.badge.checkmark.fill") {
+            CardHeader(title: "OTP Stats", icon: "clock.badge.checkmark.fill", iconColor: .green) {
                 HStack(spacing: 4) {
                     Menu {
                         ForEach(PunctualityPeriod.allCases, id: \.self) { option in

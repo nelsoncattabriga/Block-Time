@@ -23,7 +23,7 @@ struct ApproachTypesCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Approach Types", icon: "scope") {
+            CardHeader(title: "Approach Types", icon: "scope", iconColor: .indigo) {
                 if logApproaches {
                     Menu {
                         ForEach(ApproachPeriod.allCases, id: \.self) { option in

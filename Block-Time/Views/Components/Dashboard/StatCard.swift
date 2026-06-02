@@ -11,7 +11,7 @@ struct StatCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: title, icon: icon)
+            CardHeader(title: title, icon: icon, iconColor: color)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(value)

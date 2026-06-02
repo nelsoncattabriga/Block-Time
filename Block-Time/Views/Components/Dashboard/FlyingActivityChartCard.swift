@@ -52,7 +52,7 @@ struct FlyingActivityChartCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Flying Activity", icon: "chart.bar.fill") {
+            CardHeader(title: "Flying Activity", icon: "chart.bar.fill", iconColor: .purple) {
                 HStack(spacing: 4) {
                     Menu {
                         ForEach(ChartMonths.allCases, id: \.self) { option in

@@ -37,7 +37,7 @@ struct TopRoutesCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Top Routes", icon: "point.topleft.down.to.point.bottomright.curvepath.fill") {
+            CardHeader(title: "Top Routes", icon: "point.topleft.down.to.point.bottomright.curvepath.fill", iconColor: .indigo) {
                 Menu {
                     ForEach(RoutesPeriod.allCases, id: \.self) { option in
                         Button(option.rawValue) { period = option }

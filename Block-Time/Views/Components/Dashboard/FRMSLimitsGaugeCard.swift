@@ -104,7 +104,7 @@ struct FRMSLimitsGaugeCard: View {
         VStack(alignment: .leading, spacing: 14) {
 
             // Header
-            CardHeader(title: "FRMS Limits", icon: "gauge.with.needle.fill")
+            CardHeader(title: "FRMS Limits", icon: "gauge.with.needle.fill", iconColor: .orange)
 
             if frmsViewModel.isLoading {
                 loadingView
