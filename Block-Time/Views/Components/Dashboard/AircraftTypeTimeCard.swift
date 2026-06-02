@@ -103,26 +103,30 @@ struct AircraftTypeTimeCard: View {
                         .iPadScaledFont(.caption, phoneFont: .subheadline)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Button {
-                        let current = selectedAircraftType
-                        groupByFamily.toggle()
-                        if groupByFamily {
-                            selectedAircraftType = AircraftFleetService.familyName(for: current) ?? availableFamilies.first ?? ""
-                        } else {
+                    Menu {
+                        Button("Type") {
+                            guard groupByFamily else { return }
+                            let current = selectedAircraftType
+                            groupByFamily = false
                             let fleet = AircraftFleetService.availableFleets.first { $0.name == current }
                             selectedAircraftType = availableAircraftTypes.first { fleet?.types.contains($0) ?? false } ?? availableAircraftTypes.first ?? ""
+                            settings.selectedAircraftType = selectedAircraftType
+                            settings.saveSettings()
+                            Task { await loadAircraftStats() }
                         }
-                        settings.selectedAircraftType = selectedAircraftType
-                        settings.saveSettings()
-                        Task { await loadAircraftStats() }
+                        Button("Family") {
+                            guard !groupByFamily else { return }
+                            let current = selectedAircraftType
+                            groupByFamily = true
+                            selectedAircraftType = AircraftFleetService.familyName(for: current) ?? availableFamilies.first ?? ""
+                            settings.selectedAircraftType = selectedAircraftType
+                            settings.saveSettings()
+                            Task { await loadAircraftStats() }
+                        }
                     } label: {
-                        Label(groupByFamily ? "Family" : "Type",
-                              systemImage: "chevron.up.chevron.down")
-                            .iPadScaledFont(.caption2, phoneFont: .subheadline)
-                            .foregroundStyle(.secondary)
-                            .animation(.easeInOut(duration: 0.15), value: groupByFamily)
+                        CardFilterChip(title: groupByFamily ? "Family" : "Type")
                     }
-                    .buttonStyle(.plain)
+                    .tint(.primary)
                 }
             }
         }
