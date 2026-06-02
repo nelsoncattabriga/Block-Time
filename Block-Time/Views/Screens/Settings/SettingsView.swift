@@ -1,6 +1,5 @@
 // Views/Screens/SettingsView.swift - Master-Detail Settings Design
 import SwiftUI
-import UniformTypeIdentifiers
 
 // MARK: - Settings Category Enum
 enum SettingsCategory: String, CaseIterable, Identifiable {
