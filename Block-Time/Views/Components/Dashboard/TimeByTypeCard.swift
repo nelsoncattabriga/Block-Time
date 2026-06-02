@@ -144,7 +144,7 @@ struct TimeByTypeCard: View {
                         } else {
                             Text("\(totalSectors)")
                                 .font(.system(.title3, design: .rounded, weight: .bold))
-                            Text("sectors")
+                            Text("flights")
                                 .iPadScaledFont(.caption, phoneFont: .footnote)
                                 .foregroundStyle(.secondary)
                         }
