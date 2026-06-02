@@ -25,13 +25,14 @@ struct ApproachTypesCard: View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Approach Types", icon: "scope") {
                 if logApproaches {
-                    Picker("Period", selection: $period) {
-                        ForEach(ApproachPeriod.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
+                    Menu {
+                        ForEach(ApproachPeriod.allCases, id: \.self) { option in
+                            Button(option.rawValue) { period = option }
                         }
+                    } label: {
+                        CardFilterChip(title: period.rawValue)
                     }
-                    .pickerStyle(.segmented)
-                    .fixedSize()
+                    .tint(.primary)
                 }
             }
 

@@ -52,21 +52,24 @@ struct TopRegistrationsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Top Registrations", icon: "airplane") {
-                Picker("Period", selection: $period) {
-                    ForEach(RegPeriod.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+                HStack(spacing: 4) {
+                    Menu {
+                        ForEach(RegPeriod.allCases, id: \.self) { option in
+                            Button(option.rawValue) { period = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: period.rawValue)
+                    }
+                    Menu {
+                        ForEach(RegDisplayMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { displayMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: displayMode.rawValue)
                     }
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
-
-            Picker("Display", selection: $displayMode) {
-                ForEach(RegDisplayMode.allCases, id: \.self) {
-                    Text($0.rawValue).tag($0)
-                }
-            }
-            .pickerStyle(.segmented)
 
             if registrations.isEmpty {
                 ContentUnavailableView(
@@ -262,19 +265,23 @@ private struct RegistrationsSheetView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Picker("Period", selection: $period) {
-                        ForEach(RegPeriod.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
+                    HStack(spacing: 4) {
+                        Menu {
+                            ForEach(RegPeriod.allCases, id: \.self) { option in
+                                Button(option.rawValue) { period = option }
+                            }
+                        } label: {
+                            CardFilterChip(title: period.rawValue)
+                        }
+                        Menu {
+                            ForEach(RegDisplayMode.allCases, id: \.self) { option in
+                                Button(option.rawValue) { displayMode = option }
+                            }
+                        } label: {
+                            CardFilterChip(title: displayMode.rawValue)
                         }
                     }
-                    .pickerStyle(.segmented)
-
-                    Picker("Display", selection: $displayMode) {
-                        ForEach(RegDisplayMode.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    .tint(.primary)
 
                     if registrations.isEmpty {
                         ContentUnavailableView(

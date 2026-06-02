@@ -31,14 +31,14 @@ struct TimeByTypeCard: View {
     let data: [NDFleetHours]
 
     @AppStorage("timeByTypeCard_displayMode") private var displayMode: FleetDisplayMode = .hours
-    @AppStorage("timeByTypeCard_groupByFamily") private var groupByFamily: Bool = false
+    @AppStorage("timeByTypeCard_groupMode") private var groupMode: FleetGroupMode = .type
     @State private var showAll: Bool = false
 
     private static let topCount = 5
 
-    // Collapse individual types into family names when groupByFamily is active
+    // Collapse individual types into family names when groupMode is .family
     private var resolvedData: [NDFleetHours] {
-        guard groupByFamily else { return data }
+        guard groupMode == .family else { return data }
         var hoursByLabel: [String: Double] = [:]
         var sectorsByLabel: [String: Int] = [:]
         for item in data {
@@ -81,24 +81,24 @@ struct TimeByTypeCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Time by Type", icon: "airplane.circle.fill") {
-                Picker("Group", selection: Binding(
-                    get: { groupByFamily ? FleetGroupMode.family : .type },
-                    set: { groupByFamily = $0 == .family }
-                )) {
-                    ForEach(FleetGroupMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
+                HStack(spacing: 4) {
+                    Menu {
+                        ForEach(FleetGroupMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { groupMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: groupMode.rawValue)
+                    }
+                    Menu {
+                        ForEach(FleetDisplayMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { displayMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: displayMode.rawValue)
                     }
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
-
-            Picker("Display", selection: $displayMode) {
-                ForEach(FleetDisplayMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
 
             if data.isEmpty {
                 ContentUnavailableView("No Data", systemImage: "airplane")

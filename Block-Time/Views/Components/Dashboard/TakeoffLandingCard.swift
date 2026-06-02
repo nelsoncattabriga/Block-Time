@@ -21,13 +21,14 @@ struct TakeoffLandingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "T/O & LDGs", icon: "airplane") {
-                Picker("Period", selection: $period) {
-                    ForEach(TLPeriod.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+                Menu {
+                    ForEach(TLPeriod.allCases, id: \.self) { option in
+                        Button(option.rawValue) { period = option }
                     }
+                } label: {
+                    CardFilterChip(title: period.rawValue)
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
 
             HStack(spacing: 16) {

@@ -13,6 +13,11 @@ private enum PunctualityPeriod: String, CaseIterable {
     case twelveMonths = "12M"
 }
 
+private enum PunctualityViewMode: String, CaseIterable {
+    case summary = "SUMMARY"
+    case detail  = "DETAIL"
+}
+
 private struct PunctualityStats {
     var totalWithData: Int = 0
     var onTime: Int = 0
@@ -44,7 +49,7 @@ private struct FlightDelay: Identifiable {
 
 struct PunctualityCard: View {
     @AppStorage("punctualityCard_period") private var period: PunctualityPeriod = .twelveMonths
-    @AppStorage("punctualityCard_viewMode") private var showDetail: Bool = false
+    @AppStorage("punctualityCard_viewMode2") private var viewMode: PunctualityViewMode = .summary
     @AppStorage("useIATACodes") private var useIATACodes: Bool = true
     @State private var depStats: PunctualityStats = .empty
     @State private var arrStats: PunctualityStats = .empty
@@ -57,21 +62,24 @@ struct PunctualityCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "OTP Stats", icon: "clock.badge.checkmark.fill", iconColor: .teal) {
-                Picker("Period", selection: $period) {
-                    ForEach(PunctualityPeriod.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+                HStack(spacing: 4) {
+                    Menu {
+                        ForEach(PunctualityPeriod.allCases, id: \.self) { option in
+                            Button(option.rawValue) { period = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: period.rawValue)
+                    }
+                    Menu {
+                        ForEach(PunctualityViewMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { viewMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: viewMode.rawValue)
                     }
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
-
-            Picker("View", selection: $showDetail) {
-                Text("Summary").tag(false)
-                Text("Details").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .animation(.spring(response: 0.35), value: showDetail)
 
             if !hasAnyData {
                 ContentUnavailableView(
@@ -80,7 +88,7 @@ struct PunctualityCard: View {
                     description: Text("Log STD/OUT and STA/IN times to see OTP stats")
                 )
                 .frame(height: 120)
-            } else if showDetail {
+            } else if viewMode == .detail {
                 VStack(spacing: 14) {
                     delayDetailSection(label: "Departures", delays: depDelays)
                     Divider()

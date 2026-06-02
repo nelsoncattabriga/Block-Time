@@ -13,6 +13,15 @@ private enum DisplayMode: String, CaseIterable {
     case sectors = "Sectors"
 }
 
+private enum ChartMonths: String, CaseIterable, RawRepresentable {
+    case six = "6M"
+    case twelve = "12M"
+    case fiveYear = "5Y"
+    var intValue: Int {
+        switch self { case .six: return 6; case .twelve: return 12; case .fiveYear: return 60 }
+    }
+}
+
 private struct ChartBar: Identifiable {
     let id = UUID()
     let month: Date
@@ -22,13 +31,12 @@ private struct ChartBar: Identifiable {
 struct FlyingActivityChartCard: View {
     let data: [NDMonthlyActivity]
 
-    @AppStorage("flyingActivityCard_selectedMonths") private var selectedMonths = 12
+    @AppStorage("flyingActivityCard_months") private var chartMonths: ChartMonths = .twelve
     @AppStorage("flyingActivityCard_displayMode") private var displayMode: DisplayMode = .hours
     @AppStorage("showTimesInHoursMinutes") private var showTimesInHoursMinutes = false
 
     private var filtered: [NDMonthlyActivity] {
-        guard selectedMonths > 0 else { return data }
-        let cutoff = Calendar.current.date(byAdding: .month, value: -selectedMonths, to: Date()) ?? Date()
+        let cutoff = Calendar.current.date(byAdding: .month, value: -chartMonths.intValue, to: Date()) ?? Date()
         return data.filter { $0.month >= cutoff }
     }
 
@@ -45,21 +53,24 @@ struct FlyingActivityChartCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "Flying Activity", icon: "chart.bar.fill") {
-                Picker("", selection: $selectedMonths) {
-                    Text("6M").tag(6)
-                    Text("12M").tag(12)
-                    Text("5Y").tag(60)
+                HStack(spacing: 4) {
+                    Menu {
+                        ForEach(ChartMonths.allCases, id: \.self) { option in
+                            Button(option.rawValue) { chartMonths = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: chartMonths.rawValue)
+                    }
+                    Menu {
+                        ForEach(DisplayMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { displayMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: displayMode.rawValue)
+                    }
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 110)
+                .tint(.primary)
             }
-
-            Picker("Display", selection: $displayMode) {
-                ForEach(DisplayMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
 
             if filtered.isEmpty {
                 ContentUnavailableView(
@@ -91,7 +102,7 @@ struct FlyingActivityChartCard: View {
                     }
                 }
                 .frame(height: 200)
-                .animation(.spring(response: 0.4), value: selectedMonths)
+                .animation(.spring(response: 0.4), value: chartMonths)
                 .animation(.spring(response: 0.4), value: displayMode)
             }
 

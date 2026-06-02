@@ -8,14 +8,22 @@
 import SwiftUI
 import Charts
 
+private enum PFMonths: String, CaseIterable {
+    case three  = "3M"
+    case six    = "6M"
+    case twelve = "12M"
+    var intValue: Int {
+        switch self { case .three: return 3; case .six: return 6; case .twelve: return 12 }
+    }
+}
+
 struct PFRatioCard: View {
     let data: [NDMonthlyPFRatio]
 
-    @AppStorage("pfRatioCard_selectedMonths") private var selectedMonths = 12
+    @AppStorage("pfRatioCard_months") private var pfMonths: PFMonths = .twelve
 
     private var filtered: [NDMonthlyPFRatio] {
-        guard selectedMonths > 0 else { return data }
-        let cutoff = Calendar.current.date(byAdding: .month, value: -selectedMonths, to: Date()) ?? Date()
+        let cutoff = Calendar.current.date(byAdding: .month, value: -pfMonths.intValue, to: Date()) ?? Date()
         return data.filter { $0.month >= cutoff }
     }
 
@@ -27,13 +35,14 @@ struct PFRatioCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             CardHeader(title: "PF Ratio", icon: "chart.line.uptrend.xyaxis") {
-                Picker("", selection: $selectedMonths) {
-                    Text("3M").tag(3)
-                    Text("6M").tag(6)
-                    Text("12M").tag(12)
+                Menu {
+                    ForEach(PFMonths.allCases, id: \.self) { option in
+                        Button(option.rawValue) { pfMonths = option }
+                    }
+                } label: {
+                    CardFilterChip(title: pfMonths.rawValue)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 110)
+                .tint(.primary)
             }
 
             if filtered.isEmpty {
@@ -93,7 +102,7 @@ struct PFRatioCard: View {
                 }
                 .chartYScale(domain: 0...100)
                 .frame(height: 180)
-                .animation(.spring(response: 0.4), value: selectedMonths)
+                .animation(.spring(response: 0.4), value: pfMonths)
             }
 
             // Summary

@@ -20,11 +20,11 @@ import Charts
 // MARK: - Limit selector (shared with FRMSRollingBarsCard)
 
 enum FRMSRollingLimit: String, CaseIterable {
-    case flight7   = "7 Days Flt"
-    case flight28  = "28 Days Flt"
-    case flight365 = "365 Days Flt"
-    case duty7     = "7 Days Duty"
-    case duty14    = "14 Days Duty"
+    case flight7   = "FLT 7 DAYS"
+    case flight28  = "FLT 28 DAYS"
+    case flight365 = "FLT 365 DAYS"
+    case duty7     = "DUTY 7 DAYS"
+    case duty14    = "DUTY 14 DAYS"
 }
 
 // MARK: - Card
@@ -87,7 +87,19 @@ struct FRMSRollingLineCard: View {
         VStack(alignment: .leading, spacing: 14) {
 
             CardHeader(title: "FRMS Rolling Total", icon: "chart.line.uptrend.xyaxis", iconColor: .blue) {
-                limitPicker
+                Menu {
+                    ForEach(availableLimits, id: \.self) { option in
+                        Button(label(for: option)) { selectedLimit = option }
+                    }
+                } label: {
+                    CardFilterChip(title: label(for: selectedLimit))
+                }
+                .tint(.primary)
+                .onChange(of: data.flight7d == nil) { _, isNil in
+                    if isNil && selectedLimit == .flight7 {
+                        selectedLimit = .flight28
+                    }
+                }
             }
 
             if series.points.isEmpty {
@@ -104,32 +116,17 @@ struct FRMSRollingLineCard: View {
         .appCardStyle()
     }
 
-    // MARK: - Limit Picker
+    // MARK: - Limit helpers
 
     private func label(for limit: FRMSRollingLimit) -> String {
         if limit == .flight28 {
-            return "\(data.flight28d.fleet.flightTimePeriodDays) Days Flt"
+            return "FLT \(data.flight28d.fleet.flightTimePeriodDays) DAYS"
         }
         return limit.rawValue
     }
 
     private var availableLimits: [FRMSRollingLimit] {
         FRMSRollingLimit.allCases.filter { $0 != .flight7 || data.flight7d != nil }
-    }
-
-    private var limitPicker: some View {
-        Picker("", selection: $selectedLimit) {
-            ForEach(availableLimits, id: \.self) {
-                Text(label(for: $0)).tag($0)
-            }
-        }
-        .pickerStyle(.menu)
-        .labelsHidden()
-        .onChange(of: data.flight7d == nil) { _, isNil in
-            if isNil && selectedLimit == .flight7 {
-                selectedLimit = .flight28
-            }
-        }
     }
 
     // MARK: - Chart
