@@ -216,7 +216,7 @@ struct TimeByTypeCard: View {
             withAnimation(.spring(response: 0.35)) { showAll.toggle() }
         } label: {
             HStack(spacing: 4) {
-                Text(showAll ? "Show less" : "Show all \(sortedData.count) types")
+                Text(showAll ? "Show Less" : "Show All")
                     .iPadScaledFont(.caption, phoneFont: .footnote)
                 Image(systemName: showAll ? "chevron.up" : "chevron.down")
                     .imageScale(.small)
