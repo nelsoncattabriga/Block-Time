@@ -192,41 +192,47 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
             }
         }
         switch rawValue {
+        // FRMS
         case "frmsFlightTime":    return .orange
-        case "frmsDutyTime":      return .teal
+        case "frmsDutyTime":      return .orange
         case "frmsRestWindow":    return .orange
         case "frmsLimitsGauge":   return .orange
-        case "frmsRollingLine":   return .blue
-        case "activityChart":     return .blue
-        case "timeByType":        return .purple
-        case "pfRatioChart":      return .orange
-        case "takeoffLanding":    return .green
-        case "approachTypes":     return .indigo
-        case "topRoutes":         return .red
-        case "topRegistrations":  return .cyan
-        case "airportStats":      return .teal
-        case "workRateHeatmap":   return .indigo
-        case "careerMilestones":  return .yellow
-        case "customCount":       return .teal
-        case "punctuality":       return .teal
-        case "crewFrequency":     return .purple
+        case "frmsRollingLine":   return .orange
+        // Logged time / stats
         case "totalTime":         return .blue
-        case "picTime":           return .green
-        case "icusTime":          return .orange
-        case "nightTime":         return .indigo
-        case "instrumentTime":    return .teal
-        case "simTime":           return .cyan
-        case "insTime":           return .pink
+        case "picTime":           return .blue
+        case "icusTime":          return .blue
+        case "nightTime":         return .blue
+        case "instrumentTime":    return .blue
+        case "simTime":           return .blue
+        case "insTime":           return AppColors.insColor
+        // Recency
         case "recentActivity7",
              "recentActivity28",
              "recentActivity30",
-             "recentActivity365": return .green
-        case "pfRecency":         return .blue
-        case "aiiiRecency":       return .blue
-        case "takeoffRecency":    return .blue
-        case "landingRecency":    return .blue
-        case "aircraftTypeTime":  return .mint
+             "recentActivity365": return .teal
+        case "pfRecency":         return .teal
+        case "aiiiRecency":       return .teal
+        case "takeoffRecency":    return .teal
+        case "landingRecency":    return .teal
+        // Charts / analysis
+        case "activityChart":     return .purple
+        case "timeByType":        return .purple
+        case "pfRatioChart":      return .purple
+        case "workRateHeatmap":   return .purple
+        case "crewFrequency":     return .purple
         case "averageMetric":     return .purple
+        // Routes / airports / fleet
+        case "takeoffLanding":    return .indigo
+        case "approachTypes":     return .indigo
+        case "topRoutes":         return .indigo
+        case "topRegistrations":  return .indigo
+        case "airportStats":      return .indigo
+        case "aircraftTypeTime":  return .indigo
+        // Other
+        case "punctuality":       return .green
+        case "careerMilestones":  return .yellow
+        case "customCount":       return .teal
         default:                  return .gray
         }
     }

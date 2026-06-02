@@ -114,7 +114,7 @@ struct WorkRateHeatmapCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Work Rate", icon: "chart.bar.xaxis", iconColor: accentColor) {
+            CardHeader(title: "Work Rate", icon: "chart.bar.xaxis") {
                 Menu {
                     ForEach(HeatmapPeriod.allCases, id: \.self) { option in
                         Button(option.rawValue) { period = option }
