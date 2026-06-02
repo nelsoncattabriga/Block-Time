@@ -14,8 +14,8 @@ private enum PunctualityPeriod: String, CaseIterable {
 }
 
 private enum PunctualityViewMode: String, CaseIterable {
-    case summary = "SUMMARY"
-    case detail  = "DETAIL"
+    case summary = "Summary"
+    case detail  = "Detail"
 }
 
 private struct PunctualityStats {

@@ -16,7 +16,7 @@ private enum DisplayMode: String, CaseIterable {
 private enum ChartMonths: String, CaseIterable, RawRepresentable {
     case six = "6 Months"
     case twelve = "12 Months"
-    case fiveYear = "5Y"
+    case fiveYear = "5 Years"
     var intValue: Int {
         switch self { case .six: return 6; case .twelve: return 12; case .fiveYear: return 60 }
     }

@@ -20,11 +20,11 @@ import Charts
 // MARK: - Limit selector (shared with FRMSRollingBarsCard)
 
 enum FRMSRollingLimit: String, CaseIterable {
-    case flight7   = "FLT 7 DAYS"
-    case flight28  = "FLT 28 DAYS"
-    case flight365 = "FLT 365 DAYS"
-    case duty7     = "DUTY 7 DAYS"
-    case duty14    = "DUTY 14 DAYS"
+    case flight7   = "FLT - 7 Days"
+    case flight28  = "FLT - 28 Days"
+    case flight365 = "FLT - 365 Days"
+    case duty7     = "DUTY - 7 Days"
+    case duty14    = "DUTY - 14 Days"
 }
 
 // MARK: - Card
@@ -120,7 +120,7 @@ struct FRMSRollingLineCard: View {
 
     private func label(for limit: FRMSRollingLimit) -> String {
         if limit == .flight28 {
-            return "FLT \(data.flight28d.fleet.flightTimePeriodDays) DAYS"
+            return "FLT - \(data.flight28d.fleet.flightTimePeriodDays) Days"
         }
         return limit.rawValue
     }

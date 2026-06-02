@@ -24,7 +24,7 @@ struct CareerMilestonesCard: View {
                 )
                 statBlock(
                     value: "\(stats.totalSectors)",
-                    label: "Sectors",
+                    label: "Flights",
                     color: .green
                 )
                 statBlock(
