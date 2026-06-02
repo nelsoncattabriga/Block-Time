@@ -50,8 +50,8 @@ struct CardFilterChip: View {
     var body: some View {
         Text(title)
             .iPadScaledFont(.caption2, phoneFont: .footnote)
-            .fontWeight(.semibold)
-            .foregroundStyle(.secondary)
+            .fontWeight(.medium)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 7)
             .padding(.vertical, 5)
             .background(.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
