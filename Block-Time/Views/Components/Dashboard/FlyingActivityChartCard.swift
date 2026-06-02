@@ -85,7 +85,7 @@ struct FlyingActivityChartCard: View {
                         x: .value("Month", item.month, unit: .month),
                         y: .value(displayMode == .hours ? "Hours" : "Flights", item.value)
                     )
-                    .foregroundStyle(displayMode == .hours ? Color.blue.gradient : Color.teal.gradient)
+                    .foregroundStyle(Color.blue.gradient)
                     .cornerRadius(3)
                 }
                 .chartLegend(.hidden)
@@ -120,9 +120,9 @@ struct FlyingActivityChartCard: View {
                     let totalSectors = filtered.reduce(0) { $0 + $1.sectorCount }
                     let avg = Double(totalSectors) / Double(filtered.count)
                     HStack {
-                        summaryChip(label: "Monthly Avg", value: String(format: "%.0f flights", avg), color: .teal)
+                        summaryChip(label: "Monthly Avg", value: String(format: "%.0f flights", avg), color: .blue)
                         Spacer()
-                        summaryChip(label: "Period Total", value: "\(totalSectors) flights", color: .teal)
+                        summaryChip(label: "Period Total", value: "\(totalSectors) flights", color: .blue)
                     }
                 }
             }
