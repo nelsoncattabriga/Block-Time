@@ -85,7 +85,7 @@ struct PunctualityCard: View {
                 ContentUnavailableView(
                     "No Schedule Data",
                     systemImage: "clock.badge.questionmark",
-                    description: Text("Log STD/OUT and STA/IN times to see OTP stats")
+                    description: Text("STD/STA and OUT/IN Times Required")
                 )
                 .frame(height: 120)
             } else if viewMode == .detail {
@@ -95,11 +95,18 @@ struct PunctualityCard: View {
                     delayDetailSection(label: "Arrivals", delays: arrDelays)
                 }
                 .transition(.opacity)
+            } else if sizeClass == .regular {
+                HStack(spacing: 16) {
+                    punctualityColumn(label: "Departures", stats: depStats, icon: "airplane.departure", iconColor: .blue)
+                    Divider()
+                    punctualityColumn(label: "Arrivals", stats: arrStats, icon: "airplane.arrival", iconColor: .green)
+                }
+                .transition(.opacity)
             } else {
                 VStack(spacing: 14) {
-                    punctualityColumn(label: "Departures", stats: depStats)
+                    punctualityColumn(label: "Departures", stats: depStats, icon: "airplane.departure", iconColor: .blue)
                     Divider()
-                    punctualityColumn(label: "Arrivals", stats: arrStats)
+                    punctualityColumn(label: "Arrivals", stats: arrStats, icon: "airplane.arrival", iconColor: .green)
                 }
                 .transition(.opacity)
             }
@@ -113,113 +120,74 @@ struct PunctualityCard: View {
     // MARK: - Summary view
 
     @ViewBuilder
-    private func punctualityColumn(label: String, stats: PunctualityStats) -> some View {
+    private func punctualityColumn(label: String, stats: PunctualityStats, icon: String, iconColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            if stats.totalWithData == 0 {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
+                    .foregroundStyle(iconColor)
                 Text(label)
-                    .iPadScaledFont(.caption, phoneFont: .subheadline)
+                    .iPadScaledFont(.caption, phoneFont: .footnote)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
+            }
+
+            if stats.totalWithData == 0 {
                 Text("No data")
                     .iPadScaledFont(.caption, phoneFont: .subheadline)
                     .foregroundStyle(.secondary)
             } else {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(label)
-                        .iPadScaledFont(.caption, phoneFont: .subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                    if stats.delayed > 0 && sizeClass != .regular {
-                        Text("·")
-                            .iPadScaledFont(.caption2, phoneFont: .footnote)
-                            .foregroundStyle(.secondary)
-                        Text("Avg Delay")
-                            .iPadScaledFont(.caption2, phoneFont: .footnote)
-                            .foregroundStyle(.secondary)
-                        Text("\(Int(stats.medianDelayedMin)) min")
-                            .iPadScaledFont(.caption2, phoneFont: .footnote)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.red)
-                    }
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-
                 HStack(alignment: .center, spacing: 10) {
                     Text(String(format: "%.0f%%", stats.onTimePct * 100))
-                        .font(.system(sizeClass == .regular ? .title2 : .headline, design: .rounded, weight: .bold))
+                        .font(.system(sizeClass == .regular ? .title : .headline, design: .rounded, weight: .bold))
                         .foregroundStyle(stats.onTimeColor)
 
                     punctualityBar(stats: stats)
-
-                    if stats.delayed > 0 {
-                        Text(String(format: "%.0f%%", stats.delayedPct * 100))
-                            .font(.system(sizeClass == .regular ? .title2 : .headline, design: .rounded, weight: .bold))
-                            .foregroundStyle(.red)
-                    }
                 }
 
-                let showDelayed = !stats.mostDelayedRoute.isEmpty
-                let showBest    = !stats.bestOTPRoute.isEmpty
-                let isCompact   = sizeClass != .regular
-                if showDelayed || showBest {
-                    HStack(spacing: 4) {
-                        Spacer()
-                        if showBest {
-                            if !isCompact {
-                                Text("Best OTP")
-                                    .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text(stats.bestOTPRoute)
-                                .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.green)
-                            Text(String(format: "%.0f%%", stats.bestOTPRoutePct * 100))
-                                .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.green)
-                        }
-                        if showDelayed && showBest {
-                            Text("·")
-                                .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        if showDelayed {
-                            if !isCompact {
-                                Text("Worst OTP")
-                                    .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text(stats.mostDelayedRoute)
-                                .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.red)
-                            Text(String(format: "%.0f%%", stats.mostDelayedRoutePct * 100))
-                                .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.red)
-                        }
-                        if !isCompact && stats.delayed > 0 {
-                            Text("·")
-                                .iPadScaledFont(.caption2, phoneFont: .footnote)
-                                .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 3) {
+                    if !stats.bestOTPRoute.isEmpty {
+                        otpFooterRow(label: "Best OTP", route: stats.bestOTPRoute, pct: stats.bestOTPRoutePct, color: .green)
+                    }
+                    if !stats.mostDelayedRoute.isEmpty {
+                        otpFooterRow(label: "Worst OTP", route: stats.mostDelayedRoute, pct: stats.mostDelayedRoutePct, color: .red)
+                    }
+                    if stats.delayed > 0 {
+                        HStack(spacing: 6) {
+                            Circle().fill(Color.orange.opacity(0.8)).frame(width: 6, height: 6)
                             Text("Avg Delay")
                                 .iPadScaledFont(.caption2, phoneFont: .footnote)
                                 .foregroundStyle(.secondary)
+                            Spacer()
                             Text("\(Int(stats.medianDelayedMin)) min")
                                 .iPadScaledFont(.caption2, phoneFont: .footnote)
                                 .fontWeight(.semibold)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(.orange)
                         }
-                        Spacer()
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func otpFooterRow(label: String, route: String, pct: Double, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color.opacity(0.8)).frame(width: 6, height: 6)
+            Text(label)
+                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(route)
+                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(color)
+            Text(String(format: "%.0f%%", pct * 100))
+                .iPadScaledFont(.caption2, phoneFont: .footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(color)
+        }
     }
 
     private func punctualityBar(stats: PunctualityStats) -> some View {
