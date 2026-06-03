@@ -210,7 +210,7 @@ struct FlyingByTypeCard: View {
             withAnimation(.spring(response: 0.35)) { showAll.toggle() }
         } label: {
             HStack(spacing: 4) {
-                Text(showAll ? "Show Less" : "Show All")
+                Text(showAll ? "Hide Others" : "Show Others")
                     .iPadScaledFont(.caption, phoneFont: .footnote)
                 Image(systemName: showAll ? "chevron.up" : "chevron.down")
                     .imageScale(.small)
