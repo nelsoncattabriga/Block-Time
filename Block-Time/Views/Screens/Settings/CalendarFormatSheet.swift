@@ -106,8 +106,7 @@ struct CalendarFormatSheet: View {
                     Text(mode.displayName).tag(mode)
                 }
             }
-            .pickerStyle(.segmented)
-            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+            .pickerStyle(.menu)
         } header: {
             Text("Export Mode")
         }

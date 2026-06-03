@@ -256,34 +256,31 @@ private struct CalendarExportFilterCard: View {
                 Text("Filter")
                     .font(.headline)
                     .fontWeight(.semibold)
-                
-                Spacer()
-                Spacer()
-                
-                if viewModel.hasUnflownFlights {
-                    Button {
-                        viewModel.selectUnflownFlights()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "calendar.badge.clock")
-                                .font(.subheadline)
-                            Text("Flights Not Flown Only")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundStyle(.blue)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Color.blue.opacity(0.1))
-                        .clipShape(Capsule())
-                        .overlay {
-                            Capsule().stroke(Color.blue.opacity(0.3), lineWidth: 1)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            }
 
+            if viewModel.hasUnflownFlights {
+                Button {
+                    viewModel.selectUnflownFlights()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.subheadline)
+                        Text("Only Flights Not Flown")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Spacer()
+                    }
+                    .foregroundStyle(.blue)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .background(Color.blue.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8).stroke(Color.blue.opacity(0.25), lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
             }
 
             CalendarExportDateRow(
@@ -301,21 +298,16 @@ private struct CalendarExportFilterCard: View {
             Divider()
 
             Toggle(isOn: $viewModel.includePositioning) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Include PAX Flights")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                }
+                Text("Include PAX Flights")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
             }
             .tint(.purple)
 
             Toggle(isOn: $viewModel.includeSimulator) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Include SIMs")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                }
+                Text("Include SIMs")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
             }
             .tint(.purple)
         }
@@ -427,20 +419,6 @@ private struct CalendarDatePickerSheet: View {
 private struct CalendarExportFlightCountCard: View {
     let viewModel: CalendarExportViewModel
 
-    private var subtitle: String {
-        let mode = CalendarExportSettings.shared.mode
-        let days = viewModel.dutyDayCount
-        let sectors = viewModel.flightCount
-        switch mode {
-        case .allDayOnly:
-            return "^[\(days) duty day](inflect: true) will be exported as all-day events"
-        case .sectorsOnly:
-            return "^[\(sectors) sector event](inflect: true) will be exported"
-        case .both:
-            return "^[\(days) duty day](inflect: true) + ^[\(sectors) sector event](inflect: true)"
-        }
-    }
-
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "airplane")
@@ -452,7 +430,7 @@ private struct CalendarExportFlightCountCard: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
 
-                Text(subtitle)
+                subtitleText
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -465,6 +443,21 @@ private struct CalendarExportFlightCountCard: View {
         .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.teal.opacity(0.3), lineWidth: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var subtitleText: some View {
+        let mode = CalendarExportSettings.shared.mode
+        let days = viewModel.dutyDayCount
+        let sectors = viewModel.flightCount
+        switch mode {
+        case .allDayOnly:
+            Text("^[\(days) duty day](inflect: true) will be exported as all-day events")
+        case .sectorsOnly:
+            Text("^[\(sectors) sector event](inflect: true) will be exported")
+        case .both:
+            Text("^[\(days) duty day](inflect: true) + ^[\(sectors) sector event](inflect: true)")
         }
     }
 }
