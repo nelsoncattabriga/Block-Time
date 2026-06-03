@@ -81,7 +81,7 @@ struct DashboardCardView: View {
         case .activityChart:
             FlyingActivityChartCard(data: viewModel.monthlyActivity)
         case .timeByType:
-            TimeByTypeCard(data: viewModel.fleetHours)
+            FlyingByTypeCard(data: viewModel.fleetHours)
         case .pfRatioChart:
             PFRatioCard(data: viewModel.pfRatioByMonth)
         case .takeoffLanding:

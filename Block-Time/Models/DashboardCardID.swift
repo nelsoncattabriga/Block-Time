@@ -94,7 +94,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "frmsLimitsGauge":   return "FRMS Limits"
         case "frmsRollingLine":   return "FRMS Rolling Line"
         case "activityChart":     return "Flying Activity"
-        case "timeByType":        return "Time by Type"
+        case "timeByType":        return "Flying by Type"
         case "pfRatioChart":      return "PF Ratio"
         case "takeoffLanding":    return "Takeoffs & Landings"
         case "approachTypes":     return "Approach Types"

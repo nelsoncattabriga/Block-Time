@@ -27,7 +27,7 @@ struct AircraftTypeTimeCard: View {
     // Types belonging to the currently selected family
     private var typesForSelectedFamily: [String] {
         guard let fleet = AircraftFleetService.availableFleets.first(where: { $0.name == selectedAircraftType }) else { return [] }
-        return availableAircraftTypes.filter { fleet.types.contains($0) }
+        return availableAircraftTypes.filter { fleet.typeMatches($0) }
     }
 
     var body: some View {

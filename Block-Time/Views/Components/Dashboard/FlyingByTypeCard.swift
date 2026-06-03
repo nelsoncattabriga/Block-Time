@@ -1,5 +1,5 @@
 //
-//  TimeByTypeCard.swift
+//  FlyingByTypeCard.swift
 //  Block-Time
 //
 //  Donut chart showing hours or sectors broken down by aircraft type.
@@ -27,7 +27,7 @@ private func fleetColor(at index: Int) -> Color {
     fleetPalette[index % fleetPalette.count]
 }
 
-struct TimeByTypeCard: View {
+struct FlyingByTypeCard: View {
     let data: [NDFleetHours]
 
     @AppStorage("timeByTypeCard_displayMode") private var displayMode: FleetDisplayMode = .hours
@@ -80,7 +80,7 @@ struct TimeByTypeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Time by Type", icon: "airplane.circle.fill", iconColor: .purple) {
+            CardHeader(title: "Flying by Type", icon: "airplane.circle.fill", iconColor: .purple) {
                 HStack(spacing: 4) {
                     Menu {
                         ForEach(FleetGroupMode.allCases, id: \.self) { option in
@@ -138,15 +138,9 @@ struct TimeByTypeCard: View {
                         if displayMode == .hours {
                             Text(String(format: "%.0f", totalHours))
                                 .font(.system(.title3, design: .rounded, weight: .bold))
-                            Text("hrs")
-                                .iPadScaledFont(.caption, phoneFont: .footnote)
-                                .foregroundStyle(.secondary)
                         } else {
                             Text("\(totalSectors)")
                                 .font(.system(.title3, design: .rounded, weight: .bold))
-                            Text("flights")
-                                .iPadScaledFont(.caption, phoneFont: .footnote)
-                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -183,7 +177,7 @@ struct TimeByTypeCard: View {
                 let index = Self.topCount + offset
                 let value: Double = displayMode == .hours ? item.hours : Double(item.sectors)
                 let label: String = displayMode == .hours
-                    ? String(format: "%.0f hrs", item.hours)
+                    ? String(format: "%.0f", item.hours)
                     : "\(item.sectors)"
 
                 VStack(alignment: .leading, spacing: 3) {
