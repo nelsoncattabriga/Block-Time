@@ -27,12 +27,20 @@ private func fleetColor(at index: Int) -> Color {
     fleetPalette[index % fleetPalette.count]
 }
 
+private struct OverflowMaxWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct FlyingByTypeCard: View {
     let data: [NDFleetHours]
 
     @AppStorage("timeByTypeCard_displayMode") private var displayMode: FleetDisplayMode = .hours
     @AppStorage("timeByTypeCard_groupMode") private var groupMode: FleetGroupMode = .type
     @State private var showAll: Bool = false
+    @State private var overflowNameWidth: CGFloat = 0
 
     private static let topCount = 5
 
@@ -69,9 +77,9 @@ struct FlyingByTypeCard: View {
         return top + [other]
     }
 
-    // Items beyond top-5 shown as bars when expanded
+    // All items shown as bars when expanded
     private var overflowData: [NDFleetHours] {
-        Array(sortedData.dropFirst(Self.topCount))
+        sortedData
     }
 
     private var hasMore: Bool { sortedData.count > Self.topCount }
@@ -138,9 +146,15 @@ struct FlyingByTypeCard: View {
                         if displayMode == .hours {
                             Text(String(format: "%.0f", totalHours))
                                 .font(.system(.title3, design: .rounded, weight: .bold))
+                            Text("HRS")
+                                .font(.system(.caption2, design: .rounded, weight: .medium))
+                                .foregroundStyle(.secondary)
                         } else {
                             Text("\(totalSectors)")
                                 .font(.system(.title3, design: .rounded, weight: .bold))
+                            Text("FLTS")
+                                .font(.system(.caption2, design: .rounded, weight: .medium))
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -174,32 +188,45 @@ struct FlyingByTypeCard: View {
             Divider()
 
             ForEach(Array(overflowData.enumerated()), id: \.element.id) { offset, item in
-                let index = Self.topCount + offset
+                let index = offset
                 let value: Double = displayMode == .hours ? item.hours : Double(item.sectors)
                 let label: String = displayMode == .hours
                     ? String(format: "%.0f", item.hours)
                     : "\(item.sectors)"
 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack {
-                        Text(item.aircraftType)
-                            .iPadScaledFont(.caption, phoneFont: .footnote)
-                            .bold()
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Text(label)
-                            .iPadScaledFont(.caption, phoneFont: .footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    GeometryReader { geo in
+                HStack(spacing: 10) {
+                    Text(item.aircraftType)
+                        .iPadScaledFont(.caption, phoneFont: .footnote)
+                        .bold()
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear.preference(key: OverflowMaxWidthKey.self, value: geo.size.width)
+                            }
+                        )
+                        .frame(width: overflowNameWidth > 0 ? overflowNameWidth : nil, alignment: .leading)
+
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.secondary.opacity(0.1))
                         RoundedRectangle(cornerRadius: 3)
                             .fill(fleetColor(at: index))
-                            .frame(width: geo.size.width * (value / maxValue))
+                            .frame(maxWidth: .infinity)
+                            .scaleEffect(x: value / maxValue, anchor: .leading)
                     }
                     .frame(height: 6)
+                    .frame(minWidth: 60, maxWidth: .infinity)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: displayMode)
+
+                    Text(label)
+                        .iPadScaledFont(.caption, phoneFont: .footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
+        .onPreferenceChange(OverflowMaxWidthKey.self) { overflowNameWidth = $0 }
         .animation(.spring(response: 0.4), value: displayMode)
     }
 
@@ -210,7 +237,7 @@ struct FlyingByTypeCard: View {
             withAnimation(.spring(response: 0.35)) { showAll.toggle() }
         } label: {
             HStack(spacing: 4) {
-                Text(showAll ? "Hide Others" : "Show Others")
+                Text(showAll ? "Show Less" : "Show All")
                     .iPadScaledFont(.caption, phoneFont: .footnote)
                 Image(systemName: showAll ? "chevron.up" : "chevron.down")
                     .imageScale(.small)
