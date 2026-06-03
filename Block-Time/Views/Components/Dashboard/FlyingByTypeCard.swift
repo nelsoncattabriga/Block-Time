@@ -88,7 +88,7 @@ struct FlyingByTypeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Flying by Type", icon: "airplane.circle.fill", iconColor: .purple) {
+            CardHeader(title: "Flying by Type", icon: "airplane.circle.fill", iconColor: .indigo) {
                 HStack(spacing: 4) {
                     Menu {
                         ForEach(FleetGroupMode.allCases, id: \.self) { option in

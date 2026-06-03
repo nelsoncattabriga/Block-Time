@@ -205,7 +205,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "nightTime":         return .blue
         case "instrumentTime":    return .blue
         case "simTime":           return .blue
-        case "insTime":           return AppColors.insColor
+        case "insTime":           return .blue
         // Recency
         case "recentActivity7",
              "recentActivity28",
@@ -217,7 +217,6 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "landingRecency":    return .green
         // Charts / analysis
         case "activityChart":     return .purple
-        case "timeByType":        return .purple
         case "pfRatioChart":      return .purple
         case "workRateHeatmap":   return .purple
         case "crewFrequency":     return .purple
@@ -229,6 +228,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "topRegistrations":  return .indigo
         case "airportStats":      return .indigo
         case "aircraftTypeTime":  return .indigo
+        case "timeByType":        return .indigo
         // Other
         case "punctuality":       return .red
         case "careerMilestones":  return .yellow
@@ -243,8 +243,8 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case frms            = "FRMS"
         case timeStats       = "Time & Stats"
         case recency         = "Recency"
-        case charts          = "Charts & Analysis"
         case routesAirports  = "Routes, Airports & Fleet"
+        case charts          = "Misc Charts"
         case other           = "Other"
     }
 
@@ -260,11 +260,11 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "recentActivity7", "recentActivity28", "recentActivity30", "recentActivity365",
              "pfRecency", "aiiiRecency", "takeoffRecency", "landingRecency":
             return .recency
-        case "activityChart", "timeByType", "pfRatioChart", "workRateHeatmap",
+        case "activityChart", "pfRatioChart", "workRateHeatmap",
              "crewFrequency", "averageMetric":
             return .charts
         case "takeoffLanding", "approachTypes", "topRoutes", "topRegistrations",
-             "airportStats", "aircraftTypeTime":
+             "airportStats", "aircraftTypeTime", "timeByType":
             return .routesAirports
         default:
             return .other

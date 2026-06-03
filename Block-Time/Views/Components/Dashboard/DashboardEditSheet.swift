@@ -50,8 +50,6 @@ struct DashboardEditSheet: View {
                         }
                     } header: {
                         Label("Sidebar", systemImage: "sidebar.left")
-                    } footer: {
-                        Text("Narrow cards shown in the left panel.")
                     }
                 }
 
@@ -76,6 +74,15 @@ struct DashboardEditSheet: View {
                 }
 
                 // ── Available pool (grouped by category, custom order within) ──
+                Section {
+                    EmptyView()
+                } header: {
+                    Text("Available Cards")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 16)
+                        .padding(.bottom, -8)
+                }
+
                 ForEach(DashboardCardID.Category.allCases, id: \.self) { category in
                     let cards = sortedCards(availablePool.filter { $0.category == category }, in: category)
                     if !cards.isEmpty {
