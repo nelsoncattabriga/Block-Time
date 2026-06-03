@@ -20,6 +20,7 @@ final class CalendarExportViewModel {
     // Export state
     var isLoading: Bool = false
     var flightCount: Int = 0
+    var dutyDayCount: Int = 0
     var shareItem: CalendarShareItem? = nil
     var errorMessage: String? = nil
 
@@ -76,6 +77,7 @@ final class CalendarExportViewModel {
     func refreshCount() {
         let flights = filteredFlights()
         flightCount = flights.count
+        dutyDayCount = Set(flights.map { $0.date }).count
     }
 
     func export() {
@@ -90,7 +92,7 @@ final class CalendarExportViewModel {
             return
         }
 
-        let icsContent = CalendarExportService.shared.generateICS(from: flights)
+        let icsContent = CalendarExportService.shared.generateICS(from: flights, settings: CalendarExportSettings.shared)
 
         let fileName = "BlockTime_Flights_\(filenameDateRange()).ics"
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
@@ -146,6 +148,7 @@ struct CalendarExportView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ThemeService.self) private var themeService
     @State private var viewModel = CalendarExportViewModel()
+    @State private var showFormatSheet = false
 
     var body: some View {
         NavigationStack {
@@ -169,6 +172,11 @@ struct CalendarExportView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showFormatSheet = true } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: viewModel.export) {
                         if viewModel.isLoading {
@@ -183,6 +191,10 @@ struct CalendarExportView: View {
             }
             .sheet(item: $viewModel.shareItem) { item in
                 ShareSheet(url: item.url)
+            }
+            .sheet(isPresented: $showFormatSheet, onDismiss: viewModel.refreshCount) {
+                CalendarFormatSheet(settings: CalendarExportSettings.shared)
+                    .environment(themeService)
             }
             .alert("Export Error", isPresented: Binding(
                 get: { viewModel.errorMessage != nil },
@@ -415,6 +427,20 @@ private struct CalendarDatePickerSheet: View {
 private struct CalendarExportFlightCountCard: View {
     let viewModel: CalendarExportViewModel
 
+    private var subtitle: String {
+        let mode = CalendarExportSettings.shared.mode
+        let days = viewModel.dutyDayCount
+        let sectors = viewModel.flightCount
+        switch mode {
+        case .allDayOnly:
+            return "^[\(days) duty day](inflect: true) will be exported as all-day events"
+        case .sectorsOnly:
+            return "^[\(sectors) sector event](inflect: true) will be exported"
+        case .both:
+            return "^[\(days) duty day](inflect: true) + ^[\(sectors) sector event](inflect: true)"
+        }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "airplane")
@@ -426,7 +452,7 @@ private struct CalendarExportFlightCountCard: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
 
-                Text("Each flight becomes one calendar event")
+                Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
