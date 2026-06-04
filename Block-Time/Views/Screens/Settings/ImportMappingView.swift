@@ -1392,6 +1392,7 @@ struct RegistrationTypeMappingView: View {
 
     private func loadAvailableTypes() {
         var types = Set(AircraftFleetService.getAllAircraftTypes())
+        types.formUnion(FlightDatabaseService.shared.getAllAircraftTypes())
         for mapping in mappings {
             if !mapping.simpleType.isEmpty { types.insert(mapping.simpleType) }
             for rule in mapping.rules where !rule.aircraftType.isEmpty { types.insert(rule.aircraftType) }
