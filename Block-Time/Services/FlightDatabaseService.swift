@@ -3406,6 +3406,10 @@ class FlightDatabaseService: ObservableObject {
                 if !self.isImportingFromCloudKit {
                     self.isSyncing = false
                     self.lastSyncDate = Date()
+                    // Final reload after CloudKit settles — ensures fields merged in last
+                    // (e.g. isPositioning) are reflected in the UI even if earlier
+                    // debounced notifications fired before the merge completed.
+                    NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             }
         }

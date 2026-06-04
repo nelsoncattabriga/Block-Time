@@ -1502,10 +1502,31 @@ class FlightTimeExtractorViewModel: ObservableObject {
     }
     
     // MARK: - Add to internal Logbook
-    
+
+    /// True when the flight date is today or later (not yet due to be flown).
+    /// Also true for past-dated flights that have no time data at all — they were
+    /// never flown and should be treated the same way for validation purposes.
+    private var isUnflownFlight: Bool {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        let dateString = enterTimesInLocalTime ? flightDate : flightDateForStorage
+        guard let date = formatter.date(from: dateString.isEmpty ? flightDate : dateString) else { return false }
+        let todayUTC = Calendar.current.startOfDay(for: Date())
+        let flightDay = Calendar.current.startOfDay(for: date)
+        if flightDay >= todayUTC { return true }
+        // Past date — unflown if no OUT/IN or any time value recorded
+        let hasNoTimes = outTime.isEmpty && inTime.isEmpty
+            && (Double(blockTime) ?? 0) == 0
+            && (Double(spInsTime) ?? 0) == 0
+        return hasNoTimes
+    }
+
     func saveToLogbook() {
         let isSimInstruction = isSpIns && !isInstructingInAircraft
-        if isSimInstruction {
+        if isUnflownFlight {
+            // Future or unflown flight — no time data required, save whatever is filled in
+        } else if isSimInstruction {
             guard !spInsTime.isEmpty else {
                 statusMessage = "Sp/Ins time is required for simulator instruction"
                 statusColor = .red
@@ -1513,16 +1534,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         } else if isSimulator {
             guard !blockTime.isEmpty else { return }
-        } else if !isPositioning {
-            let isFutureFlight = !scheduledDeparture.isEmpty || !scheduledArrival.isEmpty
-            if !isFutureFlight {
-                guard !outTime.isEmpty && !inTime.isEmpty else { return }
-                let computed = calculateFlightTime()
-                guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
-                    statusMessage = "Block time cannot be zero"
-                    statusColor = .red
-                    return
-                }
+        } else if !isPositioning && !(isSpIns && isInstructingInAircraft) {
+            guard !outTime.isEmpty && !inTime.isEmpty else { return }
+            let computed = calculateFlightTime()
+            guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
+                statusMessage = "Block time cannot be zero"
+                statusColor = .red
+                return
             }
         }
 
@@ -1826,20 +1844,19 @@ class FlightTimeExtractorViewModel: ObservableObject {
         guard let sectorID = editingSectorID else { return false }
 
         let isSimInstruction = isSpIns && !isInstructingInAircraft
-        if isSimInstruction {
+        if isUnflownFlight {
+            // Future or unflown flight — no time data required, save whatever is filled in
+        } else if isSimInstruction {
             guard !spInsTime.isEmpty else {
                 statusMessage = "Sp/Ins time is required for simulator instruction"
                 statusColor = .red
                 return false
             }
-        } else if !isSimulator && !isPositioning {
-            let isFutureFlight = (Double(blockTime) ?? 0) == 0 && (!scheduledDeparture.isEmpty || !scheduledArrival.isEmpty)
-            if !isFutureFlight {
-                guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
-                    statusMessage = "Block time cannot be zero"
-                    statusColor = .red
-                    return false
-                }
+        } else if !isSimulator && !isPositioning && !(isSpIns && isInstructingInAircraft) {
+            guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
+                statusMessage = "Block time cannot be zero"
+                statusColor = .red
+                return false
             }
         }
 
@@ -2028,8 +2045,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
                selectedTimeCredit != originalTimeCreditType(original) ||
                isSimulator != originalWasSimulator ||
                isPositioning != original.isPositioning ||
-               isSpIns != (original.isSpInsOnly || original.isAircraftInstruction) ||
-               isInstructingInAircraft != original.isAircraftInstruction ||
+               // isSpIns/isInstructingInAircraft have no persisted representation on
+               // unflown flights (spInsTime is nil/0), so exclude them from change detection
+               // to avoid false "unsaved changes" prompts when toggling FLT↔INS.
+               (!isUnflownFlight && isSpIns != (original.isSpInsOnly || original.isAircraftInstruction)) ||
+               (!isUnflownFlight && isInstructingInAircraft != original.isAircraftInstruction) ||
                remarks != original.remarks ||
                dayTakeoffs != original.dayTakeoffs ||
                dayLandings != original.dayLandings ||

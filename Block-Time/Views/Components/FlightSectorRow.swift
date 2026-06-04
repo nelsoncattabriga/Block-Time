@@ -225,29 +225,27 @@ struct FlightSectorRow: View, Equatable {
                         .font(.headline)
                         .foregroundColor(cachedIsFutureFlight ? .secondary : .primary)
 
-                    // PAX / INS badge
-                    if !cachedIsFutureFlight {
-                        if isPositioning {
-                            Text("PAX")
-                                .font(.subheadline.monospaced())
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(Color.orange, lineWidth: 1)
-                                )
-                        } else if sector.isSpInsOnly || sector.isAircraftInstruction {
-                            Text("INS")
-                                .font(.subheadline.monospaced())
-                                .foregroundColor(.purple)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(Color.purple, lineWidth: 1)
-                                )
-                        }
+                    // PAX / INS badge — always shown regardless of future/past status
+                    if isPositioning {
+                        Text("PAX")
+                            .font(.subheadline.monospaced())
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.orange, lineWidth: 1)
+                            )
+                    } else if sector.isSpInsOnly || sector.isAircraftInstruction {
+                        Text("INS")
+                            .font(.subheadline.monospaced())
+                            .foregroundColor(.purple)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.purple, lineWidth: 1)
+                            )
                     }
 
                     Spacer()
