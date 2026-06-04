@@ -720,7 +720,10 @@ private struct FlightsListContent: View {
                 if let selectedId = selectedFlightId {
                     if let updatedFlight = filteredFlightSectors.first(where: { $0.id == selectedId }) {
                         selectedFlight = updatedFlight
-                        viewModel.loadFlightForEditing(updatedFlight)
+                        // Skip reload if user has unsaved changes (e.g. lookup data just populated)
+                        if !viewModel.hasUnsavedChanges {
+                            viewModel.loadFlightForEditing(updatedFlight)
+                        }
                     } else {
                         selectedFlight = nil
                     }
