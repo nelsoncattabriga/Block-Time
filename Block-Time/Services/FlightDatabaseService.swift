@@ -262,6 +262,12 @@ class FlightDatabaseService: ObservableObject {
         return ok
     }
 
+    func clearUndoHistory() {
+        viewContext.undoManager?.removeAllActions()
+        undoableChangeCount = 0
+        undoDescriptions.removeAll()
+    }
+
     // MARK: - Undo Manager Control (batch operations)
 
     /// Suspend undo registration and auto-merge for bulk imports/restores.
@@ -909,7 +915,6 @@ class FlightDatabaseService: ObservableObject {
                 request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
                 request.fetchBatchSize = 100
                 request.returnsObjectsAsFaults = false
- 
 
                 do {
                     let flights = try context.fetch(request)

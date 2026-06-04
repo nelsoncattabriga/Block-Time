@@ -208,6 +208,7 @@ private struct FlightsListContent: View {
     @State private var pendingScrollToLatest = false
     @State private var undoCount: Int = 0
     @State private var undoDescription: String? = nil
+    @State private var showClearUndoAlert = false
 
     // Cached date formatter for performance
     private let dateFormatter: DateFormatter = {
@@ -559,18 +560,25 @@ private struct FlightsListContent: View {
     private var undoBar: some View {
         if undoCount > 0 {
             HStack(spacing: 10) {
-                Image(systemName: "arrow.uturn.backward.circle.fill")
-                    .font(.subheadline)
-                    .foregroundColor(.orange)
+                Button {
+                    HapticManager.shared.impact(.light)
+                    showClearUndoAlert = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Clear undo history")
                 VStack(alignment: .leading, spacing: 1) {
                     Text(undoDescription ?? "\(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text("History clears when app closes")
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button {
@@ -582,7 +590,7 @@ private struct FlightsListContent: View {
                 } label: {
                     Text("Undo")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
                         .background(Color.orange)
@@ -594,13 +602,24 @@ private struct FlightsListContent: View {
             .padding(.vertical, 10)
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
+            .overlay {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(Color.orange.opacity(0.4), lineWidth: 1)
-            )
+            }
             .padding(.horizontal, 12)
             .padding(.bottom, 4)
             .transition(.move(edge: .top).combined(with: .opacity))
+            .alert("Clear Undo History?", isPresented: $showClearUndoAlert) {
+                Button("Clear History", role: .destructive) {
+                    FlightDatabaseService.shared.clearUndoHistory()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        refreshUndoState()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will remove the ability to undo recent changes.")
+            }
         }
     }
 

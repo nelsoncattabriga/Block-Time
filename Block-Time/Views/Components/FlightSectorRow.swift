@@ -36,6 +36,8 @@ struct FlightSectorRow: View, Equatable {
                lhs.sector.aircraftType == rhs.sector.aircraftType &&
                lhs.sector.outTime == rhs.sector.outTime &&
                lhs.sector.inTime == rhs.sector.inTime &&
+               lhs.sector.scheduledDeparture == rhs.sector.scheduledDeparture &&
+               lhs.sector.scheduledArrival == rhs.sector.scheduledArrival &&
                lhs.sector.blockTime == rhs.sector.blockTime &&
                lhs.sector.simTime == rhs.sector.simTime &&
                lhs.sector.captainName == rhs.sector.captainName &&
