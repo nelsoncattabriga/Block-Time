@@ -272,25 +272,38 @@ class AutomaticBackupService: ObservableObject {
             guard let self = self else { return }
 
             do {
+                let t0 = Date()
                 let flights = FlightDatabaseService.shared.fetchAllFlights()
+                LogManager.shared.info("[Backup] fetchAllFlights: \(String(format: "%.2f", Date().timeIntervalSince(t0)))s, \(flights.count) flights")
 
                 if flights.isEmpty {
                     throw BackupError.noDataToBackup
                 }
 
+                let t1 = Date()
                 let flightSortFormatter = DateFormatter()
                 flightSortFormatter.dateFormat = "dd/MM/yyyy"
-                let sortedFlights = flights.sorted { flight1, flight2 in
-                    if let date1 = flightSortFormatter.date(from: flight1.date),
-                       let date2 = flightSortFormatter.date(from: flight2.date) {
-                        return date1 < date2
+                let sortedFlights = flights
+                    .map { ($0, flightSortFormatter.date(from: $0.date)) }
+                    .sorted { a, b in
+                        if let d1 = a.1, let d2 = b.1 { return d1 < d2 }
+                        return a.0.date < b.0.date
                     }
-                    return flight1.date < flight2.date
-                }
+                    .map(\.0)
+                LogManager.shared.info("[Backup] sort: \(String(format: "%.2f", Date().timeIntervalSince(t1)))s")
 
+                let t2 = Date()
                 let csvString = FileImportService.shared.exportToCSV(flights: sortedFlights, definitions: counterDefinitions, crewContacts: crewContactsSnapshot)
+                LogManager.shared.info("[Backup] exportToCSV: \(String(format: "%.2f", Date().timeIntervalSince(t2)))s, \(csvString.count) chars")
+
+                let t3 = Date()
                 let backupURL = try self.createBackupFile(csvString: csvString, flightCount: flights.count)
+                LogManager.shared.info("[Backup] file write: \(String(format: "%.2f", Date().timeIntervalSince(t3)))s")
+                LogManager.shared.info("[Backup] total: \(String(format: "%.2f", Date().timeIntervalSince(t0)))s")
+
+                let t4 = Date()
                 try self.cleanupOldBackups()
+                LogManager.shared.info("[Backup] cleanup: \(String(format: "%.2f", Date().timeIntervalSince(t4)))s")
 
                 DispatchQueue.main.async {
                     self.isBackupInProgress = false
