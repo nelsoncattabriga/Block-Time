@@ -469,9 +469,21 @@ class FileImportService {
     // MARK: - Resolve Aircraft Type from Registration + Date
     private func resolveAircraftType(reg: String, date: String, regMappingsByPrefix: [String: RegistrationTypeMapping]) -> String {
         guard reg.count >= 2 else { return "" }
-        let prefix = String(reg.prefix(2)).uppercased()
+
+        // For VH-XXX (exactly 6 chars) or bare XXX (exactly 3 chars), look up the static fleet
+        if (reg.count == 6 && reg.uppercased().hasPrefix("VH-")) || reg.count == 3 {
+            let type = AircraftFleetService.getAircraftType(byRegistration: reg)
+            if !type.isEmpty { return type }
+        }
+
+        // Strip VH- prefix before pattern lookup, since detectRegistrationPatterns stores
+        // patterns against the stripped registration (e.g. "AJ*" not "VH*")
+        let lookupReg = (reg.count == 6 && reg.uppercased().hasPrefix("VH-"))
+            ? String(reg.dropFirst(3))
+            : reg
+        let prefix = String(lookupReg.prefix(2)).uppercased()
         guard let mapping = regMappingsByPrefix[prefix] else { return "" }
-        return mapping.resolve(reg: reg, date: date)
+        return mapping.resolve(reg: lookupReg, date: date)
     }
 
     // Helper struct for mapping info

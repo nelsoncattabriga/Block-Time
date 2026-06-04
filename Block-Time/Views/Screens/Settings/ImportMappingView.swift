@@ -184,6 +184,40 @@ struct FieldMapping: Identifiable {
     }
 }
 
+private struct RegistrationMappingRow: View {
+    let mapping: RegistrationTypeMapping
+
+    private var resolved: Bool {
+        mapping.useAdvancedRules
+            ? (!mapping.rules.isEmpty && mapping.rules.allSatisfy { !$0.aircraftType.isEmpty })
+            : !mapping.simpleType.isEmpty
+    }
+
+    private var typeLabel: String {
+        guard resolved else { return "Not set" }
+        if mapping.useAdvancedRules {
+            return "\(mapping.rules.count) rule\(mapping.rules.count == 1 ? "" : "s")"
+        }
+        return mapping.simpleType
+    }
+
+    var body: some View {
+        HStack {
+            Image(systemName: resolved ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                .foregroundStyle(resolved ? Color.green : Color.orange)
+            Text(mapping.pattern)
+                .foregroundStyle(.secondary)
+            Text("→")
+                .foregroundStyle(.secondary)
+            Text(typeLabel)
+                .fontWeight(.medium)
+                .foregroundStyle(resolved ? .primary : Color.orange)
+            Spacer()
+        }
+        .font(.subheadline)
+    }
+}
+
 // MARK: - Import Mapping View
 struct ImportMappingView: View {
     let importData: ImportData
@@ -195,9 +229,10 @@ struct ImportMappingView: View {
     @State private var importMode: ImportMode = .merge
     @State private var showingPreview = false
     @State private var previewSelection: PreviewSelection = .first100
-    @State private var enableRegistrationMapping = false
     @State private var showingRegistrationMapping = false
     @State private var registrationMappings: [RegistrationTypeMapping] = []
+
+    private static let registrationMappingPersistenceKey = "FileImportRegistrationMappings"
     @AppStorage("importTimesAreLocal") private var timesAreLocal = false
     @State private var pendingSlotConfigs: [Int: PendingSlotConfig] = [:]
 
@@ -327,36 +362,43 @@ struct ImportMappingView: View {
                 }
 
                 Section(header: Text("Aircraft Type Mapping")) {
-                    Toggle(isOn: $enableRegistrationMapping) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Map Registrations to Types")
-                                .font(.subheadline)
-                            Text("This will map imported aircraft registrations to aircraft type. Only use this if import data does not contain aircraft type information.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                    if registrationMappings.isEmpty {
+                        Text("No registration patterns found")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        let allResolved = registrationMappings.allSatisfy { mapping in
+                            mapping.useAdvancedRules
+                                ? (!mapping.rules.isEmpty && mapping.rules.allSatisfy { !$0.aircraftType.isEmpty })
+                                : !mapping.simpleType.isEmpty
                         }
-                    }
-
-                    if enableRegistrationMapping {
-                        Button {
-                            // Detect registration patterns from import data
-                            registrationMappings = detectRegistrationPatterns()
-                            showingRegistrationMapping = true
-                        } label: {
+                        VStack(spacing: 8) {
                             HStack {
-                                Image(systemName: "airplane")
-                                Text("Configure Type Mappings")
+                                Text("Registration Patterns")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
                                 Spacer()
-                                if !registrationMappings.isEmpty {
-                                    Text("\(registrationMappings.filter { !$0.simpleType.isEmpty }.count) mapped")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                Button {
+                                    showingRegistrationMapping = true
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "pencil")
+                                        Text("Edit")
+                                    }
+                                    .font(.subheadline)
                                 }
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                            }
+                            ForEach(registrationMappings) { mapping in
+                                RegistrationMappingRow(mapping: mapping)
                             }
                         }
+                        .padding(.vertical, 4)
+                        .padding()
+                        .background((allResolved ? Color.green : Color.orange).opacity(allResolved ? 0.08 : 0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke((allResolved ? Color.green : Color.orange).opacity(allResolved ? 0.3 : 0.25), lineWidth: 1))
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                     }
                 }
 
@@ -468,7 +510,8 @@ struct ImportMappingView: View {
                             CustomCounterService.shared.addToSlot(slot, label: trimmedLabel, type: config.type)
                             UserDefaults.standard.set(true, forKey: "logCustomCount")
                         }
-                        onImport(fieldMappings, importMode, enableRegistrationMapping ? registrationMappings : [], timesAreLocal)
+                        saveRegistrationMappings()
+                        onImport(fieldMappings, importMode, registrationMappings, timesAreLocal)
                         dismiss()
                     }
                     .disabled(!isValidMapping)
@@ -478,6 +521,30 @@ struct ImportMappingView: View {
             .sheet(isPresented: $showingRegistrationMapping) {
                 RegistrationTypeMappingView(mappings: $registrationMappings)
             }
+            .onAppear {
+                let fresh = detectRegistrationPatterns()
+                let saved = loadSavedRegistrationMappings()
+                registrationMappings = fresh.map { detected in
+                    if var existing = saved[detected.pattern] {
+                        existing.sampleRegistrations = detected.sampleRegistrations
+                        return existing
+                    }
+                    return detected
+                }
+            }
+        }
+    }
+
+    private func loadSavedRegistrationMappings() -> [String: RegistrationTypeMapping] {
+        guard let data = UserDefaults.standard.data(forKey: Self.registrationMappingPersistenceKey),
+              let saved = try? JSONDecoder().decode([RegistrationTypeMapping].self, from: data)
+        else { return [:] }
+        return Dictionary(saved.map { ($0.pattern, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    private func saveRegistrationMappings() {
+        if let data = try? JSONEncoder().encode(registrationMappings) {
+            UserDefaults.standard.set(data, forKey: Self.registrationMappingPersistenceKey)
         }
     }
 
@@ -528,27 +595,28 @@ struct ImportMappingView: View {
             return []
         }
 
-        // Extract all unique registrations
+        // Extract all unique registrations, stripping VH- prefix for 6-char VH-XXX regs
         var registrations = Set<String>()
         for row in importData.rows {
             guard regColumnIndex < row.count else { continue }
-            let reg = row[regColumnIndex].trimmingCharacters(in: .whitespaces)
-            if !reg.isEmpty {
-                registrations.insert(reg)
-            }
+            let raw = row[regColumnIndex].trimmingCharacters(in: .whitespaces)
+            guard !raw.isEmpty else { continue }
+            let reg = (raw.count == 6 && raw.uppercased().hasPrefix("VH-"))
+                ? String(raw.dropFirst(3))
+                : raw
+            registrations.insert(reg)
         }
 
-        // Group registrations by pattern (first 2-3 characters)
+        // Group registrations by first 2 characters
         var patternGroups: [String: [String]] = [:]
         for reg in registrations {
-            let pattern = String(reg.prefix(2)) // Use first 2 chars as pattern
+            let pattern = String(reg.prefix(2))
             patternGroups[pattern, default: []].append(reg)
         }
 
         // Create mappings for each pattern, auto-detect from AircraftFleetService
         var mappings: [RegistrationTypeMapping] = []
         for (pattern, regs) in patternGroups.sorted(by: { $0.key < $1.key }) {
-            // Try to detect type from AircraftFleetService
             let detectedType = AircraftFleetService.getAircraftType(byRegistration: regs.first ?? "")
 
             mappings.append(RegistrationTypeMapping(
@@ -1249,7 +1317,10 @@ struct RegistrationTypeMappingView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(14)
-                    .appCardStyle()
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+                    .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1)
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                     .padding(.bottom, 8)
@@ -1483,10 +1554,10 @@ private struct RegistrationPatternRow: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                     }
-                    Text(mapping.sampleRegistrations.prefix(6).joined(separator: "  ") + (mapping.sampleRegistrations.count > 6 ? "  …" : ""))
+                    Text(mapping.sampleRegistrations.joined(separator: "  "))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .lineLimit(nil)
                 }
                 Spacer()
                 // Resolved badge
@@ -1542,7 +1613,10 @@ private struct RegistrationPatternRow: View {
             }
         }
         .padding(14)
-        .appCardStyle()
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+        .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1)
         .alert("Add Custom Type", isPresented: $showingAddType) {
             TextField("ICAO Type (B788, A35K, etc)", text: $newTypeName)
                 .textInputAutocapitalization(.characters)
