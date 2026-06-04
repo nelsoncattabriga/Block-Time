@@ -127,12 +127,13 @@ struct ExportLogbookView: View {
 
                 let flightSortFormatter = DateFormatter()
                 flightSortFormatter.dateFormat = "dd/MM/yyyy"
-                let sortedFlights = flights.sorted { f1, f2 in
-                    if let d1 = flightSortFormatter.date(from: f1.date), let d2 = flightSortFormatter.date(from: f2.date) {
-                        return d1 < d2
+                let sortedFlights = flights
+                    .map { ($0, flightSortFormatter.date(from: $0.date)) }
+                    .sorted { a, b in
+                        if let d1 = a.1, let d2 = b.1 { return d1 < d2 }
+                        return a.0.date < b.0.date
                     }
-                    return f1.date < f2.date
-                }
+                    .map(\.0)
 
                 let definitions = CustomCounterService.shared.definitions
                 let csvString = FileImportService.shared.exportToCSV(

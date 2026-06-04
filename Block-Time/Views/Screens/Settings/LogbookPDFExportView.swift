@@ -496,7 +496,10 @@ struct LogbookPDFExportView: View {
             }
 
             // Sort + resolve dates on main actor
-            let sorted = filtered.sorted { effectiveSortDate(for: $0) < effectiveSortDate(for: $1) }
+            let sorted = filtered
+                .map { ($0, effectiveSortDate(for: $0)) }
+                .sorted { $0.1 < $1.1 }
+                .map(\.0)
             let resolvedDates = sorted.map { effectiveDateString(for: $0) }
 
             // Compute totals for flights before the selected range (career BF for partial exports)
