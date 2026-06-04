@@ -29,13 +29,26 @@ struct CrewContactSheet: View {
                 }
                 if contactExists {
                     Section {
-                        Button("Delete Note", role: .destructive) {
+                        Button(role: .destructive) {
                             showDeleteConfirm = true
+                        } label: {
+                            Text("Delete Note")
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                        .disabled(notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .alert("Delete note for \(name)?", isPresented: $showDeleteConfirm) {
+                            Button("Delete", role: .destructive) {
+                                CrewContactService.shared.delete(name: name)
+                                onDismiss()
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This cannot be undone.")
                         }
                     }
                 }
             }
-            .navigationTitle("Crew Contact")
+            .navigationTitle("Crew Notes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -53,15 +66,6 @@ struct CrewContactSheet: View {
                 let contact = CrewContactService.shared.fetchContact(name: name)
                 notes = contact?.notes ?? ""
                 contactExists = contact != nil
-            }
-            .confirmationDialog("Delete note for \(name)?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) {
-                    CrewContactService.shared.delete(name: name)
-                    onDismiss()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This cannot be undone.")
             }
         }
     }

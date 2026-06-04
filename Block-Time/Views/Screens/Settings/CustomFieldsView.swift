@@ -389,11 +389,12 @@ struct FieldEditSheet: View {
                     .padding()
                 }
             }
-            .confirmationDialog("Delete this field?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+            .alert("Delete this field?", isPresented: $showingDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     onDelete?()
                     dismiss()
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This will delete the field and all its data.")
             }

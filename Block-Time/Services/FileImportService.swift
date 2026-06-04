@@ -955,7 +955,7 @@ class FileImportService {
                     if let data = json.data(using: .utf8),
                        let contacts = try? JSONDecoder().decode([CrewContactBackup].self, from: data) {
                         extractedContacts = contacts
-                        LogManager.shared.info("Extracted \(contacts.count) crew contact(s) from backup")
+                        LogManager.shared.info("Extracted \(contacts.count) crew note(s) from backup")
                     }
                 }
                 remainingLines.removeFirst()

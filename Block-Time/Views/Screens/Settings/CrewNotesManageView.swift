@@ -332,7 +332,7 @@ struct CrewNoteEditView: View {
                     .fontWeight(.semibold)
                 }
             }
-            .confirmationDialog("Delete this crew note?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            .alert("Delete this crew note?", isPresented: $showDeleteConfirm) {
                 Button("Delete", role: .destructive) {
                     deleted = true
                     CrewContactService.shared.delete(name: contact.name ?? "")
