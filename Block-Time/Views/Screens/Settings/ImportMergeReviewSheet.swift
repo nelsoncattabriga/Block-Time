@@ -67,23 +67,25 @@ struct ImportMergeReviewSheet: View {
                         onConfirm(selected)
                         dismiss()
                     } label: {
-                        Text(approvedCount > 0 ? "Apply \(approvedCount)" : "Skip All")
+                        Text(approvedCount > 0 ? "Apply \(approvedCount)" : "Skip Updates")
                             .fontWeight(.semibold)
                     }
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                Button(role: .destructive) {
-                    onConfirm([])
-                    dismiss()
-                } label: {
-                    Text("Reject All Changes")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                if approvedCount > 0 {
+                    Button(role: .destructive) {
+                        onConfirm([])
+                        dismiss()
+                    } label: {
+                        Text("Skip Updates")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
                 }
-                .buttonStyle(.bordered)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
             }
         }
     }

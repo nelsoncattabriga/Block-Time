@@ -198,6 +198,14 @@ struct ImportExportView: View {
         }) {
             ImportMergeReviewSheet(proposals: pendingMergeProposals) { approved in
                 FlightDatabaseService.shared.applyMergeProposals(approved)
+                if let result = pendingImportResult {
+                    pendingImportResult = ImportSessionResult(
+                        sessionID: result.sessionID,
+                        successCount: result.successCount,
+                        duplicateCount: result.duplicateCount,
+                        mergedCount: approved.count
+                    )
+                }
             }
         }
         .sheet(item: $lastImportResult) { result in
