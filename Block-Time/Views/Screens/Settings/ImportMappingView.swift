@@ -362,43 +362,35 @@ struct ImportMappingView: View {
                 }
 
                 Section(header: Text("Aircraft Type Mapping")) {
-                    if registrationMappings.isEmpty {
+                    if fieldMappings.first(where: { $0.logbookField == "Aircraft Type" })?.sourceColumn != nil {
+                        let allResolved = registrationMappings.isEmpty || registrationMappings.allSatisfy { m in
+                            m.useAdvancedRules
+                                ? (!m.rules.isEmpty && m.rules.allSatisfy { !$0.aircraftType.isEmpty })
+                                : !m.simpleType.isEmpty
+                        }
+                        if allResolved {
+                            Text("All registrations have a type assigned.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Tap Edit to assign a type to the following registrations.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if registrationMappings.isEmpty && fieldMappings.first(where: { $0.logbookField == "Aircraft Type" })?.sourceColumn == nil {
                         Text("No registration patterns found")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                    } else {
-                        let allResolved = registrationMappings.allSatisfy { mapping in
-                            mapping.useAdvancedRules
-                                ? (!mapping.rules.isEmpty && mapping.rules.allSatisfy { !$0.aircraftType.isEmpty })
-                                : !mapping.simpleType.isEmpty
+                    } else if !registrationMappings.isEmpty {
+                        Button {
+                            showingRegistrationMapping = true
+                        } label: {
+                            Text("Edit")
                         }
-                        VStack(spacing: 8) {
-                            HStack {
-                                Text("Registration Patterns")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Button {
-                                    showingRegistrationMapping = true
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "pencil")
-                                        Text("Edit")
-                                    }
-                                    .font(.subheadline)
-                                }
-                            }
-                            ForEach(registrationMappings) { mapping in
-                                RegistrationMappingRow(mapping: mapping)
-                            }
+                        ForEach(registrationMappings) { mapping in
+                            RegistrationMappingRow(mapping: mapping)
                         }
-                        .padding(.vertical, 4)
-                        .padding()
-                        .background((allResolved ? Color.green : Color.orange).opacity(allResolved ? 0.08 : 0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke((allResolved ? Color.green : Color.orange).opacity(allResolved ? 0.3 : 0.25), lineWidth: 1))
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
                     }
                 }
 
@@ -527,6 +519,10 @@ struct ImportMappingView: View {
                 registrationMappings = fresh.map { detected in
                     if var existing = saved[detected.pattern] {
                         existing.sampleRegistrations = detected.sampleRegistrations
+                        // If saved has no type but the CSV provided one, take the fresh type
+                        if existing.simpleType.isEmpty && !detected.simpleType.isEmpty {
+                            existing.simpleType = detected.simpleType
+                        }
                         return existing
                     }
                     return detected
@@ -536,7 +532,7 @@ struct ImportMappingView: View {
     }
 
     private func loadSavedRegistrationMappings() -> [String: RegistrationTypeMapping] {
-        guard let data = UserDefaults.standard.data(forKey: Self.registrationMappingPersistenceKey),
+        guard let data = NSUbiquitousKeyValueStore.default.data(forKey: Self.registrationMappingPersistenceKey),
               let saved = try? JSONDecoder().decode([RegistrationTypeMapping].self, from: data)
         else { return [:] }
         return Dictionary(saved.map { ($0.pattern, $0) }, uniquingKeysWith: { first, _ in first })
@@ -544,7 +540,8 @@ struct ImportMappingView: View {
 
     private func saveRegistrationMappings() {
         if let data = try? JSONEncoder().encode(registrationMappings) {
-            UserDefaults.standard.set(data, forKey: Self.registrationMappingPersistenceKey)
+            NSUbiquitousKeyValueStore.default.set(data, forKey: Self.registrationMappingPersistenceKey)
+            NSUbiquitousKeyValueStore.default.synchronize()
         }
     }
 
@@ -588,15 +585,21 @@ struct ImportMappingView: View {
 
     // MARK: - Registration Pattern Detection
     private func detectRegistrationPatterns() -> [RegistrationTypeMapping] {
-        // Find the registration column
         guard let regMapping = fieldMappings.first(where: { $0.logbookField == "Aircraft Reg" }),
               let regColumnName = regMapping.sourceColumn,
               let regColumnIndex = importData.headers.firstIndex(of: regColumnName) else {
             return []
         }
 
-        // Extract all unique registrations, stripping VH- prefix for 6-char VH-XXX regs
-        var registrations = Set<String>()
+        let typeColumnIndex: Int? = fieldMappings
+            .first(where: { $0.logbookField == "Aircraft Type" })
+            .flatMap { $0.sourceColumn }
+            .flatMap { importData.headers.firstIndex(of: $0) }
+
+        // reg → first non-empty type found in CSV rows
+        var regToType: [String: String] = [:]
+        var patternGroups: [String: [String]] = [:]
+
         for row in importData.rows {
             guard regColumnIndex < row.count else { continue }
             let raw = row[regColumnIndex].trimmingCharacters(in: .whitespaces)
@@ -604,20 +607,34 @@ struct ImportMappingView: View {
             let reg = (raw.count == 6 && raw.uppercased().hasPrefix("VH-"))
                 ? String(raw.dropFirst(3))
                 : raw
-            registrations.insert(reg)
-        }
 
-        // Group registrations by first 2 characters
-        var patternGroups: [String: [String]] = [:]
-        for reg in registrations {
+            if regToType[reg] == nil, let typeIdx = typeColumnIndex, typeIdx < row.count {
+                let t = row[typeIdx].trimmingCharacters(in: .whitespaces)
+                if !t.isEmpty { regToType[reg] = t }
+            }
+
             let pattern = String(reg.prefix(2))
-            patternGroups[pattern, default: []].append(reg)
+            if !patternGroups[pattern, default: []].contains(reg) {
+                patternGroups[pattern, default: []].append(reg)
+            }
         }
 
-        // Create mappings for each pattern, auto-detect from AircraftFleetService
         var mappings: [RegistrationTypeMapping] = []
         for (pattern, regs) in patternGroups.sorted(by: { $0.key < $1.key }) {
-            let detectedType = AircraftFleetService.getAircraftType(byRegistration: regs.first ?? "")
+            let csvTypes = Set(regs.compactMap { regToType[$0] })
+
+            // Every reg in this group has a type in the CSV — no mapping needed
+            if csvTypes.count >= 1 && regs.allSatisfy({ regToType[$0] != nil }) {
+                continue
+            }
+
+            // Use CSV type if all regs share the same type; fall back to static list
+            let detectedType: String
+            if csvTypes.count == 1, let t = csvTypes.first {
+                detectedType = t
+            } else {
+                detectedType = AircraftFleetService.getAircraftType(byRegistration: regs.first ?? "")
+            }
 
             mappings.append(RegistrationTypeMapping(
                 pattern: pattern + "*",
@@ -1352,7 +1369,7 @@ struct RegistrationTypeMappingView: View {
                 }
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Aircraft Type Mapping")
+            .navigationTitle("Type Mapping")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

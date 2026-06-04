@@ -768,7 +768,7 @@ struct WebCISMappingView: View {
     }
 
     private func loadSaved() -> [String: RegistrationTypeMapping] {
-        guard let data = UserDefaults.standard.data(forKey: Self.persistenceKey),
+        guard let data = NSUbiquitousKeyValueStore.default.data(forKey: Self.persistenceKey),
               let saved = try? JSONDecoder().decode([RegistrationTypeMapping].self, from: data)
         else { return [:] }
         return Dictionary(saved.map { ($0.pattern, $0) }, uniquingKeysWith: { first, _ in first })
@@ -776,7 +776,8 @@ struct WebCISMappingView: View {
 
     private func saveMappings() {
         if let data = try? JSONEncoder().encode(registrationMappings) {
-            UserDefaults.standard.set(data, forKey: Self.persistenceKey)
+            NSUbiquitousKeyValueStore.default.set(data, forKey: Self.persistenceKey)
+            NSUbiquitousKeyValueStore.default.synchronize()
         }
     }
 
