@@ -383,6 +383,7 @@ private struct BackupDetailSheet: View {
     @State private var showingDeleteConfirmation = false
     @State private var showingRestoreConfirmation = false
     @State private var isRestoring = false
+    @State private var restoreStatusMessage = ""
     @State private var showingShareSheet = false
     @State private var showingResultAlert = false
     @State private var isSuccess = false
@@ -473,7 +474,7 @@ private struct BackupDetailSheet: View {
 
                         ActionButton(
                             title: "Restore from this Backup",
-                            subtitle: "Replace or merge your current data",
+                            subtitle: isRestoring && !restoreStatusMessage.isEmpty ? restoreStatusMessage : "Replace or merge your current data",
                             icon: "arrow.counterclockwise.circle.fill",
                             color: .green,
                             isLoading: isRestoring
@@ -654,14 +655,19 @@ private struct BackupDetailSheet: View {
 
     private func executeRestore(definitionsBehavior: DefinitionsBehavior) {
         isRestoring = true
+        restoreStatusMessage = "Preparing restore..."
         LogManager.shared.info(" Calling quickRestoreFromBackup...")
         FileImportService.shared.quickRestoreFromBackup(
             url: backup.url,
             mode: selectedRestoreMode,
             skipSecurityScoping: true,
-            definitionsBehavior: definitionsBehavior
+            definitionsBehavior: definitionsBehavior,
+            progressHandler: { message in
+                restoreStatusMessage = message
+            }
         ) { result in
             isRestoring = false
+            restoreStatusMessage = ""
             switch result {
             case .success(let importResult):
                 LogManager.shared.info("Restore succeeded: \(importResult.successCount) flights")

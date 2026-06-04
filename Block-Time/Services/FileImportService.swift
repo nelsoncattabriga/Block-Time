@@ -846,18 +846,83 @@ class FileImportService {
         mode: ImportMode = .merge,
         skipSecurityScoping: Bool = false,
         definitionsBehavior: DefinitionsBehavior = .mergeIfEmpty,
+        progressHandler: ((String) -> Void)? = nil,
         completion: @escaping (Result<ImportResult, Error>) -> Void
     ) {
         LogManager.shared.info("quickRestoreFromBackup called with mode: \(mode)")
         LogManager.shared.info("File: \(url.lastPathComponent)")
         LogManager.shared.info("skipSecurityScoping: \(skipSecurityScoping)")
 
+        DispatchQueue.global(qos: .userInitiated).async {
+            self._quickRestoreFromBackupWork(
+                url: url,
+                mode: mode,
+                skipSecurityScoping: skipSecurityScoping,
+                definitionsBehavior: definitionsBehavior,
+                progressHandler: progressHandler,
+                completion: completion
+            )
+        }
+    }
+
+    private func _quickRestoreFromBackupWork(
+        url: URL,
+        mode: ImportMode,
+        skipSecurityScoping: Bool,
+        definitionsBehavior: DefinitionsBehavior,
+        progressHandler: ((String) -> Void)?,
+        completion: @escaping (Result<ImportResult, Error>) -> Void
+    ) {
+        func reportProgress(_ message: String) {
+            DispatchQueue.main.async { progressHandler?(message) }
+        }
+
+        // Wait for the file to be available locally (iCloud Drive files may need downloading).
+        // ubiquitousItemDownloadingStatus is nil for non-iCloud files — treat that as local.
+        let resourceKeys: Set<URLResourceKey> = [.ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsDownloadingKey]
+        if let values = try? url.resourceValues(forKeys: resourceKeys),
+           let status = values.ubiquitousItemDownloadingStatus,
+           status != .current {
+            reportProgress("Downloading backup from iCloud...")
+            LogManager.shared.info("File not local (status: \(status.rawValue)) — triggering iCloud download")
+            do {
+                try FileManager.default.startDownloadingUbiquitousItem(at: url)
+            } catch {
+                LogManager.shared.error("Failed to start iCloud download: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            // Poll until downloaded, downloading in progress, or timeout (60s)
+            let deadline = Date().addingTimeInterval(60)
+            while Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.5)
+                if let v = try? url.resourceValues(forKeys: resourceKeys) {
+                    if v.ubiquitousItemDownloadingStatus == .current {
+                        LogManager.shared.info("iCloud download complete")
+                        break
+                    }
+                }
+            }
+            // Final check — if still not local after timeout, fail with a clear error
+            if let v = try? url.resourceValues(forKeys: resourceKeys),
+               let finalStatus = v.ubiquitousItemDownloadingStatus,
+               finalStatus != .current {
+                LogManager.shared.error("iCloud download timed out (status: \(finalStatus.rawValue))")
+                DispatchQueue.main.async {
+                    completion(.failure(ImportError.iCloudDownloadTimeout))
+                }
+                return
+            }
+        }
+
+        reportProgress("Reading backup file...")
+
         do {
             // Read raw content to check for #DEFINITIONS: header line
             let needsSecurity = !skipSecurityScoping && !isInAppContainer(url)
             if needsSecurity {
                 guard url.startAccessingSecurityScopedResource() else {
-                    completion(.failure(ImportError.accessDenied))
+                    DispatchQueue.main.async { completion(.failure(ImportError.accessDenied)) }
                     return
                 }
             }
@@ -867,7 +932,7 @@ class FileImportService {
                 rawContent = try String(contentsOf: url, encoding: .utf8)
             } catch {
                 if needsSecurity { url.stopAccessingSecurityScopedResource() }
-                completion(.failure(error))
+                DispatchQueue.main.async { completion(.failure(error)) }
                 return
             }
             if needsSecurity { url.stopAccessingSecurityScopedResource() }
@@ -909,7 +974,7 @@ class FileImportService {
 
             guard isLoggerExportFormat(headers: importData.headers) else {
                 LogManager.shared.info("File is not in Block-Time export format")
-                completion(.failure(ImportError.notLoggerFormat))
+                DispatchQueue.main.async { completion(.failure(ImportError.notLoggerFormat)) }
                 return
             }
 
@@ -917,6 +982,8 @@ class FileImportService {
             let mappings = createLoggerFieldMapping(headers: importData.headers)
             LogManager.shared.info("Created \(mappings.count) field mappings")
             LogManager.shared.info("Starting import with mode: \(mode)")
+
+            reportProgress("Importing \(importData.rows.count) flights...")
 
             importFlights(from: importData, mapping: mappings, mode: mode) { result in
                 if case .success = result {
@@ -954,7 +1021,7 @@ class FileImportService {
             }
 
         } catch {
-            completion(.failure(error))
+            DispatchQueue.main.async { completion(.failure(error)) }
         }
     }
 
@@ -1961,6 +2028,7 @@ enum ImportError: LocalizedError {
     case emptyFile
     case invalidFormat
     case notLoggerFormat
+    case iCloudDownloadTimeout
 
     var errorDescription: String? {
         switch self {
@@ -1972,6 +2040,8 @@ enum ImportError: LocalizedError {
             return "The file format is invalid"
         case .notLoggerFormat:
             return "File is not in Block-Time backup format"
+        case .iCloudDownloadTimeout:
+            return "Could not download the backup from iCloud. Check your internet connection and try again."
         }
     }
 }
