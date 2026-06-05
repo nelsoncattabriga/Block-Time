@@ -242,7 +242,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
     enum Category: String, CaseIterable {
         case frms            = "FRMS"
         case timeStats       = "Time & Stats"
-        case recency         = "Recency"
+        case recency         = "Recency & Limits"
         case routesAirports  = "Routes, Airports & Fleet"
         case charts          = "Misc Charts"
         case other           = "Other"
