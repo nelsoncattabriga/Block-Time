@@ -243,6 +243,45 @@ struct FlightsView: View {
         }
     }
 
+    @ViewBuilder
+    private var importDeleteBanner: some View {
+        if filterViewModel.filterImportSessionID != nil {
+            HStack(spacing: 10) {
+                Image(systemName: "trash")
+                    .font(.subheadline)
+                    .foregroundStyle(.red)
+                Text("Remove this import")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Button(action: {
+                    HapticManager.shared.impact(.light)
+                    showingDeleteSessionAlert = true
+                }) {
+                    Text("Delete")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.red.opacity(0.4), lineWidth: 1)
+            )
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
     private func refreshUndoState() {
         undoCount = FlightDatabaseService.shared.undoableChangeCount
         undoDescription = FlightDatabaseService.shared.lastUndoDescription
@@ -334,6 +373,7 @@ struct FlightsView: View {
                 .padding()
                 .background(Color.clear)
                 filterStatusBanner
+                importDeleteBanner
                 undoBar
                 flightListContent
             }
@@ -474,16 +514,6 @@ struct FlightsView: View {
                     }
                 }
 
-                if filterViewModel.filterImportSessionID != nil {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(role: .destructive) {
-                            showingDeleteSessionAlert = true
-                        } label: {
-                            Label("Delete Import", systemImage: "trash")
-                                .foregroundColor(.red)
-                        }
-                    }
-                }
             }
             .fullScreenCover(isPresented: $showingPaywall) {
                 PaywallView(isDismissible: true)
@@ -2004,4 +2034,5 @@ private struct FilterDataCache {
     let fromAirports: [String]
     let toAirports: [String]
 }
+
 

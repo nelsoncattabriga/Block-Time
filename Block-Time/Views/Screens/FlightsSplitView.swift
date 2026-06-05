@@ -418,6 +418,45 @@ private struct FlightsListContent: View {
     }
 
     @ViewBuilder
+    private var importDeleteBanner: some View {
+        if filterViewModel.filterImportSessionID != nil {
+            HStack(spacing: 10) {
+                Image(systemName: "trash")
+                    .font(.subheadline)
+                    .foregroundStyle(.red)
+                Text("Remove this import")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Button(action: {
+                    HapticManager.shared.impact(.light)
+                    showingDeleteSessionAlert = true
+                }) {
+                    Text("Delete")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.red.opacity(0.4), lineWidth: 1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    @ViewBuilder
     private var customToolbar: some View {
         HStack(spacing: 12) {
             if isSelectMode {
@@ -535,15 +574,6 @@ private struct FlightsListContent: View {
                     }
                 } // end HStack
 
-                if filterViewModel.filterImportSessionID != nil {
-                    Button(role: .destructive) {
-                        showingDeleteSessionAlert = true
-                    } label: {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red)
-                            .font(.title3)
-                    }
-                }
             }
         }
         .padding(.horizontal, 16)
@@ -635,6 +665,7 @@ private struct FlightsListContent: View {
                 flightCountHeader
                     .background(Color.clear)
                 filterStatusBanner
+                importDeleteBanner
                 undoBar
                 flightListContent
             }
