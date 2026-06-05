@@ -16,6 +16,9 @@ final class CalendarExportViewModel {
     var endDate: Date = Date()
     var includePositioning: Bool = true
     var includeSimulator: Bool = true
+    var futureFlightsOnly: Bool = false {
+        didSet { futureFlightsOnlyDidChange(oldValue: oldValue) }
+    }
 
     // Export state
     var isLoading: Bool = false
@@ -32,33 +35,6 @@ final class CalendarExportViewModel {
         return f
     }()
 
-    /// Finds the date range of future (unflown) flights and snaps the filter to it.
-    /// Returns false if no future flights exist.
-    @discardableResult
-    func selectUnflownFlights() -> Bool {
-        let todayStr = Self.dateFormatter.string(from: Date())
-        // Fetch a wide forward window — 2 years should cover any roster
-        let farFuture = Calendar.current.date(byAdding: .year, value: 2, to: Date()) ?? Date()
-        let farFutureStr = Self.dateFormatter.string(from: farFuture)
-
-        let future = FlightDatabaseService.shared.fetchFlights(from: todayStr, to: farFutureStr)
-            .filter { isUnflown($0) }
-
-        guard !future.isEmpty else { return false }
-
-        // Find earliest and latest dates among unflown flights
-        let dates = future.compactMap { Self.dateFormatter.date(from: $0.date) }
-        guard let earliest = dates.min(), let latest = dates.max() else { return false }
-
-        startDate = earliest
-        endDate   = latest
-        
-        includeSimulator = true
-        includePositioning = true
-        refreshCount()
-        return true
-    }
-
     var hasUnflownFlights: Bool {
         let todayStr = Self.dateFormatter.string(from: Date())
         let farFuture = Calendar.current.date(byAdding: .year, value: 2, to: Date()) ?? Date()
@@ -67,7 +43,23 @@ final class CalendarExportViewModel {
         return future.contains { isUnflown($0) }
     }
 
-    /// A flight is "unflown" if it has no actual block or sim time recorded.
+    private func futureFlightsOnlyDidChange(oldValue: Bool) {
+        guard futureFlightsOnly, !oldValue else { return }
+        let todayStr = Self.dateFormatter.string(from: Date())
+        let farFuture = Calendar.current.date(byAdding: .year, value: 2, to: Date()) ?? Date()
+        let farFutureStr = Self.dateFormatter.string(from: farFuture)
+        let future = FlightDatabaseService.shared.fetchFlights(from: todayStr, to: farFutureStr)
+            .filter { isUnflown($0) }
+        let dates = future.compactMap { Self.dateFormatter.date(from: $0.date) }
+        if let earliest = dates.min(), let latest = dates.max() {
+            startDate = earliest
+            endDate = latest
+        }
+        includeSimulator = true
+        includePositioning = true
+        refreshCount()
+    }
+
     private func isUnflown(_ flight: FlightSector) -> Bool {
         let block = Double(flight.blockTime) ?? 0
         let sim   = Double(flight.simTime)   ?? 0
@@ -157,8 +149,12 @@ struct CalendarExportView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        CalendarExportHeaderCard()
-                        CalendarExportFilterCard(viewModel: viewModel)
+                        Text("Create an .ics file to import into any Calendar app.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 4)
+                        CalendarExportFilterCard(viewModel: viewModel, showFormatSheet: $showFormatSheet)
                         CalendarExportFlightCountCard(viewModel: viewModel)
                     }
                     .padding(.horizontal, 16)
@@ -171,11 +167,6 @@ struct CalendarExportView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showFormatSheet = true } label: {
-                        Image(systemName: "slider.horizontal.3")
-                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: viewModel.export) {
@@ -213,39 +204,11 @@ struct CalendarExportView: View {
     }
 }
 
-// MARK: - Header Card
-
-private struct CalendarExportHeaderCard: View {
-    var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.system(size: 44))
-                .foregroundStyle(.blue)
-
-            Text("Export Flights to Calendar")
-                .font(.headline)
-                .fontWeight(.semibold)
-
-            Text("Creates a standard .ics file that can be opened directly in Calendar, Google Calendar, Outlook, or any other calendar app.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .background(.thinMaterial)
-        .clipShape(.rect(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-        }
-    }
-}
-
 // MARK: - Filter Card
 
 private struct CalendarExportFilterCard: View {
     @Bindable var viewModel: CalendarExportViewModel
+    @Binding var showFormatSheet: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -259,40 +222,26 @@ private struct CalendarExportFilterCard: View {
             }
 
             if viewModel.hasUnflownFlights {
-                Button {
-                    viewModel.selectUnflownFlights()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.subheadline)
-                        Text("Only Flights Not Flown")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        Spacer()
-                    }
-                    .foregroundStyle(.blue)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 12)
-                    .background(Color.blue.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8).stroke(Color.blue.opacity(0.25), lineWidth: 1)
-                    }
+                Toggle(isOn: $viewModel.futureFlightsOnly) {
+                    Label("Unflown flights only", systemImage: "calendar.badge.clock")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                 }
-                .buttonStyle(.plain)
+                .tint(.blue)
             }
 
             CalendarExportDateRow(
                 label: "From",
                 date: $viewModel.startDate,
-                maxDate: viewModel.endDate
+                maxDate: viewModel.endDate,
+                disabled: viewModel.futureFlightsOnly
             )
 
             CalendarExportDateRow(
                 label: "To",
                 date: $viewModel.endDate,
-                minDate: viewModel.startDate
+                minDate: viewModel.startDate,
+                disabled: viewModel.futureFlightsOnly
             )
 
             Divider()
@@ -310,6 +259,24 @@ private struct CalendarExportFilterCard: View {
                     .fontWeight(.medium)
             }
             .tint(.purple)
+
+            Divider()
+
+            Button {
+                showFormatSheet = true
+            } label: {
+                HStack {
+                    Text("Event Format")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
         }
         .padding(16)
         .background(.thinMaterial)
@@ -328,6 +295,7 @@ private struct CalendarExportDateRow: View {
     @Binding var date: Date
     var minDate: Date? = nil
     var maxDate: Date? = nil
+    var disabled: Bool = false
 
     @State private var showingPicker = false
 
@@ -353,13 +321,14 @@ private struct CalendarExportDateRow: View {
                 Text(Self.displayFormatter.string(from: date))
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(disabled ? .secondary : .primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(Color(.secondarySystemBackground))
                     .clipShape(.rect(cornerRadius: 8))
             }
             .buttonStyle(.plain)
+            .disabled(disabled)
         }
         .sheet(isPresented: $showingPicker) {
             CalendarDatePickerSheet(
@@ -389,7 +358,6 @@ private struct CalendarDatePickerSheet: View {
             datePicker
                 .datePickerStyle(.graphical)
                 .padding()
-                .onChange(of: date) { isPresented = false }
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {

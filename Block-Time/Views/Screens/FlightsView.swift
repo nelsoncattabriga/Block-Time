@@ -1916,9 +1916,6 @@ struct FilterSheet: View {
                     DatePicker("", selection: $filterStartDate, in: ...filterEndDate, displayedComponents: .date)
                         .datePickerStyle(.graphical)
                         .padding(.horizontal)
-                        .onChange(of: filterStartDate) { _, _ in
-                            showingStartDatePicker = false
-                        }
                 }
                 .presentationDetents([.height(420)])
                 .presentationDragIndicator(.visible)
@@ -1936,9 +1933,6 @@ struct FilterSheet: View {
                     DatePicker("", selection: $filterEndDate, in: filterStartDate..., displayedComponents: .date)
                         .datePickerStyle(.graphical)
                         .padding(.horizontal)
-                        .onChange(of: filterEndDate) { _, _ in
-                            showingEndDatePicker = false
-                        }
                 }
                 .presentationDetents([.height(420)])
                 .presentationDragIndicator(.visible)
