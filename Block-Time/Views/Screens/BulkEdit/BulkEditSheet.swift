@@ -109,13 +109,9 @@ struct BulkEditSheet: View {
                                 aircraftTypeFieldState: $bulkEditViewModel.aircraftType
                             )
 
-                            BulkEditTextField(
+                            BulkEditAircraftTypeField(
                                 label: "A/C Type",
-                                fieldState: $bulkEditViewModel.aircraftType,
-                                textCase: .uppercase,
-                                autocapitalization: .characters,
-                                placeholder: "e.g. B738",
-                                showClearButton: true
+                                fieldState: $bulkEditViewModel.aircraftType
                             )
 
                             BulkEditPrefixManager(

@@ -5,6 +5,175 @@
 
 import SwiftUI
 
+// MARK: - BulkEditAircraftTypeField
+
+struct BulkEditAircraftTypeField: View {
+    let label: String
+    @Binding var fieldState: BulkEditViewModel.FieldState<String>
+
+    @State private var textValue: String = ""
+    @State private var showingPicker = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 0) {
+                Button(action: { showingPicker = true }) {
+                    HStack {
+                        Text(fieldState.isMixed ? "(Mixed)" : (textValue.isEmpty ? "Select aircraft type..." : textValue))
+                            .font(.body)
+                            .foregroundColor(fieldState.isMixed ? .secondary : (textValue.isEmpty ? .secondary : .primary))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(10)
+                .background(Color(.secondarySystemBackground))
+
+                if !textValue.isEmpty || fieldState.isMixed {
+                    Button(action: {
+                        textValue = ""
+                        fieldState = .value("")
+                        HapticManager.shared.impact(.light)
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 10)
+                            .frame(maxHeight: .infinity)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .background(Color(.secondarySystemBackground))
+                }
+            }
+            .cornerRadius(8)
+            .sheet(isPresented: $showingPicker) {
+                BulkEditAircraftTypePickerSheet(
+                    selectedType: Binding(
+                        get: { textValue },
+                        set: { newValue in
+                            textValue = newValue
+                            fieldState = .value(newValue)
+                        }
+                    ),
+                    onDismiss: { showingPicker = false }
+                )
+            }
+            .onAppear {
+                if case .value(let val) = fieldState {
+                    textValue = val
+                }
+            }
+            .onChange(of: fieldState) { _, newState in
+                if case .value(let val) = newState {
+                    textValue = val
+                }
+            }
+        }
+    }
+}
+
+// MARK: - BulkEditAircraftTypePickerSheet
+
+struct BulkEditAircraftTypePickerSheet: View {
+    @Binding var selectedType: String
+    let onDismiss: () -> Void
+
+    @State private var logbookTypes: [String] = []
+    @State private var customText: String = ""
+    @FocusState private var isCustomFocused: Bool
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text("Enter Custom Type")) {
+                    HStack {
+                        TextField("e.g. B738", text: $customText)
+                            .textCase(.uppercase)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .focused($isCustomFocused)
+                            .submitLabel(.done)
+                            .onSubmit { applyCustom() }
+                        if !customText.isEmpty {
+                            Button(action: applyCustom) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.blue)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+
+                if !logbookTypes.isEmpty {
+                    Section(header: Text("From Logbook")) {
+                        ForEach(logbookTypes, id: \.self) { type in
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                selectedType = type
+                                onDismiss()
+                            }) {
+                                HStack {
+                                    Text(type)
+                                        .font(.body)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    if selectedType == type {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Select A/C Type")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if !selectedType.isEmpty {
+                        Button("Clear") {
+                            HapticManager.shared.impact(.light)
+                            selectedType = ""
+                            onDismiss()
+                        }
+                        .foregroundColor(.red)
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { onDismiss() }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            customText = selectedType
+            Task {
+                logbookTypes = await FlightDatabaseService.shared.getAllAircraftTypesAsync()
+            }
+        }
+    }
+
+    private func applyCustom() {
+        let trimmed = customText.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !trimmed.isEmpty else { return }
+        HapticManager.shared.impact(.light)
+        selectedType = trimmed
+        onDismiss()
+    }
+}
+
 // MARK: - BulkEditAircraftRegField
 
 struct BulkEditAircraftRegField: View {
