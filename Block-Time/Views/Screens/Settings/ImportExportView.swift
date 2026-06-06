@@ -85,7 +85,8 @@ struct ImportExportView: View {
         ScrollView {
             VStack(spacing: 16) {
                 // Import / Export Card
-                importExportCard
+                importCard
+                exportCard
 
                 Spacer(minLength: 20)
             }
@@ -262,133 +263,137 @@ struct ImportExportView: View {
 //        }
     }
 
-    // MARK: - Import / Export Card
-    private var importExportCard: some View {
-        VStack(spacing: 16) {
+    // MARK: - Import Card
+    private var importCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Import")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 4)
 
-                // MARK: Import
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Import")
-                        .font(.footnote)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                        .padding(.horizontal, 4)
-
-                    VStack(spacing: 8) {
-                        if isImporting {
-                            HStack(spacing: 12) {
-                                ProgressView()
-                                Text("Importing…")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                            }
-                            .padding(12)
-                            .background(Color(.systemGray6).opacity(0.75))
-                            .cornerRadius(8)
-                        }
-
-                        ActionButton(
-                            title: "Roster Import",
-                            subtitle: "Add rostered flights",
-                            icon: "calendar.badge.plus",
-                            color: .blue,
-                            isLoading: false
-                        ) {
-                            showingRosterImport = true
-                        }
-
-                        if isImportingWebCIS {
-                            HStack(spacing: 12) {
-                                ProgressView()
-                                Text("Importing webCIS data…")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                            }
-                            .padding(12)
-                            .background(Color(.systemGray6).opacity(0.75))
-                            .cornerRadius(8)
-                        }
-
-                        ActionButton(
-                            title: "Import webCIS History",
-                            subtitle: "ARMS Flying Experience Report",
-                            icon: "doc.text.fill",
-                            color: .orange.opacity(0.8),
-                            isLoading: false
-                        ) {
-                            showingWebCISInstructions = true
-                        }
-                        .disabled(isImportingWebCIS)
-
-                        ActionButton(
-                            title: "Import from File",
-                            subtitle: "CSV or Tab-Delimited files",
-                            icon: "square.and.arrow.down.on.square.fill",
-                            color: .green.opacity(0.7),
-                            isLoading: false
-                        ) {
-                            activeFilePickerMode = .importWithMapping
-                        }
-                        .disabled(isImporting)
-
-                        ActionButton(
-                            title: "Add Aircraft Summary",
-                            subtitle: "Add previous hours by type",
-                            icon: "clock.badge.checkmark.fill",
-                            color: .teal,
-                            isLoading: false
-                        ) {
-                            showingAircraftSummary = true
-                        }
+            VStack(spacing: 8) {
+                if isImporting {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text("Importing…")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Spacer()
                     }
+                    .padding(12)
+                    .background(Color(.systemGray6).opacity(0.75))
+                    .cornerRadius(8)
                 }
 
-                Divider()
-
-                // MARK: Export
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Export")
-                        .font(.footnote)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                        .padding(.horizontal, 4)
-
-                    VStack(spacing: 8) {
-                        ActionButton(
-                            title: "Print Logbook",
-                            subtitle: "Formatted paper logbook layout",
-                            icon: "books.vertical.fill",
-                            color: .brown.opacity(0.8),
-                            isLoading: false
-                        ) {
-                            showingPDFExport = true
-                        }
-
-                        ActionButton(
-                            title: "Export to Calendar",
-                            subtitle: "Save flights as .ics file",
-                            icon: "calendar.badge.checkmark",
-                            color: .indigo.opacity(0.6),
-                            isLoading: false
-                        ) {
-                            showingCalendarExport = true
-                        }
-
-                        ActionButton(
-                            title: "Export Logbook",
-                            subtitle: "Save as a CSV file",
-                            icon: "square.and.arrow.up.fill",
-                            color: .indigo.opacity(0.6),
-                            isLoading: false
-                        ) {
-                            showingExportView = true
-                        }
-                    }
+                ActionButton(
+                    title: "Roster Import",
+                    subtitle: "Add rostered flights",
+                    icon: "calendar.badge.plus",
+                    color: .blue,
+                    isLoading: false
+                ) {
+                    showingRosterImport = true
                 }
+
+                if isImportingWebCIS {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text("Importing webCIS data…")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(Color(.systemGray6).opacity(0.75))
+                    .cornerRadius(8)
+                }
+
+                ActionButton(
+                    title: "Import webCIS History",
+                    subtitle: "ARMS Flying Experience Report",
+                    icon: "doc.text.fill",
+                    color: .orange.opacity(0.8),
+                    isLoading: false
+                ) {
+                    showingWebCISInstructions = true
+                }
+                .disabled(isImportingWebCIS)
+
+                ActionButton(
+                    title: "Import from File",
+                    subtitle: "CSV or Tab-Delimited files",
+                    icon: "square.and.arrow.down.on.square.fill",
+                    color: .green.opacity(0.7),
+                    isLoading: false
+                ) {
+                    activeFilePickerMode = .importWithMapping
+                }
+                .disabled(isImporting)
+
+                ActionButton(
+                    title: "Add Aircraft Summary",
+                    subtitle: "Add previous hours by type",
+                    icon: "clock.badge.checkmark.fill",
+                    color: .teal,
+                    isLoading: false
+                ) {
+                    showingAircraftSummary = true
+                }
+            }
+        }
+        .padding(16)
+        .background(.thinMaterial)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Export Card
+    private var exportCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Export")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 8) {
+                ActionButton(
+                    title: "Print Logbook",
+                    subtitle: "Formatted paper logbook layout",
+                    icon: "books.vertical.fill",
+                    color: .brown.opacity(0.8),
+                    isLoading: false
+                ) {
+                    showingPDFExport = true
+                }
+
+                ActionButton(
+                    title: "Export to Calendar",
+                    subtitle: "Save flights as .ics file",
+                    icon: "calendar.badge.checkmark",
+                    color: .indigo.opacity(0.6),
+                    isLoading: false
+                ) {
+                    showingCalendarExport = true
+                }
+
+                ActionButton(
+                    title: "Export Logbook",
+                    subtitle: "Save as a CSV file",
+                    icon: "square.and.arrow.up.fill",
+                    color: .indigo.opacity(0.6),
+                    isLoading: false
+                ) {
+                    showingExportView = true
+                }
+            }
         }
         .padding(16)
         .background(.thinMaterial)

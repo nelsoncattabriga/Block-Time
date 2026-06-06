@@ -39,6 +39,14 @@ struct ModernDefaultCrewNamesCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            Text("CREW INFO")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+
             VStack(spacing: 12) {
                 // Flight Time Position Picker
                 HStack(spacing: 12) {
@@ -271,6 +279,14 @@ struct ModernOpsDataCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            Text("OPERATIONS")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+
             VStack(spacing: 12) {
 
                 // Instrument Time when PF
@@ -377,6 +393,14 @@ struct ModernOpsDataCard: View {
 struct ModernCustomFieldsCard: View {
     var body: some View {
         VStack(spacing: 16) {
+            Text("CUSTOM FIELDS")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+
             InlineCustomFieldsView()
         }
         .padding(16)

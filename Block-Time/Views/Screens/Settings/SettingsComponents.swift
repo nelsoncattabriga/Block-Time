@@ -121,6 +121,14 @@ struct ModernPhotoBackupCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            Text("PHOTO BACKUP")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+
             ModernToggleRow(
                 title: "Save ACARS to Photos",
                 subtitle: "Backup photos",

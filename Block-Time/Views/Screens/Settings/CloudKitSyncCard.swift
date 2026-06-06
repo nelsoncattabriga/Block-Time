@@ -12,18 +12,15 @@ struct ModernCloudKitSyncCard: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack {
+                Text("ICLOUD SYNC")
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .padding(.horizontal, 4)
+
                 Spacer()
 
-                Button {
-                    showSyncHelp = true
-                } label: {
-                    Image(systemName: "questionmark.circle")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-
-                // Debug mode indicator
                 if debugModeEnabled {
                     Text("DEBUG")
                         .font(.caption2)
@@ -34,6 +31,15 @@ struct ModernCloudKitSyncCard: View {
                         .background(Color.orange.opacity(0.2))
                         .cornerRadius(4)
                 }
+
+                Button {
+                    showSyncHelp = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
             }
             .sheet(isPresented: $showSyncHelp) {
                 ICloudSyncHelpSheet()

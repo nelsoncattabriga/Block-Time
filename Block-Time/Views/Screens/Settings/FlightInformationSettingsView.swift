@@ -10,7 +10,9 @@ struct FlightInformationSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                ModernFormatOptionsCard(viewModel: viewModel)
+                FleetCard(viewModel: viewModel)
+                AircraftAirportsCard(viewModel: viewModel)
+                TimesCard(viewModel: viewModel)
 
                 Spacer(minLength: 20)
             }
@@ -30,37 +32,48 @@ struct FlightInformationSettingsView: View {
     }
 }
 
-// MARK: - Format Options Card
+// MARK: - Fleet Card
 
-struct ModernFormatOptionsCard: View {
+struct FleetCard: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel
 
     var body: some View {
-        VStack(spacing: 16) {
-            VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Fleet")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 4)
 
-                Text("FLEET")
-                    .font(.footnote)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
+            ModernFleetSelectorRow(viewModel: viewModel)
+        }
+        .padding(16)
+        .background(.thinMaterial)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
 
-                ModernFleetSelectorRow(viewModel: viewModel)
+// MARK: - Aircraft & Airports Card
 
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+struct AircraftAirportsCard: View {
+    @ObservedObject var viewModel: FlightTimeExtractorViewModel
 
-                Text("AIRCRAFT & AIRPORTS")
-                    .font(.footnote)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Aircraft & Airports")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 4)
 
+            VStack(spacing: 8) {
                 ModernAirlinePrefixRow(
                     isEnabled: Binding(
                         get: { viewModel.includeAirlinePrefixInFlightNumber },
@@ -77,7 +90,6 @@ struct ModernFormatOptionsCard: View {
                     color: .orange
                 )
 
-
                 ModernToggleRow(
                     title: "Full A/C Registration",
                     subtitle: "VH-ABC vs ABC",
@@ -88,7 +100,6 @@ struct ModernFormatOptionsCard: View {
                     color: .orange,
                     icon: "airplane"
                 )
-
 
                 ModernToggleRow(
                     title: "Leading Zeros in Flt No",
@@ -101,7 +112,6 @@ struct ModernFormatOptionsCard: View {
                     icon: "number"
                 )
 
-                // Airport ID Picker
                 HStack(spacing: 12) {
                     Image(systemName: "airplane.circle")
                         .foregroundColor(.orange)
@@ -132,21 +142,34 @@ struct ModernFormatOptionsCard: View {
                 .padding(12)
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
+            }
+        }
+        .padding(16)
+        .background(.thinMaterial)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+        )
+    }
+}
 
+// MARK: - Times Card
 
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+struct TimesCard: View {
+    @ObservedObject var viewModel: FlightTimeExtractorViewModel
 
-                Text("TIMES")
-                    .font(.footnote)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Times")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 4)
 
-                // Enter Times In Local Time toggle
+            VStack(spacing: 8) {
                 HStack(spacing: 12) {
                     Image(systemName: "clock.badge.questionmark")
                         .foregroundColor(.orange)
@@ -178,7 +201,6 @@ struct ModernFormatOptionsCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
-                // Show Times In Picker
                 HStack(spacing: 12) {
                     Image(systemName: "clock.badge.checkmark")
                         .foregroundColor(.orange)
@@ -232,7 +254,6 @@ struct ModernFormatOptionsCard: View {
                     icon: "clock"
                 )
 
-                // Flight Times Format Picker
                 HStack(spacing: 12) {
                     Image(systemName: "clock")
                         .foregroundColor(.orange)
@@ -243,7 +264,6 @@ struct ModernFormatOptionsCard: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.primary)
-
                     }
 
                     Spacer()
@@ -261,7 +281,6 @@ struct ModernFormatOptionsCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
-                // Rounding Picker (only show when Decimal mode is selected)
                 if !viewModel.showTimesInHoursMinutes {
                     HStack(spacing: 12) {
                         Image(systemName: "number")
@@ -295,9 +314,6 @@ struct ModernFormatOptionsCard: View {
                     .background(Color(.systemGray6).opacity(0.5))
                     .cornerRadius(8)
                 }
-
-
-
             }
         }
         .padding(16)
@@ -310,7 +326,6 @@ struct ModernFormatOptionsCard: View {
         )
     }
 
-    // Computed property for rounding mode examples
     private var roundingExampleText: String {
         switch viewModel.decimalRoundingMode {
         case .standard:
