@@ -276,19 +276,32 @@ struct BackupsView: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
-                // Backup Now Button
-                ActionButton(
-                    title: "Backup Now",
-                    subtitle: "Backup all flights",
-                    icon: "square.and.arrow.down.fill",
-                    color: .blue,
-                    isLoading: backupService.isBackupInProgress
-                ) {
-                    createManualBackup()
+                // Backup Now Button — primary action, filled style
+                Button(action: createManualBackup) {
+                    HStack(spacing: 12) {
+                        if backupService.isBackupInProgress {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "square.and.arrow.down.fill")
+                                .font(.title3)
+                                .foregroundStyle(.white)
+                        }
+                        Text(backupService.isBackupInProgress ? "Backing up…" : "Backup Now")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(backupService.isBackupInProgress ? Color.blue.opacity(0.6) : Color.blue)
+                    .cornerRadius(10)
                 }
+                .buttonStyle(PlainButtonStyle())
                 .disabled(backupService.isBackupInProgress)
 
-                // Restore from Backup Button
+                // Manage Backups — navigation row
                 ActionButton(
                     title: "Manage Backups",
                     subtitle: "View and restore saved backups",
@@ -321,7 +334,7 @@ struct BackupsView: View {
                     .foregroundStyle(.red)
                     .font(.title3)
 
-                Text("Delete Logbook")
+                Text("DELETE LOGBOOK")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.red)
@@ -331,7 +344,7 @@ struct BackupsView: View {
 
             ActionButton(
                 title: "Delete All Flight Data",
-                subtitle: "This cannot be undone",
+                subtitle: "This cannot be undone!",
                 icon: "exclamationmark.triangle.fill",
                 color: .red,
                 isLoading: false
