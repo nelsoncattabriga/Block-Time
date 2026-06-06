@@ -13,6 +13,24 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    enum Section: String {
+        case configure = "Configure"
+        case data = "Data"
+        case other = "Other"
+    }
+
+    var section: Section {
+        switch self {
+        case .crew, .flightInfo, .frms, .appearance: return .configure
+        case .importExport, .backups: return .data
+        case .about: return .other
+        }
+    }
+
+    static var configureCases: [SettingsCategory] { allCases.filter { $0.section == .configure } }
+    static var dataCases: [SettingsCategory] { allCases.filter { $0.section == .data } }
+    static var otherCases: [SettingsCategory] { allCases.filter { $0.section == .other } }
+
     var icon: String {
         switch self {
         case .appearance: return "moonphase.first.quarter"
@@ -71,40 +89,9 @@ struct SettingsView: View {
 
                     BackupNudgeBannerView(navigateToBackups: $navigateToBackups)
 
-                    ForEach(SettingsCategory.allCases) { category in
-                        NavigationLink(destination: categoryDetailView(for: category)) {
-                            HStack(spacing: 16) {
-                                Image(systemName: category.icon)
-                                    .foregroundColor(category.color)
-                                    .font(.title3)
-                                    .frame(width: 32, height: 32)
-                                    .background(category.color.opacity(0.15))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(category.rawValue)
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.primary)
-
-                                    Text(category.subtitle)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Spacer()
-
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(16)
-                            .background(.thinMaterial)
-                            .cornerRadius(12)
-                            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
+                    settingsSection(title: "Configure", categories: SettingsCategory.configureCases)
+                    settingsSection(title: "Data", categories: SettingsCategory.dataCases)
+                    settingsSection(title: "Other", categories: SettingsCategory.otherCases)
 
                     Spacer(minLength: 20)
                 }
@@ -121,6 +108,55 @@ struct SettingsView: View {
         }
         .navigationDestination(isPresented: $navigateToBackups) {
             BackupsView(viewModel: viewModel)
+        }
+    }
+
+    @ViewBuilder
+    private func settingsSection(title: String, categories: [SettingsCategory]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 8) {
+                ForEach(categories) { category in
+                    NavigationLink(destination: categoryDetailView(for: category)) {
+                        HStack(spacing: 16) {
+                            Image(systemName: category.icon)
+                                .foregroundStyle(category.color)
+                                .font(.title3)
+                                .frame(width: 32, height: 32)
+                                .background(category.color.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(category.rawValue)
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.primary)
+
+                                Text(category.subtitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(16)
+                        .background(.thinMaterial)
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
         }
     }
 

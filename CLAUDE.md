@@ -9,6 +9,7 @@ When something fails repeatedly, when Nelson has to re-explain, add a one-line b
 - Replace any `NavigationView` encountered with `NavigationStack` and update toolbar placements to `.topBar*`.
 - Previews using `ThemeService` child views must inject `.environment(ThemeService.shared)` or crash with SIGTRAP.
 - For simple single-file changes, edit inline. Use GSD for complex/multi-file tasks — ask first.
+- Always check for paired iPad/iPhone view files (e.g. `*SplitView` + base view) and apply changes to both.
 
 ## Coding Standards
 

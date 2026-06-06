@@ -20,6 +20,7 @@ struct BackupsView: View {
     @State private var isAutomaticBackupsExpanded = false
     @State private var showingManageBackups = false
     @State private var showBackupHelp = false
+    @State private var showingDeleteWarning = false
 
     var body: some View {
         ScrollView {
@@ -34,6 +35,9 @@ struct BackupsView: View {
                 
                 // Merged Backups & Restore Card
                 mergedBackupsCard
+
+                // Delete Logbook Card
+                deleteLogbookCard
 
                 Spacer(minLength: 20)
             }
@@ -54,6 +58,14 @@ struct BackupsView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(resultMessage)
+        }
+        .alert("Delete All Logbook Data", isPresented: $showingDeleteWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteAllFlights()
+            }
+        } message: {
+            Text("This will permanently delete all data.")
         }
     }
 
@@ -301,7 +313,52 @@ struct BackupsView: View {
         }
     }
 
+    // MARK: - Delete Logbook Card
+    private var deleteLogbookCard: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "trash.fill")
+                    .foregroundStyle(.red)
+                    .font(.title3)
+
+                Text("Delete Logbook")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.red)
+
+                Spacer()
+            }
+
+            ActionButton(
+                title: "Delete All Flight Data",
+                subtitle: "This cannot be undone",
+                icon: "exclamationmark.triangle.fill",
+                color: .red,
+                isLoading: false
+            ) {
+                showingDeleteWarning = true
+            }
+        }
+        .padding(16)
+        .background(.thinMaterial)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.red.opacity(0.2), lineWidth: 1)
+        )
+    }
+
     // MARK: - Helper Functions
+    private func deleteAllFlights() {
+        FlightDatabaseService.shared.suspendUndoForBatchImport()
+        let success = FlightDatabaseService.shared.clearAllFlights()
+        FlightDatabaseService.shared.resumeUndoAfterBatchImport()
+        resultMessage = success ? "All flights have been successfully deleted." : "Failed to delete flights. Please try again."
+        isSuccess = success
+        showingResult = true
+    }
+
     private func createManualBackup() {
         backupService.performManualBackup { result in
             switch result {

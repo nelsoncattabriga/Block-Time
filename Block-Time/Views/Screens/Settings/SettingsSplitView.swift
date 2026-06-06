@@ -114,23 +114,39 @@ private struct SettingsCategoriesListContent: View {
                 .listRowSeparator(.hidden)
             }
 
-            ForEach(SettingsCategory.allCases, id: \.self) { category in
+            settingsSectionRows(title: "Configure", categories: SettingsCategory.configureCases)
+            settingsSectionRows(title: "Data", categories: SettingsCategory.dataCases)
+            settingsSectionRows(title: "Other", categories: SettingsCategory.otherCases)
+        }
+        .onChange(of: selectedCategory) { oldValue, newValue in
+            if newValue != nil {
+                HapticManager.shared.impact(.light)
+            }
+        }
+        .listStyle(.sidebar)
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private func settingsSectionRows(title: String, categories: [SettingsCategory]) -> some View {
+        Section(header: Text(title)) {
+            ForEach(categories, id: \.self) { category in
                 HStack(spacing: 0) {
-                    
                     Label {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(category.rawValue)
                                 .font(.headline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
 
                             Text(category.subtitle)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     } icon: {
                         Image(systemName: category.icon)
-                            .foregroundColor(category.color)
+                            .foregroundStyle(category.color)
                             .font(.title3)
                             .frame(width: 32, height: 32)
                             .background(category.color.opacity(0.15))
@@ -148,14 +164,6 @@ private struct SettingsCategoriesListContent: View {
                 .tag(category)
             }
         }
-        .onChange(of: selectedCategory) { oldValue, newValue in
-            if newValue != nil {
-                HapticManager.shared.impact(.light)
-            }
-        }
-        .listStyle(.sidebar)
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

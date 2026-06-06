@@ -75,8 +75,6 @@ struct ImportExportView: View {
     @State private var lastImportSuccessCount = 0
     @AppStorage("backupNudgeDismissed") private var backupNudgeDismissed = false
 
-    // Delete state
-    @State private var showingDeleteWarning = false
 
     // Merge review state
     @State private var pendingMergeProposals: [MergeProposal] = []
@@ -88,9 +86,6 @@ struct ImportExportView: View {
             VStack(spacing: 16) {
                 // Import / Export Card
                 importExportCard
-
-                // Delete Logbook Card
-                deleteLogbookCard
 
                 Spacer(minLength: 20)
             }
@@ -224,14 +219,6 @@ struct ImportExportView: View {
                 .presentationDetents([.height(420)])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Delete All Logbook Data", isPresented: $showingDeleteWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                deleteAllFlights()
-            }
-        } message: {
-            Text("This will permanently delete all data.")
-        }
         .sheet(isPresented: $showingWebCISInstructions) {
             WebCISImportInstructionsView {
                 activeFilePickerMode = .webCIS
@@ -291,134 +278,131 @@ struct ImportExportView: View {
                 Spacer()
             }
 
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
 
-                if isImporting {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text("Importing…")
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                        Spacer()
+                // MARK: Import
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Import")
+                        .font(.footnote)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .padding(.horizontal, 4)
+
+                    VStack(spacing: 8) {
+                        if isImporting {
+                            HStack(spacing: 12) {
+                                ProgressView()
+                                Text("Importing…")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(Color(.systemGray6).opacity(0.75))
+                            .cornerRadius(8)
+                        }
+
+                        ActionButton(
+                            title: "Roster Import",
+                            subtitle: "Add rostered flights",
+                            icon: "calendar.badge.plus",
+                            color: .blue,
+                            isLoading: false
+                        ) {
+                            showingRosterImport = true
+                        }
+
+                        if isImportingWebCIS {
+                            HStack(spacing: 12) {
+                                ProgressView()
+                                Text("Importing webCIS data…")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(Color(.systemGray6).opacity(0.75))
+                            .cornerRadius(8)
+                        }
+
+                        ActionButton(
+                            title: "Import webCIS History",
+                            subtitle: "ARMS Flying Experience Report",
+                            icon: "doc.text.fill",
+                            color: .orange.opacity(0.8),
+                            isLoading: false
+                        ) {
+                            showingWebCISInstructions = true
+                        }
+                        .disabled(isImportingWebCIS)
+
+                        ActionButton(
+                            title: "Import from File",
+                            subtitle: "CSV or Tab-Delimited files",
+                            icon: "square.and.arrow.down.on.square.fill",
+                            color: .green.opacity(0.7),
+                            isLoading: false
+                        ) {
+                            activeFilePickerMode = .importWithMapping
+                        }
+                        .disabled(isImporting)
+
+                        ActionButton(
+                            title: "Add Aircraft Summary",
+                            subtitle: "Add previous hours by type",
+                            icon: "clock.badge.checkmark.fill",
+                            color: .teal,
+                            isLoading: false
+                        ) {
+                            showingAircraftSummary = true
+                        }
                     }
-                    .padding(12)
-                    .background(Color(.systemGray6).opacity(0.75))
-                    .cornerRadius(8)
                 }
 
-                // Import roster (unified for both SH and LH)
-                ActionButton(
-                    title: "Roster Import",
-                    subtitle: "Add rostered flights",
-                    icon: "calendar.badge.plus",
-                    color: .blue,
-                    isLoading: false
-                ) {
-                    showingRosterImport = true
-                }
-
-               
-                
                 Divider()
-                
-                // Add Aircraft Summary
-                ActionButton(
-                    title: "Add Aircraft Summary",
-                    subtitle: "Add previous hours by type",
-                    icon: "clock.badge.checkmark.fill",
-                    color: .teal,
-                    isLoading: false
-                ) {
-                    showingAircraftSummary = true
-                }
 
-               
+                // MARK: Export
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Export")
+                        .font(.footnote)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .padding(.horizontal, 4)
 
-                // webCIS Import Button
-                if isImportingWebCIS {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text("Importing webCIS data…")
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                        Spacer()
+                    VStack(spacing: 8) {
+                        ActionButton(
+                            title: "Print Logbook",
+                            subtitle: "Formatted paper logbook layout",
+                            icon: "books.vertical.fill",
+                            color: .brown.opacity(0.8),
+                            isLoading: false
+                        ) {
+                            showingPDFExport = true
+                        }
+
+                        ActionButton(
+                            title: "Export to Calendar",
+                            subtitle: "Save flights as .ics file",
+                            icon: "calendar.badge.checkmark",
+                            color: .indigo.opacity(0.6),
+                            isLoading: false
+                        ) {
+                            showingCalendarExport = true
+                        }
+
+                        ActionButton(
+                            title: "Export Logbook",
+                            subtitle: "Save as a CSV file",
+                            icon: "square.and.arrow.up.fill",
+                            color: .indigo.opacity(0.6),
+                            isLoading: false
+                        ) {
+                            showingExportView = true
+                        }
                     }
-                    .padding(12)
-                    .background(Color(.systemGray6).opacity(0.75))
-                    .cornerRadius(8)
                 }
-
-                // Import from webCIS data file
-                ActionButton(
-                    title: "Import webCIS History",
-                    subtitle: "ARMS Flying Experience Report",
-                    icon: "doc.text.fill",
-                    color: .orange.opacity(0.8),
-                    isLoading: false
-                ) {
-                    showingWebCISInstructions = true
-                }
-                .disabled(isImportingWebCIS)
-
-                // Generic data import
-                ActionButton(
-                    title: "Import from File",
-                    subtitle: "CSV or Tab-Delimited files",
-                    icon: "square.and.arrow.down.on.square.fill",
-                    color: .green.opacity(0.7),
-                    isLoading: false
-                ) {
-                    activeFilePickerMode = .importWithMapping
-                }
-                .disabled(isImporting)
-
-                Divider()
-
-                // PDF Logbook
-                ActionButton(
-                    title: "Print Logbook",
-                    subtitle: "Formatted paper logbook layout",
-                    icon: "books.vertical.fill",
-                    color: .brown.opacity(0.8),
-                    isLoading: false
-                ) {
-                    showingPDFExport = true
-                }
-
-                // Export flights to calendar
-                ActionButton(
-                    title: "Export to Calendar",
-                    subtitle: "Save flights as .ics file",
-                    icon: "calendar.badge.checkmark",
-                    color: .indigo.opacity(0.6),
-                    isLoading: false
-                ) {
-                    showingCalendarExport = true
-                }
-
-                // Export Data
-                ActionButton(
-                    title: "Export Logbook",
-                    subtitle: "Save as a CSV file",
-                    icon: "square.and.arrow.up.fill",
-                    color: .indigo.opacity(0.6),
-                    isLoading: false
-                ) {
-                    showingExportView = true
-                }
-
-//                Divider()
-
-//                // Migration Import from Logger
-//                ActionButton(
-//                    title: "Import from Logger",
-//                    subtitle: "App migration from Logger",
-//                    icon: "square.and.arrow.down.fill",
-//                    color: .orange,
-//                    isLoading: false
-//                ) {
-//                    showingMigrationImport = true
-//                }
             }
         }
         .padding(16)
@@ -428,42 +412,6 @@ struct ImportExportView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.purple.opacity(0.2), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Delete Logbook Card
-    private var deleteLogbookCard: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "trash.fill")
-                    .foregroundColor(.red)
-                    .font(.title3)
-
-                Text("Delete Logbook")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.red)
-
-                Spacer()
-            }
-
-            ActionButton(
-                title: "Delete All Flight Data",
-                subtitle: "This cannot be undone",
-                icon: "exclamationmark.triangle.fill",
-                color: .red,
-                isLoading: false
-            ) {
-                showingDeleteWarning = true
-            }
-        }
-        .padding(16)
-        .background(.thinMaterial)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.red.opacity(0.2), lineWidth: 1)
         )
     }
 
@@ -554,18 +502,6 @@ struct ImportExportView: View {
                 showingResult = true
             }
         }
-    }
-
-    private func deleteAllFlights() {
-        FlightDatabaseService.shared.suspendUndoForBatchImport()
-        let success = FlightDatabaseService.shared.clearAllFlights()
-        FlightDatabaseService.shared.resumeUndoAfterBatchImport()
-        if success {
-            resultMessage = "All flights have been successfully deleted."
-        } else {
-            resultMessage = "Failed to delete flights. Please try again."
-        }
-        showingResult = true
     }
 
     private func saveAircraftSummary(_ summary: FlightSector) {
