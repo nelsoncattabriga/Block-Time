@@ -143,9 +143,6 @@ struct ModernDefaultCrewNamesCard: View {
                     )
                 }
 
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
 
                 ModernToggleRow(
                     title: "Log S/O Names",
@@ -159,9 +156,6 @@ struct ModernDefaultCrewNamesCard: View {
                 )
 
 
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
 
                 ModernToggleRow(
                     title: "Log Instructor Time",
@@ -178,9 +172,6 @@ struct ModernDefaultCrewNamesCard: View {
                     instructionEnvironmentPicker
                 }
 
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
 
                 NavigationLink(destination: CrewNotesManageView()) {
                     HStack(spacing: 12) {
@@ -323,9 +314,6 @@ struct ModernOpsDataCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
 
                 // Log Approaches Toggle
                 ModernToggleRow(
