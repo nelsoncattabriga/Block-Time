@@ -265,20 +265,6 @@ struct ImportExportView: View {
     // MARK: - Import / Export Card
     private var importExportCard: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "arrow.down.doc.fill")
-                    .foregroundColor(.indigo)
-                    .font(.title3)
-
-                Text("Import & Export")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
-            VStack(spacing: 16) {
 
                 // MARK: Import
                 VStack(alignment: .leading, spacing: 8) {
@@ -403,7 +389,6 @@ struct ImportExportView: View {
                         }
                     }
                 }
-            }
         }
         .padding(16)
         .background(.thinMaterial)
