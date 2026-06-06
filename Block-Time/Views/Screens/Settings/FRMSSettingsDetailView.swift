@@ -38,18 +38,13 @@ struct ModernFRMSCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "clock.badge.exclamationmark")
-                    .foregroundColor(.green)
-                    .font(.title3)
-
-                Text("FRMS Configuration")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
+            Text("FRMS CONFIGURATION")
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
 
             VStack(spacing: 12) {
                 // Fleet Picker
