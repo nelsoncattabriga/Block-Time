@@ -12,7 +12,6 @@ struct PersonalCrewSettingsView: View {
             VStack(spacing: 16) {
                 ModernDefaultCrewNamesCard(viewModel: viewModel)
                 ModernOpsDataCard(viewModel: viewModel)
-                ModernCrewNotesCard()
                 ModernCustomFieldsCard()
 
                 Spacer(minLength: 20)
@@ -183,6 +182,33 @@ struct ModernDefaultCrewNamesCard: View {
                 if viewModel.showSpInsSelector {
                     instructionEnvironmentPicker
                 }
+
+                Divider()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+
+                NavigationLink(destination: CrewNotesManageView()) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "note.text")
+                            .foregroundStyle(.blue)
+                            .frame(width: 20)
+
+                        Text("Crew Notes")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(12)
+                    .background(Color(.systemGray6).opacity(0.5))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(16)
@@ -403,48 +429,3 @@ struct ModernCustomFieldsCard: View {
     }
 }
 
-// MARK: - Crew Notes Card
-
-struct ModernCrewNotesCard: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "note.text")
-                    .foregroundStyle(.blue)
-                    .font(.title3)
-
-                Text("Crew Notes")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
-
-                Spacer()
-            }
-
-            NavigationLink(destination: CrewNotesManageView()) {
-                HStack(spacing: 12) {
-                    Image(systemName: "person.text.rectangle")
-                        .foregroundStyle(.blue)
-                        .frame(width: 20)
-
-                    Text("Edit Notes")
-                        .font(.subheadline)
-                        .foregroundStyle(.primary)
-
-                    Spacer()
-                }
-                .padding(12)
-                .background(Color(.systemGray6).opacity(0.5))
-                .clipShape(.rect(cornerRadius: 8))
-            }
-        }
-        .padding(16)
-        .background(.thinMaterial)
-        .clipShape(.rect(cornerRadius: 12))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-        )
-    }
-}

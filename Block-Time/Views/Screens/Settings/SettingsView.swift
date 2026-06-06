@@ -194,21 +194,8 @@ struct AppearanceSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Combined Appearance & Theme Card
+                // Appearance & Theme Card
                 VStack(spacing: 16) {
-                    HStack {
-                        Image(systemName: "paintpalette.fill")
-                            .foregroundColor(.red)
-                            .font(.title3)
-
-                        Text("Appearance")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-
-                        Spacer()
-                    }
-
                     VStack(spacing: 12) {
                         // Appearance Picker
                         HStack(spacing: 12) {

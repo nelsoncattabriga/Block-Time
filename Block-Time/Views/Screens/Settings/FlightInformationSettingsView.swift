@@ -37,19 +37,6 @@ struct ModernFormatOptionsCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "scribble.variable")
-                    .foregroundColor(.orange)
-                    .font(.title3)
-
-                Text("Flight Information")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
             VStack(spacing: 12) {
 
                 // Fleet Selector

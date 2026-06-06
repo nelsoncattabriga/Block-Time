@@ -71,15 +71,6 @@ struct SupportView: View {
                         Spacer(minLength: 20)
 
                         VStack(spacing: 20){
-                            NavigationLink {
-                                UserGuideView()
-                            } label: {
-                                Text("User Guide")
-                                    .foregroundColor(.blue)
-                                    .font(.title3.bold())
-                            }
-                            .buttonStyle(.plain)
-                                
                             Link("Email Support", destination: URL(string: "mailto:support@block-time.app")!)
                                 .foregroundColor(.blue)
                                 .font(.title3.bold())
