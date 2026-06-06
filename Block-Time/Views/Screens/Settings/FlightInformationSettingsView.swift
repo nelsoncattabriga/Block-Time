@@ -39,13 +39,27 @@ struct ModernFormatOptionsCard: View {
         VStack(spacing: 16) {
             VStack(spacing: 12) {
 
-                // Fleet Selector
-                ModernFleetSelectorRow(viewModel: viewModel)
+                Text("FLEET")
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
 
+                ModernFleetSelectorRow(viewModel: viewModel)
 
                 Divider()
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
+
+                Text("AIRCRAFT & AIRPORTS")
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
 
                 ModernAirlinePrefixRow(
                     isEnabled: Binding(
@@ -87,10 +101,6 @@ struct ModernFormatOptionsCard: View {
                     icon: "number"
                 )
 
-                Divider()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-
                 // Airport ID Picker
                 HStack(spacing: 12) {
                     Image(systemName: "airplane.circle")
@@ -127,6 +137,14 @@ struct ModernFormatOptionsCard: View {
                 Divider()
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
+
+                Text("TIMES")
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
 
                 // Enter Times In Local Time toggle
                 HStack(spacing: 12) {
@@ -192,8 +210,6 @@ struct ModernFormatOptionsCard: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
-                Divider()
-
                 ModernToggleRow(
                     title: "Count SIM in Total",
                     subtitle: "Include SIM time in Total Time",
@@ -215,8 +231,6 @@ struct ModernFormatOptionsCard: View {
                     color: .orange,
                     icon: "clock"
                 )
-
-                Divider()
 
                 // Flight Times Format Picker
                 HStack(spacing: 12) {
