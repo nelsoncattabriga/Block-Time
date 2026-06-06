@@ -327,18 +327,13 @@ struct BackupsView: View {
     // MARK: - Delete Logbook Card
     private var deleteLogbookCard: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "trash.fill")
-                    .foregroundStyle(.red)
-                    .font(.title3)
-
-                Text("DELETE LOGBOOK")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.red)
-
-                Spacer()
-            }
+            Text("DELETE LOGBOOK")
+                .font(.callout)
+                .fontWeight(.semibold)
+                .foregroundStyle(.red)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
 
             ActionButton(
                 title: "Delete All Flight Data",
