@@ -9,6 +9,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case backups = "Backup & Sync"
     case importExport = "Import & Export"
     case appearance = "Appearance"
+    case userGuide = "User Guide"
     case about = "Support"
 
     var id: String { rawValue }
@@ -16,14 +17,14 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     enum Section: String {
         case configure = "Configure"
         case data = "Data"
-        case other = "Other"
+        case other = "Help"
     }
 
     var section: Section {
         switch self {
         case .crew, .flightInfo, .frms, .appearance: return .configure
         case .importExport, .backups: return .data
-        case .about: return .other
+        case .userGuide, .about: return .other
         }
     }
 
@@ -39,6 +40,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .frms: return "clock.badge.exclamationmark"
         case .backups: return "arrow.clockwise.icloud"
         case .importExport: return "arrow.up.arrow.down.circle"
+        case .userGuide: return "book.fill"
         case .about: return "info.circle.fill"
         }
     }
@@ -51,6 +53,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .frms: return .green
         case .backups: return .blue
         case .importExport: return .indigo
+        case .userGuide: return .teal
         case .about: return .orange
         }
     }
@@ -63,6 +66,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .frms: return "Fatigue Risk Management System"
         case .backups: return "iCloud Sync & Backups"
         case .importExport: return "Import & Export Data"
+        case .userGuide: return "How to use Block-Time"
         case .about: return "App Version & Support Links"
         }
     }
@@ -91,7 +95,7 @@ struct SettingsView: View {
 
                     settingsSection(title: "Configure", categories: SettingsCategory.configureCases)
                     settingsSection(title: "Data", categories: SettingsCategory.dataCases)
-                    settingsSection(title: "Other", categories: SettingsCategory.otherCases)
+                    settingsSection(title: "Help", categories: SettingsCategory.otherCases)
 
                     Spacer(minLength: 20)
                 }
@@ -175,6 +179,8 @@ struct SettingsView: View {
             BackupsView(viewModel: viewModel)
         case .importExport:
             ImportExportView(viewModel: viewModel)
+        case .userGuide:
+            UserGuideView()
         case .about:
             SupportView()
         }

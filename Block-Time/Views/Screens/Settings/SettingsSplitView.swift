@@ -78,6 +78,8 @@ struct SettingsSplitView: View {
             BackupsView(viewModel: viewModel)
         case .importExport:
             ImportExportView(viewModel: viewModel, showingWebCISLiveImport: $showingWebCISLiveImport)
+        case .userGuide:
+            UserGuideView()
         case .about:
             SupportView()
         }
@@ -116,7 +118,7 @@ private struct SettingsCategoriesListContent: View {
 
             settingsSectionRows(title: "Configure", categories: SettingsCategory.configureCases)
             settingsSectionRows(title: "Data", categories: SettingsCategory.dataCases)
-            settingsSectionRows(title: "Other", categories: SettingsCategory.otherCases)
+            settingsSectionRows(title: "Help", categories: SettingsCategory.otherCases)
         }
         .onChange(of: selectedCategory) { oldValue, newValue in
             if newValue != nil {
