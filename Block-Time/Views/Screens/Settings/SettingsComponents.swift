@@ -121,19 +121,6 @@ struct ModernPhotoBackupCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "photo.badge.arrow.down")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("Photo Backup")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
             ModernToggleRow(
                 title: "Save ACARS to Photos",
                 subtitle: "Backup photos",

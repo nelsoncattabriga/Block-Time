@@ -73,15 +73,6 @@ struct BackupsView: View {
     private var mergedBackupsCard: some View {
         VStack(spacing: 16) {
             HStack {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("Data Backup")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
                 Spacer()
 
                 Button {
@@ -930,19 +921,6 @@ struct ManageBackupsView: View {
     // MARK: - External File Picker Card
     private var externalFilePickerCard: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "folder.badge.plus")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("External Backups")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
             Button(action: {
                 showingFilePicker = true
             }) {
@@ -992,19 +970,9 @@ struct ManageBackupsView: View {
     // MARK: - Saved Backups Card
     private var savedBackupsCard: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("Available Backups")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-                if !backupService.availableBackups.isEmpty {
+            if !backupService.availableBackups.isEmpty {
+                HStack {
+                    Spacer()
                     Text("\(backupService.availableBackups.count)")
                         .font(.caption)
                         .fontWeight(.semibold)

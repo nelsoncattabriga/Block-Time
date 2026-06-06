@@ -11,17 +11,7 @@ struct ModernCloudKitSyncCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Header
             HStack {
-                Image(systemName: "icloud.fill")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("iCloud Sync Status")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
                 Spacer()
 
                 Button {

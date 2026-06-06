@@ -39,19 +39,6 @@ struct ModernDefaultCrewNamesCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "person.2.fill")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("Crew Info")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
             VStack(spacing: 12) {
                 // Flight Time Position Picker
                 HStack(spacing: 12) {
@@ -284,19 +271,6 @@ struct ModernOpsDataCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "slider.horizontal.3")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("Operations")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
             VStack(spacing: 12) {
 
                 // Instrument Time when PF
@@ -403,19 +377,6 @@ struct ModernOpsDataCard: View {
 struct ModernCustomFieldsCard: View {
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "list.bullet.rectangle.portrait")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("Custom Fields")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
             InlineCustomFieldsView()
         }
         .padding(16)
