@@ -13,7 +13,7 @@ struct ModernCloudKitSyncCard: View {
         VStack(spacing: 16) {
             HStack {
                 Text("ICLOUD SYNC")
-                    .font(.footnote)
+                    .font(.callout)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)

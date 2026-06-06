@@ -39,7 +39,7 @@ struct ModernFRMSCard: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("FRMS CONFIGURATION")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)

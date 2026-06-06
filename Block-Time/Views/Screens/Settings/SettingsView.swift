@@ -119,7 +119,7 @@ struct SettingsView: View {
     private func settingsSection(title: String, categories: [SettingsCategory]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)

@@ -122,7 +122,7 @@ struct ModernPhotoBackupCard: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("PHOTO BACKUP")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)

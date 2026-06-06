@@ -40,7 +40,7 @@ struct FleetCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Fleet")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -67,7 +67,7 @@ struct AircraftAirportsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Aircraft & Airports")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -163,7 +163,7 @@ struct TimesCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Times")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)

@@ -267,7 +267,7 @@ struct ImportExportView: View {
     private var importCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Import")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -357,7 +357,7 @@ struct ImportExportView: View {
     private var exportCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Export")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)

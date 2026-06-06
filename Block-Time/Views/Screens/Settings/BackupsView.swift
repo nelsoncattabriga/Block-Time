@@ -74,7 +74,7 @@ struct BackupsView: View {
         VStack(spacing: 16) {
             HStack {
                 Text("DATA BACKUP")
-                    .font(.footnote)
+                    .font(.callout)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)

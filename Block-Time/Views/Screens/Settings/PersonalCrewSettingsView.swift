@@ -40,7 +40,7 @@ struct ModernDefaultCrewNamesCard: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("CREW INFO")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -271,7 +271,7 @@ struct ModernOpsDataCard: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("OPERATIONS")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
@@ -382,7 +382,7 @@ struct ModernCustomFieldsCard: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("CUSTOM FIELDS")
-                .font(.footnote)
+                .font(.callout)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
