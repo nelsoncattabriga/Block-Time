@@ -99,6 +99,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var isEditingMode = false
     var editingSectorID: UUID?
     private var originalFlightData: FlightSector?
+    private var isLoadingFlight = false
     private var originalIsICUS: Bool = false  // Stored separately since not in FlightSector model
 
     // Form fields
@@ -116,19 +117,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var so2Name = ""
     @Published var isPilotFlying = false {
         didSet {
-            // Auto-update time credit when F/O toggles PF
-            // Only do this when not in editing mode and when position is F/O
-            if !isEditingMode && flightTimePosition == .firstOfficer {
-                if isPilotFlying {
-                    // F/O + PF = use the foPilotFlyingCredit setting (ICUS or P2)
-                    selectedTimeCredit = foPilotFlyingCredit
-                    isTimeCreditManualOverride = false
-                } else {
-                    // F/O + not PF = P2
-                    selectedTimeCredit = .p2
-                    isTimeCreditManualOverride = false
-                }
-            }
+            // Auto-update time credit when F/O toggles PF.
+            // Skipped during loadFlightForEditing so stored credit isn't overwritten by the position restore.
+            guard !isLoadingFlight && flightTimePosition == .firstOfficer else { return }
+            selectedTimeCredit = isPilotFlying ? foPilotFlyingCredit : .p2
+            isTimeCreditManualOverride = false
         }
     }
     @Published var isAIII = false
@@ -1648,6 +1641,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     // MARK: - Flight Editing
 
     func loadFlightForEditing(_ sector: FlightSector) {
+        isLoadingFlight = true
         isEditingMode = true
         editingSectorID = sector.id
 
@@ -1837,6 +1831,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // Load custom counter entries
         loadCounterEntries(from: sector)
 
+        isLoadingFlight = false
 //        print("DEBUG: Loaded flight for editing: \(sector.flightNumber)")
     }
 
