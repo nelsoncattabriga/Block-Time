@@ -1,7 +1,7 @@
 import Foundation
 
 // MARK: - Main Interface
-class NightCalcService {
+class NightCalcService: @unchecked Sendable {
     private let airportLookup = AirportLookup()
 
     /// Get airport coordinates by ICAO code

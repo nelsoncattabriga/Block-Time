@@ -2488,33 +2488,40 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // This prevents stacking multiple expensive calculations when fields
         // change rapidly (e.g. pasting times or rapid keystrokes).
         nightTimeCalculationTask?.cancel()
-        nightTimeCalculationTask = Task { [weak self] in
+        // Capture all @MainActor state before leaving the actor.
+        let fromAirport = self.fromAirport
+        let toAirport = self.toAirport
+        let outTime = self.outTime
+        let blockTime = self.blockTime
+        let flightDate = self.flightDate
+        let manager = self.timeCalculationManager
+
+        nightTimeCalculationTask = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self, !Task.isCancelled else { return }
 
-            // Yield so the current run-loop turn can complete before the heavy work starts.
-            // This keeps the UI responsive during time entry.
-            await Task.yield()
-            guard !Task.isCancelled else { return }
-
-            // Build context and calculate — both happen on @MainActor but any previously
-            // queued calculation has been cancelled above, so only one runs at a time.
-            if let context = self.timeCalculationManager.buildCalculationContext(
-                fromAirport: self.fromAirport,
-                toAirport: self.toAirport,
-                outTime: self.outTime,
-                blockTime: self.blockTime,
-                flightDate: self.flightDate
+            // Build context and run the 200-segment solar trig loop off the main thread.
+            if let context = manager.buildCalculationContext(
+                fromAirport: fromAirport,
+                toAirport: toAirport,
+                outTime: outTime,
+                blockTime: blockTime,
+                flightDate: flightDate
             ) {
                 guard !Task.isCancelled else { return }
-                self.nightTime = self.timeCalculationManager.calculateNightTime(using: context)
-                self.updateTakeoffsLandings(using: context)
-            } else {
-                if capturedEditingMode && self.outTime.isEmpty {
-                    // Preserve existing night time in edit mode when OUT is missing
-                } else {
-                    self.nightTime = ""
+                let result = manager.calculateNightTime(using: context)
+                await MainActor.run {
+                    self.nightTime = result
+                    self.updateTakeoffsLandings(using: context)
                 }
-                self.updateTakeoffsLandings(using: nil)
+            } else {
+                await MainActor.run {
+                    if capturedEditingMode && outTime.isEmpty {
+                        // Preserve existing night time in edit mode when OUT is missing
+                    } else {
+                        self.nightTime = ""
+                    }
+                    self.updateTakeoffsLandings(using: nil)
+                }
             }
         }
     }
