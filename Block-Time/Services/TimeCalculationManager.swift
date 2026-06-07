@@ -34,7 +34,7 @@ class TimeCalculationManager: @unchecked Sendable {
         self.nightCalcService = nightCalcService
     }
 
-    private static let flightDateFormatter: DateFormatter = {
+    private nonisolated static let flightDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "dd/MM/yyyy"
         f.timeZone = TimeZone(secondsFromGMT: 0)
@@ -108,7 +108,7 @@ class TimeCalculationManager: @unchecked Sendable {
     ///   - timeStr: Time string in "HH:mm" or "HHmm" format
     ///   - date: The date to parse the time on
     /// - Returns: Date object with time set in UTC timezone, or nil if invalid
-    func parseUTCTimeOnDate(_ timeStr: String, on date: Date) -> Date? {
+    nonisolated func parseUTCTimeOnDate(_ timeStr: String, on date: Date) -> Date? {
         let clean = timeStr.replacingOccurrences(of: ":", with: "")
 
         // Handle both 3-digit (e.g., "710" for 07:10) and 4-digit (e.g., "0710") formats
@@ -280,7 +280,7 @@ class TimeCalculationManager: @unchecked Sendable {
         let hour = utcCalendar.component(.hour, from: context.departureTime)
         let minute = utcCalendar.component(.minute, from: context.departureTime)
 
-        LogManager.shared.debug("calculateNightTime(using context): departureTime=\(context.departureTime), extracted hour=\(hour), minute=\(minute)")
+        print("[TimeCalc] calculateNightTime: departureTime=\(context.departureTime), hour=\(hour), minute=\(minute)")
 
         let departureUTC = String(format: "%02d%02d", hour, minute)
 
@@ -306,7 +306,7 @@ class TimeCalculationManager: @unchecked Sendable {
     /// - Parameter timeString: Time string (e.g., "13:40" or "13.67")
     /// - Returns: Time in decimal hours, or nil if invalid
     /// - Note: Uses Int parsing for HH:mm format to match calculateFlightTime precision (truncates seconds)
-    private func timeStringToHours(_ timeString: String) -> Double? {
+    private nonisolated func timeStringToHours(_ timeString: String) -> Double? {
         let trimmed = timeString.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.contains(":") {
             let components = trimmed.split(separator: ":")

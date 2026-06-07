@@ -5,7 +5,7 @@ class NightCalcService: @unchecked Sendable {
     private let airportLookup = AirportLookup()
 
     /// Get airport coordinates by ICAO code
-    func getAirportCoordinates(for icao: String) -> (latitude: Double, longitude: Double)? {
+    nonisolated func getAirportCoordinates(for icao: String) -> (latitude: Double, longitude: Double)? {
         return airportLookup.getCoordinates(for: icao)
     }
 
@@ -27,7 +27,7 @@ class NightCalcService: @unchecked Sendable {
     ///   - flightTimeHours: Flight duration in hours (e.g., 8.5)
     ///   - flightDate: The actual date of the flight (defaults to today if not provided)
     /// - Returns: Night time in hours, or nil if airports not found
-    func calculateNightTime(
+    nonisolated func calculateNightTime(
         from fromAirport: String,
         to toAirport: String,
         departureUTC: String,
@@ -53,7 +53,7 @@ class NightCalcService: @unchecked Sendable {
 }
 
 // MARK: - Airport Lookup
-private class AirportLookup {
+private class AirportLookup: @unchecked Sendable {
     private var airports: [String: (latitude: Double, longitude: Double)] = [:]
     
     init() {
