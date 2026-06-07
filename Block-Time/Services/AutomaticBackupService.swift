@@ -264,17 +264,17 @@ class AutomaticBackupService: ObservableObject {
         isBackupInProgress = true
         lastBackupError = nil
 
-        // Capture counter definitions on main thread before going to background
+        // Capture all main-thread data before going to background
         let counterDefinitions = CustomCounterService.shared.definitions
         let crewContactsSnapshot = CrewContactService.shared.fetchAllAsBackup()
+        let t0 = Date()
+        let flights = FlightDatabaseService.shared.fetchAllFlights()
+        LogManager.shared.info("[Backup] fetchAllFlights: \(String(format: "%.2f", Date().timeIntervalSince(t0)))s, \(flights.count) flights")
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
 
             do {
-                let t0 = Date()
-                let flights = FlightDatabaseService.shared.fetchAllFlights()
-                LogManager.shared.info("[Backup] fetchAllFlights: \(String(format: "%.2f", Date().timeIntervalSince(t0)))s, \(flights.count) flights")
 
                 if flights.isEmpty {
                     throw BackupError.noDataToBackup
