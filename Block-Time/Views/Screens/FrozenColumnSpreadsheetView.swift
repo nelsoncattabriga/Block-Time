@@ -420,7 +420,7 @@ final class SpreadsheetContainerView: UIView {
         addHeaderLabel("S/O1",         width: Col.crew,     to: headerRow, x: &x)
         addHeaderLabel("S/O2",         width: Col.crew,     to: headerRow, x: &x)
         addHeaderLabel("P1 Time",      width: Col.p1,       to: headerRow, x: &x, alignment: .center)
-        addHeaderLabel("P1US Time",    width: Col.p1us,     to: headerRow, x: &x, alignment: .center)
+        addHeaderLabel("ICUS Time",    width: Col.p1us,     to: headerRow, x: &x, alignment: .center)
         addHeaderLabel("P2 Time",      width: Col.p2,       to: headerRow, x: &x, alignment: .center)
         addHeaderLabel("Instrument",   width: Col.instr,    to: headerRow, x: &x, alignment: .center)
         addHeaderLabel("SIM Time",     width: Col.sim,      to: headerRow, x: &x, alignment: .center)

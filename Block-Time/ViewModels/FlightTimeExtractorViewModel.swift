@@ -2137,6 +2137,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
             changes.append("PF: \(original.isPilotFlying ? "Yes" : "No") → \(isPilotFlying ? "Yes" : "No")")
         }
 
+        let origCredit = originalTimeCreditType(original)
+        if selectedTimeCredit != origCredit {
+            changes.append("Time logged as: \(origCredit.displayName) → \(selectedTimeCredit.displayName)")
+        }
+
         // Approach type changes
         let originalApproach = getApproachType(from: original)
         let currentApproach = selectedApproachType ?? "VFR"
