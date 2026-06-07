@@ -68,17 +68,25 @@ struct BackupFileInfo: Identifiable, Equatable {
     let flightCount: Int?
 
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        Self.dateFormatter.string(from: date)
     }
 
     var formattedSize: String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: size)
+        Self.sizeFormatter.string(fromByteCount: size)
     }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
+    private static let sizeFormatter: ByteCountFormatter = {
+        let f = ByteCountFormatter()
+        f.countStyle = .file
+        return f
+    }()
 }
 
 // MARK: - Automatic Backup Service
@@ -101,6 +109,20 @@ class AutomaticBackupService: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let settingsKey = "automaticBackupSettings"
     private let fileManager = FileManager.default
+
+    // nonisolated so it can be used from DispatchQueue.global in performBackup
+    private nonisolated static let flightSortFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy"
+        return f
+    }()
+
+    // Used in createBackupFile, also called from background queue
+    private nonisolated static let backupTimestampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd_HHmm"
+        return f
+    }()
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
 
     // Backup file naming
@@ -281,10 +303,8 @@ class AutomaticBackupService: ObservableObject {
                 }
 
                 let t1 = Date()
-                let flightSortFormatter = DateFormatter()
-                flightSortFormatter.dateFormat = "dd/MM/yyyy"
                 let sortedFlights = flights
-                    .map { ($0, flightSortFormatter.date(from: $0.date)) }
+                    .map { ($0, Self.flightSortFormatter.date(from: $0.date)) }
                     .sorted { a, b in
                         if let d1 = a.1, let d2 = b.1 { return d1 < d2 }
                         return a.0.date < b.0.date
@@ -363,10 +383,7 @@ class AutomaticBackupService: ObservableObject {
     private func createBackupFile(csvString: String, flightCount: Int) throws -> URL {
         let backupDir = try getBackupDirectory()
 
-        // Create filename with timestamp
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd_HHmm"
-        let timestamp = dateFormatter.string(from: Date())
+        let timestamp = Self.backupTimestampFormatter.string(from: Date())
         let filename = "\(backupFilePrefix)\(timestamp)_\(flightCount)flights.\(backupFileExtension)"
 
         let fileURL = backupDir.appendingPathComponent(filename)

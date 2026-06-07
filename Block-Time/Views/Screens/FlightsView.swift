@@ -1455,6 +1455,13 @@ struct FilterSheet: View {
         f.timeStyle = .none
         return f
     }()
+
+    private static let sessionDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
     @State private var showingCaptainPicker = false
     @State private var showingFOPicker = false
     @State private var showingSOPicker = false
@@ -1971,10 +1978,7 @@ struct FilterSheet: View {
     }
 
     private func formatSessionDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        Self.sessionDateFormatter.string(from: date)
     }
 
     /// Load all filter data with caching (5 minute cache)
