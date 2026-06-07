@@ -54,7 +54,7 @@ class NightCalcService: @unchecked Sendable {
 
 // MARK: - Airport Lookup
 private class AirportLookup: @unchecked Sendable {
-    private var airports: [String: (latitude: Double, longitude: Double)] = [:]
+    private nonisolated(unsafe) var airports: [String: (latitude: Double, longitude: Double)] = [:]
     
     init() {
         loadAirports()
