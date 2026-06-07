@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FRMS Operational Limits — A380/A330/B787 Rev 4.1</title>
+<title>FRMS Operational Limits — A380/A330/B787 Rev 5</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -100,7 +100,7 @@
 <body>
 <div class="container">
   <h1>FRMS Operational Limits — Chapter 1B (FD10)</h1>
-  <div class="subtitle">A380 / A330 / B787 &nbsp;·&nbsp; Revision 4 &nbsp;·&nbsp; 26 June 2023</div>
+  <div class="subtitle">A380 / A330 / B787 &nbsp;·&nbsp; Revision 5 &nbsp;·&nbsp; 15 June 2026</div>
 
   <!-- 2 PILOT OPERATIONAL -->
   <div class="section-title"><span class="badge badge-2p">2 Pilot</span> &nbsp;Flight &amp; Duty Time Limits (Operational)</div>
@@ -110,26 +110,12 @@
         <tr>
           <th>Local Sign-On</th>
           <th>Duty Period Limit</th>
-          <th>Flight Time Limit</th>
-          <th>Requirements</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td rowspan="3">ALL</td>
-          <td><span class="val">11</span> planned · <span class="val">12</span> pilot discretion</td>
-          <td><span class="val">9.5</span></td>
-          <td class="note">If more than 7 hours of flight time conducted in darkness</td>
-        </tr>
-        <tr>
-          <td><span class="val">11</span> planned · <span class="val">12</span> pilot discretion</td>
-          <td><span class="val">10</span></td>
-          <td class="note">If greater than 1 sector is rostered</td>
-        </tr>
-        <tr>
-          <td><span class="val">11</span> planned · <span class="val">12</span> pilot discretion</td>
-          <td><span class="val">10.5</span></td>
-          <td></td>
+          <td>ALL</td>
+          <td><span class="val">12</span></td>
         </tr>
       </tbody>
     </table>
@@ -170,7 +156,7 @@
         <tr>
           <th>Crew Rest Facility</th>
           <th>Duty Period Limit</th>
-          <th>Flight Time Limit</th>
+          <th>Inflight Management</th>
           <th>Requirements</th>
         </tr>
       </thead>
@@ -228,7 +214,7 @@
         <tr>
           <th>Crew Rest Facility</th>
           <th>Duty Period Limit</th>
-          <th>Flight Time Limit</th>
+          <th>Inflight Management</th>
           <th>Requirements</th>
         </tr>
       </thead>
@@ -236,14 +222,22 @@
         <tr>
           <td>Seats in Passenger Compartment</td>
           <td><span class="val">14</span></td>
-          <td>8 consecutive hrs of active duty</td>
+          <td class="note">8 consecutive hrs of active duty</td>
           <td></td>
+        </tr>
+        <tr>
+          <td>1 × Class 2 Rest *1 &amp; 1 × Seat in Passenger Compartment</td>
+          <td><span class="val">16</span></td>
+          <td rowspan="5" class="note">A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.</td>
+          <td rowspan="5" class="note">≤ 2 sectors if duty period was scheduled to exceed 14 hours</td>
         </tr>
         <tr>
           <td>2 × Class 2 Rest</td>
           <td><span class="val">16</span></td>
-          <td rowspan="3" class="note">A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.</td>
-          <td rowspan="3" class="note">≤ 2 sectors if duty period was scheduled to exceed 14 hours</td>
+        </tr>
+        <tr>
+          <td>1 × Class 1 Rest *1 &amp; 1 × Seat in Passenger Compartment</td>
+          <td><span class="val">18</span></td>
         </tr>
         <tr>
           <td>1 × Class 1 &amp; 1 × Class 2 Rest *1</td>
@@ -254,8 +248,8 @@
           <td><span class="val">20</span></td>
         </tr>
         <tr>
-          <td>2 × Class 1 Rest — &gt;18 Hours as per FD3.4</td>
-          <td><span class="val">21</span> (A380 &amp; B787 only)</td>
+          <td>2 × Class 1 Rest — Relevant Sectors as per FD10.4</td>
+          <td><span class="val">21</span> <span class="note">(A380 &amp; B787 only)</span></td>
           <td colspan="2"></td>
         </tr>
       </tbody>
@@ -290,8 +284,26 @@
     <div class="footnote">If the next duty period is solely deadheading then the minimum pre-duty deadheading limits apply.</div>
   </div>
 
+  <!-- CREW REST CLASSIFICATION -->
+  <div class="section-title">Crew Rest Classification <span style="font-size:11px;color:var(--muted);font-weight:400;">FD10.3.2</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Class</th><th>Aircraft</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Class 1</strong></td>
+          <td class="note">A380-800; B787-9; A330-300 (International configuration) dedicated crew rest facility; A330-200L (International configuration) dedicated crew rest facility located mid cabin</td>
+        </tr>
+        <tr>
+          <td><strong>Class 2</strong></td>
+          <td class="note">A330-200L dedicated crew rest area located at seat 5A</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
   <!-- RELEVANT SECTORS -->
-  <div class="section-title">Patterns &gt; 18 Hours — Relevant Sectors (A380 &amp; B787 Only)</div>
+  <div class="section-title">Patterns &gt; 18 Hours — Relevant Sectors (A380 &amp; B787 Only) <span style="font-size:11px;color:var(--muted);font-weight:400;">FD10.4</span></div>
   <div class="card">
     <table>
       <thead><tr><th>Relevant Sectors</th></tr></thead>
@@ -301,24 +313,26 @@
         <tr><td>c) Melbourne to Dallas and vice versa</td></tr>
         <tr><td>d) Perth to London and vice versa</td></tr>
         <tr><td>e) Auckland to New York and vice versa</td></tr>
+        <tr><td>f) Perth to Paris and vice versa</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="card">
     <table>
-      <thead><tr><th colspan="2">Disruption Rest Limits — Relevant Sectors</th></tr>
+      <thead><tr><th colspan="2">Downline Disruption Rest Limits — Relevant Sectors (FD10.4)</th></tr>
         <tr><th>Condition</th><th>Min Rest</th></tr>
       </thead>
       <tbody>
-        <tr><td>Prior to operating a Relevant Sector</td><td><span class="val">22</span></td></tr>
-        <tr><td colspan="2" style="color:var(--muted); font-weight:600; padding-top:14px;">After operating a Relevant Sector:</td></tr>
+        <tr><td>(a) Prior to operating a Relevant Sector</td><td><span class="val">22</span></td></tr>
+        <tr><td colspan="2" style="color:var(--muted); font-weight:600; padding-top:14px;">(b) After operating a Relevant Sector:</td></tr>
         <tr><td>&nbsp;&nbsp;(i) Captain OR First Officer</td><td><span class="val">27</span></td></tr>
         <tr><td>&nbsp;&nbsp;(ii) Captain OR First Officer and a duty period &gt; 20 hours</td><td><span class="val">36</span></td></tr>
         <tr><td>&nbsp;&nbsp;(iii) Captain AND First Officer</td><td><span class="val">36</span></td></tr>
-        <tr><td>&nbsp;&nbsp;(iv) If Duty Period &lt; 18 hours</td><td class="note">Chapter 1B Flight and Duty Limitations apply as per FD10.1</td></tr>
-        <tr><td>&nbsp;&nbsp;(v) If Duty Period &gt; 18 hours, at crew discretion, where next operating sector has flight time &lt; 4 hours</td><td><span class="val">24</span><br><span class="note">Min rest before operating any Relevant Sector is then 36 hours</span></td></tr>
-        <tr><td colspan="2" style="color:var(--muted); font-weight:600; padding-top:14px;">After Relevant Sector inbound to Australia or New Zealand:</td></tr>
+        <tr><td>&nbsp;&nbsp;(iv) Second Officer(s)</td><td><span class="val">27</span></td></tr>
+        <tr><td>&nbsp;&nbsp;(v) If Duty Period &lt; 18 hours</td><td class="note">Chapter 1B Flight and Duty Limitations apply as per FD10.1</td></tr>
+        <tr><td>&nbsp;&nbsp;(vi) If Duty Period &gt; 18 hours, pilot fit, next operating sector has flight time &lt; 4 hours</td><td><span class="val">24</span><br><span class="note">Min rest before operating any Relevant Sector is then 36 hours</span></td></tr>
+        <tr><td colspan="2" style="color:var(--muted); font-weight:600; padding-top:14px;">(c) After Relevant Sector inbound to Australia or New Zealand:</td></tr>
         <tr><td>&nbsp;&nbsp;(i) Next operation returning to same time zone destination</td><td><span class="val">36</span></td></tr>
         <tr><td>&nbsp;&nbsp;(ii) Next operation is domestic or trans-Tasman sector</td><td><span class="val">22</span></td></tr>
       </tbody>
@@ -326,7 +340,7 @@
   </div>
 
   <div class="subtitle" style="margin-top:32px; text-align:center; font-size:11px;">
-    Source: QF FRMS Ruleset A380/A330/B787 — Revision 4.1 — 08 December 2025 — Chapter 1B (FD10)
+    Source: QF FRMS Ruleset A380/A330/B787 — Revision 5 — 15 June 2026 — Chapter 1B (FD10)
   </div>
 </div>
 </body>

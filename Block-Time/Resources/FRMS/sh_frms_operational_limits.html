@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FRMS Operational Limits — A320/B737 Rev 4.2</title>
+<title>FRMS Operational Limits — A320/B737 Rev 5</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -104,6 +104,9 @@
 
   <!-- MAX DUTY PERIODS — 2 PILOT -->
   <div class="section-title">Maximum Duty Periods — 2 Pilot Operations <span class="clause-ref">FD23.1</span></div>
+  <div class="note-block">
+    When it is operationally necessary in order to complete the objective of the duty <strong>and</strong> the pilot considers himself or herself physically and mentally fit for the operation, the operational maximum duty periods are listed below.
+  </div>
   <div class="card">
     <table>
       <thead>
@@ -111,19 +114,19 @@
       </thead>
       <tbody>
         <tr>
-          <td><span class="time-badge">0500–1459</span></td>
+          <td><span class="time-badge">0500–1259</span></td>
           <td><span class="val">14</span><span class="val-unit">hrs</span></td>
           <td><span class="val">13</span><span class="val-unit">hrs</span></td>
           <td><span class="val">12</span><span class="val-unit">hrs</span></td>
         </tr>
         <tr>
-          <td><span class="time-badge">1500–1959</span></td>
+          <td><span class="time-badge">1300–1759</span></td>
           <td><span class="val">13</span><span class="val-unit">hrs</span></td>
           <td><span class="val">12</span><span class="val-unit">hrs</span></td>
           <td><span class="val">11</span><span class="val-unit">hrs</span></td>
         </tr>
         <tr>
-          <td><span class="time-badge">2000–0459</span></td>
+          <td><span class="time-badge">1800–0459</span></td>
           <td><span class="val">12</span><span class="val-unit">hrs</span></td>
           <td><span class="val">12</span><span class="val-unit">hrs</span></td>
           <td><span class="val">11</span><span class="val-unit">hrs</span></td>
@@ -131,8 +134,33 @@
       </tbody>
     </table>
   </div>
-  <div class="note-block">
-    At the discretion of the pilot when it is operationally necessary in order to complete the objective of the duty and the pilot considers himself or herself physically and mentally fit for the operation.
+
+  <!-- MAX DUTY PERIODS — 3 PILOT -->
+  <div class="section-title">Maximum Duty Periods — 3 Pilot Operations <span class="clause-ref">FD23.1</span></div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Local Start Time</th><th>Class 2 Rest</th><th>Business Seat</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="time-badge">0500–1259</span></td>
+          <td><span class="val">16</span><span class="val-unit">hrs</span></td>
+          <td><span class="val">14.5</span><span class="val-unit">hrs</span></td>
+          <td rowspan="3" class="note">Total min rest period of not less than 2 hours. Max 3 sectors.</td>
+        </tr>
+        <tr>
+          <td><span class="time-badge">1300–1759</span></td>
+          <td><span class="val">16</span><span class="val-unit">hrs</span></td>
+          <td><span class="val">13.5</span><span class="val-unit">hrs</span></td>
+        </tr>
+        <tr>
+          <td><span class="time-badge">1800–0459</span></td>
+          <td><span class="val">16</span><span class="val-unit">hrs</span></td>
+          <td><span class="val">12.5</span><span class="val-unit">hrs</span></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- MAX DUTY — AUGMENTED -->
@@ -183,27 +211,24 @@
   </div>
 
   <!-- RESERVE DUTY -->
-  <div class="section-title">Reserve Duty <span class="clause-ref">FD23.5</span></div>
+  <div class="section-title">Reserve Duty <span class="clause-ref">FD23.3–23.5</span></div>
   <div class="note-block">
-    Max <strong>12 consecutive hours</strong>. Access to suitable sleeping accommodation and free from all duties associated with employment.
+    <strong>FD23.3</strong> — Max <strong>12 consecutive hours</strong>. Access to suitable sleeping accommodation and free from all duties associated with employment.<br>
+    <strong>FD23.4</strong> — If a pilot is called out from reserve, the maximum combined duration of the reserve and subsequent duty period is <strong>16 hours</strong> except where:<br>
+    &nbsp;&nbsp;(a) It is an augmented crew operation;<br>
+    &nbsp;&nbsp;(b) Split duty as per FD27; or<br>
+    &nbsp;&nbsp;(c) When it is operationally necessary in order to complete the objective of the duty and the pilot considers themselves physically and mentally fit for operation, the maximum combined duration can be <strong>18 hours</strong>.<br>
+    <strong>FD23.5</strong> — If a reserve starts between 2300 and 0600, the time between 2300 and 0600 does not count towards the combined reserve and duty period limit in FD23.4 until the crew member is contacted by The Company.
   </div>
 
   <!-- LATE NIGHT OPERATIONS -->
-  <div class="section-title">Late Night Operations <span class="clause-ref">FD24</span></div>
-  <div class="card">
-    <table>
-      <thead><tr><th>Rule</th><th>Limit</th></tr></thead>
-      <tbody>
-        <tr><td>Max consecutive nights with late night ops in any 7 consecutive night period</td><td><span class="val">4</span><span class="val-unit">nights</span></td></tr>
-        <tr><td>Once per 28 consecutive days: max late night ops in any 7 consecutive night period</td><td><span class="val">5</span><span class="val-unit">nights</span></td></tr>
-      </tbody>
-    </table>
-  </div>
+  <div class="section-title">Late Night Operations, Back of Clock Operations and Early Starts <span class="clause-ref">FD24</span></div>
   <div class="note-block">
-    <strong>FD24.3</strong> — Where &gt;2 duty periods involve late night ops in any 7 consecutive night period:<br>
-    (a) Max <strong>40 hrs</strong> duty in that 7-night period.<br>
-    (b) Max <strong>4 duty periods</strong> in that 7-night period (except per FD24.2).<br>
-    (c) After consecutive late nights: remain on late night ops (up to FD24.1/24.2 limits) <em>and/or</em> min <strong>24 hrs</strong> free of duty before any other duty.
+    <strong>FD24.1</strong> — When a pilot completes more than <strong>2 consecutive LNO</strong> flying duties, a <strong>24-hour</strong> free of duty period is required before performing any other flying duty.<br>
+    <strong>FD24.2</strong> — A pilot cannot be rostered for more than <strong>4 LNO</strong> flying duty periods in <strong>168 hours</strong>.<br>
+    <strong>FD24.3</strong> — FD24.1 and FD24.2 are not applicable for reserve duty periods.<br>
+    <strong>FD24.4</strong> — A pilot cannot be rostered for more than <strong>2 BOC</strong> flying duty periods in <strong>168 hours</strong>. A pilot may agree to waive this requirement.<br>
+    <strong>FD24.5</strong> — If a duty is a BOC flying duty, the following flying duty, if in Australia, is limited to sign-on no earlier than <strong>1000 local</strong> the following day. A pilot may agree to waive this requirement.
   </div>
 
   <!-- DEADHEADING -->
@@ -246,6 +271,7 @@
 
   <!-- TIME FREE FROM DUTY -->
   <div class="section-title">Time Free from Duty <span class="clause-ref">FD28</span></div>
+  <div class="note-block" style="margin-bottom:8px;"><strong>2 Pilot Operations</strong></div>
   <div class="card">
     <table>
       <thead><tr><th>Previous Duty Period</th><th>Min Time Free of Duty</th></tr></thead>
@@ -256,6 +282,32 @@
         <tr><td>Standby completed (no call-out)</td><td><span class="val">10</span><span class="val-unit">hrs</span></td></tr>
       </tbody>
     </table>
+  </div>
+  <div class="note-block" style="margin-bottom:8px;"><strong>3 Pilot Operations</strong> — Time Free of Duty following an Augmented Pattern</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>TAFB (hours)</th><th>Day Return</th><th>Multi-day Pattern</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>≤52</td>
+          <td><span class="val">12</span><span class="val-unit">hrs</span></td>
+          <td class="note">12 hrs; or if last duty was &gt;12 hrs then 12 hrs + 1.5 × time over 12 hrs (next duty day &gt;9.59)<sup>1</sup></td>
+        </tr>
+        <tr>
+          <td>52+ to &lt;124</td>
+          <td class="note">N/A</td>
+          <td class="note">12 hrs + 1.5 × time over 12 hrs (next duty day &gt;9.59)<sup>1</sup></td>
+        </tr>
+        <tr>
+          <td>124+</td>
+          <td class="note">N/A</td>
+          <td><span class="val">22</span><span class="val-unit">hrs</span> <span class="note">(next duty day &gt;9.59)<sup>1</sup></span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:var(--muted);padding:8px 14px;border-top:1px solid var(--border);">Note<sup>1</sup>: Refer to FD24.5 (BOC sign-on restriction)</div>
   </div>
   <div class="card">
     <table>
@@ -274,7 +326,7 @@
   </div>
 
   <div class="footer">
-    Source: QF FRMS Ruleset A320/B737 — Revision 4.2 — 08 December 2025 — Chapter 1B (FD21–FD28)
+    Source: QF FRMS Ruleset A320/B737 — Revision 5 — 15 June 2026 — Chapter 1B (FD21–FD28)
   </div>
 
 </div>
