@@ -1,7 +1,7 @@
 import Foundation
 
 // MARK: - SH Planning Flight & Duty Limits
-// Source: FRMS Ruleset A320/B737, Revision 4.1, 1 October 2024
+// Source: FRMS Ruleset A320/B737, Revision 5, 15 June 2026
 // Chapter 1A: Planning Flight and Duty Limitations (FD11–FD20)
 
 struct SH_Planning_FltDuty {
@@ -9,15 +9,15 @@ struct SH_Planning_FltDuty {
     // MARK: - Types
 
     enum LocalStartTime: String, CaseIterable {
-        case early     = "0500–1459"
-        case afternoon = "1500–1959"
-        case night     = "2000–0459"
+        case early     = "0500–1259"
+        case afternoon = "1300–1759"
+        case night     = "1800–0459"
 
         var range: ClosedRange<Int> {
             switch self {
-            case .early:     return 500...1459
-            case .afternoon: return 1500...1959
-            case .night:     return 2000...2459 // wraps to 0459
+            case .early:     return 500...1259
+            case .afternoon: return 1300...1759
+            case .night:     return 1800...2459 // wraps to 0459
             }
         }
     }
@@ -49,25 +49,40 @@ struct SH_Planning_FltDuty {
         DutyPeriodLimit(localStartTime: .night,      maxDutySectors1to4: 10, maxDutySectors5or6: 10),
     ]
 
+    // MARK: - Maximum Duty Periods – 3 Pilot Operations (FD13.1)
+    // Rev 5: limits vary by both rest facility and local start time band. Max 2 sectors.
+
+    struct ThreePilotDutyLimit {
+        let localStartTime: LocalStartTime
+        let class2RestHours: Double      // Class 2 = separate screened seat
+        let businessSeatHours: Double    // Business Seat = passenger compartment seat
+        static let maxSectors: Int = 2
+    }
+
+    static let threePilotDutyLimits: [ThreePilotDutyLimit] = [
+        ThreePilotDutyLimit(localStartTime: .early,     class2RestHours: 14, businessSeatHours: 14),
+        ThreePilotDutyLimit(localStartTime: .afternoon, class2RestHours: 14, businessSeatHours: 13),
+        ThreePilotDutyLimit(localStartTime: .night,     class2RestHours: 14, businessSeatHours: 12),
+    ]
+
+    static func threePilotMaxDutyHours(localStartTime: LocalStartTime, restFacility: AugmentedRestFacility) -> Double {
+        let limit = threePilotDutyLimits.first(where: { $0.localStartTime == localStartTime })
+            ?? threePilotDutyLimits.last(where: { $0.localStartTime == .night })!
+        return restFacility == .separateScreenedSeat ? limit.class2RestHours : limit.businessSeatHours
+    }
+
     // MARK: - Maximum Duty Periods – Augmented Crew (FD13.1)
+    // Legacy flat limits retained for 4-pilot fallback use.
 
     struct AugmentedDutyLimit {
         let restFacility: AugmentedRestFacility
         let maxDutyHours: Double
-        let maxSectors: Int? // nil if no sector restriction stated
+        let maxSectors: Int?
     }
 
     static let augmentedDutyLimits: [AugmentedDutyLimit] = [
-        AugmentedDutyLimit(
-            restFacility: .separateScreenedSeat,
-            maxDutyHours: 16,
-            maxSectors: 2 // max 2 sectors if FDP scheduled to exceed 14 hours
-        ),
-        AugmentedDutyLimit(
-            restFacility: .passengerCompartmentSeat,
-            maxDutyHours: 14,
-            maxSectors: nil
-        ),
+        AugmentedDutyLimit(restFacility: .separateScreenedSeat,    maxDutyHours: 16, maxSectors: 2),
+        AugmentedDutyLimit(restFacility: .passengerCompartmentSeat, maxDutyHours: 14, maxSectors: nil),
     ]
 
     // MARK: - Flight Time Limits – 2 Pilot Operations (FD13.3)

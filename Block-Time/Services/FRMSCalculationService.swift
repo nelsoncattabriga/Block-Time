@@ -371,10 +371,10 @@ class FRMSCalculationService {
         var minimumRest: Double = 12.0
         var earliestSignOn: Date? = nil
 
-        // Get base limits for crew complement
-        let baseLimits = getBaseLimits(crewComplement: proposedCrewComplement,
-                                      restFacility: proposedRestFacility,
-                                      limitType: limitType)
+        // Get base limits for crew complement (signOn unknown yet; will refine below for 3-pilot)
+        var baseLimits = getBaseLimits(crewComplement: proposedCrewComplement,
+                                       restFacility: proposedRestFacility,
+                                       limitType: limitType)
 
         maxDutyPeriod = baseLimits.maxDuty
         maxFlightTime = baseLimits.maxFlight
@@ -387,6 +387,17 @@ class FRMSCalculationService {
             // Calculate earliest sign-on using standard rounding for minutes
             let restMinutes = Int(round(minimumRest * 60))
             earliestSignOn = Calendar.current.date(byAdding: .minute, value: restMinutes, to: prevDuty.signOff)
+
+            // Re-evaluate 3-pilot base limits now that earliest sign-on is known (Rev 5 FD13.1/FD23.1)
+            if configuration.fleet == .a320B737 && proposedCrewComplement == .threePilot, let signOn = earliestSignOn {
+                baseLimits = getBaseLimits(crewComplement: proposedCrewComplement,
+                                           restFacility: proposedRestFacility,
+                                           limitType: limitType,
+                                           signOn: signOn)
+                maxDutyPeriod = baseLimits.maxDuty
+                maxFlightTime = baseLimits.maxFlight
+                maxSectors = baseLimits.maxSectors
+            }
 
             // Apply restrictions based on previous duty characteristics
             if prevDuty.dutyTime > 12 {
@@ -572,12 +583,12 @@ class FRMSCalculationService {
 
     private func getBaseLimits(crewComplement: CrewComplement,
                               restFacility: RestFacilityClass,
-                              limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
+                              limitType: FRMSLimitType,
+                              signOn: Date? = nil) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
 
-        // Return fleet-specific limits
         switch configuration.fleet {
         case .a320B737:
-            return getBaseLimitsA320B737(crewComplement: crewComplement, restFacility: restFacility, limitType: limitType)
+            return getBaseLimitsA320B737(crewComplement: crewComplement, restFacility: restFacility, limitType: limitType, signOn: signOn)
         case .a380A330B787:
             return getBaseLimitsA380A330B787(crewComplement: crewComplement, restFacility: restFacility, limitType: limitType)
         }
@@ -1032,59 +1043,46 @@ class FRMSCalculationService {
 
     private func getBaseLimitsA320B737(crewComplement: CrewComplement,
                                       restFacility: RestFacilityClass,
-                                      limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
+                                      limitType: FRMSLimitType,
+                                      signOn: Date? = nil) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
 
         switch crewComplement {
         case .twoPilot:
-            // A320/B737 2-pilot limits from SH_Planning_FltDuty (FD13) or SH_Operational_FltDuty (FD23)
-            // NOTE: These are baseline values. Actual limits vary by local start time.
-            // Use the most restrictive baseline (night operations) for general calculations
+            // Baseline (most restrictive band) — actual per-sign-on limits resolved via getA320B737MaxDutyHours
             if limitType == .operational {
-                // Operational (FD23): Night window baseline (most restrictive)
-                // Max duty: 12h (1-4 sectors), 12h (5 sectors), 11h (6 sectors)
-                // Max flight: 10h (multi-sector), 10.5h (single sector), 9.5h (>7h darkness)
                 return (maxDuty: 12.0, maxFlight: 10.0, maxSectors: 6)
             } else {
-                // Planning (FD13): Night window baseline (most restrictive)
-                // Max duty: 10h (1-4 sectors), 10h (5-6 sectors)
-                // Max flight: 10h (multi-sector), 10.5h (single sector), 9.5h (>7h darkness)
                 return (maxDuty: 10.0, maxFlight: 10.0, maxSectors: 6)
             }
 
         case .threePilot:
-            // A320/B737 augmented crew (3-pilot) limits depend on rest facility
-            // NOTE: Planning (FD13.1) and Operational (FD23.1) augmented limits are identical
-            // Map RestFacilityClass to AugmentedRestFacility for SH rules
+            // Rev 5 FD13.1/FD23.1: limits vary by start band AND rest facility
+            let homeTimeZone = getHomeBaseTimeZone()
             let shRestFacility: SH_Operational_FltDuty.AugmentedRestFacility
             switch restFacility {
             case .class1:
-                shRestFacility = .separateScreenedSeat  // Class 1 = separate screened seat
+                shRestFacility = .separateScreenedSeat
             case .class2, .mixed, .none:
-                shRestFacility = .passengerCompartmentSeat  // Class 2 = passenger compartment seat
+                shRestFacility = .passengerCompartmentSeat
             }
 
-            // Get limits from SH_Operational_FltDuty (same values in SH_Planning_FltDuty)
-            if let augmentedLimit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == shRestFacility }) {
-                // Flight time limit is 10.5h for augmented operations (FD13.4 & FD23.4)
-                return (maxDuty: augmentedLimit.maxDutyHours,
-                       maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours,
-                       maxSectors: augmentedLimit.maxSectors ?? 6)
+            if limitType == .operational {
+                let band = signOn.map { SH_Operational_FltDuty.LocalStartTime.classify(signOn: $0, homeBaseTimeZone: homeTimeZone) } ?? .night
+                let maxDuty = SH_Operational_FltDuty.threePilotMaxDutyHours(localStartTime: band, restFacility: shRestFacility)
+                return (maxDuty: maxDuty, maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours, maxSectors: SH_Operational_FltDuty.ThreePilotDutyLimit.maxSectors)
+            } else {
+                let band = signOn.map {
+                    SH_Planning_FltDuty.LocalStartTime(rawValue: SH_Operational_FltDuty.LocalStartTime.classify(signOn: $0, homeBaseTimeZone: homeTimeZone).rawValue) ?? .night
+                } ?? .night
+                let maxDuty = SH_Planning_FltDuty.threePilotMaxDutyHours(localStartTime: band, restFacility: SH_Planning_FltDuty.AugmentedRestFacility(rawValue: shRestFacility.rawValue) ?? .passengerCompartmentSeat)
+                return (maxDuty: maxDuty, maxFlight: SH_Planning_FltDuty.augmentedFlightTimeLimitHours, maxSectors: SH_Planning_FltDuty.ThreePilotDutyLimit.maxSectors)
             }
-
-            // Fallback to conservative values
-            return (maxDuty: 14.0, maxFlight: 10.5, maxSectors: 6)
 
         case .fourPilot:
-            // A320/B737 4-pilot operations are rare but follow similar augmented rules
-            // NOTE: Planning (FD13.1) and Operational (FD23.1) augmented limits are identical
-            // Use most generous augmented limit (separate screened seat)
-            if let augmentedLimit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == .separateScreenedSeat }) {
-                return (maxDuty: augmentedLimit.maxDutyHours,
-                       maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours,
-                       maxSectors: augmentedLimit.maxSectors ?? 2)
+            // 4-pilot: use most generous augmented limit (separate screened seat)
+            if let limit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == .separateScreenedSeat }) {
+                return (maxDuty: limit.maxDutyHours, maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours, maxSectors: limit.maxSectors ?? 2)
             }
-
-            // Fallback
             return (maxDuty: 16.0, maxFlight: 10.5, maxSectors: 2)
         }
     }

@@ -3,7 +3,7 @@
 //  Block-Time
 //
 //  FRMS (Fatigue Risk Management System) - Short Haul Operational Limits
-//  Source: FRMS Ruleset A320/B737, Revision 4.1, 1 October 2024
+//  Source: FRMS Ruleset A320/B737, Revision 5, 15 June 2026
 //  Chapter 1B: Operations Flight and Duty Limitations (FD21–FD28)
 //
 
@@ -16,15 +16,15 @@ struct SH_Operational_FltDuty {
     // MARK: - Types
 
     enum LocalStartTime: String, CaseIterable {
-        case early   = "0500–1459"
-        case afternoon = "1500–1959"
-        case night   = "2000–0459"
+        case early   = "0500–1259"
+        case afternoon = "1300–1759"
+        case night   = "1800–0459"
 
         var range: ClosedRange<Int> {
             switch self {
-            case .early:     return 500...1459
-            case .afternoon: return 1500...1959
-            case .night:     return 2000...2459 // wraps to 0459
+            case .early:     return 500...1259
+            case .afternoon: return 1300...1759
+            case .night:     return 1800...2459 // wraps to 0459
             }
         }
 
@@ -50,12 +50,12 @@ struct SH_Operational_FltDuty {
             let timeAsInt = hour * 100 + minute
 
             // Check ranges (note: night wraps around midnight)
-            if timeAsInt >= 500 && timeAsInt <= 1459 {
+            if timeAsInt >= 500 && timeAsInt <= 1259 {
                 return .early
-            } else if timeAsInt >= 1500 && timeAsInt <= 1959 {
+            } else if timeAsInt >= 1300 && timeAsInt <= 1759 {
                 return .afternoon
             } else {
-                return .night  // 2000-0459
+                return .night  // 1800-0459
             }
         }
     }
@@ -95,25 +95,40 @@ struct SH_Operational_FltDuty {
         DutyPeriodLimit(localStartTime: .night,      maxDutySectors1to4: 12, maxDutySectors5: 12, maxDutySectors6: 11),
     ]
 
+    // MARK: - Maximum Duty Periods – 3 Pilot Operations (FD23.1)
+    // Rev 5: limits vary by both rest facility and local start time band. Max 3 sectors.
+
+    struct ThreePilotDutyLimit {
+        let localStartTime: LocalStartTime
+        let class2RestHours: Double      // Class 2 = separate screened seat
+        let businessSeatHours: Double    // Business Seat = passenger compartment seat
+        static let maxSectors: Int = 3
+    }
+
+    static let threePilotDutyLimits: [ThreePilotDutyLimit] = [
+        ThreePilotDutyLimit(localStartTime: .early,     class2RestHours: 16,   businessSeatHours: 14.5),
+        ThreePilotDutyLimit(localStartTime: .afternoon, class2RestHours: 16,   businessSeatHours: 13.5),
+        ThreePilotDutyLimit(localStartTime: .night,     class2RestHours: 16,   businessSeatHours: 12.5),
+    ]
+
+    static func threePilotMaxDutyHours(localStartTime: LocalStartTime, restFacility: AugmentedRestFacility) -> Double {
+        let limit = threePilotDutyLimits.first(where: { $0.localStartTime == localStartTime })
+            ?? threePilotDutyLimits.last(where: { $0.localStartTime == .night })!
+        return restFacility == .separateScreenedSeat ? limit.class2RestHours : limit.businessSeatHours
+    }
+
     // MARK: - Maximum Duty Periods – Augmented Crew (FD23.1)
+    // Legacy flat limits retained for 4-pilot fallback use.
 
     struct AugmentedDutyLimit {
         let restFacility: AugmentedRestFacility
         let maxDutyHours: Double
-        let maxSectors: Int? // nil if no sector restriction stated
+        let maxSectors: Int?
     }
 
     static let augmentedDutyLimits: [AugmentedDutyLimit] = [
-        AugmentedDutyLimit(
-            restFacility: .separateScreenedSeat,
-            maxDutyHours: 16,
-            maxSectors: 2 // max 2 sectors if FDP exceeds 14 hours
-        ),
-        AugmentedDutyLimit(
-            restFacility: .passengerCompartmentSeat,
-            maxDutyHours: 14,
-            maxSectors: nil
-        ),
+        AugmentedDutyLimit(restFacility: .separateScreenedSeat,     maxDutyHours: 16, maxSectors: 2),
+        AugmentedDutyLimit(restFacility: .passengerCompartmentSeat, maxDutyHours: 14, maxSectors: nil),
     ]
 
     // MARK: - Flight Time Limits – 2 Pilot Operations (FD23.3)
