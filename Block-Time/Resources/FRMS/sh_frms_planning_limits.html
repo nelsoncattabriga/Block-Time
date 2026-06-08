@@ -41,7 +41,16 @@
     background: var(--card); border: 1px solid var(--border);
     border-radius: 10px; overflow: hidden; margin-bottom: 16px;
   }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  col.c1 { width: 55%; }
+  col.c2 { width: 45%; }
+  col.e1 { width: 30%; }
+  col.e2 { width: 23%; }
+  col.e3 { width: 47%; }
+  col.f1 { width: 28%; }
+  col.f2 { width: 18%; }
+  col.f3 { width: 27%; }
+  col.f4 { width: 27%; }
   thead th {
     background: var(--header-bg); color: var(--muted); font-weight: 600;
     text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.5px;
@@ -76,6 +85,7 @@
   <div class="section-title">Flight Time Limits <span class="clause-ref">FD11.1</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="c1"><col class="c2"></colgroup>
       <thead><tr><th>Period</th><th>Max Flight Time</th></tr></thead>
       <tbody>
         <tr><td>Any consecutive 28 days</td><td><span class="val">100</span><span class="val-unit">hrs</span></td></tr>
@@ -89,6 +99,7 @@
   <div class="section-title">Cumulative Duty Time Limits <span class="clause-ref">FD12</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="c1"><col class="c2"></colgroup>
       <thead><tr><th>Period</th><th>Max Duty Time</th></tr></thead>
       <tbody>
         <tr><td>Any consecutive 7 days</td><td><span class="val">60</span><span class="val-unit">hrs</span></td></tr>
@@ -107,6 +118,7 @@
   <div class="section-title">Maximum Duty Periods — 2 Pilot Operations <span class="clause-ref">FD13.1</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="e1"><col class="e2"><col class="e3"></colgroup>
       <thead>
         <tr><th>Local Start Time</th><th>Sectors 1–4</th><th>Sectors 5 or 6</th></tr>
       </thead>
@@ -134,6 +146,7 @@
   <div class="section-title">Maximum Duty Periods — 3 Pilot Operations <span class="clause-ref">FD13.1</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"></colgroup>
       <thead>
         <tr><th>Local Start Time</th><th>Class 2 Rest</th><th>Business Seat</th><th>Notes</th></tr>
       </thead>
@@ -162,6 +175,7 @@
   <div class="section-title">Maximum Duty Periods — Augmented Crew <span class="clause-ref">FD13.1</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="e1"><col class="e2"><col class="e3"></colgroup>
       <thead><tr><th>Rest Facility</th><th>Max Duty</th><th>Sector Limit</th></tr></thead>
       <tbody>
         <tr>
@@ -185,6 +199,7 @@
   <div class="section-title">Flight Time Limits — 2 Pilot Operations <span class="clause-ref">FD13.3</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="c1"><col class="c2"></colgroup>
       <thead><tr><th>Condition</th><th>Max Flight Time</th></tr></thead>
       <tbody>
         <tr><td>More than 7 hours of flight time in a duty period conducted in darkness</td><td><span class="val">9.5</span><span class="val-unit">hrs</span></td></tr>
@@ -198,6 +213,7 @@
   <div class="section-title">Flight Time Limits — More Than 2 Pilots <span class="clause-ref">FD13.4</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="c1"><col class="c2"></colgroup>
       <thead><tr><th>Condition</th><th>Max Flight Time</th></tr></thead>
       <tbody>
         <tr><td>All occasions</td><td><span class="val">10.5</span><span class="val-unit">hrs</span></td></tr>
@@ -243,6 +259,7 @@
   <div class="section-title">Split Duty <span class="clause-ref">FD17</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="c1"><col class="c2"></colgroup>
       <thead><tr><th>Rule</th><th>Limit</th></tr></thead>
       <tbody>
         <tr><td>Minimum rest period at suitable sleeping accommodation</td><td><span class="val">6</span><span class="val-unit">hrs</span></td></tr>
@@ -260,6 +277,7 @@
   <div class="section-title">Time Free from Duty — Within a Pattern <span class="clause-ref">FD18.1</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="c1"><col class="c2"></colgroup>
       <thead><tr><th>Previous Duty Period</th><th>Min Time Free of Duty</th></tr></thead>
       <tbody>
         <tr><td>Does not exceed 12 hours</td><td><span class="val">10</span><span class="val-unit">hrs</span> or as long as previous duty, whichever is greater</td></tr>
@@ -273,6 +291,7 @@
   <div class="note-block" style="margin-bottom:8px;"><strong>2 Pilot Operations</strong></div>
   <div class="card">
     <table>
+      <colgroup><col class="c1"><col class="c2"></colgroup>
       <thead><tr><th>Pattern Length</th><th>Min Time Free of Duty</th></tr></thead>
       <tbody>
         <tr><td>1 or 2 day pattern</td><td><span class="val">12</span><span class="val-unit">hrs</span></td></tr>
@@ -283,6 +302,7 @@
   <div class="note-block" style="margin-bottom:8px;"><strong>3 Pilot Operations</strong> — Time Free of Duty following an Augmented Pattern</div>
   <div class="card">
     <table>
+      <colgroup><col class="e1"><col class="e2"><col class="e3"></colgroup>
       <thead>
         <tr><th>TAFB (hours)</th><th>Day Return</th><th>Multi-day Pattern</th></tr>
       </thead>
@@ -311,6 +331,7 @@
   <div class="section-title">Time Free from Duty <span class="clause-ref">FD20</span></div>
   <div class="card">
     <table>
+      <colgroup><col class="c1"><col class="c2"></colgroup>
       <thead><tr><th>Period</th><th>Requirement</th></tr></thead>
       <tbody>
         <tr><td>Any consecutive 7 days</td><td>Min <span class="val">36</span><span class="val-unit">hrs</span> free of all duty</td></tr>
