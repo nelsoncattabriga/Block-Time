@@ -652,23 +652,33 @@ class PlannedFlightService {
                 ])
                 request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)]
 
-                guard let windowFlights = try? context.fetch(request) else {
-                    continuation.resume(returning: [])
-                    return
-                }
-
-                // Build roster key set: "normalisedFlightNum|depICAO|arrICAO|dd/MM/yyyy(UTC)"
                 let utcDayFormatter = DateFormatter()
                 utcDayFormatter.dateFormat = "dd/MM/yyyy"
                 utcDayFormatter.locale = Locale(identifier: "en_US_POSIX")
                 utcDayFormatter.timeZone = TimeZone(secondsFromGMT: 0)
 
+                LogManager.shared.debug("[StaleDetect] Window: \(utcDayFormatter.string(from: startOfPeriod)) → \(utcDayFormatter.string(from: endOfPeriodInclusive)) (UTC)")
+                LogManager.shared.debug("[StaleDetect] periodStart(local)=\(periodStart) periodEnd(local)=\(periodEnd)")
+
+                guard let windowFlights = try? context.fetch(request) else {
+                    LogManager.shared.debug("[StaleDetect] Core Data fetch failed")
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                LogManager.shared.debug("[StaleDetect] DB flights in window: \(windowFlights.count)")
+                for f in windowFlights {
+                    let dateStr = f.date.map { utcDayFormatter.string(from: $0) } ?? "nil"
+                    let flown = self.isFlown(f)
+                    LogManager.shared.debug("[StaleDetect]   DB: \(f.flightNumber ?? "?") \(f.fromAirport ?? "?")-\(f.toAirport ?? "?") \(dateStr)(UTC) flown=\(flown) blockTime=\(f.blockTime ?? "nil")")
+                }
+
+                // Build roster key set: "normalisedFlightNum|depICAO|arrICAO|dd/MM/yyyy(UTC)"
                 var rosterKeySet = Set<String>()
                 for rosterFlight in rosterFlights {
                     let depICAO = airportService.convertToICAO(rosterFlight.departureAirport)
                     let arrICAO = airportService.convertToICAO(rosterFlight.arrivalAirport)
 
-                    // Convert roster local date + time to UTC date string (reusing existing service logic)
                     let calendar = Calendar.current
                     let comps = calendar.dateComponents([.year, .month, .day], from: rosterFlight.date)
                     guard let day = comps.day, let month = comps.month, let year = comps.year else { continue }
@@ -686,13 +696,13 @@ class PlannedFlightService {
 
                     let normNum = self.normaliseFlightNumber(rosterFlight.flightNumber)
                     let key = "\(normNum)|\(depICAO)|\(arrICAO)|\(utcDateString)"
+                    LogManager.shared.debug("[StaleDetect] Roster key: \(key)  (local=\(localDateString) \(localOutTime) dep=\(rosterFlight.departureAirport)→\(depICAO))")
                     rosterKeySet.insert(key)
                 }
 
                 // Identify stale: in window, not flown, not matched in new roster
                 var stale: [FlightEntity] = []
                 for flight in windowFlights {
-                    // Never include flown flights
                     guard !self.isFlown(flight) else { continue }
 
                     guard let flightDate = flight.date else { continue }
@@ -701,12 +711,15 @@ class PlannedFlightService {
                     let depICAO = flight.fromAirport ?? ""
                     let arrICAO = flight.toAirport ?? ""
                     let key = "\(normNum)|\(depICAO)|\(arrICAO)|\(utcDayStr)"
+                    let matched = rosterKeySet.contains(key)
+                    LogManager.shared.debug("[StaleDetect]   DB key: \(key) → \(matched ? "MATCHED (keep)" : "NO MATCH (stale)")")
 
-                    if !rosterKeySet.contains(key) {
+                    if !matched {
                         stale.append(flight)
                     }
                 }
 
+                LogManager.shared.debug("[StaleDetect] Result: \(stale.count) stale flights found")
                 continuation.resume(returning: stale)
             }
         }
