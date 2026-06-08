@@ -550,15 +550,15 @@ struct FRMSMaximumNextDuty: Codable, Sendable {
 /// Represents duty and flight time limits for a specific sign-on time range
 struct SignOnTimeRange: Codable {
     let timeRange: String               // e.g., "0500-0759" or rest facility name for augmented ops
-    let maxDutyPeriod: Double           // Hours (planning)
+    let maxDutyPeriod: Double            // Hours (planning)
     let maxDutyPeriodOperational: Double? // Hours (operational, if different)
-    let maxFlightTime: Double           // Hours (planning)
+    let maxFlightTime: Double?           // nil = no flight time limit (Rev 5 removed LH FT limits)
     let maxFlightTimeOperational: Double? // Hours (operational, if different)
-    let preRestRequired: Double         // Hours (minimum/baseline)
-    let postRestRequired: Double        // Hours (minimum/baseline)
-    let notes: String?                  // e.g., "Max 8 hrs continuous & 14 hrs total on flight deck / 14 hrs total in flight deck"
-    let sectorLimit: String?            // e.g., "≤2 sectors if DP > 14 hrs"
-    let restFacility: CrewRestFacility? // nil for 2-pilot (sign-on window rows)
+    let preRestRequired: Double          // Hours (minimum/baseline)
+    let postRestRequired: Double         // Hours (minimum/baseline)
+    let notes: String?                   // e.g., "Max 8 hrs continuous & 14 hrs total on flight deck"
+    let sectorLimit: String?             // e.g., "≤2 sectors if DP > 14 hrs"
+    let restFacility: CrewRestFacility?  // nil for 2-pilot (sign-on window rows)
 
     func getMaxDuty(for limitType: FRMSLimitType) -> Double {
         if limitType == .operational, let operational = maxDutyPeriodOperational {
@@ -567,7 +567,7 @@ struct SignOnTimeRange: Codable {
         return maxDutyPeriod
     }
 
-    func getMaxFlight(for limitType: FRMSLimitType) -> Double {
+    func getMaxFlight(for limitType: FRMSLimitType) -> Double? {
         if limitType == .operational, let operational = maxFlightTimeOperational {
             return operational
         }

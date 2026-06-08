@@ -24,7 +24,9 @@ struct AdaptiveLimitLayout: View {
     }
 
     private var flightTimeDisplay: String {
-        return range.notes ?? formatTime(range.getMaxFlight(for: limitType))
+        if let notes = range.notes { return notes }
+        if let ft = range.getMaxFlight(for: limitType) { return formatTime(ft) }
+        return "—"
     }
 
     var body: some View {
