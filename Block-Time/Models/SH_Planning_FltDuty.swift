@@ -194,17 +194,14 @@ struct SH_Planning_FltDuty {
 
     /// FD14.1 — max consecutive nights with late night ops in any 7-night period.
     static let lateNightMaxConsecutiveNights: Int = 4
-    /// FD14.2 — once per 28 consecutive days: max late night nights in any 7-night period.
-    static let lateNightMaxConsecutiveNightsException: Int = 5
-    static let lateNightExceptionPeriodDays: Int = 28
-    /// FD14.3(a) — max duty hours in a 7-night period when >2 LNO duties are present.
-    static let lateNightMaxDutyHoursIn7NightPeriod: Double = 40
-    /// FD14.3(b) — max duty periods in that 7-night period (except per FD14.2).
-    static let lateNightMaxDutyPeriodsIn7NightPeriod: Int = 4
+    /// FD14.3 (Rev 5) — max LNO duty periods (late night or back-of-clock) in any 168-hour window.
+    static let lateNightMaxDutiesIn168Hours: Int = 4
     /// FD14.3(c) — min hours free before any non-LNO duty after consecutive late nights.
     static let lateNightRecoveryMinFreeHours: Double = 24
     /// FD14.4 — back of clock: ≥2 hrs between 0100–0459 local at departure.
     static let backOfClockMinutesThreshold: Int = 120
+    /// FD14.4 — max BOC duty periods in any 168-hour window (Rev 5 FD14.4).
+    static let backOfClockMaxDutiesIn168Hours: Int = 2
     /// FD14.4 — next duty in Australia: sign-on no earlier than this local time (HHMM).
     static let backOfClockEarliestSignOnLocalHHMM: Int = 1000
 
@@ -290,6 +287,50 @@ struct SH_Planning_FltDuty {
         PatternTimeFreeRequirement(patternDescription: "1 or 2 day pattern", minTimeFreeHours: 12),
         PatternTimeFreeRequirement(patternDescription: "3 or 4 day pattern", minTimeFreeHours: 15),
     ]
+
+    // =========================================================================
+    // MARK: - 3-Pilot Post-Pattern Rest (FD19, Rev 5)
+    // =========================================================================
+
+    /// Encodes one row of the Rev 5 FD19 augmented post-pattern rest table.
+    struct ThreePilotPatternRest {
+        let tafbFromHours: Double
+        let tafbToHours: Double
+        let isDayReturn: Bool
+        let minRestHours: Double
+        /// When true, applies only when next duty day exceeds 9.59 hrs.
+        let requiresNextDutyDayOver9h59: Bool
+    }
+
+    /// FD19 (Rev 5) — 3-pilot planning post-pattern rest table.
+    static let threePilotPatternRestRequirements: [ThreePilotPatternRest] = [
+        // TAFB ≤ 52 hrs, day return — 14.5 hrs
+        ThreePilotPatternRest(tafbFromHours: 0,   tafbToHours: 52,       isDayReturn: true,  minRestHours: 14.5, requiresNextDutyDayOver9h59: false),
+        // TAFB ≤ 52 hrs, multi-day — 15 hrs (next duty day > 9.59 hrs)
+        ThreePilotPatternRest(tafbFromHours: 0,   tafbToHours: 52,       isDayReturn: false, minRestHours: 15,   requiresNextDutyDayOver9h59: true),
+        // TAFB 52–124 hrs, multi-day — 22 hrs (next duty day > 9.59 hrs)
+        ThreePilotPatternRest(tafbFromHours: 52,  tafbToHours: 124,      isDayReturn: false, minRestHours: 22,   requiresNextDutyDayOver9h59: true),
+        // TAFB ≥ 124 hrs, multi-day — 32 hrs
+        ThreePilotPatternRest(tafbFromHours: 124, tafbToHours: .infinity, isDayReturn: false, minRestHours: 32,   requiresNextDutyDayOver9h59: false),
+    ]
+
+    /// Calculate minimum post-pattern rest for a 3-pilot planning duty.
+    static func threePilotMinPostPatternRestHours(tafbHours: Double,
+                                                  isDayReturn: Bool,
+                                                  nextDutyDayHours: Double?) -> Double? {
+        guard let row = threePilotPatternRestRequirements.first(where: {
+            tafbHours >= $0.tafbFromHours &&
+            tafbHours < $0.tafbToHours &&
+            isDayReturn == $0.isDayReturn
+        }) else { return nil }
+
+        if row.requiresNextDutyDayOver9h59,
+           let next = nextDutyDayHours,
+           next <= 9.983 {
+            return nil
+        }
+        return row.minRestHours
+    }
 
     // =========================================================================
     // MARK: - Time Free from Duty (FD20)

@@ -274,10 +274,19 @@ struct SH_NextDutyView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Duty Hours (7 nights)")
+                            Text("LNO Duties (168 hrs)")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            Text("\(formatHoursMinutes(lateNight.dutyHoursIn7Nights)) / \(formatHoursMinutes(lateNight.maxDutyHoursIn7Nights)) hrs")
+                            Text("\(lateNight.lnoDutiesIn168Hours) / \(lateNight.maxLnoDutiesIn168Hours)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("BOC Duties (168 hrs)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text("\(lateNight.bocDutiesIn168Hours) / \(lateNight.maxBocDutiesIn168Hours)")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }

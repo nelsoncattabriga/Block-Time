@@ -1267,32 +1267,16 @@ class FRMSCalculationService {
             )
         }
 
-        // Build late night status
+        // Build late night status (Rev 5: count LNO and BOC duties in rolling 168-hr window)
         var lateNightStatus: LateNightStatus? = nil
         if cumulativeTotals.consecutiveLateNights > 0 {
-            // Calculate duty hours in 7-night period from duties involving late night operations
-            // Per FD14.3(a) & FD24.3(a): Only count duties that are classified as late night or back of clock
-            let homeTimeZone = getHomeBaseTimeZone()
-            var calendar = Calendar.current
-            calendar.timeZone = homeTimeZone
+            let windowStart = date.addingTimeInterval(-168 * 3600)
 
-            let now = Date()
-            let startOfToday = calendar.startOfDay(for: now)
-            let sevenDaysAgo = calendar.date(byAdding: .day, value: -6, to: startOfToday) ?? startOfToday
-            let endOfToday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
-
-            // Filter duties in last 7 days that involve late night operations
-            let lateNightDutiesIn7Days = duties.filter { duty in
-                // Check if duty is in the 7-day window
-                let dutyDate = duty.date
-                guard dutyDate >= sevenDaysAgo && dutyDate <= endOfToday else { return false }
-
-                // Check if duty is classified as late night or back of clock
-                return duty.timeClass == .lateNight || duty.timeClass == .backOfClock
+            let lnoDutiesIn168 = duties.filter { duty in
+                duty.signOn >= windowStart &&
+                (duty.timeClass == .lateNight || duty.timeClass == .backOfClock)
             }
-
-            // Sum duty hours from late night duties only
-            let dutyHours7Nights = lateNightDutiesIn7Days.reduce(0.0) { $0 + $1.dutyTime }
+            let bocDutiesIn168 = lnoDutiesIn168.filter { $0.timeClass == .backOfClock }
 
             let recoveryOption: LateNightRecoveryOption
             if cumulativeTotals.consecutiveLateNights >= SH_Planning_FltDuty.lateNightMaxConsecutiveNights {
@@ -1306,9 +1290,10 @@ class FRMSCalculationService {
             lateNightStatus = LateNightStatus(
                 consecutiveLateNights: cumulativeTotals.consecutiveLateNights,
                 maxConsecutiveLateNights: SH_Planning_FltDuty.lateNightMaxConsecutiveNights,
-                dutyHoursIn7Nights: dutyHours7Nights,
-                maxDutyHoursIn7Nights: SH_Planning_FltDuty.lateNightMaxDutyHoursIn7NightPeriod,
-                canUse5NightException: true, // Would need to track 28-day usage
+                lnoDutiesIn168Hours: lnoDutiesIn168.count,
+                maxLnoDutiesIn168Hours: SH_Planning_FltDuty.lateNightMaxDutiesIn168Hours,
+                bocDutiesIn168Hours: bocDutiesIn168.count,
+                maxBocDutiesIn168Hours: SH_Planning_FltDuty.backOfClockMaxDutiesIn168Hours,
                 recoveryOption: recoveryOption
             )
         }
@@ -1403,7 +1388,8 @@ class FRMSCalculationService {
         let reserveDutyRules = ReserveDutyRules(
             afterCalloutRest: "MAX(12 hours, actual duty length)",
             withoutCalloutRest: "10 hours free of all duty (operational)",
-            betweenReservePeriods: "MAX(12 hours, previous duty length)"
+            betweenReservePeriods: "MAX(12 hours, previous duty length)",
+            combinedMaxDutyHoursOperationalNecessity: SH_Operational_FltDuty.reserveCombinedMaxDutyHoursOperationalNecessity
         )
 
         // Deadheading limitations (FD15, FD25)

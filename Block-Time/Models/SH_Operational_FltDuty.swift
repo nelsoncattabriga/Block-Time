@@ -256,6 +256,8 @@ struct SH_Operational_FltDuty {
     /// Max consecutive reserve duty hours. Pilot must have access to suitable
     /// sleeping accommodation and be free from all employment duties.
     static let reserveDutyMaxConsecutiveHours: Double = 12
+    /// FD23.4(c) (Rev 5) — when operationally necessary and pilot fit, combined reserve + duty max.
+    static let reserveCombinedMaxDutyHoursOperationalNecessity: Double = 18
 
     // =========================================================================
     // MARK: - Late Night Operations (FD24)
@@ -263,16 +265,12 @@ struct SH_Operational_FltDuty {
 
     /// FD24.1 — max consecutive nights with late night ops in any 7-night period.
     static let lateNightMaxConsecutiveNights: Int = 4
-    /// FD24.2 — once per 28 consecutive days: max late night nights in any 7-night period.
-    static let lateNightMaxConsecutiveNightsException: Int = 5
-    static let lateNightExceptionPeriodDays: Int = 28
-    /// FD24.3(a) — max duty hours in a 7-night period when >2 LNO duties are present.
-    static let lateNightMaxDutyHoursIn7NightPeriod: Double = 40
-    /// FD24.3(b) — max duty periods in that 7-night period (except per FD24.2).
-    static let lateNightMaxDutyPeriodsIn7NightPeriod: Int = 4
+    /// FD24.3 (Rev 5) — max LNO duty periods (late night or back-of-clock) in any 168-hour window.
+    static let lateNightMaxDutiesIn168Hours: Int = 4
     /// FD24.3(c) — min hours free before any non-LNO duty after consecutive late nights.
     static let lateNightRecoveryMinFreeHours: Double = 24
-    // Note: FD24.4 back-of-clock restriction is not present in operational limits.
+    /// FD24.4 (Rev 5) — max BOC duty periods in any 168-hour window.
+    static let backOfClockMaxDutiesIn168Hours: Int = 2
 
     // =========================================================================
     // MARK: - Deadheading Following a Flight Duty (FD25)
@@ -405,4 +403,67 @@ struct SH_Operational_FltDuty {
         DaysFreeRequirement(description: "Min free days per calendar month",                   minDaysFree: 8,  inConsecutiveDays: 0),
         DaysFreeRequirement(description: "Min free days in any 3 consecutive calendar months", minDaysFree: 26, inConsecutiveDays: 0),
     ]
+
+    // =========================================================================
+    // MARK: - 3-Pilot Post-Pattern Rest (FD28, Rev 5)
+    // =========================================================================
+
+    /// Encodes one row of the Rev 5 FD28 augmented post-pattern rest table.
+    struct ThreePilotPatternRest {
+        /// Lower bound of TAFB range (inclusive), in hours.
+        let tafbFromHours: Double
+        /// Upper bound of TAFB range (exclusive), or .infinity for the open-ended last row.
+        let tafbToHours: Double
+        /// Whether this row applies to a same-day return pattern.
+        let isDayReturn: Bool
+        /// Minimum post-pattern free hours. For duty > 12 hrs, use the formula instead.
+        let minRestHours: Double
+        /// When true, apply 12 + 1.5 × (lastDuty − 12) if lastDuty > 12 hrs.
+        let applyExtendedFormula: Bool
+        /// This rest requirement only applies when the next duty day exceeds this threshold (hrs).
+        /// nil = applies unconditionally.
+        let appliesWhenNextDutyDayExceedsHours: Double?
+    }
+
+    /// FD28 (Rev 5) — 3-pilot operational post-pattern rest table.
+    /// Rows are ordered; use the first matching row.
+    static let threePilotPatternRestRequirements: [ThreePilotPatternRest] = [
+        // TAFB ≤ 52 hrs, day return
+        ThreePilotPatternRest(tafbFromHours: 0,    tafbToHours: 52,       isDayReturn: true,  minRestHours: 12,  applyExtendedFormula: false, appliesWhenNextDutyDayExceedsHours: nil),
+        // TAFB ≤ 52 hrs, multi-day — 12 hrs; or 12 + 1.5× over 12 if last duty > 12 hrs (next duty day > 9.59 hrs)
+        ThreePilotPatternRest(tafbFromHours: 0,    tafbToHours: 52,       isDayReturn: false, minRestHours: 12,  applyExtendedFormula: true,  appliesWhenNextDutyDayExceedsHours: 9.983),
+        // TAFB 52–124 hrs, multi-day only (same formula)
+        ThreePilotPatternRest(tafbFromHours: 52,   tafbToHours: 124,      isDayReturn: false, minRestHours: 12,  applyExtendedFormula: true,  appliesWhenNextDutyDayExceedsHours: 9.983),
+        // TAFB ≥ 124 hrs, multi-day — 22 hrs flat
+        ThreePilotPatternRest(tafbFromHours: 124,  tafbToHours: .infinity, isDayReturn: false, minRestHours: 22, applyExtendedFormula: false, appliesWhenNextDutyDayExceedsHours: 9.983),
+    ]
+
+    /// Calculate minimum post-pattern rest for a 3-pilot operational duty.
+    /// - Parameters:
+    ///   - tafbHours: Time Away From Base in hours for the completed pattern.
+    ///   - isDayReturn: True if the crew returns on the same day the pattern started.
+    ///   - lastDutyHours: Actual duration of the last duty period in the pattern.
+    ///   - nextDutyDayHours: Planned duration of the next duty day (to test the >9.59 trigger).
+    /// - Returns: Minimum free hours required, or nil if no augmented rule matches.
+    static func threePilotMinPostPatternRestHours(tafbHours: Double,
+                                                  isDayReturn: Bool,
+                                                  lastDutyHours: Double,
+                                                  nextDutyDayHours: Double?) -> Double? {
+        guard let row = threePilotPatternRestRequirements.first(where: {
+            tafbHours >= $0.tafbFromHours &&
+            tafbHours < $0.tafbToHours &&
+            isDayReturn == $0.isDayReturn
+        }) else { return nil }
+
+        if let threshold = row.appliesWhenNextDutyDayExceedsHours,
+           let next = nextDutyDayHours,
+           next <= threshold {
+            return nil
+        }
+
+        guard row.applyExtendedFormula && lastDutyHours > 12 else {
+            return row.minRestHours
+        }
+        return 12 + 1.5 * (lastDutyHours - 12)
+    }
 }

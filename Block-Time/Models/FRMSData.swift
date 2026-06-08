@@ -765,13 +765,16 @@ struct BackOfClockRestriction: Codable {
     let appliesTo: String           // "Australia only" or "All operations"
 }
 
-/// Late night operation status and restrictions
+/// Late night operation status and restrictions (Rev 5)
 struct LateNightStatus: Codable {
     let consecutiveLateNights: Int
-    let maxConsecutiveLateNights: Int     // 4 normally, 5 if exception used
-    let dutyHoursIn7Nights: Double
-    let maxDutyHoursIn7Nights: Double     // 40 hours
-    let canUse5NightException: Bool       // Once per 28 days
+    let maxConsecutiveLateNights: Int     // 4
+    /// All LNO (late night + BOC) duties in the rolling 168-hr window. Rev 5 FD14.3/FD24.3.
+    let lnoDutiesIn168Hours: Int
+    let maxLnoDutiesIn168Hours: Int       // 4
+    /// BOC-only duties in the rolling 168-hr window. Rev 5 FD14.4/FD24.4.
+    let bocDutiesIn168Hours: Int
+    let maxBocDutiesIn168Hours: Int       // 2
     let recoveryOption: LateNightRecoveryOption
 }
 
@@ -860,6 +863,8 @@ struct ReserveDutyRules: Codable {
     let afterCalloutRest: String               // e.g., "MAX(12 hours, actual duty length)"
     let withoutCalloutRest: String             // e.g., "10 hours free of all duty"
     let betweenReservePeriods: String          // e.g., "MAX(12 hours, previous duty length)"
+    /// FD23.4(c) Rev 5 — combined reserve + duty ceiling when operationally necessary and pilot fit.
+    let combinedMaxDutyHoursOperationalNecessity: Double  // 18
 }
 
 /// Deadheading after flight duty limitations
