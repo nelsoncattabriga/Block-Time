@@ -630,13 +630,17 @@ class PlannedFlightService {
             context.perform {
                 let airportService = AirportService.shared
 
-                // Build UTC day boundaries for the period
+                // Build UTC day boundaries for the period.
+                // periodStart/periodEnd are local-timezone Dates (device calendar), but Core Data stores UTC.
+                // Widen by ±1 day so that timezone offsets never push a flight outside the query window.
+                // Key-set matching (normalised flight number + ICAO route + UTC day) provides correctness;
+                // the wider window only determines which DB rows are candidates for the stale check.
                 var utcCal = Calendar(identifier: .gregorian)
                 utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
 
-                let startOfPeriod = utcCal.startOfDay(for: periodStart)
-                guard let endOfPeriod = utcCal.date(byAdding: .day, value: 1, to: utcCal.startOfDay(for: periodEnd)),
-                      let endOfPeriodInclusive = Calendar(identifier: .gregorian).date(byAdding: .second, value: -1, to: endOfPeriod) else {
+                guard let startOfPeriod = utcCal.date(byAdding: .day, value: -1, to: utcCal.startOfDay(for: periodStart)),
+                      let endOfPeriod = utcCal.date(byAdding: .day, value: 2, to: utcCal.startOfDay(for: periodEnd)),
+                      let endOfPeriodInclusive = utcCal.date(byAdding: .second, value: -1, to: endOfPeriod) else {
                     continuation.resume(returning: [])
                     return
                 }
