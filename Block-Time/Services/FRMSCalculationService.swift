@@ -1269,35 +1269,36 @@ class FRMSCalculationService {
         }
 
         // Build late night status (Rev 5: count LNO and BOC duties in rolling 168-hr window)
-        var lateNightStatus: LateNightStatus? = nil
-        if cumulativeTotals.consecutiveLateNights > 0 {
-            let windowStart = Date().addingTimeInterval(-168 * 3600)
-
-            let lnoDutiesIn168 = duties.filter { duty in
-                duty.signOn >= windowStart &&
-                (duty.timeClass == .lateNight || duty.timeClass == OperationTimeClass.backOfClock)
-            }
-            let bocDutiesIn168 = lnoDutiesIn168.filter { $0.timeClass == OperationTimeClass.backOfClock }
-
-            let recoveryOption: LateNightRecoveryOption
-            if cumulativeTotals.consecutiveLateNights >= SH_Planning_FltDuty.lateNightMaxConsecutiveNights {
-                recoveryOption = .require24HoursOff
-            } else if cumulativeTotals.consecutiveLateNights >= 2 {
-                recoveryOption = .continueOnLateNights
-            } else {
-                recoveryOption = .noRestriction
-            }
-
-            lateNightStatus = LateNightStatus(
-                consecutiveLateNights: cumulativeTotals.consecutiveLateNights,
-                maxConsecutiveLateNights: SH_Planning_FltDuty.lateNightMaxConsecutiveNights,
-                lnoDutiesIn168Hours: lnoDutiesIn168.count,
-                maxLnoDutiesIn168Hours: SH_Planning_FltDuty.lateNightMaxDutiesIn168Hours,
-                bocDutiesIn168Hours: bocDutiesIn168.count,
-                maxBocDutiesIn168Hours: SH_Planning_FltDuty.backOfClockMaxDutiesIn168Hours,
-                recoveryOption: recoveryOption
-            )
+        // FD14.3: reserve/standby duties are exempt from FD14.2 (4 LNO in 168 hrs) and FD14.1 (consecutive nights)
+        let lnoWindowStart = Date().addingTimeInterval(-168 * 3600)
+        let lnoDutiesIn168 = duties.filter { duty in
+            duty.signOn >= lnoWindowStart &&
+            duty.dutyType != .standby &&
+            (duty.timeClass == .lateNight || duty.timeClass == OperationTimeClass.backOfClock)
         }
+        let bocDutiesIn168 = duties.filter { duty in
+            duty.signOn >= lnoWindowStart &&
+            duty.timeClass == OperationTimeClass.backOfClock
+        }
+
+        let recoveryOption: LateNightRecoveryOption
+        if cumulativeTotals.consecutiveLateNights >= SH_Planning_FltDuty.lateNightMaxConsecutiveNights {
+            recoveryOption = .require24HoursOff
+        } else if cumulativeTotals.consecutiveLateNights >= 2 {
+            recoveryOption = .continueOnLateNights
+        } else {
+            recoveryOption = .noRestriction
+        }
+
+        let lateNightStatus: LateNightStatus? = LateNightStatus(
+            consecutiveLateNights: cumulativeTotals.consecutiveLateNights,
+            maxConsecutiveLateNights: SH_Planning_FltDuty.lateNightMaxConsecutiveNights,
+            lnoDutiesIn168Hours: lnoDutiesIn168.count,
+            maxLnoDutiesIn168Hours: SH_Planning_FltDuty.lateNightMaxDutiesIn168Hours,
+            bocDutiesIn168Hours: bocDutiesIn168.count,
+            maxBocDutiesIn168Hours: SH_Planning_FltDuty.backOfClockMaxDutiesIn168Hours,
+            recoveryOption: recoveryOption
+        )
 
         // Build consecutive duty status
         let consecutiveDutyStatus = ConsecutiveDutyStatus(
