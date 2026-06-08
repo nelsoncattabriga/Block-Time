@@ -4,8 +4,8 @@ milestone: v1.x
 milestone_name: "v1.x ongoing work"
 current_phase: —
 status: active
-last_updated: "2026-06-03"
-last_activity: "2026-06-03 - Implement calendar export customisation (260603-tmj)"
+last_updated: "2026-06-08"
+last_activity: "2026-06-08 - Implement stale roster flight removal (260608-ptl)"
 progress:
   total_phases: 1
   completed_phases: 0
@@ -74,3 +74,4 @@ Last updated: 2026-06-02
 | 260601-sx6 | Add human-readable undo descriptions to undo bar | 2026-06-01 | f1c599a | [260601-sx6-add-human-readable-undo-descriptions-to-](./quick/260601-sx6-add-human-readable-undo-descriptions-to-/) |
 | 260602-cefe | Split SettingsView.swift into per-category files | 2026-06-02 | b35b953 | [260602-cefe-split-settingsview-into-per-category-files](./quick/260602-cefe-split-settingsview-into-per-category-files/) |
 | 260603-tmj | Implement calendar export customisation (mode, reorderable components, live previews) | 2026-06-03 | a23136e | [260603-tmj-implement-calendar-export-customisation-](./quick/260603-tmj-implement-calendar-export-customisation-/) |
+| 260608-ptl | Implement stale roster flight removal with interstitial review sheet | 2026-06-08 | 97ae817 | [260608-ptl-implement-stale-roster-flight-removal-wi](./quick/260608-ptl-implement-stale-roster-flight-removal-wi/) |
