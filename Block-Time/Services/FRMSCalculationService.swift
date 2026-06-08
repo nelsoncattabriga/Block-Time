@@ -623,17 +623,18 @@ class FRMSCalculationService {
             ]
         } else {
             // FD3.1 — One row per sign-on window (5 rows including both 0800-1359 variants).
-            // Pre/post rest: 11 hrs (if FT < 8), 22 hrs otherwise.
+            // Rev 5: flight time limits removed. Pre/post rest: 11 hrs (duty ≤11), 22 hrs otherwise.
             return LH_Planning_FltDuty.twoPilotLimits.map { limit in
                 let isDayPattern = limit.sectorLimit.contains("DAY PATTERN")
+                let rest = limit.dutyPeriodLimit <= 11 ? 11.0 : 22.0
                 return SignOnTimeRange(
                     timeRange: limit.signOnWindow.rawValue,
                     maxDutyPeriod: limit.dutyPeriodLimit,
                     maxDutyPeriodOperational: nil,
-                    maxFlightTime: limit.flightTimeLimit,
+                    maxFlightTime: nil,
                     maxFlightTimeOperational: nil,
-                    preRestRequired: limit.flightTimeLimit < 8.5 ? 11.0 : 22.0,
-                    postRestRequired: limit.flightTimeLimit < 8.5 ? 11.0 : 22.0,
+                    preRestRequired: rest,
+                    postRestRequired: rest,
                     notes: isDayPattern ? "Day Pattern Only" : nil,
                     sectorLimit: limit.sectorLimit,
                     restFacility: nil
@@ -690,13 +691,14 @@ class FRMSCalculationService {
             ]
         } else {
             // FD3.1 Planning — Class 2 and Class 1 only.
+            // Rev 5: flight time limits removed. Post-rest: 12 hrs (duty ≤12), 22 hrs (duty >12).
             return LH_Planning_FltDuty.threePilotLimits.map { limit in
-                let postRest = limit.flightTimeLimit < 9.0 ? 12.0 : 18.0
+                let postRest = limit.dutyPeriodLimit <= 12 ? 12.0 : 22.0
                 return SignOnTimeRange(
                     timeRange: limit.restFacility.rawValue,
                     maxDutyPeriod: limit.dutyPeriodLimit,
                     maxDutyPeriodOperational: nil,
-                    maxFlightTime: limit.flightTimeLimit,
+                    maxFlightTime: nil,
                     maxFlightTimeOperational: nil,
                     preRestRequired: 12.0,
                     postRestRequired: postRest,
@@ -710,7 +712,7 @@ class FRMSCalculationService {
 
     /// Get all sign-on time based limits for 4-pilot A380/A330/B787 operations.
     /// Returns ALL rest facility options so the view can display the complete table.
-    /// Operational (FD10): Seat in Pax, 2×Class 2, Mixed, 2×Class 1, 2×Class 1 FD3.4.
+    /// Operational (FD10): Seat in Pax, 1×C2+Seat, 2×C2, 1×C1+Seat, 1×C1+C2, 2×C1, 2×C1 FD10.4.
     /// Planning (FD3): 2×Class 2, Mixed (1×C1+1×C2), 2×Class 1.
     private func getSignOnBasedLimits4PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
 
@@ -730,6 +732,18 @@ class FRMSCalculationService {
                     restFacility: .seatInPassengerCompartment
                 ),
                 SignOnTimeRange(
+                    timeRange: "1 × Class 2 Rest & 1 × Seat",
+                    maxDutyPeriod: 16.0,
+                    maxDutyPeriodOperational: nil,
+                    maxFlightTime: 14.0,
+                    maxFlightTimeOperational: nil,
+                    preRestRequired: 12.0,
+                    postRestRequired: 12.0,
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck. Priority higher class for landing crew.",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
+                    restFacility: .oneClass2OneSeat
+                ),
+                SignOnTimeRange(
                     timeRange: "2 × Class 2 Rest",
                     maxDutyPeriod: 16.0,
                     maxDutyPeriodOperational: nil,
@@ -740,6 +754,18 @@ class FRMSCalculationService {
                     notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
                     sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
                     restFacility: .twoClass2
+                ),
+                SignOnTimeRange(
+                    timeRange: "1 × Class 1 Rest & 1 × Seat",
+                    maxDutyPeriod: 18.0,
+                    maxDutyPeriodOperational: nil,
+                    maxFlightTime: 14.0,
+                    maxFlightTimeOperational: nil,
+                    preRestRequired: 12.0,
+                    postRestRequired: 24.0,
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck. Priority higher class for landing crew.",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
+                    restFacility: .oneClass1OneSeat
                 ),
                 SignOnTimeRange(
                     timeRange: "1 × Class 1 & 1 × Class 2 Rest",
@@ -766,7 +792,7 @@ class FRMSCalculationService {
                     restFacility: .twoClass1
                 ),
                 SignOnTimeRange(
-                    timeRange: "2 × Class 1 Rest (>18 hrs — FD3.4)",
+                    timeRange: "2 × Class 1 Rest (>18 hrs — FD10.4)",
                     maxDutyPeriod: 21.0,
                     maxDutyPeriodOperational: nil,
                     maxFlightTime: 14.0,

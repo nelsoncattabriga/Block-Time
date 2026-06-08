@@ -2,11 +2,11 @@
 //  LH_Planning_FltDuty.swift
 //  Block-Time
 //
-//  FRMS Ruleset A380/A330/B787 — Revision 4 — 26 June 2023
+//  FRMS Ruleset A380/A330/B787 — Revision 5 — 15 June 2026
 //  Chapter 1A: Flight and Duty Limitations (Planning) — FD3
 //
 //  Source: Qantas Airways Limited Fatigue Risk Management System Ruleset A380/A330/B787
-//  
+//
 //
 
 import Foundation
@@ -34,7 +34,6 @@ enum DeadheadDutyType: String, Codable, CaseIterable {
 struct TwoPilotPlanningLimit: Codable {
     let signOnWindow: SignOnWindow
     let dutyPeriodLimit: Double
-    let flightTimeLimit: Double
     let sectorLimit: String
 }
 
@@ -42,7 +41,6 @@ struct TwoPilotPlanningLimit: Codable {
 struct ThreePilotPlanningLimit: Codable {
     let restFacility: CrewRestFacility
     let dutyPeriodLimit: Double
-    let flightTimeLimit: Double
     let sectorLimit: String
 }
 
@@ -76,8 +74,8 @@ struct PlanningRestRequirement: Codable {
 /// All Chapter 1A (FD3) Planning limits for A380/A330/B787.
 enum LH_Planning_FltDuty {
 
-    static let rulesetRevision = 4
-    static let issueDate = "26 June 2023"
+    static let rulesetRevision = 5
+    static let issueDate = "15 June 2026"
     static let applicableFleets = ["A380", "A330", "B787"]
     static let chapter = "1A"
     static let reference = "FD3"
@@ -91,36 +89,31 @@ enum LH_Planning_FltDuty {
         TwoPilotPlanningLimit(
             signOnWindow: .w0500_0759,
             dutyPeriodLimit: 11,
-            flightTimeLimit: 8,
-            sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
+            sectorLimit: "1 if any sector flight time > 6, otherwise 4"
         ),
         // 0800–1359 (standard)
         TwoPilotPlanningLimit(
             signOnWindow: .w0800_1359,
             dutyPeriodLimit: 11,
-            flightTimeLimit: 8.5,
-            sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
+            sectorLimit: "1 if any sector flight time > 6, otherwise 4"
         ),
         // 0800–1359 (1 day pattern only)
         TwoPilotPlanningLimit(
             signOnWindow: .w0800_1359,
             dutyPeriodLimit: 12,
-            flightTimeLimit: 9.5,
-            sectorLimit: "Day Pattern ONLY, maximum 4 sectors"
+            sectorLimit: "1 DAY PATTERN ONLY, maximum 4 sectors"
         ),
         // 1400–1559
         TwoPilotPlanningLimit(
             signOnWindow: .w1400_1559,
             dutyPeriodLimit: 11,
-            flightTimeLimit: 8.5,
-            sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
+            sectorLimit: "1 if any sector flight time > 6, otherwise 4"
         ),
         // 1600–0459
         TwoPilotPlanningLimit(
             signOnWindow: .w1600_0459,
             dutyPeriodLimit: 10,
-            flightTimeLimit: 8,
-            sectorLimit: "1 Sector if Flight Time > 6 hrs; 2 Sectors if sign-on 2100–0300 LT; 2 Sectors if Flight Time > 2 hrs, otherwise 3 Sectors"
+            sectorLimit: "1 if any sector flight time > 6; 2 if sign-on 2100\u{2013}0300 LT; 2 if any sector flight time > 2, otherwise 3"
         ),
     ]
 
@@ -185,13 +178,11 @@ enum LH_Planning_FltDuty {
         ThreePilotPlanningLimit(
             restFacility: .class2,
             dutyPeriodLimit: 12,
-            flightTimeLimit: 8.5,
             sectorLimit: "3 if duty period > 11, otherwise maximum 4"
         ),
         ThreePilotPlanningLimit(
             restFacility: .class1,
             dutyPeriodLimit: 14,
-            flightTimeLimit: 12.5,
             sectorLimit: "3 if duty period > 11, otherwise maximum 4"
         ),
     ]
@@ -466,6 +457,7 @@ enum LH_Planning_FltDuty {
         "Melbourne to Dallas and vice versa",
         "Perth to London and vice versa",
         "Auckland to New York and vice versa",
+        "Perth to Paris and vice versa",
     ]
 
     /// FD3.4.1
@@ -495,6 +487,11 @@ enum LH_Planning_FltDuty {
         RelevantSectorDisruptionRest(
             condition: "Captain AND First Officer",
             minimumRestHours: 36,
+            note: nil
+        ),
+        RelevantSectorDisruptionRest(
+            condition: "Second Officer(s)",
+            minimumRestHours: 27,
             note: nil
         ),
         RelevantSectorDisruptionRest(

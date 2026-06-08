@@ -2,7 +2,7 @@
 //  LH_Operational_FltDuty.swift
 //  Block-Time
 //
-//  FRMS Ruleset A380/A330/B787 — Revision 4 — 26 June 2023
+//  FRMS Ruleset A380/A330/B787 — Revision 5 — 15 June 2026
 //  Chapter 1B: Flight and Duty Limitations (Operational) — FD10
 //
 //  Source: Qantas Airways Limited Fatigue Risk Management System Ruleset A380/A330/B787
@@ -23,10 +23,12 @@ enum CrewRestFacility: String, Codable, CaseIterable {
     case seatInPassengerCompartment = "Seat in Passenger Compartment"
     case class2                    = "Class 2 Rest"
     case class1                    = "Class 1 Rest"
+    case oneClass2OneSeat          = "1 × Class 2 Rest & 1 × Seat in Passenger Compartment"
     case twoClass2                 = "2 × Class 2 Rest"
+    case oneClass1OneSeat          = "1 × Class 1 Rest & 1 × Seat in Passenger Compartment"
     case oneClass1OneClass2        = "1 × Class 1 & 1 × Class 2 Rest"
     case twoClass1                 = "2 × Class 1 Rest"
-    case twoClass1FD34             = "2 × Class 1 Rest (>18 hrs per FD3.4)"
+    case twoClass1FD34             = "2 × Class 1 Rest (>18 hrs per FD10.4)"
 }
 
 /// Role context for Relevant Sector disruption rest.
@@ -101,8 +103,8 @@ struct CrewRestAircraftDefinition {
 /// All Chapter 1B (FD10) Operational limits for A380/A330/B787.
 enum LH_Operational_FltDuty {
 
-    static let rulesetRevision = 4
-    static let issueDate = "26 June 2023"
+    static let rulesetRevision = 5
+    static let issueDate = "15 June 2026"
     static let applicableFleets = ["A380", "A330", "B787"]
     static let chapter = "1B"
     static let reference = "FD10"
@@ -116,27 +118,9 @@ enum LH_Operational_FltDuty {
         DutyLimit(
             crewComplement: .twoPilot,
             restFacility: nil,
-            dutyPeriodLimitPlanned: 11,
-            dutyPeriodLimitDiscretion: 12,
-            flightTimeLimit: 9.5,
-            flightTimeLimitNote: nil,
-            requirements: "If more than 7 hours of flight time conducted in darkness"
-        ),
-        DutyLimit(
-            crewComplement: .twoPilot,
-            restFacility: nil,
-            dutyPeriodLimitPlanned: 11,
-            dutyPeriodLimitDiscretion: 12,
-            flightTimeLimit: 10,
-            flightTimeLimitNote: nil,
-            requirements: "If greater than 1 sector is rostered"
-        ),
-        DutyLimit(
-            crewComplement: .twoPilot,
-            restFacility: nil,
-            dutyPeriodLimitPlanned: 11,
-            dutyPeriodLimitDiscretion: 12,
-            flightTimeLimit: 10.5,
+            dutyPeriodLimitPlanned: 12,
+            dutyPeriodLimitDiscretion: nil,
+            flightTimeLimit: nil,
             flightTimeLimitNote: nil,
             requirements: nil
         ),
@@ -186,11 +170,29 @@ enum LH_Operational_FltDuty {
         ),
         DutyLimit(
             crewComplement: .fourPilot,
+            restFacility: .oneClass2OneSeat,
+            dutyPeriodLimitPlanned: 16,
+            dutyPeriodLimitDiscretion: nil,
+            flightTimeLimit: nil,
+            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
+        ),
+        DutyLimit(
+            crewComplement: .fourPilot,
             restFacility: .twoClass2,
             dutyPeriodLimitPlanned: 16,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
+            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
+        ),
+        DutyLimit(
+            crewComplement: .fourPilot,
+            restFacility: .oneClass1OneSeat,
+            dutyPeriodLimitPlanned: 18,
+            dutyPeriodLimitDiscretion: nil,
+            flightTimeLimit: nil,
+            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
         ),
         DutyLimit(
@@ -199,7 +201,7 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 20,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
+            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
         ),
         DutyLimit(
@@ -208,7 +210,7 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 20,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
+            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
             requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
         ),
         DutyLimit(
@@ -217,8 +219,8 @@ enum LH_Operational_FltDuty {
             dutyPeriodLimitPlanned: 21,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
-            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
-            requirements: "A380 & B787 only. >18 hours as per FD3.4"
+            flightTimeLimitNote: "A pilot cannot spend more than 8 continuous hours on duty in the flight deck and no more than 14 hours total duty in the flight deck.",
+            requirements: "A380 & B787 only. >18 hours as per FD10.4"
         ),
     ]
 
@@ -422,6 +424,7 @@ enum LH_Operational_FltDuty {
         "Melbourne to Dallas and vice versa",
         "Perth to London and vice versa",
         "Auckland to New York and vice versa",
+        "Perth to Paris and vice versa",
     ]
 
     /// Minimum rest prior to operating a Relevant Sector (disruption).
@@ -442,6 +445,11 @@ enum LH_Operational_FltDuty {
         RelevantSectorDisruptionRest(
             condition: "Captain AND First Officer",
             minimumRestHours: 36,
+            note: nil
+        ),
+        RelevantSectorDisruptionRest(
+            condition: "Second Officer(s)",
+            minimumRestHours: 27,
             note: nil
         ),
         RelevantSectorDisruptionRest(
