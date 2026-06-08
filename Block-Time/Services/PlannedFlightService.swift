@@ -599,19 +599,17 @@ class PlannedFlightService {
         return flightDate >= today
     }
 
-    /// Check if a flight has been flown (has block time or flight time logged)
+    /// Check if a flight has been flown (has block time or flight time logged).
+    /// Roster-imported placeholder flights store times as "0.0"; treat that as zero alongside "00:00" and "0".
     func isFlown(_ flight: FlightEntity) -> Bool {
-        // A flight is considered "flown" if it has block time or any flight time logged
-        if let blockTime = flight.blockTime, !blockTime.isEmpty, blockTime != "00:00" {
-            return true
+        func hasTime(_ value: String?) -> Bool {
+            guard let v = value, !v.isEmpty else { return false }
+            if let d = Double(v) { return d > 0 }
+            // HH:MM format
+            let parts = v.split(separator: ":").compactMap { Int($0) }
+            return parts.reduce(0, +) > 0
         }
-        if let p1Time = flight.p1Time, !p1Time.isEmpty, p1Time != "00:00" {
-            return true
-        }
-        if let p2Time = flight.p2Time, !p2Time.isEmpty, p2Time != "00:00" {
-            return true
-        }
-        return false
+        return hasTime(flight.blockTime) || hasTime(flight.p1Time) || hasTime(flight.p2Time)
     }
 
     // MARK: - Stale Flight Detection
