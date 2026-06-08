@@ -1270,13 +1270,13 @@ class FRMSCalculationService {
         // Build late night status (Rev 5: count LNO and BOC duties in rolling 168-hr window)
         var lateNightStatus: LateNightStatus? = nil
         if cumulativeTotals.consecutiveLateNights > 0 {
-            let windowStart = date.addingTimeInterval(-168 * 3600)
+            let windowStart = Date().addingTimeInterval(-168 * 3600)
 
             let lnoDutiesIn168 = duties.filter { duty in
                 duty.signOn >= windowStart &&
-                (duty.timeClass == .lateNight || duty.timeClass == .backOfClock)
+                (duty.timeClass == .lateNight || duty.timeClass == OperationTimeClass.backOfClock)
             }
-            let bocDutiesIn168 = lnoDutiesIn168.filter { $0.timeClass == .backOfClock }
+            let bocDutiesIn168 = lnoDutiesIn168.filter { $0.timeClass == OperationTimeClass.backOfClock }
 
             let recoveryOption: LateNightRecoveryOption
             if cumulativeTotals.consecutiveLateNights >= SH_Planning_FltDuty.lateNightMaxConsecutiveNights {
