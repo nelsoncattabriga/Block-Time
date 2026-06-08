@@ -3,7 +3,7 @@
 //  Block-Time
 //
 //  FRMS (Fatigue Risk Management System) Data Models
-//  Based on Qantas FRMS Ruleset Rev 4.1 (A320/B737) and Rev 4 (A380/A330/B787)
+//  Based on Qantas FRMS Ruleset Revision 5 — 15 June 2026 (A320/B737 and A380/A330/B787)
 //
 
 import Foundation
@@ -41,18 +41,18 @@ enum FRMSFleet: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// Returns the rolling period in days for flight time limits (28 or 30)
+    /// Returns the rolling period in days for flight time limits (Rev 5: both fleets use 28 days)
     var flightTimePeriodDays: Int {
         switch self {
         case .a320B737: return 28
-        case .a380A330B787: return 30
+        case .a380A330B787: return 28
         }
     }
 
     var maxFlightTime365Days: Double {
         switch self {
         case .a320B737: return 1000.0
-        case .a380A330B787: return 900.0
+        case .a380A330B787: return 1000.0
         }
     }
 
@@ -64,7 +64,7 @@ enum FRMSFleet: String, Codable, CaseIterable, Sendable {
     }
 
     /// Initial 14-day duty limit (at roster publication, no agreement required).
-    /// SH only: 90 hrs (FD12/FD22). LH has a single limit of 100 hrs.
+    /// SH: 90 hrs (FD12/FD22). LH: nil — single fortnightly limit of 90 hrs (FD11.1 Rev 5).
     var maxDutyTime14DaysInitial: Double? {
         switch self {
         case .a320B737: return 90.0
@@ -72,11 +72,12 @@ enum FRMSFleet: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// Hard maximum 14-day duty limit (requires pilot agreement or open time bid for SH).
+    /// Hard maximum fortnightly/14-day duty limit.
+    /// SH: 100 hrs extended (FD12/FD22). LH: 90 hrs fortnightly for 2-pilot (FD11.1 Rev 5).
     var maxDutyTime14Days: Double {
         switch self {
         case .a320B737: return 100.0
-        case .a380A330B787: return 100.0  // FD6.4.3
+        case .a380A330B787: return 90.0
         }
     }
 }
