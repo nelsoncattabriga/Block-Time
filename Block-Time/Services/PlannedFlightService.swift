@@ -23,6 +23,7 @@ class PlannedFlightService {
         let duplicates: Int
         let errors: Int
         let flights: [ImportedFlight]
+        let staleFlights: [FlightEntity]
     }
 
     struct ImportedFlight {
@@ -122,7 +123,8 @@ class PlannedFlightService {
             imported: imported,
             duplicates: duplicates,
             errors: errors,
-            flights: results
+            flights: results,
+            staleFlights: []
         )
     }
 
@@ -610,6 +612,122 @@ class PlannedFlightService {
             return true
         }
         return false
+    }
+
+    // MARK: - Stale Flight Detection
+
+    /// Find unflown logbook flights inside [periodStart...periodEnd] (inclusive, by day) that are
+    /// NOT present in the new roster. Flown flights are always excluded regardless of key match.
+    /// Roster flights are matched by normalised flight number + ICAO route + same UTC calendar day.
+    func findStaleFlights(
+        periodStart: Date,
+        periodEnd: Date,
+        rosterFlights: [RosterParserService.ParsedFlight]
+    ) async -> [FlightEntity] {
+        let context = databaseService.viewContext
+
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                let airportService = AirportService.shared
+
+                // Build UTC day boundaries for the period
+                var utcCal = Calendar(identifier: .gregorian)
+                utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
+
+                let startOfPeriod = utcCal.startOfDay(for: periodStart)
+                guard let endOfPeriod = utcCal.date(byAdding: .day, value: 1, to: utcCal.startOfDay(for: periodEnd)),
+                      let endOfPeriodInclusive = Calendar(identifier: .gregorian).date(byAdding: .second, value: -1, to: endOfPeriod) else {
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    NSPredicate(format: "date >= %@", startOfPeriod as NSDate),
+                    NSPredicate(format: "date <= %@", endOfPeriodInclusive as NSDate)
+                ])
+                request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)]
+
+                guard let windowFlights = try? context.fetch(request) else {
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                // Build roster key set: "normalisedFlightNum|depICAO|arrICAO|dd/MM/yyyy(UTC)"
+                let utcDayFormatter = DateFormatter()
+                utcDayFormatter.dateFormat = "dd/MM/yyyy"
+                utcDayFormatter.locale = Locale(identifier: "en_US_POSIX")
+                utcDayFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+                var rosterKeySet = Set<String>()
+                for rosterFlight in rosterFlights {
+                    let depICAO = airportService.convertToICAO(rosterFlight.departureAirport)
+                    let arrICAO = airportService.convertToICAO(rosterFlight.arrivalAirport)
+
+                    // Convert roster local date + time to UTC date string (reusing existing service logic)
+                    let calendar = Calendar.current
+                    let comps = calendar.dateComponents([.year, .month, .day], from: rosterFlight.date)
+                    guard let day = comps.day, let month = comps.month, let year = comps.year else { continue }
+                    let localDateString = String(format: "%02d/%02d/%04d", day, month, year)
+                    let localOutTime: String = {
+                        let t = rosterFlight.departureTime
+                        guard t.count == 4 else { return t }
+                        return "\(t.prefix(2)):\(t.suffix(2))"
+                    }()
+                    let utcDateString = airportService.convertFromLocalToUTCDate(
+                        localDateString: localDateString,
+                        localTimeString: localOutTime,
+                        airportICAO: depICAO
+                    )
+
+                    let normNum = self.normaliseFlightNumber(rosterFlight.flightNumber)
+                    let key = "\(normNum)|\(depICAO)|\(arrICAO)|\(utcDateString)"
+                    rosterKeySet.insert(key)
+                }
+
+                // Identify stale: in window, not flown, not matched in new roster
+                var stale: [FlightEntity] = []
+                for flight in windowFlights {
+                    // Never include flown flights
+                    guard !self.isFlown(flight) else { continue }
+
+                    guard let flightDate = flight.date else { continue }
+                    let utcDayStr = utcDayFormatter.string(from: flightDate)
+                    let normNum = self.normaliseFlightNumber(flight.flightNumber ?? "")
+                    let depICAO = flight.fromAirport ?? ""
+                    let arrICAO = flight.toAirport ?? ""
+                    let key = "\(normNum)|\(depICAO)|\(arrICAO)|\(utcDayStr)"
+
+                    if !rosterKeySet.contains(key) {
+                        stale.append(flight)
+                    }
+                }
+
+                continuation.resume(returning: stale)
+            }
+        }
+    }
+
+    /// Delete the given stale flight entities from the logbook. Returns count deleted.
+    @discardableResult
+    func deleteStaleFlights(_ flights: [FlightEntity]) async -> Int {
+        guard !flights.isEmpty else { return 0 }
+
+        let context = databaseService.viewContext
+        let objectIDs = flights.compactMap { $0.objectID }
+
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                var deleted = 0
+                for objectID in objectIDs {
+                    guard let flight = try? context.existingObject(with: objectID) as? FlightEntity else { continue }
+                    context.delete(flight)
+                    deleted += 1
+                }
+                try? context.save()
+                continuation.resume(returning: deleted)
+            }
+        }
     }
 
     /// Get count of future flights
