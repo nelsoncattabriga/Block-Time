@@ -48,9 +48,9 @@ struct UnifiedParseResult {
     let base: String
     let category: String
     let rosterType: RosterType
-    /// Earliest flight date in the roster (local calendar date). Nil when no flights.
+    /// First calendar day of the bid period, derived from the BP number via epoch formula.
     let periodStartDate: Date?
-    /// Latest flight date in the roster (local calendar date). Nil when no flights.
+    /// Last calendar day of the bid period, derived from the BP number via epoch formula.
     let periodEndDate: Date?
 }
 
@@ -229,8 +229,8 @@ class LHRosterParser: RosterParser {
             base: result.base,
             category: result.category,
             rosterType: .longHaul,
-            periodStartDate: flights.map(\.date).min(),
-            periodEndDate: flights.map(\.date).max()
+            periodStartDate: result.periodStartDate ?? flights.map(\.date).min(),
+            periodEndDate: result.periodEndDate ?? flights.map(\.date).max()
         )
     }
 }
