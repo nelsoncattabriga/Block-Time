@@ -35,6 +35,10 @@ class RosterParserService {
         let bidPeriod: String
         let base: String
         let category: String  // e.g., "CPT-B737"
+        /// First calendar day listed in the bid period summary (not the first flight date).
+        let periodStartDate: Date?
+        /// Last calendar day listed in the bid period summary (not the last flight date).
+        let periodEndDate: Date?
     }
 
     // MARK: - Equipment Code Mapping
@@ -73,13 +77,18 @@ class RosterParserService {
         // Extract flights from Pattern Details section
         let flights = extractFlights(from: lines, pilotInfo: pilotInfo)
 
+        // Extract true bid period boundaries from the day-summary section
+        let (periodStart, periodEnd) = extractPeriodDates(from: lines, pilotInfo: pilotInfo)
+
         return ParseResult(
             flights: flights,
             pilotName: pilotInfo.name,
             staffNumber: pilotInfo.staffNumber,
             bidPeriod: pilotInfo.bidPeriod,
             base: pilotInfo.base,
-            category: pilotInfo.category
+            category: pilotInfo.category,
+            periodStartDate: periodStart,
+            periodEndDate: periodEnd
         )
     }
 
@@ -275,6 +284,119 @@ class RosterParserService {
 
                         LogManager.shared.debug(" Total flights extracted: \(flights.count)")
         return flights
+    }
+
+    // MARK: - Period Date Extraction
+
+    /// Extract the true start and end dates of the bid period from the day-summary section.
+    /// The summary lists every calendar day (e.g. "15 Mon  D/O ...", "16 Tue  5028 ...").
+    /// These lines define the full period scope, independent of which days have flights.
+    /// Day numbers are tracked in order; a drop (e.g. 30→1) signals a month rollover.
+    private static func extractPeriodDates(from lines: [String], pilotInfo: PilotInfo) -> (Date?, Date?) {
+        let dayPattern = #"^\s{0,2}(\d{1,2})\s+(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s"#
+        let calendar = Calendar.current
+
+        // Collect all day numbers from the summary block (appears before "Pattern Details")
+        // Stop at the dashes separator that precedes the Pattern Details flight table
+        var inSummary = true
+        var dayNumbers: [Int] = []
+        for line in lines {
+            if line.contains("Pattern Details") || line.contains("(L - time)") {
+                inSummary = false
+            }
+            guard inSummary else { break }
+            if let match = line.range(of: dayPattern, options: .regularExpression) {
+                let matched = String(line[match]).trimmingCharacters(in: .whitespaces)
+                let parts = matched.split(separator: " ")
+                if let day = Int(parts[0]) {
+                    dayNumbers.append(day)
+                }
+            }
+        }
+
+        guard !dayNumbers.isEmpty else { return (nil, nil) }
+
+        // Determine the starting month from the first flight date or header year context.
+        // Use the first flight date as an anchor since the parser already computed it correctly.
+        // Fall back to current month if no flights.
+        let anchorDate = pilotInfo as AnyObject  // just for scoping
+        _ = anchorDate
+        let now = Date()
+        var startMonth = calendar.component(.month, from: now)
+        var startYear = pilotInfo.year
+
+        // Find the month of the first summary day by anchoring to the known flight dates.
+        // The day-summary first entry matches the roster's start date in the header.
+        // We know from the header that the roster year is pilotInfo.year and the first
+        // day number is dayNumbers[0]. We reconstruct month by finding what month+year
+        // combination makes the first day fall on the correct weekday — but that's complex.
+        // Simpler: use the first *flight* date as an anchor and walk backwards to the
+        // first summary day number.
+        //
+        // Strategy: find the month/year of dayNumbers[0] by checking what month the
+        // first flight's date is in and working backwards by day number.
+        // The day-summary always begins at most 28 days before the first flight.
+        if let firstFlightDate = [
+            // Re-derive from lines rather than storing — find first "DDMon" flight date
+            lines.compactMap({ line -> Date? in
+                let fp = #"^\s+(\d{2})(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{3}"#
+                guard line.range(of: fp, options: .regularExpression) != nil else { return nil }
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                let token = trimmed.prefix(5) // "16Jun"
+                return convertDate(String(token), year: pilotInfo.year)
+            }).first
+        ].compactMap({ $0 }).first {
+            // Walk from firstFlightDate backwards to find the date of dayNumbers[0]
+            let firstDaySummary = dayNumbers[0]
+            let firstFlightDay = calendar.component(.day, from: firstFlightDate)
+            let firstFlightMonth = calendar.component(.month, from: firstFlightDate)
+            let firstFlightYear = calendar.component(.year, from: firstFlightDate)
+
+            if firstDaySummary <= firstFlightDay {
+                // Same month as first flight
+                startMonth = firstFlightMonth
+                startYear = firstFlightYear
+            } else {
+                // First summary day is in the month before the first flight
+                var comps = DateComponents()
+                comps.year = firstFlightYear
+                comps.month = firstFlightMonth
+                comps.day = 1
+                if let firstOfFlightMonth = calendar.date(from: comps),
+                   let prevMonth = calendar.date(byAdding: .month, value: -1, to: firstOfFlightMonth) {
+                    startMonth = calendar.component(.month, from: prevMonth)
+                    startYear = calendar.component(.year, from: prevMonth)
+                }
+            }
+        }
+
+        // Now walk the day numbers assigning months, rolling over when day decreases
+        var currentMonth = startMonth
+        var currentYear = startYear
+        var previousDay = 0
+        var dates: [Date] = []
+
+        for day in dayNumbers {
+            if day < previousDay {
+                // Month rollover
+                currentMonth += 1
+                if currentMonth > 12 {
+                    currentMonth = 1
+                    currentYear += 1
+                }
+            }
+            var comps = DateComponents()
+            comps.year = currentYear
+            comps.month = currentMonth
+            comps.day = day
+            comps.hour = 0; comps.minute = 0; comps.second = 0
+            if let date = calendar.date(from: comps) {
+                dates.append(date)
+            }
+            previousDay = day
+        }
+
+        return (dates.first, dates.last)
     }
 
     // MARK: - Date Conversion

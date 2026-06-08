@@ -175,8 +175,8 @@ class SHRosterParser: RosterParser {
             base: result.base,
             category: result.category,
             rosterType: .shortHaul,
-            periodStartDate: flights.map(\.date).min(),
-            periodEndDate: flights.map(\.date).max()
+            periodStartDate: result.periodStartDate ?? flights.map(\.date).min(),
+            periodEndDate: result.periodEndDate ?? flights.map(\.date).max()
         )
     }
 }
