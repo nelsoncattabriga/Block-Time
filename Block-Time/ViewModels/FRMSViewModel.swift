@@ -102,6 +102,7 @@ class FRMSViewModel {
     }
 
     @objc private func handleFlightDataChanged() {
+        guard !FlightDatabaseService.shared.isAppInBackground else { return }
         let positionRaw = UserDefaults.standard.string(forKey: "flightTimePosition") ?? FlightTimePosition.captain.rawValue
         let crewPosition = FlightTimePosition(rawValue: positionRaw) ?? .captain
         Task {

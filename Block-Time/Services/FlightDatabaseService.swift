@@ -77,7 +77,7 @@ class FlightDatabaseService: ObservableObject {
     private var remoteChangeSyncSettleTimer: Timer?
 
     // MARK: - Background state tracking
-    private var isAppInBackground: Bool = false
+    var isAppInBackground: Bool = false
     private var pendingDataChanged: Bool = false
 
     private init() {
@@ -3422,6 +3422,7 @@ class FlightDatabaseService: ObservableObject {
 
     @objc private func handleAppDidEnterBackground() {
         isAppInBackground = true
+        viewContext.refreshAllObjects()
         LogManager.shared.debug("FlightDatabaseService: App entered background  notifications suppressed")
     }
 
