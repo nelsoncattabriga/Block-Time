@@ -336,13 +336,30 @@ struct UnifiedRosterImportView: View {
 
                 let result = try await plannedFlightService.importFlights(convertedFlights)
 
-                // Stale detection: find unflown logbook flights in the bid period that are absent from new roster
+                // Stale detection: find unflown logbook flights in the bid period that are absent from new roster.
+                // Key set is built from the FULL roster (parseResult.flights), not just the user's selected subset,
+                // so deselected-but-still-rostered flights are not incorrectly flagged as stale.
                 if let periodStart = parseResult.periodStartDate,
                    let periodEnd = parseResult.periodEndDate {
+                    let allRosterFlights = parseResult.flights.map { flight -> RosterParserService.ParsedFlight in
+                        RosterParserService.ParsedFlight(
+                            date: flight.date,
+                            flightNumber: flight.flightNumber,
+                            departureAirport: flight.departureAirport,
+                            arrivalAirport: flight.arrivalAirport,
+                            departureTime: flight.departureTime,
+                            arrivalTime: flight.arrivalTime,
+                            aircraftType: flight.aircraftType,
+                            role: flight.role,
+                            isPositioning: flight.isPositioning,
+                            bidPeriod: flight.bidPeriod,
+                            dutyCode: flight.dutyCode
+                        )
+                    }
                     let stale = await plannedFlightService.findStaleFlights(
                         periodStart: periodStart,
                         periodEnd: periodEnd,
-                        rosterFlights: convertedFlights
+                        rosterFlights: allRosterFlights
                     )
                     await MainActor.run {
                         if stale.isEmpty {
