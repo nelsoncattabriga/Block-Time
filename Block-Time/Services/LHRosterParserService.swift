@@ -36,6 +36,8 @@ class LHRosterParserService {
         let bidPeriod: String
         let base: String
         let category: String  // e.g., "F/O-B787"
+        let periodStartDate: Date?
+        let periodEndDate: Date?
     }
 
     /// Represents a duty entry from the calendar section
@@ -136,7 +138,9 @@ class LHRosterParserService {
             staffNumber: pilotInfo.staffNumber,
             bidPeriod: pilotInfo.bidPeriod,
             base: pilotInfo.base,
-            category: pilotInfo.category
+            category: pilotInfo.category,
+            periodStartDate: bpDates.startDate,
+            periodEndDate: bpDates.endDate
         )
     }
 
