@@ -1848,8 +1848,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 return false
             }
         } else if !isSimulator && !isPositioning && !(isSpIns && isInstructingInAircraft) {
-            guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
-                statusMessage = "Block time cannot be zero"
+            let hasActualTimes = !outTime.isEmpty && !inTime.isEmpty
+            let hasScheduledTimes = !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty
+            let hasManualBlockTime = !blockTime.isEmpty && blockTime != "0.0"
+            guard hasActualTimes || hasScheduledTimes || hasManualBlockTime else {
+                statusMessage = "Enter OUT/IN times, STD/STA, or a manual block time"
                 statusColor = .red
                 return false
             }
@@ -1914,7 +1917,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             foName: coPilotName,
             so1Name: so1Name.isEmpty ? nil : so1Name,
             so2Name: so2Name.isEmpty ? nil : so2Name,
-            blockTime: (isSimulator || isSimInstruction) ? "0.0" : blockTime,
+            blockTime: (isSimulator || isSimInstruction) ? "0.0" : ((!outTime.isEmpty && !inTime.isEmpty) ? calculateFlightTime() : (blockTime.isEmpty ? "0.0" : blockTime)),
             nightTime: nightTimeValue,
             p1Time: p1TimeValue,
             p1usTime: p1usTimeValue,
