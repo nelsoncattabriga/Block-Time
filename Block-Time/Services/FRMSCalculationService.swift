@@ -39,8 +39,17 @@ class FRMSCalculationService {
 
     // MARK: - Local Time Zone Helper
 
-    /// Get the timezone for the crew's home base
-    /// Uses AirportService to look up timezone from airports.dat.txt database
+    /// Get the timezone for the crew's home base.
+    ///
+    /// Uses AirportService to look up the **raw** (non-DST) UTC offset from airports.dat.
+    /// This satisfies FD2.2 per-base compliance:
+    ///   - ADL (YPAD) = +9.5 h, distinct from SYD/MEL +10 h — FD2.2 is met because the offset differs ✓
+    ///   - BNE (YBBN) = +10 h raw, same numeric value as SYD/MEL — correct because BNE observes no DST,
+    ///     so its raw offset is its true year-round offset ✓
+    ///   - SYD/MEL = +10 h raw (AEDT in summer would be +11 h, but DST is not applied here by design)
+    ///
+    /// Home base is used rather than departure port because the FRMS sign-on time rules
+    /// are anchored to the crew member's base (simpler and safer than departure-airport lookup).
     func getHomeBaseTimeZone() -> TimeZone {
         // NZ home base uses Auckland timezone
         if configuration.homeBase == "NZ" {

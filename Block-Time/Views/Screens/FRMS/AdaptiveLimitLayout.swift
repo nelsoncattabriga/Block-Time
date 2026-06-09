@@ -12,6 +12,10 @@ struct AdaptiveLimitLayout: View {
     let range: SignOnTimeRange
     let limitType: FRMSLimitType
     let showTimesInHoursMinutes: Bool
+    /// Pass `true` from LH callers to rename "Max Flight Time" → "Inflight Management".
+    /// When `false` (default, SH) and `flightTimeDisplay` would be "—", the flight-time
+    /// row is hidden entirely (SH has no flight time limit in Rev5).
+    var isLongHaul: Bool = false
 
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
@@ -29,6 +33,16 @@ struct AdaptiveLimitLayout: View {
         return "—"
     }
 
+    /// True when the flight-time row should be shown.
+    /// LH always shows it. SH hides it when the value would be "—" (no limit defined in Rev5).
+    private var showFlightTimeRow: Bool {
+        isLongHaul || flightTimeDisplay != "—"
+    }
+
+    private var flightTimeLabel: String {
+        isLongHaul ? "Inflight Management" : "Max Flight Time"
+    }
+
     var body: some View {
         if horizontalSizeClass == .compact {
             // iPhone layout
@@ -40,12 +54,14 @@ struct AdaptiveLimitLayout: View {
                     valueColor: AppColors.accentOrange
                 )
 
-                LimitInfoView(
-                    icon: "airplane",
-                    label: "Max Flight Time",
-                    value: flightTimeDisplay,
-                    valueColor: AppColors.accentBlue
-                )
+                if showFlightTimeRow {
+                    LimitInfoView(
+                        icon: "airplane",
+                        label: flightTimeLabel,
+                        value: flightTimeDisplay,
+                        valueColor: AppColors.accentBlue
+                    )
+                }
 
                 if let sectorLimit = range.sectorLimit {
                     LimitInfoView(
@@ -70,17 +86,19 @@ struct AdaptiveLimitLayout: View {
                         .foregroundStyle(AppColors.accentOrange)
                 }
 
-                Divider()
+                if showFlightTimeRow {
+                    Divider()
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("Max Flight Time", systemImage: "airplane")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label(flightTimeLabel, systemImage: "airplane")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
 
-                    Text(flightTimeDisplay)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppColors.accentBlue)
+                        Text(flightTimeDisplay)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppColors.accentBlue)
+                    }
                 }
 
                 if let sectorLimit = range.sectorLimit {

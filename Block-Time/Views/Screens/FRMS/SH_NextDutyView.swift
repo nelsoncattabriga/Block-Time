@@ -8,6 +8,13 @@
 
 import SwiftUI
 
+/// Rest type selection for 3-pilot SH duties (FD13.1 / FD23.1).
+/// Persisted in UserDefaults so the last selection is remembered across sessions.
+private enum ThreePilotRestType: String, CaseIterable {
+    case class2       = "Class 2"
+    case businessSeat = "Business Seat"
+}
+
 struct SH_NextDutyView: View {
 
     @Bindable var viewModel: FRMSViewModel
@@ -18,6 +25,8 @@ struct SH_NextDutyView: View {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var appViewModel: FlightTimeExtractorViewModel
+
+    @AppStorage("frmsThreePilotRest") private var threePilotRest: ThreePilotRestType = .class2
 
     // MARK: - Owned State
 
@@ -107,19 +116,41 @@ struct SH_NextDutyView: View {
                 // iPhone layout
                 VStack(alignment: .leading, spacing: 12) {
                     limitTypePicker
+                    if viewModel.lastDuty?.crewComplement == .threePilot {
+                        threePilotRestPicker
+                    }
                     signOnWindowSection
                 }
             } else {
                 // iPad layout
-                HStack {
-                    limitTypePicker
-                        .frame(width: 220)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        limitTypePicker
+                            .frame(width: 220)
 
-                    Spacer()
+                        Spacer()
 
-                    signOnWindowSection
+                        signOnWindowSection
+                    }
+                    if viewModel.lastDuty?.crewComplement == .threePilot {
+                        threePilotRestPicker
+                    }
                 }
             }
+        }
+    }
+
+    private var threePilotRestPicker: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("3-Pilot Rest Facility")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Picker("3-Pilot Rest", selection: $threePilotRest) {
+                ForEach(ThreePilotRestType.allCases, id: \.self) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
         }
     }
 

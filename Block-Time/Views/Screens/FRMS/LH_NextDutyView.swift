@@ -258,7 +258,7 @@ struct LH_NextDutyView: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(AppColors.accentOrange)
 
-            AdaptiveLimitLayout(range: range, limitType: limitType, showTimesInHoursMinutes: appViewModel.showTimesInHoursMinutes)
+            AdaptiveLimitLayout(range: range, limitType: limitType, showTimesInHoursMinutes: appViewModel.showTimesInHoursMinutes, isLongHaul: true)
         }
         .padding()
         .background(.ultraThinMaterial)
@@ -440,6 +440,7 @@ struct LH_NextDutyView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 4)
 
+                // FD10.4(b) Rev5: S/O 27h row — rendered by ForEach below, index 3
                 ForEach(postDutyRest.indices, id: \.self) { i in
                     let row = postDutyRest[i]
                     HStack(alignment: .top, spacing: 8) {
