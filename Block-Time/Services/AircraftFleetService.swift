@@ -340,7 +340,11 @@ class AircraftFleetService: ObservableObject {
                       let type = entity.type else {
                     return nil
                 }
-                return Aircraft(customRegistration: registration, type: type)
+                // Use fullRegistration (e.g. "VH-OGF") so the VH- prefix is correctly
+                // recognised by customRegistration init, producing matching id/fullRegistration
+                // with the static fleet and allowing Set dedup to eliminate duplicates.
+                let reg = entity.fullRegistration ?? registration
+                return Aircraft(customRegistration: reg, type: type)
             }
         } catch {
             LogManager.shared.error("Error fetching custom aircraft: \(error.localizedDescription)")

@@ -40,6 +40,24 @@ extension View {
     }
 }
 
+// MARK: - Card Filter Chip
+
+/// Tappable badge used as a Menu label for card filter controls.
+/// Wrap in a Menu and apply .tint(.primary) to the containing HStack.
+struct CardFilterChip: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .iPadScaledFont(.caption2, phoneFont: .footnote)
+            .fontWeight(.medium)
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
 // MARK: - Card Header
 
 struct CardHeader<Trailing: View>: View {

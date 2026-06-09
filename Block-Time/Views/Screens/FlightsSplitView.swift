@@ -206,6 +206,9 @@ private struct FlightsListContent: View {
     @State private var cachedTotalHours: Double = 0.0
     @State private var hasScrolledOnLaunch = false
     @State private var pendingScrollToLatest = false
+    @State private var undoCount: Int = 0
+    @State private var undoDescription: String? = nil
+    @State private var showClearUndoAlert = false
 
     // Cached date formatter for performance
     private let dateFormatter: DateFormatter = {
@@ -285,38 +288,22 @@ private struct FlightsListContent: View {
             .onAppear {
                 guard !hasScrolledOnLaunch, !filteredFlightSectors.isEmpty else { return }
                 hasScrolledOnLaunch = true
-                let anchorID = filteredFlightSectors.first(where: {
-                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
-                })?.id ?? filteredFlightSectors.last?.id
-                if let id = anchorID {
-                    Task { @MainActor in
-                        proxy.scrollTo(id, anchor: .top)
-                    }
-                }
+                scrollToLastCompleted(in: filteredFlightSectors, proxy: proxy)
             }
             .onChange(of: filteredFlightSectors) { _, sectors in
-                if pendingScrollToLatest, !sectors.isEmpty {
+                guard !sectors.isEmpty else { return }
+                if pendingScrollToLatest {
                     pendingScrollToLatest = false
-                    let anchorID = sectors.first(where: {
-                        $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
-                    })?.id ?? sectors.last?.id
-                    if let id = anchorID {
-                        Task { @MainActor in
-                            proxy.scrollTo(id, anchor: .top)
-                        }
-                    }
+                    scrollToLastCompleted(in: sectors, proxy: proxy)
                     return
                 }
-                guard !hasScrolledOnLaunch, !sectors.isEmpty else { return }
-                hasScrolledOnLaunch = true
-                let anchorID = sectors.first(where: {
-                    $0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning
-                })?.id ?? sectors.last?.id
-                if let id = anchorID {
-                    Task { @MainActor in
-                        proxy.scrollTo(id, anchor: .top)
-                    }
+                if isFilterActive {
+                    proxy.scrollTo(sectors.first?.id, anchor: .top)
+                    return
                 }
+                guard !hasScrolledOnLaunch else { return }
+                hasScrolledOnLaunch = true
+                scrollToLastCompleted(in: sectors, proxy: proxy)
             }
             .onReceive(NotificationCenter.default.publisher(for: .flightAdded)) { _ in
                 hasScrolledOnLaunch = false
@@ -424,6 +411,45 @@ private struct FlightsListContent: View {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(accentColor.opacity(0.4), lineWidth: 1)
             )
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    @ViewBuilder
+    private var importDeleteBanner: some View {
+        if filterViewModel.filterImportSessionID != nil {
+            HStack(spacing: 10) {
+                Image(systemName: "trash")
+                    .font(.subheadline)
+                    .foregroundStyle(.red)
+                Text("Remove this import")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Button(action: {
+                    HapticManager.shared.impact(.light)
+                    showingDeleteSessionAlert = true
+                }) {
+                    Text("Delete")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.red.opacity(0.4), lineWidth: 1)
+            }
             .padding(.horizontal, 12)
             .padding(.bottom, 4)
             .transition(.move(edge: .top).combined(with: .opacity))
@@ -548,20 +574,83 @@ private struct FlightsListContent: View {
                     }
                 } // end HStack
 
-                if filterViewModel.filterImportSessionID != nil {
-                    Button(role: .destructive) {
-                        showingDeleteSessionAlert = true
-                    } label: {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red)
-                            .font(.title3)
-                    }
-                }
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .padding(.top, safeAreaTopInset)
+    }
+
+    private func refreshUndoState() {
+        undoCount = FlightDatabaseService.shared.undoableChangeCount
+        undoDescription = FlightDatabaseService.shared.lastUndoDescription
+    }
+
+    @ViewBuilder
+    private var undoBar: some View {
+        if undoCount > 0 {
+            HStack(spacing: 10) {
+                Button {
+                    HapticManager.shared.impact(.light)
+                    showClearUndoAlert = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Clear undo history")
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(undoDescription ?? "\(undoCount) \(undoCount == 1 ? "change" : "changes") to undo")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text("History clears when app closes")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    HapticManager.shared.impact(.light)
+                    FlightDatabaseService.shared.undoLastChange()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        refreshUndoState()
+                    }
+                } label: {
+                    Text("Undo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Color.orange)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.orange.opacity(0.4), lineWidth: 1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .alert("Clear Undo History?", isPresented: $showClearUndoAlert) {
+                Button("Clear History", role: .destructive) {
+                    FlightDatabaseService.shared.clearUndoHistory()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        refreshUndoState()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will remove the ability to undo recent changes.")
+            }
+        }
     }
 
     var body: some View {
@@ -576,6 +665,8 @@ private struct FlightsListContent: View {
                 flightCountHeader
                     .background(Color.clear)
                 filterStatusBanner
+                importDeleteBanner
+                undoBar
                 flightListContent
             }
         }
@@ -584,6 +675,7 @@ private struct FlightsListContent: View {
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelectMode)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedFlightsForDeletion.count)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: undoCount)
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea(.container, edges: .top)
         .fullScreenCover(isPresented: $showingPaywall) {
@@ -641,10 +733,14 @@ private struct FlightsListContent: View {
                 viewModel.exitEditingMode()
             }
             Task { await loadFlights() }
+            refreshUndoState()
             if AppState.shared.pendingAddFlight {
                 AppState.shared.pendingAddFlight = false
                 isAddingNewFlight = true
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name.NSManagedObjectContextDidSave)) { _ in
+            refreshUndoState()
         }
         .onReceive(NotificationCenter.default.publisher(for: .openAddFlight)) { _ in
             isAddingNewFlight = true
@@ -674,11 +770,16 @@ private struct FlightsListContent: View {
                 if let selectedId = selectedFlightId {
                     if let updatedFlight = filteredFlightSectors.first(where: { $0.id == selectedId }) {
                         selectedFlight = updatedFlight
+                        // Skip reload if user has unsaved changes (e.g. lookup data just populated)
+                        if !viewModel.hasUnsavedChanges {
+                            viewModel.loadFlightForEditing(updatedFlight)
+                        }
                     } else {
                         selectedFlight = nil
                     }
                 }
             }
+            refreshUndoState()
         }
         .onChange(of: refreshTrigger) { _, _ in
             Task { await loadFlights() }
@@ -702,7 +803,7 @@ private struct FlightsListContent: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This action cannot be undone.")
+            Text("This will delete the selected entries.")
         }
         .alert(bulkDuplicateAlertTitle, isPresented: $showingBulkDuplicateAlert) {
             Button("Duplicate") {
@@ -723,7 +824,7 @@ private struct FlightsListContent: View {
                 }
             }
         } message: {
-            Text("This will permanently delete all flights from this import. This cannot be undone.")
+            Text("This will permanently delete all flights from this import.")
         }
         .sheet(isPresented: $showingBulkEditSheet) {
             let flights = filteredFlightSectors.filter { selectedFlightsForDeletion.contains($0.id) }
@@ -829,6 +930,20 @@ private struct FlightsListContent: View {
                 selectedFlightsForDeletion.insert(sector.id)
             }
             .id(sector.id)
+    }
+
+    private func scrollToLastCompleted(in sectors: [FlightSector], proxy: ScrollViewProxy) {
+        let today = Calendar.current.startOfDay(for: Date())
+        guard let completedIndex = sectors.firstIndex(where: {
+            guard let date = $0.parsedDate else { return false }
+            return date <= today && ($0.blockTimeValue > 0 || $0.simTimeValue > 0 || $0.spInsTimeValue > 0 || $0.isPositioning)
+        }) else {
+            if let id = sectors.last?.id { proxy.scrollTo(id, anchor: .top) }
+            return
+        }
+        // Scroll to the next future flight if one exists, so the user sees upcoming context.
+        let scrollIndex = completedIndex > 0 ? completedIndex - 1 : completedIndex
+        proxy.scrollTo(sectors[scrollIndex].id, anchor: .top)
     }
 
     @MainActor

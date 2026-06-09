@@ -99,6 +99,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var isEditingMode = false
     var editingSectorID: UUID?
     private var originalFlightData: FlightSector?
+    private var isLoadingFlight = false
     private var originalIsICUS: Bool = false  // Stored separately since not in FlightSector model
 
     // Form fields
@@ -116,19 +117,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var so2Name = ""
     @Published var isPilotFlying = false {
         didSet {
-            // Auto-update time credit when F/O toggles PF
-            // Only do this when not in editing mode and when position is F/O
-            if !isEditingMode && flightTimePosition == .firstOfficer {
-                if isPilotFlying {
-                    // F/O + PF = use the foPilotFlyingCredit setting (ICUS or P2)
-                    selectedTimeCredit = foPilotFlyingCredit
-                    isTimeCreditManualOverride = false
-                } else {
-                    // F/O + not PF = P2
-                    selectedTimeCredit = .p2
-                    isTimeCreditManualOverride = false
-                }
-            }
+            // Auto-update time credit when F/O toggles PF.
+            // Skipped during loadFlightForEditing so stored credit isn't overwritten by the position restore.
+            guard !isLoadingFlight && flightTimePosition == .firstOfficer else { return }
+            selectedTimeCredit = isPilotFlying ? foPilotFlyingCredit : .p2
+            isTimeCreditManualOverride = false
         }
     }
     @Published var isAIII = false
@@ -197,10 +190,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var selectedFleetID = "B737"  // Selected fleet for filtering
     @Published var decimalRoundingMode: RoundingMode = .standard  // Rounding mode for decimal times
 
-    // Saved crew names
-    @Published var savedCaptainNames: [String] = []
-    @Published var savedCoPilotNames: [String] = []
-    @Published var savedSONames: [String] = []  // Shared list for both SO 1 and SO 2
+    // Saved crew names — unified list shared across all roles
+    @Published var savedCrewNames: [String] = []
 
     // Recent crew names
     @Published var recentCaptainNames: [String] = []
@@ -442,7 +433,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             logbookDestination = settings.logbookDestination
         }
 
-        savedSONames = settings.savedSONames
         defaultCaptainName = settings.defaultCaptainName
         defaultCoPilotName = settings.defaultCoPilotName
         defaultSOName = settings.defaultSOName
@@ -453,8 +443,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
         airlinePrefix = settings.airlinePrefix
         isCustomAirlinePrefix = settings.isCustomAirlinePrefix
         showFullAircraftReg = settings.showFullAircraftReg
-        savedCaptainNames = settings.savedCaptainNames
-        savedCoPilotNames = settings.savedCoPilotNames
         savePhotosToLibrary = settings.savePhotosToLibrary  // NEW SETTING LOAD
         showSONameFields = settings.showSONameFields  // Load SO fields visibility setting
         logCustomCount = settings.logCustomCount
@@ -504,8 +492,6 @@ class FlightTimeExtractorViewModel: ObservableObject {
             switch key {
             case "logbookDestination":
                 logbookDestination = settings.logbookDestination
-            case "savedSONames":
-                savedSONames = settings.savedSONames
             case "defaultCaptainName":
                 defaultCaptainName = settings.defaultCaptainName
             case "defaultCoPilotName":
@@ -526,10 +512,8 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 isCustomAirlinePrefix = settings.isCustomAirlinePrefix
             case "showFullAircraftReg":
                 showFullAircraftReg = settings.showFullAircraftReg
-            case "savedCaptainNames":
-                savedCaptainNames = settings.savedCaptainNames
-            case "savedCoPilotNames":
-                savedCoPilotNames = settings.savedCoPilotNames
+            case "savedCrewNames":
+                savedCrewNames = settings.savedCrewNames
             case "savePhotosToLibrary":
                 savePhotosToLibrary = settings.savePhotosToLibrary
             case "showSONameFields":
@@ -549,7 +533,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             case "enterTimesInLocalTime":
                 enterTimesInLocalTime = settings.enterTimesInLocalTime
             case "useIATACodes":
-                            LogManager.shared.debug("  ✏️ Updating useIATACodes: \(useIATACodes) -> \(settings.useIATACodes)")
+                            LogManager.shared.debug("   Updating useIATACodes: \(useIATACodes) -> \(settings.useIATACodes)")
                 useIATACodes = settings.useIATACodes
             case "logApproaches":
                 logApproaches = settings.logApproaches
@@ -656,7 +640,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
     }
     func addSOName(_ name: String) {
-        savedSONames = userDefaultsService.addSOName(name)
+        savedCrewNames = userDefaultsService.addSOName(name)
     }
     
     func updateSO1Name(_ value: String) {
@@ -1313,7 +1297,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         if !isB787Extraction {
             updateNightTime()
         } else {
-                        LogManager.shared.debug("ℹ️ Deferring night time calculation for B787 - airports need to be entered manually")
+                        LogManager.shared.debug(" Deferring night time calculation for B787 - airports need to be entered manually")
         }
 
         // After populating ACARS data, check for a matching scheduled/future flight
@@ -1328,7 +1312,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     private func prefillFromMatchingScheduledFlight() {
         // Need at least date and flight number to attempt matching
         guard !flightDate.isEmpty, !flightNumber.isEmpty else {
-            LogManager.shared.debug("ℹ️ Not enough data to search for matching scheduled flight (need date and flight number)")
+            LogManager.shared.debug(" Not enough data to search for matching scheduled flight (need date and flight number)")
             return
         }
 
@@ -1350,7 +1334,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         } else {
             // No airports (e.g., B787 ACARS) - search by date and flight number only
             // Will only return a match if exactly one scheduled flight matches
-            LogManager.shared.debug("ℹ️ Airports not available - searching by date and flight number only")
+            LogManager.shared.debug(" Airports not available - searching by date and flight number only")
             scheduledFlight = databaseService.findScheduledFlightByDateAndFlightNumber(
                 date: flightDate,
                 flightNumber: formattedFlightNumber
@@ -1358,23 +1342,23 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
 
         guard let scheduledFlight = scheduledFlight else {
-            LogManager.shared.debug("ℹ️ No matching scheduled flight found for pre-fill")
+            LogManager.shared.debug(" No matching scheduled flight found for pre-fill")
             return
         }
 
-        LogManager.shared.info("✈️ Found matching scheduled flight - pre-filling form with roster data")
+        LogManager.shared.info(" Found matching scheduled flight - pre-filling form with roster data")
 
         // Pre-fill empty fields from the scheduled flight
         // Only update if current field is empty and scheduled flight has data
 
         // Pre-fill airports (especially useful for B787 where ACARS doesn't include them)
         if fromAirport.isEmpty, let scheduledFrom = scheduledFlight.fromAirport, !scheduledFrom.isEmpty {
-            fromAirport = scheduledFrom
+            fromAirport = normalizeAirportCode(scheduledFrom)
             LogManager.shared.debug("   Pre-filled From: \(scheduledFrom)")
         }
 
         if toAirport.isEmpty, let scheduledTo = scheduledFlight.toAirport, !scheduledTo.isEmpty {
-            toAirport = scheduledTo
+            toAirport = normalizeAirportCode(scheduledTo)
             LogManager.shared.debug("   Pre-filled To: \(scheduledTo)")
         }
 
@@ -1478,48 +1462,64 @@ class FlightTimeExtractorViewModel: ObservableObject {
     // MARK: - Crew Name Management (unchanged)
 
     func addCaptainName(_ name: String) {
-        savedCaptainNames = userDefaultsService.addCaptainName(name)
+        savedCrewNames = userDefaultsService.addCaptainName(name)
     }
 
     func addCoPilotName(_ name: String) {
-        savedCoPilotNames = userDefaultsService.addCoPilotName(name)
+        savedCrewNames = userDefaultsService.addCoPilotName(name)
     }
 
     func removeCaptainName(_ name: String) {
-        savedCaptainNames = userDefaultsService.removeCaptainName(name)
+        savedCrewNames = userDefaultsService.removeCaptainName(name)
     }
 
     func removeCoPilotName(_ name: String) {
-        savedCoPilotNames = userDefaultsService.removeCoPilotName(name)
+        savedCrewNames = userDefaultsService.removeCoPilotName(name)
     }
 
     func removeSOName(_ name: String) {
-        savedSONames = userDefaultsService.removeSOName(name)
+        savedCrewNames = userDefaultsService.removeSOName(name)
     }
 
     func reloadSavedCrewNames() {
         let settings = userDefaultsService.loadSettings()
         let databaseService = FlightDatabaseService.shared
 
-        // Merge UserDefaults saved names with database crew names
-        let userCaptainNames = Set(settings.savedCaptainNames)
+        // Merge unified saved crew names with all database crew names
+        let userCrewNames = Set(settings.savedCrewNames)
         let dbCaptainNames = Set(databaseService.getAllCaptainNames())
-        savedCaptainNames = Array(userCaptainNames.union(dbCaptainNames)).sorted()
-
-        let userCoPilotNames = Set(settings.savedCoPilotNames)
         let dbFONames = Set(databaseService.getAllFONames())
-        savedCoPilotNames = Array(userCoPilotNames.union(dbFONames)).sorted()
-
-        let userSONames = Set(settings.savedSONames)
         let dbSONames = Set(databaseService.getAllSONames())
-        savedSONames = Array(userSONames.union(dbSONames)).sorted()
+        let allDBNames = dbCaptainNames.union(dbFONames).union(dbSONames)
+        savedCrewNames = Array(userCrewNames.union(allDBNames)).sorted()
     }
     
     // MARK: - Add to internal Logbook
-    
+
+    /// True when the flight date is today or later (not yet due to be flown).
+    /// Also true for past-dated flights that have no time data at all — they were
+    /// never flown and should be treated the same way for validation purposes.
+    private var isUnflownFlight: Bool {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        let dateString = enterTimesInLocalTime ? flightDate : flightDateForStorage
+        guard let date = formatter.date(from: dateString.isEmpty ? flightDate : dateString) else { return false }
+        let todayUTC = Calendar.current.startOfDay(for: Date())
+        let flightDay = Calendar.current.startOfDay(for: date)
+        if flightDay >= todayUTC { return true }
+        // Past date — unflown if no OUT/IN or any time value recorded
+        let hasNoTimes = outTime.isEmpty && inTime.isEmpty
+            && (Double(blockTime) ?? 0) == 0
+            && (Double(spInsTime) ?? 0) == 0
+        return hasNoTimes
+    }
+
     func saveToLogbook() {
         let isSimInstruction = isSpIns && !isInstructingInAircraft
-        if isSimInstruction {
+        if isUnflownFlight {
+            // Future or unflown flight — no time data required, save whatever is filled in
+        } else if isSimInstruction {
             guard !spInsTime.isEmpty else {
                 statusMessage = "Sp/Ins time is required for simulator instruction"
                 statusColor = .red
@@ -1527,16 +1527,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         } else if isSimulator {
             guard !blockTime.isEmpty else { return }
-        } else if !isPositioning {
-            let isFutureFlight = !scheduledDeparture.isEmpty || !scheduledArrival.isEmpty
-            if !isFutureFlight {
-                guard !outTime.isEmpty && !inTime.isEmpty else { return }
-                let computed = calculateFlightTime()
-                guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
-                    statusMessage = "Block time cannot be zero"
-                    statusColor = .red
-                    return
-                }
+        } else if !isPositioning && !(isSpIns && isInstructingInAircraft) {
+            guard !outTime.isEmpty && !inTime.isEmpty else { return }
+            let computed = calculateFlightTime()
+            guard !computed.isEmpty, (Double(computed) ?? 0) > 0 else {
+                statusMessage = "Block time cannot be zero"
+                statusColor = .red
+                return
             }
         }
 
@@ -1631,7 +1628,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         )
                     LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), p2Time=\(newFlight.p2Time)")
 
-        if databaseService.saveFlight(newFlight) {
+        if databaseService.saveFlight(newFlight, actionDescription: nil) {
                         LogManager.shared.debug("DEBUG: Saved sector with instrumentTime=\(newFlight.instrumentTime)")
             statusMessage = "Flight saved to logbook!"
             statusColor = .green
@@ -1644,6 +1641,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     // MARK: - Flight Editing
 
     func loadFlightForEditing(_ sector: FlightSector) {
+        isLoadingFlight = true
         isEditingMode = true
         editingSectorID = sector.id
 
@@ -1833,6 +1831,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // Load custom counter entries
         loadCounterEntries(from: sector)
 
+        isLoadingFlight = false
 //        print("DEBUG: Loaded flight for editing: \(sector.flightNumber)")
     }
 
@@ -1840,20 +1839,19 @@ class FlightTimeExtractorViewModel: ObservableObject {
         guard let sectorID = editingSectorID else { return false }
 
         let isSimInstruction = isSpIns && !isInstructingInAircraft
-        if isSimInstruction {
+        if isUnflownFlight {
+            // Future or unflown flight — no time data required, save whatever is filled in
+        } else if isSimInstruction {
             guard !spInsTime.isEmpty else {
                 statusMessage = "Sp/Ins time is required for simulator instruction"
                 statusColor = .red
                 return false
             }
-        } else if !isSimulator && !isPositioning {
-            let isFutureFlight = (Double(blockTime) ?? 0) == 0 && (!scheduledDeparture.isEmpty || !scheduledArrival.isEmpty)
-            if !isFutureFlight {
-                guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
-                    statusMessage = "Block time cannot be zero"
-                    statusColor = .red
-                    return false
-                }
+        } else if !isSimulator && !isPositioning && !(isSpIns && isInstructingInAircraft) {
+            guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
+                statusMessage = "Block time cannot be zero"
+                statusColor = .red
+                return false
             }
         }
 
@@ -1944,7 +1942,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         )
 
         let databaseService = FlightDatabaseService.shared
-        let success = databaseService.updateFlight(updatedFlight)
+        let success = databaseService.updateFlight(updatedFlight, actionDescription: nil)
 
         if success {
             statusMessage = "Flight updated successfully!"
@@ -2042,8 +2040,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
                selectedTimeCredit != originalTimeCreditType(original) ||
                isSimulator != originalWasSimulator ||
                isPositioning != original.isPositioning ||
-               isSpIns != (original.isSpInsOnly || original.isAircraftInstruction) ||
-               isInstructingInAircraft != original.isAircraftInstruction ||
+               // isSpIns/isInstructingInAircraft have no persisted representation on
+               // unflown flights (spInsTime is nil/0), so exclude them from change detection
+               // to avoid false "unsaved changes" prompts when toggling FLT↔INS.
+               (!isUnflownFlight && isSpIns != (original.isSpInsOnly || original.isAircraftInstruction)) ||
+               (!isUnflownFlight && isInstructingInAircraft != original.isAircraftInstruction) ||
                remarks != original.remarks ||
                dayTakeoffs != original.dayTakeoffs ||
                dayLandings != original.dayLandings ||
@@ -2134,6 +2135,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         if isPilotFlying != original.isPilotFlying {
             changes.append("PF: \(original.isPilotFlying ? "Yes" : "No") → \(isPilotFlying ? "Yes" : "No")")
+        }
+
+        let origCredit = originalTimeCreditType(original)
+        if selectedTimeCredit != origCredit {
+            changes.append("Time logged as: \(origCredit.displayName) → \(selectedTimeCredit.displayName)")
         }
 
         // Approach type changes
@@ -2250,7 +2256,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         )
 
         let databaseService = FlightDatabaseService.shared
-        let success = databaseService.deleteFlight(tempSector)
+        let success = databaseService.deleteFlight(tempSector, actionDescription: nil)
 
         if success {
             HapticManager.shared.notification(.success)
@@ -2482,33 +2488,40 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // This prevents stacking multiple expensive calculations when fields
         // change rapidly (e.g. pasting times or rapid keystrokes).
         nightTimeCalculationTask?.cancel()
-        nightTimeCalculationTask = Task { [weak self] in
+        // Capture all @MainActor state before leaving the actor.
+        let fromAirport = self.fromAirport
+        let toAirport = self.toAirport
+        let outTime = self.outTime
+        let blockTime = self.blockTime
+        let flightDate = self.flightDate
+        let manager = self.timeCalculationManager
+
+        nightTimeCalculationTask = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self, !Task.isCancelled else { return }
 
-            // Yield so the current run-loop turn can complete before the heavy work starts.
-            // This keeps the UI responsive during time entry.
-            await Task.yield()
-            guard !Task.isCancelled else { return }
-
-            // Build context and calculate — both happen on @MainActor but any previously
-            // queued calculation has been cancelled above, so only one runs at a time.
-            if let context = self.timeCalculationManager.buildCalculationContext(
-                fromAirport: self.fromAirport,
-                toAirport: self.toAirport,
-                outTime: self.outTime,
-                blockTime: self.blockTime,
-                flightDate: self.flightDate
+            // Build context and run the 200-segment solar trig loop off the main thread.
+            if let context = manager.buildCalculationContext(
+                fromAirport: fromAirport,
+                toAirport: toAirport,
+                outTime: outTime,
+                blockTime: blockTime,
+                flightDate: flightDate
             ) {
                 guard !Task.isCancelled else { return }
-                self.nightTime = self.timeCalculationManager.calculateNightTime(using: context)
-                self.updateTakeoffsLandings(using: context)
-            } else {
-                if capturedEditingMode && self.outTime.isEmpty {
-                    // Preserve existing night time in edit mode when OUT is missing
-                } else {
-                    self.nightTime = ""
+                let result = manager.calculateNightTime(using: context)
+                await MainActor.run {
+                    self.nightTime = result
+                    self.updateTakeoffsLandings(using: context)
                 }
-                self.updateTakeoffsLandings(using: nil)
+            } else {
+                await MainActor.run {
+                    if capturedEditingMode && outTime.isEmpty {
+                        // Preserve existing night time in edit mode when OUT is missing
+                    } else {
+                        self.nightTime = ""
+                    }
+                    self.updateTakeoffsLandings(using: nil)
+                }
             }
         }
     }
@@ -2628,9 +2641,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 targetMonth = 12
                 targetYear -= 1
             }
-            LogManager.shared.debug("Day \(day) > current day \(currentDay) → using previous month (\(targetMonth)/\(targetYear))")
+            LogManager.shared.debug("Day \(day) > current day \(currentDay)  using previous month (\(targetMonth)/\(targetYear))")
         } else {
-            LogManager.shared.debug("Day \(day) <= current day \(currentDay) → using current month (\(targetMonth)/\(targetYear))")
+            LogManager.shared.debug("Day \(day) <= current day \(currentDay)  using current month (\(targetMonth)/\(targetYear))")
         }
 
         // Create the date
@@ -2841,7 +2854,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             toAirport: toICAO
         ) {
             // Found a matching scheduled flight - update it with actual data
-                        LogManager.shared.debug("📋 Found scheduled flight to update")
+                        LogManager.shared.debug(" Found scheduled flight to update")
 
             let actualFlightData = FlightSector(
                 date: flightDate,
@@ -2881,7 +2894,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 counterEntries: isPositioning ? [:] : currentCounterEntries()
             )
 
-            if databaseService.updateScheduledFlightWithActualData(scheduledFlight, actualData: actualFlightData) {
+            if databaseService.updateScheduledFlightWithActualData(scheduledFlight, actualData: actualFlightData, actionDescription: nil) {
                             LogManager.shared.debug("Successfully updated scheduled flight with ACARS data")
                 statusMessage = "Flight updated from roster to actual!"
                 statusColor = .green
@@ -2896,7 +2909,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         } else {
             // No matching scheduled flight found - create new flight as normal
-                        LogManager.shared.debug("ℹ️ No scheduled flight found - creating new flight")
+                        LogManager.shared.debug(" No scheduled flight found - creating new flight")
 
             let newFlight = FlightSector(
                 date: flightDate,
@@ -2937,7 +2950,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             )
                         LogManager.shared.debug("DEBUG: New FlightSector instrumentTime=\(newFlight.instrumentTime), PF=\(newFlight.isPilotFlying), date=\(newFlight.date), flt=\(newFlight.flightNumber), isSimulator=\(isSimulator), simTime=\(newFlight.simTime), blockTime=\(newFlight.blockTime), p2Time=\(newFlight.p2Time)")
 
-            if databaseService.saveFlight(newFlight) {
+            if databaseService.saveFlight(newFlight, actionDescription: nil) {
                             LogManager.shared.debug("DEBUG: Saved sector successfully with instrumentTime=\(newFlight.instrumentTime)")
                 statusMessage = "Flight saved to logbook!"
                 statusColor = .green
@@ -3034,16 +3047,16 @@ class FlightTimeExtractorViewModel: ObservableObject {
     
     
     func debugTogglePhotoSaving(_ newValue: Bool) {
-                    LogManager.shared.debug("🔧 DEBUG: Toggle called with value: \(newValue)")
-                    LogManager.shared.debug("🔧 DEBUG: Current savePhotosToLibrary: \(savePhotosToLibrary)")
-                    LogManager.shared.debug("🔧 DEBUG: Has photo permission: \(hasPhotoPermission())")
-                    LogManager.shared.debug("🔧 DEBUG: Photo permission status: \(getPhotoPermissionStatus())")
+                    LogManager.shared.debug(" DEBUG: Toggle called with value: \(newValue)")
+                    LogManager.shared.debug(" DEBUG: Current savePhotosToLibrary: \(savePhotosToLibrary)")
+                    LogManager.shared.debug(" DEBUG: Has photo permission: \(hasPhotoPermission())")
+                    LogManager.shared.debug(" DEBUG: Photo permission status: \(getPhotoPermissionStatus())")
 
         // Force update the setting regardless of permission (for testing)
         savePhotosToLibrary = newValue
         userDefaultsService.setSavePhotosToLibrary(newValue)
 
-                    LogManager.shared.debug("🔧 DEBUG: After update - savePhotosToLibrary: \(savePhotosToLibrary)")
+                    LogManager.shared.debug(" DEBUG: After update - savePhotosToLibrary: \(savePhotosToLibrary)")
     }
 
     // MARK: - Flight Data Lookup (FlightAware + AeroDataBox)
@@ -3080,7 +3093,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // FlightAware always expects a UTC date. When enterTimesInLocalTime is on,
         // flightDate holds the local date — flightDateForStorage converts it back to UTC.
         let utcDateForSearch = flightDateForStorage
-        LogManager.shared.info("🔍 Flight lookup: FA=\(flightAwareCode), ADB=\(iataFlightNumber), utcDate=\(utcDateForSearch) (flightDate=\(flightDate))")
+        LogManager.shared.info(" Flight lookup: FA=\(flightAwareCode), ADB=\(iataFlightNumber), utcDate=\(utcDateForSearch) (flightDate=\(flightDate))")
 
         Task {
             // Step 1: Fetch FlightAware first — its result gives us the departure ICAO
@@ -3098,13 +3111,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
                     airportICAO: firstFA.origin
                 )
                 adbLocalDate = localDate
-                LogManager.shared.info("🔍 ADB local date: \(localDate) (derived from \(firstFA.origin) UTC \(firstFA.flightDate) \(firstFA.departureTime))")
+                LogManager.shared.info(" ADB local date: \(localDate) (derived from \(firstFA.origin) UTC \(firstFA.flightDate) \(firstFA.departureTime))")
             } else {
                 // No FA result — fall back to flightDate.
                 // In local mode flightDate IS the local date (correct for ADB).
                 // In UTC mode it's the UTC date (approximate, but UTC mode always finds FA results).
                 adbLocalDate = flightDate
-                LogManager.shared.info("🔍 ADB local date: \(flightDate) (fallback — no FA result to derive from)")
+                LogManager.shared.info(" ADB local date: \(flightDate) (fallback  no FA result to derive from)")
             }
 
             // Step 3: Fetch AeroDataBox with the precise local departure date
@@ -3139,39 +3152,39 @@ class FlightTimeExtractorViewModel: ObservableObject {
     private func fetchFromFlightAware(code: String, date: String) async -> [FlightAwareData] {
         do {
             let results = try await flightAwareService.fetchFlightData(flightNumber: code, date: date)
-            LogManager.shared.info("✈️ FlightAware: \(results.count) result(s) for \(code)")
+            LogManager.shared.info(" FlightAware: \(results.count) result(s) for \(code)")
             for (i, r) in results.enumerated() {
-                LogManager.shared.info("✈️ FlightAware [\(i)] \(r.origin)→\(r.destination): OUT=\(r.departureTime) (actual=\(r.departureIsActual)), IN=\(r.arrivalTime) (actual=\(r.arrivalIsActual)), STD=\(r.scheduledDepartureTime ?? "nil"), STA=\(r.scheduledArrivalTime ?? "nil"), date=\(r.flightDate)")
+                LogManager.shared.info(" FlightAware [\(i)] \(r.origin)\(r.destination): OUT=\(r.departureTime) (actual=\(r.departureIsActual)), IN=\(r.arrivalTime) (actual=\(r.arrivalIsActual)), STD=\(r.scheduledDepartureTime ?? "nil"), STA=\(r.scheduledArrivalTime ?? "nil"), date=\(r.flightDate)")
             }
             return results
         } catch {
-            LogManager.shared.warning("✈️ FlightAware: fetch failed — \(error.localizedDescription)")
+            LogManager.shared.warning(" FlightAware: fetch failed  \(error.localizedDescription)")
             return []
         }
     }
 
     private func fetchFromAeroDataBox(flightNumber: String, localDate: String) async -> [FlightAwareData] {
         let results = await aeroDataBoxService.fetchFlightData(flightNumber: flightNumber, localDepartureDate: localDate)
-        LogManager.shared.info("🌐 AeroDataBox: \(results.count) result(s) for \(flightNumber) on local date \(localDate)")
+        LogManager.shared.info(" AeroDataBox: \(results.count) result(s) for \(flightNumber) on local date \(localDate)")
         return results
     }
 
     /// Merge results from both sources, preferring entries with actual gate times.
     /// Matches legs by ICAO origin+destination pair.
     private func mergeFlightResults(flightAware: [FlightAwareData], aeroDataBox: [FlightAwareData]) -> [FlightAwareData] {
-        LogManager.shared.info("🔀 Merge: FlightAware=\(flightAware.count), AeroDataBox=\(aeroDataBox.count)")
+        LogManager.shared.info(" Merge: FlightAware=\(flightAware.count), AeroDataBox=\(aeroDataBox.count)")
 
         // If one source returned nothing, use the other as-is
         if flightAware.isEmpty && aeroDataBox.isEmpty {
-            LogManager.shared.info("🔀 Merge: Both sources empty")
+            LogManager.shared.info(" Merge: Both sources empty")
             return []
         }
         if flightAware.isEmpty {
-            LogManager.shared.info("🔀 Merge: FlightAware empty — using AeroDataBox results only")
+            LogManager.shared.info(" Merge: FlightAware empty  using AeroDataBox results only")
             return aeroDataBox
         }
         if aeroDataBox.isEmpty {
-            LogManager.shared.info("🔀 Merge: AeroDataBox empty — using FlightAware results only")
+            LogManager.shared.info(" Merge: AeroDataBox empty  using FlightAware results only")
             return flightAware
         }
 
@@ -3186,7 +3199,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 let adbFlight = aeroDataBox[adbIdx]
                 matchedADBIndices.insert(adbIdx)
 
-                LogManager.shared.info("🔀 \(faFlight.origin)→\(faFlight.destination): hybrid field merge")
+                LogManager.shared.info(" \(faFlight.origin)\(faFlight.destination): hybrid field merge")
                 LogManager.shared.info("   FA : OUT=\(faFlight.departureTime) (actual=\(faFlight.departureIsActual)), IN=\(faFlight.arrivalTime) (actual=\(faFlight.arrivalIsActual))")
                 LogManager.shared.info("   ADB: OUT=\(adbFlight.departureTime) (actual=\(adbFlight.departureIsActual)), IN=\(adbFlight.arrivalTime) (actual=\(adbFlight.arrivalIsActual)), T/O=\(adbFlight.departureRunwayTime ?? "nil"), LDG=\(adbFlight.arrivalRunwayTime ?? "nil")")
                 LogManager.shared.info("   ADB registration: \(adbFlight.aircraftRegistration ?? "nil")")
@@ -3194,18 +3207,18 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 merged.append(hybridMerge(flightAware: faFlight, aeroDataBox: adbFlight))
             } else {
                 // No ADB leg matched this FA leg
-                LogManager.shared.info("🔀 \(faFlight.origin)→\(faFlight.destination): FlightAware only (no AeroDataBox match)")
+                LogManager.shared.info(" \(faFlight.origin)\(faFlight.destination): FlightAware only (no AeroDataBox match)")
                 merged.append(faFlight)
             }
         }
 
         // Append any ADB legs not matched by a FA leg (e.g. extra segments FA missed)
         for (idx, adbFlight) in aeroDataBox.enumerated() where !matchedADBIndices.contains(idx) {
-            LogManager.shared.info("🔀 \(adbFlight.origin)→\(adbFlight.destination): AeroDataBox only (no FlightAware match)")
+            LogManager.shared.info(" \(adbFlight.origin)\(adbFlight.destination): AeroDataBox only (no FlightAware match)")
             merged.append(adbFlight)
         }
 
-        LogManager.shared.info("🔀 Merge complete: \(merged.count) leg(s) total")
+        LogManager.shared.info(" Merge complete: \(merged.count) leg(s) total")
         return merged
     }
 
@@ -3224,9 +3237,9 @@ class FlightTimeExtractorViewModel: ObservableObject {
         if !fa.departureIsActual && adb.departureIsActual {
             result.departureTime     = adb.departureTime
             result.departureIsActual = true
-            LogManager.shared.info("🔀 OUT: AeroDataBox \(adb.departureTime) used (FA has scheduled only)")
+            LogManager.shared.info(" OUT: AeroDataBox \(adb.departureTime) used (FA has scheduled only)")
         } else {
-            LogManager.shared.info("🔀 OUT: FlightAware \(fa.departureTime) used (actual=\(fa.departureIsActual))")
+            LogManager.shared.info(" OUT: FlightAware \(fa.departureTime) used (actual=\(fa.departureIsActual))")
         }
 
         // ── IN time ─────────────────────────────────────────────────────────
@@ -3241,13 +3254,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 if adbMin > faMin {
                     result.arrivalTime     = adb.arrivalTime
                     result.arrivalIsActual = true
-                    LogManager.shared.info("🔀 IN : AeroDataBox \(adb.arrivalTime) used (later than FA \(fa.arrivalTime); adjusted mins: ADB=\(adbMin) FA=\(faMin))")
+                    LogManager.shared.info(" IN : AeroDataBox \(adb.arrivalTime) used (later than FA \(fa.arrivalTime); adjusted mins: ADB=\(adbMin) FA=\(faMin))")
                 } else {
-                    LogManager.shared.info("🔀 IN : FlightAware \(fa.arrivalTime) used (later than or equal to ADB \(adb.arrivalTime); adjusted mins: FA=\(faMin) ADB=\(adbMin))")
+                    LogManager.shared.info(" IN : FlightAware \(fa.arrivalTime) used (later than or equal to ADB \(adb.arrivalTime); adjusted mins: FA=\(faMin) ADB=\(adbMin))")
                 }
             }
         } else {
-            LogManager.shared.info("🔀 IN : FlightAware \(fa.arrivalTime) used (AeroDataBox has no actual IN)")
+            LogManager.shared.info(" IN : FlightAware \(fa.arrivalTime) used (AeroDataBox has no actual IN)")
         }
 
         // ── Scheduled times (STD/STA) ────────────────────────────────────────
@@ -3261,25 +3274,25 @@ class FlightTimeExtractorViewModel: ObservableObject {
         // from predicted/scheduled data.
         if !result.departureIsActual {
             result.departureTime = ""
-            LogManager.shared.info("🔀 OUT cleared (flight not yet departed — use STD \(result.scheduledDepartureTime ?? "nil"))")
+            LogManager.shared.info(" OUT cleared (flight not yet departed  use STD \(result.scheduledDepartureTime ?? "nil"))")
         }
         if !result.arrivalIsActual {
             result.arrivalTime = ""
-            LogManager.shared.info("🔀 IN  cleared (flight not yet arrived — use STA \(result.scheduledArrivalTime ?? "nil"))")
+            LogManager.shared.info(" IN  cleared (flight not yet arrived  use STA \(result.scheduledArrivalTime ?? "nil"))")
         }
 
         // ── Aircraft registration ────────────────────────────────────────────
         // AeroDataBox is the only source that provides this.
         if let reg = adb.aircraftRegistration, !reg.isEmpty {
             result.aircraftRegistration = reg
-            LogManager.shared.info("🔀 REG: \(reg) from AeroDataBox")
+            LogManager.shared.info(" REG: \(reg) from AeroDataBox")
         }
 
         // ── ADB runway times ─────────────────────────────────────────────────
         result.departureRunwayTime = adb.departureRunwayTime
         result.arrivalRunwayTime   = adb.arrivalRunwayTime
 
-        LogManager.shared.info("🔀 Hybrid result: OUT=\(result.departureTime.isEmpty ? "nil" : result.departureTime) (actual=\(result.departureIsActual)), IN=\(result.arrivalTime.isEmpty ? "nil" : result.arrivalTime) (actual=\(result.arrivalIsActual)), STD=\(result.scheduledDepartureTime ?? "nil"), STA=\(result.scheduledArrivalTime ?? "nil")")
+        LogManager.shared.info(" Hybrid result: OUT=\(result.departureTime.isEmpty ? "nil" : result.departureTime) (actual=\(result.departureIsActual)), IN=\(result.arrivalTime.isEmpty ? "nil" : result.arrivalTime) (actual=\(result.arrivalIsActual)), STD=\(result.scheduledDepartureTime ?? "nil"), STA=\(result.scheduledArrivalTime ?? "nil")")
         return result
     }
 
@@ -3318,7 +3331,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             } else {
                 formattedReg = reg  // No dash (e.g. US N-numbers) — use as-is
             }
-            LogManager.shared.info("✈️ Aircraft registration from AeroDataBox: \(reg) → stored as \(formattedReg) (showFullReg=\(showFullAircraftReg))")
+            LogManager.shared.info(" Aircraft registration from AeroDataBox: \(reg)  stored as \(formattedReg) (showFullReg=\(showFullAircraftReg))")
             self.updateAircraftReg(formattedReg)
         }
 
@@ -3334,7 +3347,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     func saveDraftFlightData() {
         // Don't save drafts when in editing mode - we don't want to overwrite an existing flight's data
         guard !isEditingMode else {
-                        LogManager.shared.debug("📝 Skipping draft save - in editing mode")
+                        LogManager.shared.debug(" Skipping draft save - in editing mode")
             return
         }
 
@@ -3348,7 +3361,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
                       !remarks.isEmpty
 
         guard hasData else {
-                        LogManager.shared.debug("📝 Skipping draft save - no data entered")
+                        LogManager.shared.debug(" Skipping draft save - no data entered")
             return
         }
 
@@ -3391,7 +3404,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             let encoder = JSONEncoder()
             let data = try encoder.encode(draft)
             UserDefaults.standard.set(data, forKey: Self.draftFlightDataKey)
-                        LogManager.shared.debug("💾 Draft flight data saved successfully")
+                        LogManager.shared.debug(" Draft flight data saved successfully")
         } catch {
                         LogManager.shared.debug("Failed to save draft flight data: \(error)")
         }
@@ -3400,7 +3413,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
     /// Restore draft flight data if available and not expired
     func restoreDraftFlightData() {
         guard let data = UserDefaults.standard.data(forKey: Self.draftFlightDataKey) else {
-                        LogManager.shared.debug("📝 No draft flight data found")
+                        LogManager.shared.debug(" No draft flight data found")
             return
         }
 
@@ -3410,13 +3423,13 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
             // Check if draft is expired
             if draft.isExpired {
-                            LogManager.shared.debug("📝 Draft flight data expired (older than 24 hours) - clearing")
+                            LogManager.shared.debug(" Draft flight data expired (older than 24 hours) - clearing")
                 clearDraftFlightData()
                 return
             }
 
             // Restore all fields from draft
-                        LogManager.shared.debug("💾 Restoring draft flight data from \(draft.timestamp)")
+                        LogManager.shared.debug(" Restoring draft flight data from \(draft.timestamp)")
             flightDate = draft.flightDate
             aircraftReg = draft.aircraftReg
             aircraftType = draft.aircraftType

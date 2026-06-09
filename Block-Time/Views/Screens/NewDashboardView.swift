@@ -11,10 +11,11 @@ import SwiftUI
 
 struct NewDashboardView: View {
     var frmsViewModel: FRMSViewModel
+    var viewModel: NewDashboardViewModel
 
-    @State private var viewModel = NewDashboardViewModel()
     @State private var config = DashboardConfiguration()
     @State private var showingEditSheet = false
+    @AppStorage("dashboardNudgeDismissed") private var nudgeDismissed = false
     @Environment(ThemeService.self) private var themeService
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -24,17 +25,17 @@ struct NewDashboardView: View {
 
     /// Loads dashboard data and FRMS cumulative totals concurrently.
     private func loadAll() async {
-        // FRMS loads first so its duties are available for the rolling chart
-        await triggerFRMSLoadIfNeeded()
-        await viewModel.load(duties: frmsViewModel.dutiesLast365Days)
-    }
-
-    @MainActor
-    private func triggerFRMSLoadIfNeeded() async {
-        guard frmsViewModel.cumulativeTotals == nil, !frmsViewModel.isLoading else { return }
+        guard frmsViewModel.cumulativeTotals == nil, !frmsViewModel.isLoading else {
+            await viewModel.load(duties: frmsViewModel.dutiesLast365Days)
+            return
+        }
         let raw      = UserDefaults.standard.string(forKey: "flightTimePosition") ?? ""
         let position = FlightTimePosition(rawValue: raw) ?? .captain
-        await frmsViewModel.refreshFlightData(crewPosition: position, ignoresCooldown: true)
+        async let frmsLoad: Void = frmsViewModel.refreshFlightData(crewPosition: position, ignoresCooldown: true)
+        async let dashLoad: Void = viewModel.load(duties: [])
+        _ = await (frmsLoad, dashLoad)
+        // Reload dashboard now that FRMS duties are available for the rolling chart
+        await viewModel.load(duties: frmsViewModel.dutiesLast365Days)
     }
 
     var body: some View {
@@ -60,7 +61,10 @@ struct NewDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showingEditSheet = true } label: {
+                    Button {
+                        nudgeDismissed = true
+                        showingEditSheet = true
+                    } label: {
                         Image(systemName: "slider.horizontal.3")
                     }
                 }
@@ -87,7 +91,10 @@ struct NewDashboardView: View {
         .sheet(isPresented: $showingEditSheet) {
             DashboardEditSheet(config: config)
         }
-        .task { await loadAll() }
+        .task {
+            guard !viewModel.hasLoadedOnce else { return }
+            await loadAll()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             Task { await loadAll() }
         }
@@ -123,7 +130,10 @@ struct NewDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showingEditSheet = true } label: {
+                    Button {
+                        nudgeDismissed = true
+                        showingEditSheet = true
+                    } label: {
                         Image(systemName: "slider.horizontal.3")
                     }
                 }
@@ -132,7 +142,10 @@ struct NewDashboardView: View {
                 DashboardEditSheet(config: config)
             }
         }
-        .task { await loadAll() }
+        .task {
+            guard !viewModel.hasLoadedOnce else { return }
+            await loadAll()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
             Task { await loadAll() }
         }
@@ -147,6 +160,9 @@ struct NewDashboardView: View {
     @ViewBuilder
     private var detailCards: some View {
         VStack(spacing: 16) {
+            if !nudgeDismissed {
+                customiseNudge
+            }
             ForEach(config.detailCards, id: \.self) { card in
                 DashboardCardView(
                     cardID: card,
@@ -155,5 +171,56 @@ struct NewDashboardView: View {
                 )
             }
         }
+    }
+
+    private var customiseNudge: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "slider.horizontal.3")
+                .foregroundStyle(.secondary)
+            Text("Tap the sliders icon to customise.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Button {
+                nudgeDismissed = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Customise Nudge") {
+    ZStack {
+        Color(.systemGroupedBackground).ignoresSafeArea()
+        VStack(spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "slider.horizontal.3")
+                    .foregroundStyle(.secondary)
+                Text("Tap the sliders icon to customise.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Button { } label: {
+                    Image(systemName: "xmark")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Dismiss")
+            }
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 16)
+
+            Spacer()
+        }
+        .padding(.top, 16)
     }
 }

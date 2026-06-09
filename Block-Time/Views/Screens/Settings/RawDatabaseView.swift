@@ -4,6 +4,7 @@ import CoreData
 // MARK: - Raw Database Viewer
 
 struct RawDatabaseView: View {
+    @Environment(ThemeService.self) private var themeService
     @Environment(\.managedObjectContext) private var viewContext
     @FetchRequest(
         entity: FlightEntity.entity(),
@@ -37,6 +38,10 @@ struct RawDatabaseView: View {
             .buttonStyle(.plain)
         }
         .searchable(text: $searchText, prompt: "Flight, route, registration")
+        .background(
+            themeService.getGradient()
+                .ignoresSafeArea()
+        )
         .navigationTitle("Raw Database (\(flights.count))")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: Binding(

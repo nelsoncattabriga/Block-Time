@@ -8,8 +8,8 @@
 import SwiftUI
 
 private enum RoutesPeriod: String, CaseIterable {
-    case oneMonth     = "1M"
-    case twelveMonths = "12M"
+    case oneMonth     = "1 Month"
+    case twelveMonths = "12 Months"
     case all          = "ALL"
 }
 
@@ -37,14 +37,15 @@ struct TopRoutesCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Top Routes", icon: "point.topleft.down.to.point.bottomright.curvepath.fill") {
-                Picker("Period", selection: $period) {
-                    ForEach(RoutesPeriod.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+            CardHeader(title: "Top Routes", icon: "point.topleft.down.to.point.bottomright.curvepath.fill", iconColor: .indigo) {
+                Menu {
+                    ForEach(RoutesPeriod.allCases, id: \.self) { option in
+                        Button(option.rawValue) { period = option }
                     }
+                } label: {
+                    CardFilterChip(title: period.rawValue)
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
 
             if routes.isEmpty {
@@ -227,12 +228,16 @@ private struct RoutesSheetView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Picker("Period", selection: $period) {
-                        ForEach(RoutesPeriod.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
+                    HStack(spacing: 4) {
+                        Menu {
+                            ForEach(RoutesPeriod.allCases, id: \.self) { option in
+                                Button(option.rawValue) { period = option }
+                            }
+                        } label: {
+                            CardFilterChip(title: period.rawValue)
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .tint(.primary)
 
                     VStack(spacing: 8) {
                         ForEach(routes, id: \.id) { route in

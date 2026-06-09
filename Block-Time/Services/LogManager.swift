@@ -15,15 +15,6 @@ enum LogLevel: String, CaseIterable, Comparable, Sendable {
     case warning = "WARNING"
     case error = "ERROR  "
 
-    var emoji: String {
-        switch self {
-        case .debug: return "🔍"
-        case .info: return "ℹ️"
-        case .warning: return "⚠️"
-        case .error: return "❌"
-        }
-    }
-
     var displayName: String {
         switch self {
         case .debug: return "Debug"
@@ -61,6 +52,9 @@ class LogManager {
     // .warning - Show warning and error only
     // .error  - Show only errors (least verbose)
     var minimumConsoleLogLevel: LogLevel = .debug
+
+    // Minimum level written to the log file — debug stays console-only
+    var minimumFileLogLevel: LogLevel = .info
 
     // File management
     private let fileManager = FileManager.default
@@ -141,8 +135,10 @@ class LogManager {
             let timestamp = self.timestamp()
             let logEntry = "[\(timestamp)] [\(level.rawValue)] → \(message)"
 
-            // Write ALL logs to file (regardless of level)
-            self.writeToFile(logEntry)
+            // Write to file only if level meets minimum threshold
+            if level.priority >= self.minimumFileLogLevel.priority {
+                self.writeToFile(logEntry)
+            }
 
             // Print to console only if level meets minimum threshold
             #if DEBUG

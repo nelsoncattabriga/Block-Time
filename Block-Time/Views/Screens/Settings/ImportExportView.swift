@@ -62,7 +62,7 @@ struct ImportExportView: View {
     @State private var showingPDFExport = false
 
     // Migration import state
-    @State private var showingMigrationImport = false
+//    @State private var showingMigrationImport = false
 
     // Aircraft Summary state
     @State private var showingAircraftSummary = false
@@ -75,8 +75,6 @@ struct ImportExportView: View {
     @State private var lastImportSuccessCount = 0
     @AppStorage("backupNudgeDismissed") private var backupNudgeDismissed = false
 
-    // Delete state
-    @State private var showingDeleteWarning = false
 
     // Merge review state
     @State private var pendingMergeProposals: [MergeProposal] = []
@@ -87,10 +85,8 @@ struct ImportExportView: View {
         ScrollView {
             VStack(spacing: 16) {
                 // Import / Export Card
-                importExportCard
-
-                // Delete Logbook Card
-                deleteLogbookCard
+                importCard
+                exportCard
 
                 Spacer(minLength: 20)
             }
@@ -198,6 +194,14 @@ struct ImportExportView: View {
         }) {
             ImportMergeReviewSheet(proposals: pendingMergeProposals) { approved in
                 FlightDatabaseService.shared.applyMergeProposals(approved)
+                if let result = pendingImportResult {
+                    pendingImportResult = ImportSessionResult(
+                        sessionID: result.sessionID,
+                        successCount: result.successCount,
+                        duplicateCount: result.duplicateCount,
+                        mergedCount: approved.count
+                    )
+                }
             }
         }
         .sheet(item: $lastImportResult) { result in
@@ -215,14 +219,6 @@ struct ImportExportView: View {
             BackupNudgeSheet(importedFlightCount: lastImportSuccessCount)
                 .presentationDetents([.height(420)])
                 .presentationDragIndicator(.visible)
-        }
-        .alert("Delete All Logbook Data", isPresented: $showingDeleteWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                deleteAllFlights()
-            }
-        } message: {
-            Text("This will permanently delete all data.")
         }
         .sheet(isPresented: $showingWebCISInstructions) {
             WebCISImportInstructionsView {
@@ -260,37 +256,30 @@ struct ImportExportView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showingMigrationImport) {
-            MigrationImportView()
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
+//        .sheet(isPresented: $showingMigrationImport) {
+//            MigrationImportView()
+//                .presentationDetents([.large])
+//                .presentationDragIndicator(.visible)
+//        }
     }
 
-    // MARK: - Import / Export Card
-    private var importExportCard: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "arrow.down.doc.fill")
-                    .foregroundColor(.indigo)
-                    .font(.title3)
+    // MARK: - Import Card
+    private var importCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Import")
+                .font(.callout)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 4)
 
-                Text("Import & Export")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
-            VStack(spacing: 12) {
-
+            VStack(spacing: 8) {
                 if isImporting {
                     HStack(spacing: 12) {
                         ProgressView()
                         Text("Importing…")
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         Spacer()
                     }
                     .padding(12)
@@ -298,7 +287,6 @@ struct ImportExportView: View {
                     .cornerRadius(8)
                 }
 
-                // Import roster (unified for both SH and LH)
                 ActionButton(
                     title: "Roster Import",
                     subtitle: "Add rostered flights",
@@ -309,30 +297,12 @@ struct ImportExportView: View {
                     showingRosterImport = true
                 }
 
-               
-                
-                Divider()
-                
-                // Add Aircraft Summary
-                ActionButton(
-                    title: "Add Aircraft Summary",
-                    subtitle: "Add previous hours by type",
-                    icon: "clock.badge.checkmark.fill",
-                    color: .teal,
-                    isLoading: false
-                ) {
-                    showingAircraftSummary = true
-                }
-
-               
-
-                // webCIS Import Button
                 if isImportingWebCIS {
                     HStack(spacing: 12) {
                         ProgressView()
                         Text("Importing webCIS data…")
                             .font(.subheadline)
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         Spacer()
                     }
                     .padding(12)
@@ -340,7 +310,6 @@ struct ImportExportView: View {
                     .cornerRadius(8)
                 }
 
-                // Import from webCIS data file
                 ActionButton(
                     title: "Import webCIS History",
                     subtitle: "ARMS Flying Experience Report",
@@ -352,7 +321,6 @@ struct ImportExportView: View {
                 }
                 .disabled(isImportingWebCIS)
 
-                // Generic data import
                 ActionButton(
                     title: "Import from File",
                     subtitle: "CSV or Tab-Delimited files",
@@ -364,53 +332,15 @@ struct ImportExportView: View {
                 }
                 .disabled(isImporting)
 
-                Divider()
-
-                // PDF Logbook
                 ActionButton(
-                    title: "Print Logbook",
-                    subtitle: "Formatted paper logbook layout",
-                    icon: "books.vertical.fill",
-                    color: .brown.opacity(0.8),
+                    title: "Add Aircraft Summary",
+                    subtitle: "Add previous hours by type",
+                    icon: "clock.badge.checkmark.fill",
+                    color: .teal,
                     isLoading: false
                 ) {
-                    showingPDFExport = true
+                    showingAircraftSummary = true
                 }
-
-                // Export flights to calendar
-                ActionButton(
-                    title: "Export to Calendar",
-                    subtitle: "Save flights as .ics file",
-                    icon: "calendar.badge.checkmark",
-                    color: .indigo.opacity(0.6),
-                    isLoading: false
-                ) {
-                    showingCalendarExport = true
-                }
-
-                // Export Data
-                ActionButton(
-                    title: "Export Logbook",
-                    subtitle: "Save as a CSV file",
-                    icon: "square.and.arrow.up.fill",
-                    color: .indigo.opacity(0.6),
-                    isLoading: false
-                ) {
-                    showingExportView = true
-                }
-
-//                Divider()
-
-//                // Migration Import from Logger
-//                ActionButton(
-//                    title: "Import from Logger",
-//                    subtitle: "App migration from Logger",
-//                    icon: "square.and.arrow.down.fill",
-//                    color: .orange,
-//                    isLoading: false
-//                ) {
-//                    showingMigrationImport = true
-//                }
             }
         }
         .padding(16)
@@ -423,30 +353,46 @@ struct ImportExportView: View {
         )
     }
 
-    // MARK: - Delete Logbook Card
-    private var deleteLogbookCard: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Image(systemName: "trash.fill")
-                    .foregroundColor(.red)
-                    .font(.title3)
+    // MARK: - Export Card
+    private var exportCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Export")
+                .font(.callout)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 4)
 
-                Text("Delete Logbook")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.red)
+            VStack(spacing: 8) {
+                ActionButton(
+                    title: "Print Logbook",
+                    subtitle: "Formatted paper logbook layout",
+                    icon: "books.vertical.fill",
+                    color: .brown.opacity(0.8),
+                    isLoading: false
+                ) {
+                    showingPDFExport = true
+                }
 
-                Spacer()
-            }
+                ActionButton(
+                    title: "Export to Calendar",
+                    subtitle: "Save flights as .ics file",
+                    icon: "calendar.badge.checkmark",
+                    color: .indigo.opacity(0.6),
+                    isLoading: false
+                ) {
+                    showingCalendarExport = true
+                }
 
-            ActionButton(
-                title: "Delete All Flight Data",
-                subtitle: "This cannot be undone",
-                icon: "exclamationmark.triangle.fill",
-                color: .red,
-                isLoading: false
-            ) {
-                showingDeleteWarning = true
+                ActionButton(
+                    title: "Export Logbook",
+                    subtitle: "Save as a CSV file",
+                    icon: "square.and.arrow.up.fill",
+                    color: .indigo.opacity(0.6),
+                    isLoading: false
+                ) {
+                    showingExportView = true
+                }
             }
         }
         .padding(16)
@@ -455,7 +401,7 @@ struct ImportExportView: View {
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                .stroke(Color.purple.opacity(0.2), lineWidth: 1)
         )
     }
 
@@ -546,16 +492,6 @@ struct ImportExportView: View {
                 showingResult = true
             }
         }
-    }
-
-    private func deleteAllFlights() {
-        let success = FlightDatabaseService.shared.clearAllFlights()
-        if success {
-            resultMessage = "All flights have been successfully deleted."
-        } else {
-            resultMessage = "Failed to delete flights. Please try again."
-        }
-        showingResult = true
     }
 
     private func saveAircraftSummary(_ summary: FlightSector) {
@@ -766,7 +702,7 @@ struct WebCISMappingView: View {
     }
 
     private func loadSaved() -> [String: RegistrationTypeMapping] {
-        guard let data = UserDefaults.standard.data(forKey: Self.persistenceKey),
+        guard let data = NSUbiquitousKeyValueStore.default.data(forKey: Self.persistenceKey),
               let saved = try? JSONDecoder().decode([RegistrationTypeMapping].self, from: data)
         else { return [:] }
         return Dictionary(saved.map { ($0.pattern, $0) }, uniquingKeysWith: { first, _ in first })
@@ -774,7 +710,8 @@ struct WebCISMappingView: View {
 
     private func saveMappings() {
         if let data = try? JSONEncoder().encode(registrationMappings) {
-            UserDefaults.standard.set(data, forKey: Self.persistenceKey)
+            NSUbiquitousKeyValueStore.default.set(data, forKey: Self.persistenceKey)
+            NSUbiquitousKeyValueStore.default.synchronize()
         }
     }
 

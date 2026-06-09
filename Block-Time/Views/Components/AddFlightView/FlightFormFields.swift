@@ -300,7 +300,12 @@ struct ModernCrewField: View {
     let onNameRemoved: ((String) -> Void)?
     let icon: String
     var isDisabled: Bool = false
-    @State private var showingPicker = false
+    private enum ActiveSheet: Identifiable {
+        case picker
+        case contact
+        var id: Int { hashValue }
+    }
+    @State private var activeSheet: ActiveSheet?
     @State private var searchText = ""
 
     var body: some View {
@@ -330,6 +335,18 @@ struct ModernCrewField: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+
+            if !isDisabled {
+                Button {
+                    activeSheet = .contact
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.headline)
+                        .foregroundColor(value.isEmpty ? Color.secondary.opacity(0.4) : .blue)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(value.isEmpty)
+            }
         }
         .padding(12)
         .background(Color(.systemGray6).opacity(0.75))
@@ -339,23 +356,31 @@ struct ModernCrewField: View {
         .onTapGesture {
             if !isDisabled {
                 searchText = value  // Pre-populate with current value
-                showingPicker = true
+                activeSheet = .picker
             }
         }
-        .sheet(isPresented: $showingPicker) {
-            CrewNamePickerSheet(
-                title: label,
-                selectedName: $value,
-                searchText: $searchText,
-                savedNames: savedNames,
-                recentNames: recentNames,
-                onNameAdded: onNameAdded,
-                onNameRemoved: onNameRemoved,
-                onDismiss: {
-                    showingPicker = false
-                    searchText = ""  // Clear after dismissing
-                }
-            )
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .picker:
+                CrewNamePickerSheet(
+                    title: label,
+                    selectedName: $value,
+                    searchText: $searchText,
+                    savedNames: savedNames,
+                    recentNames: recentNames,
+                    onNameAdded: onNameAdded,
+                    onNameRemoved: onNameRemoved,
+                    onDismiss: {
+                        activeSheet = nil
+                        searchText = ""  // Clear after dismissing
+                    }
+                )
+            case .contact:
+                CrewContactSheet(
+                    name: value,
+                    onDismiss: { activeSheet = nil }
+                )
+            }
         }
     }
 }

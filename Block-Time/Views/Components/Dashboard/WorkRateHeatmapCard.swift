@@ -12,9 +12,9 @@ import SwiftUI
 // MARK: - Period
 
 private enum HeatmapPeriod: String, CaseIterable {
-    case twentyEightDays = "28D"
-    case fiftyFiveDays   = "56D"
-    case fiveYears       = "5Y"
+    case twentyEightDays = "28 Days"
+    case fiftyFiveDays   = "56 Days"
+    case fiveYears       = "5 Years"
 }
 
 // MARK: - Card
@@ -114,14 +114,15 @@ struct WorkRateHeatmapCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Work Rate", icon: "chart.bar.xaxis", iconColor: accentColor) {
-                Picker("Period", selection: $period) {
-                    ForEach(HeatmapPeriod.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+            CardHeader(title: "Work Rate", icon: "chart.bar.xaxis", iconColor: .purple) {
+                Menu {
+                    ForEach(HeatmapPeriod.allCases, id: \.self) { option in
+                        Button(option.rawValue) { period = option }
                     }
+                } label: {
+                    CardFilterChip(title: period.rawValue)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 120)
+                .tint(.primary)
             }
 
             if isEmpty {

@@ -220,7 +220,7 @@ private struct CompactLayoutView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("This action cannot be undone.")
+                Text("This will delete this entry.")
             }
         }
     }
@@ -319,7 +319,7 @@ private struct WideLayoutView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This action cannot be undone.")
+            Text("This will delete this entry.")
         }
     }
 }

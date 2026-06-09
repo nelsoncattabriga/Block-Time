@@ -48,6 +48,10 @@ struct UnifiedParseResult {
     let base: String
     let category: String
     let rosterType: RosterType
+    /// First calendar day of the bid period, derived from the BP number via epoch formula.
+    let periodStartDate: Date?
+    /// Last calendar day of the bid period, derived from the BP number via epoch formula.
+    let periodEndDate: Date?
 }
 
 // MARK: - Roster Parser Protocol
@@ -170,7 +174,9 @@ class SHRosterParser: RosterParser {
             bidPeriod: result.bidPeriod,
             base: result.base,
             category: result.category,
-            rosterType: .shortHaul
+            rosterType: .shortHaul,
+            periodStartDate: result.periodStartDate ?? flights.map(\.date).min(),
+            periodEndDate: result.periodEndDate ?? flights.map(\.date).max()
         )
     }
 }
@@ -222,7 +228,9 @@ class LHRosterParser: RosterParser {
             bidPeriod: result.bidPeriod,
             base: result.base,
             category: result.category,
-            rosterType: .longHaul
+            rosterType: .longHaul,
+            periodStartDate: result.periodStartDate ?? flights.map(\.date).min(),
+            periodEndDate: result.periodEndDate ?? flights.map(\.date).max()
         )
     }
 }

@@ -35,6 +35,10 @@ class RosterParserService {
         let bidPeriod: String
         let base: String
         let category: String  // e.g., "CPT-B737"
+        /// First calendar day listed in the bid period summary (not the first flight date).
+        let periodStartDate: Date?
+        /// Last calendar day listed in the bid period summary (not the last flight date).
+        let periodEndDate: Date?
     }
 
     // MARK: - Equipment Code Mapping
@@ -73,13 +77,18 @@ class RosterParserService {
         // Extract flights from Pattern Details section
         let flights = extractFlights(from: lines, pilotInfo: pilotInfo)
 
+        // Derive true bid period boundaries from the bid period number using the epoch formula
+        let (periodStart, periodEnd) = bpDates(bidPeriod: pilotInfo.bidPeriod)
+
         return ParseResult(
             flights: flights,
             pilotName: pilotInfo.name,
             staffNumber: pilotInfo.staffNumber,
             bidPeriod: pilotInfo.bidPeriod,
             base: pilotInfo.base,
-            category: pilotInfo.category
+            category: pilotInfo.category,
+            periodStartDate: periodStart,
+            periodEndDate: periodEnd
         )
     }
 
@@ -128,7 +137,7 @@ class RosterParserService {
                 let pattern = #"Bid Period (\d{4})"#
                 if let match = line.range(of: pattern, options: .regularExpression) {
                     bidPeriod = String(line[match]).replacingOccurrences(of: "Bid Period ", with: "")
-                                    LogManager.shared.debug("📋 Detected bid period: \(bidPeriod)")
+                                    LogManager.shared.debug(" Detected bid period: \(bidPeriod)")
                 }
             }
 
@@ -190,10 +199,10 @@ class RosterParserService {
             // Detect role from section headers
             if line.contains("1-CPT") {
                 currentRole = "Captain"
-                                LogManager.shared.debug("👨‍✈️ Role detected: Captain (line \(index))")
+                                LogManager.shared.debug(" Role detected: Captain (line \(index))")
             } else if line.contains("1-F/O") {
                 currentRole = "First Officer"
-                                LogManager.shared.debug("👨‍✈️ Role detected: First Officer (line \(index))")
+                                LogManager.shared.debug(" Role detected: First Officer (line \(index))")
             }
 
             // Extract duty code from reason lines (e.g., "5017A2 DATED 06Oct25")
@@ -202,7 +211,7 @@ class RosterParserService {
                 if let match = line.range(of: pattern, options: .regularExpression) {
                     let matched = String(line[match])
                     currentDutyCode = matched.replacingOccurrences(of: " DATED", with: "").trimmingCharacters(in: .whitespaces)
-                                    LogManager.shared.debug("📋 Duty code detected: \(currentDutyCode ?? "nil") (line \(index))")
+                                    LogManager.shared.debug(" Duty code detected: \(currentDutyCode ?? "nil") (line \(index))")
                 }
             }
 
@@ -214,7 +223,7 @@ class RosterParserService {
             let pattern = #"^(\d{2}\w{3})\s+(P)?\s*(\d{3,4})\s+([A-Z]{3})\s+(\d{4})\s+([A-Z]{3})\s+(\d{4})\s+([A-Z0-9]{3})"#
 
             if let match = line.range(of: pattern, options: .regularExpression) {
-                LogManager.shared.debug("✈️  Line \(index): \(line.trimmingCharacters(in: .whitespaces))")
+                LogManager.shared.debug("  Line \(index): \(line.trimmingCharacters(in: .whitespaces))")
 
                 let matched = String(line[match])
                 let components = matched.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
@@ -240,11 +249,11 @@ class RosterParserService {
                 let equipmentCode = components[flightIndex + 5]
 
                 LogManager.shared.debug("   Date: \(dateString)")
-                LogManager.shared.debug("   ✈️  Flight: \(flightNumber)")
-                LogManager.shared.debug("   🛫 From: \(departureAirport) at \(departureTime)")
-                LogManager.shared.debug("   🛬 To: \(arrivalAirport) at \(arrivalTime)")
-                LogManager.shared.debug("   🛩️  Aircraft: \(equipmentCode)")
-                LogManager.shared.debug("   🅿️  Positioning: \(isPositioning)")
+                LogManager.shared.debug("     Flight: \(flightNumber)")
+                LogManager.shared.debug("    From: \(departureAirport) at \(departureTime)")
+                LogManager.shared.debug("    To: \(arrivalAirport) at \(arrivalTime)")
+                LogManager.shared.debug("     Aircraft: \(equipmentCode)")
+                LogManager.shared.debug("     Positioning: \(isPositioning)")
 
                 // Convert date string to Date
                 if let date = convertDate(dateString, year: pilotInfo.year) {
@@ -273,8 +282,46 @@ class RosterParserService {
             }
         }
 
-                        LogManager.shared.debug("🎯 Total flights extracted: \(flights.count)")
+                        LogManager.shared.debug(" Total flights extracted: \(flights.count)")
         return flights
+    }
+
+    // MARK: - Period Date Calculation
+
+    /// Derive the start and end dates of a bid period from its number, using the same
+    /// epoch-based formula already used by LHRosterParserService.
+    /// 4-digit SH bid periods are 28 days; 3-digit LH bid periods are 56 days.
+    private static func bpDates(bidPeriod: String) -> (Date?, Date?) {
+        guard let bp = Int(bidPeriod) else { return (nil, nil) }
+        let calendar = Calendar.current
+        let bpLen = bidPeriod.count
+
+        if bpLen == 4 {
+            // 28-day SH period. Two interleaved sequences based on last digit.
+            let lastDigit = bidPeriod.last!
+            let epochBP: Int
+            let epochDate: Date
+            if lastDigit == "1" {
+                epochBP = 11
+                epochDate = calendar.date(from: DateComponents(year: 1969, month: 1, day: 13))!
+            } else {
+                epochBP = 15
+                epochDate = calendar.date(from: DateComponents(year: 1969, month: 2, day: 10))!
+            }
+            let diff = (bp - epochBP) / 5
+            guard let start = calendar.date(byAdding: .day, value: 28 * diff, to: epochDate),
+                  let end = calendar.date(byAdding: .day, value: 27, to: start) else { return (nil, nil) }
+            return (start, end)
+        } else if bpLen == 3 {
+            // 56-day LH period.
+            let epochDate = calendar.date(from: DateComponents(year: 1969, month: 1, day: 13))!
+            let diff = bp - 1
+            guard let start = calendar.date(byAdding: .day, value: 56 * diff, to: epochDate),
+                  let end = calendar.date(byAdding: .day, value: 55, to: start) else { return (nil, nil) }
+            return (start, end)
+        }
+
+        return (nil, nil)
     }
 
     // MARK: - Date Conversion

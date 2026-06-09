@@ -8,8 +8,8 @@
 import SwiftUI
 
 private enum TLPeriod: String, CaseIterable {
-    case oneMonth   = "1M"
-    case twelveMonths = "12M"
+    case oneMonth   = "1 Month"
+    case twelveMonths = "12 Months"
     case all         = "ALL"
 }
 
@@ -20,14 +20,15 @@ struct TakeoffLandingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "T/O & LDGs", icon: "airplane") {
-                Picker("Period", selection: $period) {
-                    ForEach(TLPeriod.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+            CardHeader(title: "T/O & LDGs", icon: "airplane", iconColor: .indigo) {
+                Menu {
+                    ForEach(TLPeriod.allCases, id: \.self) { option in
+                        Button(option.rawValue) { period = option }
                     }
+                } label: {
+                    CardFilterChip(title: period.rawValue)
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
 
             HStack(spacing: 16) {

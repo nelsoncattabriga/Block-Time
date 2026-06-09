@@ -1,5 +1,5 @@
 //
-//  TimeByTypeCard.swift
+//  FlyingByTypeCard.swift
 //  Block-Time
 //
 //  Donut chart showing hours or sectors broken down by aircraft type.
@@ -10,7 +10,7 @@ import Charts
 
 private enum FleetDisplayMode: String, CaseIterable {
     case hours = "Hours"
-    case sectors = "Sectors"
+    case sectors = "Flights"
 }
 
 private enum FleetGroupMode: String, CaseIterable {
@@ -27,18 +27,26 @@ private func fleetColor(at index: Int) -> Color {
     fleetPalette[index % fleetPalette.count]
 }
 
-struct TimeByTypeCard: View {
+private struct OverflowMaxWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+struct FlyingByTypeCard: View {
     let data: [NDFleetHours]
 
     @AppStorage("timeByTypeCard_displayMode") private var displayMode: FleetDisplayMode = .hours
-    @AppStorage("timeByTypeCard_groupByFamily") private var groupByFamily: Bool = false
+    @AppStorage("timeByTypeCard_groupMode") private var groupMode: FleetGroupMode = .type
     @State private var showAll: Bool = false
+    @State private var overflowNameWidth: CGFloat = 0
 
     private static let topCount = 5
 
-    // Collapse individual types into family names when groupByFamily is active
+    // Collapse individual types into family names when groupMode is .family
     private var resolvedData: [NDFleetHours] {
-        guard groupByFamily else { return data }
+        guard groupMode == .family else { return data }
         var hoursByLabel: [String: Double] = [:]
         var sectorsByLabel: [String: Int] = [:]
         for item in data {
@@ -69,9 +77,9 @@ struct TimeByTypeCard: View {
         return top + [other]
     }
 
-    // Items beyond top-5 shown as bars when expanded
+    // All items shown as bars when expanded
     private var overflowData: [NDFleetHours] {
-        Array(sortedData.dropFirst(Self.topCount))
+        sortedData
     }
 
     private var hasMore: Bool { sortedData.count > Self.topCount }
@@ -80,25 +88,25 @@ struct TimeByTypeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Time by Type", icon: "airplane.circle.fill") {
-                Picker("Group", selection: Binding(
-                    get: { groupByFamily ? FleetGroupMode.family : .type },
-                    set: { groupByFamily = $0 == .family }
-                )) {
-                    ForEach(FleetGroupMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
+            CardHeader(title: "Flying by Type", icon: "airplane.circle.fill", iconColor: .indigo) {
+                HStack(spacing: 4) {
+                    Menu {
+                        ForEach(FleetGroupMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { groupMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: groupMode.rawValue)
+                    }
+                    Menu {
+                        ForEach(FleetDisplayMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { displayMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: displayMode.rawValue)
                     }
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
-
-            Picker("Display", selection: $displayMode) {
-                ForEach(FleetDisplayMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
 
             if data.isEmpty {
                 ContentUnavailableView("No Data", systemImage: "airplane")
@@ -124,7 +132,7 @@ struct TimeByTypeCard: View {
                     Chart(Array(chartData.enumerated()), id: \.element.id) { index, item in
                         SectorMark(
                             angle: .value(
-                                displayMode == .hours ? "Hours" : "Sectors",
+                                displayMode == .hours ? "Hours" : "Flights",
                                 displayMode == .hours ? item.hours : Double(item.sectors)
                             ),
                             innerRadius: .ratio(0.60),
@@ -138,14 +146,14 @@ struct TimeByTypeCard: View {
                         if displayMode == .hours {
                             Text(String(format: "%.0f", totalHours))
                                 .font(.system(.title3, design: .rounded, weight: .bold))
-                            Text("hrs")
-                                .iPadScaledFont(.caption, phoneFont: .footnote)
+                            Text("HRS")
+                                .font(.system(.caption2, design: .rounded, weight: .medium))
                                 .foregroundStyle(.secondary)
                         } else {
                             Text("\(totalSectors)")
                                 .font(.system(.title3, design: .rounded, weight: .bold))
-                            Text("sectors")
-                                .iPadScaledFont(.caption, phoneFont: .footnote)
+                            Text("FLTS")
+                                .font(.system(.caption2, design: .rounded, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -180,32 +188,45 @@ struct TimeByTypeCard: View {
             Divider()
 
             ForEach(Array(overflowData.enumerated()), id: \.element.id) { offset, item in
-                let index = Self.topCount + offset
+                let index = offset
                 let value: Double = displayMode == .hours ? item.hours : Double(item.sectors)
                 let label: String = displayMode == .hours
-                    ? String(format: "%.0f hrs", item.hours)
+                    ? String(format: "%.0f", item.hours)
                     : "\(item.sectors)"
 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack {
-                        Text(item.aircraftType)
-                            .iPadScaledFont(.caption, phoneFont: .footnote)
-                            .bold()
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Text(label)
-                            .iPadScaledFont(.caption, phoneFont: .footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    GeometryReader { geo in
+                HStack(spacing: 10) {
+                    Text(item.aircraftType)
+                        .iPadScaledFont(.caption, phoneFont: .footnote)
+                        .bold()
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear.preference(key: OverflowMaxWidthKey.self, value: geo.size.width)
+                            }
+                        )
+                        .frame(width: overflowNameWidth > 0 ? overflowNameWidth : nil, alignment: .leading)
+
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.secondary.opacity(0.1))
                         RoundedRectangle(cornerRadius: 3)
                             .fill(fleetColor(at: index))
-                            .frame(width: geo.size.width * (value / maxValue))
+                            .frame(maxWidth: .infinity)
+                            .scaleEffect(x: value / maxValue, anchor: .leading)
                     }
                     .frame(height: 6)
+                    .frame(minWidth: 60, maxWidth: .infinity)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: displayMode)
+
+                    Text(label)
+                        .iPadScaledFont(.caption, phoneFont: .footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
+        .onPreferenceChange(OverflowMaxWidthKey.self) { overflowNameWidth = $0 }
         .animation(.spring(response: 0.4), value: displayMode)
     }
 
@@ -216,7 +237,7 @@ struct TimeByTypeCard: View {
             withAnimation(.spring(response: 0.35)) { showAll.toggle() }
         } label: {
             HStack(spacing: 4) {
-                Text(showAll ? "Show less" : "Show all \(sortedData.count) types")
+                Text(showAll ? "Show Less" : "Show All")
                     .iPadScaledFont(.caption, phoneFont: .footnote)
                 Image(systemName: showAll ? "chevron.up" : "chevron.down")
                     .imageScale(.small)

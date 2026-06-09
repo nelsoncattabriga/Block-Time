@@ -11,18 +11,22 @@ import CoreData
 struct SupportView: View {
     @Environment(ThemeService.self) private var themeService
     @Environment(PurchaseService.self) private var purchaseService
-    @AppStorage("debugModeEnabled") private var debugModeEnabled = false
     @State private var showingLogViewer = false
     @State private var showingRawDatabase = false
     @State private var devToolsExpanded = false
-    @State private var versionTapCount = 0
+    @State private var showingDebugHelp = false
+
     @State private var showingRecalculateConfirm = false
     @State private var isRecalculating = false
     @State private var recalculateResult: String?
-    @State private var showingUUIDRegenerationAlert = false
-    @State private var uuidRegenerationMessage = ""
-    @State private var showingGhostFlightAlert = false
-    @State private var ghostFlightMessage = ""
+    @State private var showingResetCrewNamesConfirm = false
+    @State private var resetCrewNamesMessage: String?
+    @State private var showingNormaliseAirportsConfirm = false
+    @State private var isNormalisingAirports = false
+    @State private var normaliseAirportsResult: String?
+    @State private var showingFixSimTimesConfirm = false
+    @State private var isFixingSimTimes = false
+    @State private var fixSimTimesResult: String?
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
@@ -69,26 +73,10 @@ struct SupportView: View {
                         Text("Version \(appVersion).\(buildNumber)")
                             .font(.headline)
                             .foregroundColor(.secondary)
-                            .onTapGesture {
-                                versionTapCount += 1
-                                if versionTapCount >= 10 {
-                                    //devToolsExpanded = true
-                                    HapticManager.shared.notification(.success)
-                                }
-                            }
 
                         Spacer(minLength: 20)
 
                         VStack(spacing: 20){
-                            NavigationLink {
-                                UserGuideView()
-                            } label: {
-                                Text("User Guide")
-                                    .foregroundColor(.blue)
-                                    .font(.title3.bold())
-                            }
-                            .buttonStyle(.plain)
-                                
                             Link("Email Support", destination: URL(string: "mailto:support@block-time.app")!)
                                 .foregroundColor(.blue)
                                 .font(.title3.bold())
@@ -100,11 +88,7 @@ struct SupportView: View {
                 // Push content down
                 Spacer(minLength: 40)
 
-                // Debug Tools Requires 10 taps to unhide
-                let showDebugTools = versionTapCount >= 10
-                
-                if showDebugTools {
-                    DisclosureGroup(
+                DisclosureGroup(
                     isExpanded: $devToolsExpanded,
                     content: {
                         VStack(spacing: 8) {
@@ -152,7 +136,7 @@ struct SupportView: View {
                                         .frame(width: 20)
 
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("Raw Database")
+                                        Text("View Raw Database Entries")
                                             .font(.subheadline)
                                             .fontWeight(.medium)
                                             .foregroundColor(.primary)
@@ -174,39 +158,34 @@ struct SupportView: View {
                             }
                             .buttonStyle(PlainButtonStyle())
 
-                            // Debug Mode Toggle
-                            HStack(spacing: 12) {
-                                Image(systemName: "exclamationmark.icloud")
-                                    .foregroundColor(.orange)
-                                    .frame(width: 20)
+                            // Reset Crew Names
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                showingResetCrewNamesConfirm = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "person.2.slash")
+                                        .foregroundColor(.orange)
+                                        .frame(width: 20)
 
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("iCloud Debug")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.primary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Reset Crew Names")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
 
-                                    Text("Shows error simulation in iCloud Sync Status")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        Text("Clear saved names and rebuild from logbook")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
                                 }
-
-                                Spacer()
-
-                                Toggle("", isOn: $debugModeEnabled)
-                                    .labelsHidden()
-                                    .scaleEffect(0.8)
+                                .padding(12)
+                                .background(Color(.systemGray6).opacity(0.5))
+                                .cornerRadius(8)
                             }
-                            .padding(12)
-                            .background(Color(.systemGray6).opacity(0.5))
-                            .cornerRadius(8)
-
-                            if debugModeEnabled {
-                                Text("Error simulation buttons will appear in iCloud Sync Status")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                                    .multilineTextAlignment(.center)
-                            }
+                            .buttonStyle(PlainButtonStyle())
 
                             // Recalculate Block Times Button
                             Button(action: {
@@ -215,7 +194,7 @@ struct SupportView: View {
                             }) {
                                 HStack(spacing: 12) {
                                     Image(systemName: isRecalculating ? "hourglass" : "arrow.triangle.2.circlepath")
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(.orange)
                                         .frame(width: 20)
 
                                     VStack(alignment: .leading, spacing: 2) {
@@ -237,7 +216,7 @@ struct SupportView: View {
                                     }
                                 }
                                 .padding(12)
-                                .background(Color(.orange).opacity(0.5))
+                                .background(Color(.systemGray6).opacity(0.5))
                                 .cornerRadius(8)
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -252,109 +231,94 @@ struct SupportView: View {
                                     .padding(.top, 4)
                             }
 
-                            // Regenerate UUIDs Button
+                            // Normalise Airport Codes Button
                             Button(action: {
                                 HapticManager.shared.impact(.light)
-                                let result = FlightDatabaseService.shared.regenerateAllFlightUUIDs()
-                                var message = "Updated \(result.updatedCount) flights\nRemoved \(result.duplicatesRemoved) duplicates"
-                                if !result.duplicatesList.isEmpty {
-                                    message += "\n\nDuplicates removed:"
-                                    for duplicate in result.duplicatesList.prefix(10) {
-                                        message += "\n• \(duplicate)"
-                                    }
-                                    if result.duplicatesList.count > 10 {
-                                        message += "\n... and \(result.duplicatesList.count - 10) more"
-                                    }
-                                }
-                                uuidRegenerationMessage = message
-                                showingUUIDRegenerationAlert = true
+                                showingNormaliseAirportsConfirm = true
                             }) {
                                 HStack(spacing: 12) {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .foregroundColor(.blue)
+                                    Image(systemName: isNormalisingAirports ? "hourglass" : "mappin.and.ellipse")
+                                        .foregroundColor(.orange)
                                         .frame(width: 20)
 
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("Regen UUIDs & Remove Duplicates")
+                                        Text("Normalise Airport Codes")
                                             .font(.subheadline)
                                             .fontWeight(.medium)
                                             .foregroundColor(.primary)
 
-                                        Text("Fixes duplicate flights and regenerates identifiers")
+                                        Text("Convert any IATA codes stored in your logbook to ICAO")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
 
                                     Spacer()
+
+                                    if isNormalisingAirports {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    }
                                 }
                                 .padding(12)
-                                .background(Color(.orange).opacity(0.5))
+                                .background(Color(.systemGray6).opacity(0.5))
                                 .cornerRadius(8)
                             }
                             .buttonStyle(PlainButtonStyle())
+                            .disabled(isNormalisingAirports)
 
-                            // Recover Ghost Flights Button
+                            if let result = normaliseAirportsResult {
+                                Text(result)
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 4)
+                            }
+
+                            // Fix SIM Flight Times Button
                             Button(action: {
                                 HapticManager.shared.impact(.light)
-                                let context = FlightDatabaseService.shared.persistentContainer.viewContext
-                                var recovered = 0
-                                context.performAndWait {
-                                    let request = NSFetchRequest<FlightEntity>(entityName: "FlightEntity")
-                                    request.predicate = NSPredicate(
-                                        format: "(blockTime == %@ OR blockTime == %@ OR blockTime == %@ OR blockTime == nil) AND (simTime == %@ OR simTime == %@ OR simTime == %@ OR simTime == nil) AND isPositioning == NO AND (scheduledDeparture == nil OR scheduledDeparture == %@) AND (scheduledArrival == nil OR scheduledArrival == %@)",
-                                        "0", "0.0", "0.00", "0", "0.0", "0.00", "", ""
-                                    )
-                                    if let ghosts = try? context.fetch(request) {
-                                        recovered = ghosts.count
-                                        for ghost in ghosts {
-                                            ghost.isPositioning = true
-                                        }
-                                        try? context.save()
-                                    }
-                                }
-                                if recovered > 0 {
-                                    NotificationCenter.default.post(name: .flightDataChanged, object: nil)
-                                    ghostFlightMessage = "Found and surfaced \(recovered) hidden flight(s).\n\nThey are now visible as PAX flights. Review and correct their type and times."
-                                } else {
-                                    ghostFlightMessage = "No hidden flights found."
-                                }
-                                showingGhostFlightAlert = true
+                                showingFixSimTimesConfirm = true
                             }) {
                                 HStack(spacing: 12) {
-                                    Image(systemName: "eye.fill")
-                                        .foregroundColor(.purple)
+                                    Image(systemName: isFixingSimTimes ? "hourglass" : "waveform.path.ecg")
+                                        .foregroundColor(.orange)
                                         .frame(width: 20)
 
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("Recover Hidden Flights")
+                                        Text("Fix SIM Flight Times")
                                             .font(.subheadline)
                                             .fontWeight(.medium)
                                             .foregroundColor(.primary)
 
-                                        Text("Surface zero-time ghost records")
+                                        Text("Zero out P1 / P2 / night /instrument for SIMs")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
 
                                     Spacer()
+
+                                    if isFixingSimTimes {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    }
                                 }
                                 .padding(12)
-                                .background(Color.purple.opacity(0.3))
+                                .background(Color(.systemGray6).opacity(0.5))
                                 .cornerRadius(8)
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .alert("Ghost Flight Recovery", isPresented: $showingGhostFlightAlert) {
-                                Button("OK", role: .cancel) { }
-                            } message: {
-                                Text(ghostFlightMessage)
+                            .disabled(isFixingSimTimes)
+
+                            if let result = fixSimTimesResult {
+                                Text(result)
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 4)
                             }
+
                         }
                         .padding(.top, 8)
-                        .alert("UUID Regeneration Complete", isPresented: $showingUUIDRegenerationAlert) {
-                            Button("OK", role: .cancel) { }
-                        } message: {
-                            Text(uuidRegenerationMessage)
-                        }
                     },
                     label: {
                         HStack {
@@ -362,29 +326,71 @@ struct SupportView: View {
                                 .foregroundColor(.orange)
                                 .frame(width: 20)
 
-                            Text("Debug Tools")
+                            Text("Advanced Tools")
                                 .font(.headline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
+
+                            Spacer()
+
+                            Button {
+                                showingDebugHelp = true
+                            } label: {
+                                Image(systemName: "questionmark.circle")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-                    )
-                    .padding(16)
-                    .background(.thinMaterial)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.orange.opacity(0.2), lineWidth: 1)
-                    )
-                    .alert("Recalculate Block Times?", isPresented: $showingRecalculateConfirm) {
-                        Button("Cancel", role: .cancel) { }
-                        Button("Recalculate", role: .destructive) {
-                            performRecalculation()
-                        }
-                    } message: {
-                        Text("This will recalculate block times from OUT and IN times for all regular flights. Use this to fix data imported from other sources or ensure consistency. SIM and PAX flights will be skipped. This operation cannot be undone.")
+                )
+                .padding(16)
+                .background(.thinMaterial)
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.orange.opacity(0.2), lineWidth: 1)
+                )
+                .sheet(isPresented: $showingDebugHelp) {
+                    DebugToolsHelpSheet()
+                }
+                .alert("Recalculate Block Times?", isPresented: $showingRecalculateConfirm) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Recalculate", role: .destructive) {
+                        performRecalculation()
                     }
+                } message: {
+                    Text("This will recalculate block times from OUT and IN times for all regular flights. Use this to fix data imported from other sources or ensure consistency. SIM and PAX flights will be skipped. Run a Backup first to save your current data.")
+                }
+                .alert("Reset Crew Names?", isPresented: $showingResetCrewNamesConfirm) {
+                    Button("Cancel", role: .cancel) {}
+                    Button("Reset", role: .destructive) {
+                        resetCrewNamesFromLogbook()
+                    }
+                } message: {
+                    Text("This will clear all saved crew names and rebuild the list from your logbook. Any manually added names not linked to a flight will be removed.")
+                }
+                .alert("Crew Names Reset", isPresented: Binding(get: { resetCrewNamesMessage != nil }, set: { if !$0 { resetCrewNamesMessage = nil } })) {
+                    Button("OK", role: .cancel) { resetCrewNamesMessage = nil }
+                } message: {
+                    Text(resetCrewNamesMessage ?? "")
+                }
+                .alert("Normalise Airport Codes?", isPresented: $showingNormaliseAirportsConfirm) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Normalise", role: .destructive) {
+                        performAirportNormalisation()
+                    }
+                } message: {
+                    Text("This will convert any IATA airport codes (e.g. SYD) stored in your logbook to their ICAO equivalents (e.g. YSSY). Airports not found in the database will be left unchanged. Run a Backup first.")
+                }
+                .alert("Fix SIM Flight Times?", isPresented: $showingFixSimTimesConfirm) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Fix", role: .destructive) {
+                        performFixSimTimes()
+                    }
+                } message: {
+                    Text("This will zero out P1, P2, night, and instrument time on any simulator flights where those fields were incorrectly populated. Safe to run multiple times. Run a Backup first.")
                 }
 
                 Spacer(minLength: 20)
@@ -434,6 +440,171 @@ struct SupportView: View {
                 }
             }
         }
+    }
+    private func performAirportNormalisation() {
+        isNormalisingAirports = true
+        normaliseAirportsResult = nil
+        HapticManager.shared.impact(.medium)
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = FlightDatabaseService.shared.normaliseAirportCodes()
+
+            DispatchQueue.main.async {
+                isNormalisingAirports = false
+                normaliseAirportsResult = "Updated \(result.fixed) of \(result.total) flights"
+                HapticManager.shared.notification(.success)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                    withAnimation { normaliseAirportsResult = nil }
+                }
+            }
+        }
+    }
+
+    private func performFixSimTimes() {
+        isFixingSimTimes = true
+        fixSimTimesResult = nil
+        HapticManager.shared.impact(.medium)
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let count = FlightDatabaseService.shared.migrateSimP1Times()
+
+            DispatchQueue.main.async {
+                isFixingSimTimes = false
+                fixSimTimesResult = count > 0 ? "Fixed \(count) simulator flight\(count == 1 ? "" : "s")" : "No changes needed"
+                HapticManager.shared.notification(.success)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                    withAnimation { fixSimTimesResult = nil }
+                }
+            }
+        }
+    }
+
+    private func resetCrewNamesFromLogbook() {
+        let db = FlightDatabaseService.shared
+        let uds = UserDefaultsService()
+
+        let captains = db.getAllCaptainNames()
+        let fos = db.getAllFONames()
+        let sos = db.getAllSONames()
+        let rebuilt = Array(Set(captains + fos + sos)).sorted()
+
+        var settings = uds.loadSettings()
+        settings.savedCrewNames = rebuilt
+        uds.saveSettings(settings)
+
+        resetCrewNamesMessage = "Rebuilt \(rebuilt.count) crew name\(rebuilt.count == 1 ? "" : "s") from your logbook."
+        HapticManager.shared.notification(.success)
+    }
+}
+
+// MARK: - Advanced Tools Help Sheet
+
+private struct DebugToolsHelpSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "wrench.and.screwdriver.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Advanced Tools")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                            Text("Recovery and diagnostic tools for your logbook.")
+                                .font(.footnote)
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color.orange)
+
+                    VStack(spacing: 12) {
+                        infoBlock(
+                            icon: "doc.text.magnifyingglass",
+                            title: "View App Logs",
+                            body: "Shows a live log of app activity. Use this if support asks for a diagnostic log by sharing the file directly from this screen."
+                        )
+
+                        infoBlock(
+                            icon: "tablecells",
+                            title: "View Raw Database",
+                            body: "Displays every flight record stored in the database. Useful for troubleshooting databse corruption. Individual records can be deleted from here."
+                        )
+
+                        infoBlock(
+                            icon: "person.2.slash",
+                            title: "Reset Crew Names",
+                            body: "Clears the saved crew name suggestions and rebuilds them from the names recorded in your logbook. Use this if autocomplete is showing names that are no longer relevant or if the list has become cluttered after a data import."
+                        )
+
+                        infoBlock(
+                            icon: "arrow.triangle.2.circlepath",
+                            title: "Recalculate All Block Times",
+                            body: "Recalculates block time from OUT and IN times for every regular flight. Use this if block times look wrong after a CSV import or a data migration. SIM and PAX flights are skipped. This cannot be undone."
+                        )
+
+                        infoBlock(
+                            icon: "mappin.and.ellipse",
+                            title: "Normalise Airport Codes",
+                            body: "Scans every flight in your logbook and converts any IATA airport codes (e.g. SYD) to their ICAO equivalents (e.g. YSSY). Airports not found in the database are left unchanged. Safe to run multiple times."
+                        )
+
+                        infoBlock(
+                            icon: "waveform.path.ecg",
+                            title: "Fix SIM Flight Times",
+                            body: "Zeros out P1, P2, night, and instrument time on simulator flights where those fields were incorrectly populated — typically after importing from another logbook app. Safe to run multiple times."
+                        )
+                    }
+                    .padding(16)
+                }
+            }
+            .navigationTitle("Advanced Tools")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func infoBlock(icon: String, title: String, body: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.subheadline)
+                .foregroundColor(.orange)
+                .frame(width: 20, alignment: .top)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+
+                Text(body)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.orange.opacity(0.15), lineWidth: 1)
+        )
     }
 }
 

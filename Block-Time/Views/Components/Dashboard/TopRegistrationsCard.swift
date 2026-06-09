@@ -8,14 +8,14 @@
 import SwiftUI
 
 private enum RegPeriod: String, CaseIterable {
-    case oneMonth     = "1M"
-    case twelveMonths = "12M"
+    case oneMonth     = "1 Month"
+    case twelveMonths = "12 Months"
     case all          = "ALL"
 }
 
 private enum RegDisplayMode: String, CaseIterable {
     case hours   = "Hours"
-    case sectors = "Sectors"
+    case sectors = "Flights"
 }
 
 struct TopRegistrationsCard: View {
@@ -51,22 +51,25 @@ struct TopRegistrationsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Top Registrations", icon: "airplane") {
-                Picker("Period", selection: $period) {
-                    ForEach(RegPeriod.allCases, id: \.self) {
-                        Text($0.rawValue).tag($0)
+            CardHeader(title: "Top Registrations", icon: "airplane", iconColor: .indigo) {
+                HStack(spacing: 4) {
+                    Menu {
+                        ForEach(RegPeriod.allCases, id: \.self) { option in
+                            Button(option.rawValue) { period = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: period.rawValue)
+                    }
+                    Menu {
+                        ForEach(RegDisplayMode.allCases, id: \.self) { option in
+                            Button(option.rawValue) { displayMode = option }
+                        }
+                    } label: {
+                        CardFilterChip(title: displayMode.rawValue)
                     }
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                .tint(.primary)
             }
-
-            Picker("Display", selection: $displayMode) {
-                ForEach(RegDisplayMode.allCases, id: \.self) {
-                    Text($0.rawValue).tag($0)
-                }
-            }
-            .pickerStyle(.segmented)
 
             if registrations.isEmpty {
                 ContentUnavailableView(
@@ -204,10 +207,10 @@ struct TopRegistrationsCard: View {
             .frame(minWidth: 60, maxWidth: .infinity)
 
             if displayMode == .hours {
-                Text(String(format: "%.0f hrs", reg.hours))
+                Text(String(format: "%.0f", reg.hours))
                     .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             } else {
-                Text("\(reg.sectors) sectors")
+                Text("\(reg.sectors)")
                     .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             }
         }
@@ -262,19 +265,23 @@ private struct RegistrationsSheetView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Picker("Period", selection: $period) {
-                        ForEach(RegPeriod.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
+                    HStack(spacing: 4) {
+                        Menu {
+                            ForEach(RegPeriod.allCases, id: \.self) { option in
+                                Button(option.rawValue) { period = option }
+                            }
+                        } label: {
+                            CardFilterChip(title: period.rawValue)
+                        }
+                        Menu {
+                            ForEach(RegDisplayMode.allCases, id: \.self) { option in
+                                Button(option.rawValue) { displayMode = option }
+                            }
+                        } label: {
+                            CardFilterChip(title: displayMode.rawValue)
                         }
                     }
-                    .pickerStyle(.segmented)
-
-                    Picker("Display", selection: $displayMode) {
-                        ForEach(RegDisplayMode.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    .tint(.primary)
 
                     if registrations.isEmpty {
                         ContentUnavailableView(
@@ -335,10 +342,10 @@ private struct RegistrationsSheetView: View {
             .frame(minWidth: 60, maxWidth: .infinity)
 
             if displayMode == .hours {
-                Text(String(format: "%.0f hrs", reg.hours))
+                Text(String(format: "%.0f", reg.hours))
                     .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             } else {
-                Text("\(reg.sectors) sectors")
+                Text("\(reg.sectors)")
                     .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.semibold).foregroundStyle(.secondary)
             }
         }

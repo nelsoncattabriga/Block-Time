@@ -9,8 +9,8 @@ import SwiftUI
 import Charts
 
 private enum ApproachPeriod: String, CaseIterable {
-    case oneMonth     = "1M"
-    case twelveMonths = "12M"
+    case oneMonth     = "1 Month"
+    case twelveMonths = "12 Months"
     case all          = "ALL"
 }
 
@@ -23,15 +23,16 @@ struct ApproachTypesCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Approach Types", icon: "scope") {
+            CardHeader(title: "Approach Types", icon: "scope", iconColor: .indigo) {
                 if logApproaches {
-                    Picker("Period", selection: $period) {
-                        ForEach(ApproachPeriod.allCases, id: \.self) {
-                            Text($0.rawValue).tag($0)
+                    Menu {
+                        ForEach(ApproachPeriod.allCases, id: \.self) { option in
+                            Button(option.rawValue) { period = option }
                         }
+                    } label: {
+                        CardFilterChip(title: period.rawValue)
                     }
-                    .pickerStyle(.segmented)
-                    .fixedSize()
+                    .tint(.primary)
                 }
             }
 
@@ -50,7 +51,7 @@ struct ApproachTypesCard: View {
                 )
                 .frame(height: 120)
             } else {
-                VStack(spacing: 10) {
+                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                     ForEach(data) { item in
                         approachRow(item: item)
                     }
@@ -109,11 +110,12 @@ struct ApproachTypesCard: View {
 
     @ViewBuilder
     private func approachRow(item: NDApproachTypeStat) -> some View {
-        HStack(spacing: 10) {
+        GridRow {
             Text(item.typeName)
                 .iPadScaledFont(.caption, phoneFont: .footnote).fontWeight(.bold)
                 .foregroundStyle(item.color)
-                .frame(width: 36, alignment: .leading)
+                .fixedSize()
+                .gridColumnAlignment(.leading)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -127,7 +129,6 @@ struct ApproachTypesCard: View {
                 }
             }
             .frame(height: 16)
-            .layoutPriority(-1)
 
             HStack(spacing: 4) {
                 Text("\(item.count)")
@@ -136,6 +137,7 @@ struct ApproachTypesCard: View {
                     .iPadScaledFont(.caption, phoneFont: .footnote).foregroundStyle(.secondary)
             }
             .fixedSize()
+            .gridColumnAlignment(.trailing)
         }
     }
 }

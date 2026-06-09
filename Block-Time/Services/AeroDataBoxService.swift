@@ -88,10 +88,10 @@ final class AeroDataBoxService {
     ///   - localDepartureDate: Local departure date in app format dd/MM/yyyy
     func fetchFlightData(flightNumber: String, localDepartureDate: String) async -> [FlightAwareData] {
         let cleanNumber = flightNumber.replacingOccurrences(of: " ", with: "")
-        LogManager.shared.info("🌐 AeroDataBox: Starting fetch — flight=\(cleanNumber), localDate=\(localDepartureDate)")
+        LogManager.shared.info(" AeroDataBox: Starting fetch  flight=\(cleanNumber), localDate=\(localDepartureDate)")
 
         guard let apiDate = convertDateToAPIFormat(localDepartureDate) else {
-            LogManager.shared.error("🌐 AeroDataBox: Failed to convert date '\(localDepartureDate)' — expected dd/MM/yyyy")
+            LogManager.shared.error(" AeroDataBox: Failed to convert date '\(localDepartureDate)'  expected dd/MM/yyyy")
             return []
         }
 
@@ -107,11 +107,11 @@ final class AeroDataBoxService {
             + "?withAircraftImage=false&withLocation=false&withFlightPlan=false&dateLocalRole=Departure"
 
         guard let url = URL(string: urlString) else {
-            LogManager.shared.error("🌐 AeroDataBox: Could not build URL for date \(apiDate)")
+            LogManager.shared.error(" AeroDataBox: Could not build URL for date \(apiDate)")
             return []
         }
 
-        LogManager.shared.info("🌐 AeroDataBox: GET \(urlString)")
+        LogManager.shared.debug(" AeroDataBox: GET \(urlString)")
 
         var request = URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 15.0)
         request.httpMethod = "GET"
@@ -123,34 +123,34 @@ final class AeroDataBoxService {
         do {
             (data, response) = try await URLSession.shared.data(for: request)
         } catch {
-            LogManager.shared.error("🌐 AeroDataBox (\(apiDate)): Network error — \(error.localizedDescription)")
+            LogManager.shared.error(" AeroDataBox (\(apiDate)): Network error  \(error.localizedDescription)")
             return []
         }
 
         if let http = response as? HTTPURLResponse {
-            LogManager.shared.info("🌐 AeroDataBox (\(apiDate)): HTTP \(http.statusCode)")
+            LogManager.shared.debug(" AeroDataBox (\(apiDate)): HTTP \(http.statusCode)")
             guard http.statusCode == 200 else {
                 if http.statusCode != 404 {
                     let body = String(data: data, encoding: .utf8) ?? "<no body>"
-                    LogManager.shared.error("🌐 AeroDataBox (\(apiDate)): HTTP \(http.statusCode) — \(body.prefix(200))")
+                    LogManager.shared.error(" AeroDataBox (\(apiDate)): HTTP \(http.statusCode)  \(body.prefix(200))")
                 }
                 return []
             }
         }
 
         if let rawJSON = String(data: data, encoding: .utf8) {
-            LogManager.shared.debug("🌐 AeroDataBox (\(apiDate)): Raw JSON (first 1500 chars): \(rawJSON.prefix(1500))")
+            LogManager.shared.debug(" AeroDataBox (\(apiDate)): Raw JSON (first 1500 chars): \(rawJSON.prefix(1500))")
         }
 
         let flights: [ADBFlight]
         do {
             flights = try JSONDecoder().decode([ADBFlight].self, from: data)
         } catch {
-            LogManager.shared.error("🌐 AeroDataBox (\(apiDate)): JSON decode failed — \(error)")
+            LogManager.shared.error(" AeroDataBox (\(apiDate)): JSON decode failed  \(error)")
             return []
         }
 
-        LogManager.shared.info("🌐 AeroDataBox (\(apiDate)): Decoded \(flights.count) flight object(s)")
+        LogManager.shared.info(" AeroDataBox (\(apiDate)): Decoded \(flights.count) flight object(s)")
 
         return parseFlights(flights, searchDate: apiDate)
     }
@@ -166,16 +166,16 @@ final class AeroDataBoxService {
             let isCargo     = flight.isCargo ?? false
             let aircraftReg = flight.aircraft?.reg
 
-            LogManager.shared.info("🌐 AeroDataBox (\(searchDate)) [\(idx)] number=\(flightNum), status=\(status), isCargo=\(isCargo), aircraftReg=\(aircraftReg ?? "nil")")
+            LogManager.shared.debug(" AeroDataBox (\(searchDate)) [\(idx)] number=\(flightNum), status=\(status), isCargo=\(isCargo), aircraftReg=\(aircraftReg ?? "nil")")
 
             if isCargo {
-                LogManager.shared.info("🌐 AeroDataBox (\(searchDate)) [\(idx)]: Skipping cargo flight")
+                LogManager.shared.debug(" AeroDataBox (\(searchDate)) [\(idx)]: Skipping cargo flight")
                 continue
             }
 
             guard let depICAO = flight.departure.airport.icao, !depICAO.isEmpty,
                   let arrICAO = flight.arrival.airport.icao, !arrICAO.isEmpty else {
-                LogManager.shared.warning("🌐 AeroDataBox (\(searchDate)) [\(idx)]: Missing ICAO code(s) — skipping")
+                LogManager.shared.warning(" AeroDataBox (\(searchDate)) [\(idx)]: Missing ICAO code(s)  skipping")
                 continue
             }
 
@@ -184,20 +184,14 @@ final class AeroDataBoxService {
             let depRevised   = flight.departure.revisedTime?.utc
             let depRunway    = flight.departure.runwayTime?.utc
 
-            LogManager.shared.info("🌐 AeroDataBox (\(searchDate)) [\(idx)] DEP \(depICAO):")
-            LogManager.shared.info("   scheduledTime (STD) = \(depScheduled ?? "nil")")
-            LogManager.shared.info("   revisedTime  (OUT)  = \(depRevised  ?? "nil")")
-            LogManager.shared.info("   runwayTime  (T/O)   = \(depRunway   ?? "nil")")
+            LogManager.shared.debug(" AeroDataBox (\(searchDate)) [\(idx)] DEP \(depICAO): STD=\(depScheduled ?? "nil") OUT=\(depRevised ?? "nil") T/O=\(depRunway ?? "nil")")
 
             // ── Arrival times ────────────────────────────────────────────────
             let arrScheduled = flight.arrival.scheduledTime?.utc
             let arrRevised   = flight.arrival.revisedTime?.utc
             let arrRunway    = flight.arrival.runwayTime?.utc
 
-            LogManager.shared.info("🌐 AeroDataBox (\(searchDate)) [\(idx)] ARR \(arrICAO):")
-            LogManager.shared.info("   scheduledTime (STA) = \(arrScheduled ?? "nil")")
-            LogManager.shared.info("   revisedTime  (IN)   = \(arrRevised   ?? "nil")")
-            LogManager.shared.info("   runwayTime  (LDG)   = \(arrRunway    ?? "nil")")
+            LogManager.shared.debug(" AeroDataBox (\(searchDate)) [\(idx)] ARR \(arrICAO): STA=\(arrScheduled ?? "nil") IN=\(arrRevised ?? "nil") LDG=\(arrRunway ?? "nil")")
 
             // revisedTime = actual gate OUT/IN only when the flight has actually operated.
             // For "Expected", "Scheduled", etc., revisedTime is just a prediction — mark as not actual.
@@ -221,13 +215,13 @@ final class AeroDataBoxService {
 
             guard let depRaw = depRevised ?? depScheduled,
                   let arrRaw = arrRevised ?? arrScheduled else {
-                LogManager.shared.warning("🌐 AeroDataBox (\(searchDate)) [\(idx)] \(depICAO)→\(arrICAO): No usable times — skipping")
+                LogManager.shared.warning(" AeroDataBox (\(searchDate)) [\(idx)] \(depICAO)\(arrICAO): No usable times  skipping")
                 continue
             }
 
             guard let depTime = parseUTCTime(depRaw),
                   let arrTime = parseUTCTime(arrRaw) else {
-                LogManager.shared.warning("🌐 AeroDataBox (\(searchDate)) [\(idx)] \(depICAO)→\(arrICAO): Failed to parse times '\(depRaw)' / '\(arrRaw)' — skipping")
+                LogManager.shared.warning(" AeroDataBox (\(searchDate)) [\(idx)] \(depICAO)\(arrICAO): Failed to parse times '\(depRaw)' / '\(arrRaw)'  skipping")
                 continue
             }
 
@@ -240,14 +234,8 @@ final class AeroDataBoxService {
             let flightDateSource = depScheduled ?? depRevised ?? depRaw
             let flightDate = parseUTCDate(flightDateSource) ?? searchDate.replacingOccurrences(of: "-", with: "/")
 
-            LogManager.shared.info("🌐 AeroDataBox (\(searchDate)) [\(idx)] \(depICAO)→\(arrICAO) RESOLVED:")
-            LogManager.shared.info("   OUT (revisedTime) = \(depTime) UTC (actual=\(departureIsActual))")
-            LogManager.shared.info("   IN  (revisedTime) = \(arrTime) UTC (actual=\(arrivalIsActual))")
-            LogManager.shared.info("   STD               = \(scheduledDepTime ?? "nil") UTC")
-            LogManager.shared.info("   STA               = \(scheduledArrTime ?? "nil") UTC")
-            LogManager.shared.info("   T/O (runwayTime)  = \(runwayDepTime ?? "nil") UTC")
-            LogManager.shared.info("   LDG (runwayTime)  = \(runwayArrTime ?? "nil") UTC")
-            LogManager.shared.info("   Date              = \(flightDate)")
+            LogManager.shared.debug(" AeroDataBox (\(searchDate)) [\(idx)] \(depICAO)\(arrICAO): OUT=\(depTime)(actual=\(departureIsActual)) IN=\(arrTime)(actual=\(arrivalIsActual)) STD=\(scheduledDepTime ?? "nil") STA=\(scheduledArrTime ?? "nil")")
+            LogManager.shared.debug(" AeroDataBox (\(searchDate)) [\(idx)] T/O=\(runwayDepTime ?? "nil") LDG=\(runwayArrTime ?? "nil") date=\(flightDate)")
 
             results.append(FlightAwareData(
                 origin: depICAO,

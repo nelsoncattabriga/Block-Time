@@ -62,7 +62,7 @@ struct AirportStatsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            CardHeader(title: "Airport Stats", icon: "building.columns.fill", iconColor: .teal)
+            CardHeader(title: "Airport Stats", icon: "building.columns.fill", iconColor: .indigo)
 
             Spacer().frame(height: 14)
 

@@ -178,7 +178,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         if let blockVal = Double(self.blockTime), blockVal > 0,
            let simVal = Double(self.simTime), simVal > 0,
            self.flightNumber != "SUMMARY" {  // Exclude Summary Rows (legitimate dual-field entries)
-            LogManager.shared.warning("⚠️ FlightSector created with BOTH blockTime and simTime > 0: date=\(date), flight=\(flightNumber), block=\(self.blockTime), sim=\(self.simTime)")
+            LogManager.shared.warning(" FlightSector created with BOTH blockTime and simTime > 0: date=\(date), flight=\(flightNumber), block=\(self.blockTime), sim=\(self.simTime)")
         }
         #endif
     }

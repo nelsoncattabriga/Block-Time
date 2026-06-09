@@ -20,6 +20,7 @@ struct BackupsView: View {
     @State private var isAutomaticBackupsExpanded = false
     @State private var showingManageBackups = false
     @State private var showBackupHelp = false
+    @State private var showingDeleteWarning = false
 
     var body: some View {
         ScrollView {
@@ -34,6 +35,9 @@ struct BackupsView: View {
                 
                 // Merged Backups & Restore Card
                 mergedBackupsCard
+
+                // Delete Logbook Card
+                deleteLogbookCard
 
                 Spacer(minLength: 20)
             }
@@ -55,20 +59,26 @@ struct BackupsView: View {
         } message: {
             Text(resultMessage)
         }
+        .alert("Delete All Logbook Data", isPresented: $showingDeleteWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteAllFlights()
+            }
+        } message: {
+            Text("This will permanently delete all data.")
+        }
     }
 
     // MARK: - Merged Backups Card
     private var mergedBackupsCard: some View {
         VStack(spacing: 16) {
             HStack {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-
-                Text("Data Backup")
-                    .font(.headline)
+                Text("DATA BACKUP")
+                    .font(.callout)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .padding(.horizontal, 4)
 
                 Spacer()
 
@@ -264,19 +274,32 @@ struct BackupsView: View {
                 .background(Color(.systemGray6).opacity(0.5))
                 .cornerRadius(8)
 
-                // Backup Now Button
-                ActionButton(
-                    title: "Backup Now",
-                    subtitle: "Backup all flights",
-                    icon: "square.and.arrow.down.fill",
-                    color: .blue,
-                    isLoading: backupService.isBackupInProgress
-                ) {
-                    createManualBackup()
+                // Backup Now Button — primary action, filled style
+                Button(action: createManualBackup) {
+                    HStack(spacing: 12) {
+                        if backupService.isBackupInProgress {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "square.and.arrow.down.fill")
+                                .font(.title3)
+                                .foregroundStyle(.white)
+                        }
+                        Text(backupService.isBackupInProgress ? "Backing up…" : "Backup Now")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background(backupService.isBackupInProgress ? Color.blue.opacity(0.6) : Color.blue)
+                    .cornerRadius(10)
                 }
+                .buttonStyle(PlainButtonStyle())
                 .disabled(backupService.isBackupInProgress)
 
-                // Restore from Backup Button
+                // Manage Backups — navigation row
                 ActionButton(
                     title: "Manage Backups",
                     subtitle: "View and restore saved backups",
@@ -301,7 +324,47 @@ struct BackupsView: View {
         }
     }
 
+    // MARK: - Delete Logbook Card
+    private var deleteLogbookCard: some View {
+        VStack(spacing: 16) {
+            Text("DELETE LOGBOOK")
+                .font(.callout)
+                .fontWeight(.semibold)
+                .foregroundStyle(.red)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+
+            ActionButton(
+                title: "Delete All Flight Data",
+                subtitle: "This cannot be undone!",
+                icon: "exclamationmark.triangle.fill",
+                color: .red,
+                isLoading: false
+            ) {
+                showingDeleteWarning = true
+            }
+        }
+        .padding(16)
+        .background(.thinMaterial)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.red.opacity(0.2), lineWidth: 1)
+        )
+    }
+
     // MARK: - Helper Functions
+    private func deleteAllFlights() {
+        FlightDatabaseService.shared.suspendUndoForBatchImport()
+        let success = FlightDatabaseService.shared.clearAllFlights()
+        FlightDatabaseService.shared.resumeUndoAfterBatchImport()
+        resultMessage = success ? "All flights have been successfully deleted." : "Failed to delete flights. Please try again."
+        isSuccess = success
+        showingResult = true
+    }
+
     private func createManualBackup() {
         backupService.performManualBackup { result in
             switch result {
@@ -383,6 +446,7 @@ private struct BackupDetailSheet: View {
     @State private var showingDeleteConfirmation = false
     @State private var showingRestoreConfirmation = false
     @State private var isRestoring = false
+    @State private var restoreStatusMessage = ""
     @State private var showingShareSheet = false
     @State private var showingResultAlert = false
     @State private var isSuccess = false
@@ -473,7 +537,7 @@ private struct BackupDetailSheet: View {
 
                         ActionButton(
                             title: "Restore from this Backup",
-                            subtitle: "Replace or merge your current data",
+                            subtitle: isRestoring && !restoreStatusMessage.isEmpty ? restoreStatusMessage : "Replace or merge your current data",
                             icon: "arrow.counterclockwise.circle.fill",
                             color: .green,
                             isLoading: isRestoring
@@ -623,8 +687,8 @@ private struct BackupDetailSheet: View {
 
     private func performRestore() {
         LogManager.shared.info("performRestore called")
-        LogManager.shared.info("📁 Backup URL: \(backup.url.path)")
-        LogManager.shared.info("🔀 Restore mode: \(selectedRestoreMode)")
+        LogManager.shared.info(" Backup URL: \(backup.url.path)")
+        LogManager.shared.info(" Restore mode: \(selectedRestoreMode)")
 
         if selectedRestoreMode == .replace {
             // Replace mode: always overwrite definitions — no conflict check needed
@@ -644,24 +708,29 @@ private struct BackupDetailSheet: View {
            !CustomCounterService.shared.definitions.isEmpty,
            backupDefs != CustomCounterService.shared.definitions {
             // Conflict: backup has definitions that differ from device — ask user
-            LogManager.shared.info("Definition conflict detected — showing conflict sheet")
+            LogManager.shared.info("Definition conflict detected  showing conflict sheet")
             pendingBackupDefinitions = PendingDefinitions(definitions: backupDefs)
         } else {
-            LogManager.shared.info("No conflict — proceeding with mergeIfEmpty")
+            LogManager.shared.info("No conflict  proceeding with mergeIfEmpty")
             executeRestore(definitionsBehavior: .mergeIfEmpty)
         }
     }
 
     private func executeRestore(definitionsBehavior: DefinitionsBehavior) {
         isRestoring = true
-        LogManager.shared.info("📖 Calling quickRestoreFromBackup...")
+        restoreStatusMessage = "Preparing restore..."
+        LogManager.shared.info(" Calling quickRestoreFromBackup...")
         FileImportService.shared.quickRestoreFromBackup(
             url: backup.url,
             mode: selectedRestoreMode,
             skipSecurityScoping: true,
-            definitionsBehavior: definitionsBehavior
+            definitionsBehavior: definitionsBehavior,
+            progressHandler: { message in
+                restoreStatusMessage = message
+            }
         ) { result in
             isRestoring = false
+            restoreStatusMessage = ""
             switch result {
             case .success(let importResult):
                 LogManager.shared.info("Restore succeeded: \(importResult.successCount) flights")
@@ -688,7 +757,7 @@ private struct BackupDetailSheet: View {
                 showingResultAlert = true
             }
         }
-        LogManager.shared.info("📤 quickRestoreFromBackup call initiated (async)")
+        LogManager.shared.info(" quickRestoreFromBackup call initiated (async)")
     }
 
     private func deleteBackup() {

@@ -100,7 +100,7 @@ class FlightAwareService {
                 throw FlightAwareError.parsingError
             }
 
-            LogManager.shared.debug("Successfully fetched HTML (\(data.count) bytes), parsing flight data")
+            LogManager.shared.debug(" FA: Fetched \(data.count) bytes, parsing")
             // Parse the HTML to extract flight data
             let flights = try await parseFlightData(from: html, targetDate: targetDate, originalDateString: date)
             LogManager.shared.info("FlightAware lookup successful: Found \(flights.count) flight(s) for \(flightNumber)")
@@ -289,7 +289,7 @@ class FlightAwareService {
             }()
 
             // Fetch the detail page and extract gate times
-            LogManager.shared.debug("✈️ FA table row: \(origin)→\(destination) utcDep=\(utcDepDate) \(utcDepTime) actual=\(depIsActual), fetching detail: \(detailPagePath!)")
+            LogManager.shared.debug(" FA table row: \(origin)\(destination) utcDep=\(utcDepDate) \(utcDepTime) actual=\(depIsActual), fetching detail: \(detailPagePath!)")
             if let detailData = try? await fetchFlightDetailPageByPath(
                 path: detailPagePath!,
                 targetDate: originalDateString,
@@ -298,7 +298,7 @@ class FlightAwareService {
             ) {
                 return detailData
             } else {
-                LogManager.shared.debug("✈️ FA detail page fetch failed — using table row fallback (actual=\(depIsActual))")
+                LogManager.shared.debug(" FA detail page fetch failed  using table row fallback (actual=\(depIsActual))")
                 // Convert arrival time from local to UTC using destination airport
                 guard let (_, utcArrTime) = convertLocalToUTC(
                     localDate: localDateCell,
@@ -684,288 +684,6 @@ class FlightAwareService {
         }
     }
 
-    private func fetchFlightDetailPage(flightNumber: String, date: String, time: String, origin: String, destination: String) async throws {
-        // Construct the detail page URL
-        // Format: /live/flight/QFA933/history/20251023/2010Z/YBBN/YPPH
-
-        let detailURL = "https://www.flightaware.com/live/flight/\(flightNumber)/history/\(date)/\(time)/\(origin)/\(destination)"
-
-
-        guard let url = URL(string: detailURL) else {
-            LogManager.shared.error("FlightAware: Invalid detail page URL")
-            return
-        }
-
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-
-            guard let html = String(data: data, encoding: .utf8) else {
-                LogManager.shared.error("FlightAware Detail: Failed to decode HTML data")
-                return
-            }
-
-            LogManager.shared.info("📄 FlightAware Detail: HTML length: \(html.count) characters")
-            LogManager.shared.info(String(repeating: "=", count: 80))
-            LogManager.shared.info("FLIGHT DETAIL PAGE ANALYSIS - Available Data:")
-            LogManager.shared.info(String(repeating: "=", count: 80))
-
-            // Look for JSON data structures
-            analyzeJSONData(in: html)
-
-            // Look for table structures
-            analyzeTableData(in: html)
-
-            // Look for metadata
-            analyzeMetadata(in: html)
-
-            LogManager.shared.info(String(repeating: "=", count: 80))
-
-        } catch {
-            LogManager.shared.error("FlightAware Detail: Error fetching page - \(error.localizedDescription)")
-        }
-    }
-
-    private func analyzeJSONData(in html: String) {
-        LogManager.shared.info("\nJSON DATA STRUCTURES:")
-
-        // Look for trackpollBootstrap which contains the flight data
-        // The JSON can be very large and complex, so we need to match it carefully
-        let pattern = #"var trackpollBootstrap\s*=\s*(\{)"#
-
-        guard let startRegex = try? NSRegularExpression(pattern: pattern),
-              let startMatch = startRegex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-              let startRange = Range(startMatch.range(at: 1), in: html) else {
-            LogManager.shared.info("  No 'trackpollBootstrap' found")
-            return
-        }
-
-        // Find the start position of the JSON object
-        let jsonStartIndex = startRange.lowerBound
-
-        // Now we need to find the matching closing brace
-        // Count braces to find where the JSON object ends
-        var braceCount = 0
-        var jsonEndIndex = jsonStartIndex
-        var inString = false
-        var escapeNext = false
-
-        for index in html[jsonStartIndex...].indices {
-            let char = html[index]
-
-            if escapeNext {
-                escapeNext = false
-                continue
-            }
-
-            if char == "\\" {
-                escapeNext = true
-                continue
-            }
-
-            if char == "\"" {
-                inString.toggle()
-                continue
-            }
-
-            if !inString {
-                if char == "{" {
-                    braceCount += 1
-                } else if char == "}" {
-                    braceCount -= 1
-                    if braceCount == 0 {
-                        jsonEndIndex = html.index(after: index)
-                        break
-                    }
-                }
-            }
-        }
-
-        let jsonString = String(html[jsonStartIndex..<jsonEndIndex])
-        LogManager.shared.info("  Found 'trackpollBootstrap' - Length: \(jsonString.count) characters")
-
-        if let jsonData = jsonString.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
-
-            LogManager.shared.info("\n  Analyzing trackpollBootstrap structure:")
-            LogManager.shared.info("     Top-level keys: \(json.keys.joined(separator: ", "))")
-
-            // Navigate to flights data
-            if let flights = json["flights"] as? [String: Any] {
-                LogManager.shared.info("\n  ✈️ Found flights object with \(flights.count) entries")
-
-                for (flightKey, flightValue) in flights {
-                    LogManager.shared.info("\n  📋 Flight key: \(flightKey)")
-
-                    guard let flightData = flightValue as? [String: Any] else { continue }
-
-                    // Look for activityLog
-                    if let activityLog = flightData["activityLog"] as? [String: Any],
-                       let flightsArray = activityLog["flights"] as? [[String: Any]] {
-
-                        LogManager.shared.info("     Found \(flightsArray.count) flight(s) in activityLog")
-
-                        for (index, flight) in flightsArray.enumerated() {
-                            LogManager.shared.info("\n     🛫 Flight \(index + 1):")
-                            LogManager.shared.info("        Available keys: \(flight.keys.joined(separator: ", "))")
-
-                            // Gate departure time (OUT)
-                            if let gateDepartureTimes = flight["gateDepartureTimes"] as? [String: Any] {
-                                LogManager.shared.info("        🔑 gateDepartureTimes keys: \(gateDepartureTimes.keys.joined(separator: ", "))")
-
-                                // Try as dictionary
-                                if let actual = gateDepartureTimes["actual"] as? [String: Any] {
-                                    LogManager.shared.info("           🔑 actual (dict) keys: \(actual.keys.joined(separator: ", "))")
-                                    if let localtime = actual["localtime"] as? String {
-                                        LogManager.shared.info("        🚪 Gate Departure (OUT): \(localtime)")
-                                    }
-                                    if let epoch = actual["epoch"] as? Int {
-                                        let date = Date(timeIntervalSince1970: TimeInterval(epoch))
-                                        let formatter = DateFormatter()
-                                        formatter.dateFormat = "dd/MM/yyyy HH:mm"
-                                        formatter.timeZone = TimeZone(identifier: "Australia/Brisbane")
-                                        LogManager.shared.info("        🚪 Gate Departure (OUT) from epoch: \(formatter.string(from: date))")
-                                    }
-                                }
-                                // Try as string (in case it's a direct time string)
-                                else if let actualString = gateDepartureTimes["actual"] as? String {
-                                    LogManager.shared.info("           🔑 actual (string): \(actualString)")
-                                    LogManager.shared.info("        🚪 Gate Departure (OUT): \(actualString)")
-                                }
-                                // Try as number (epoch timestamp)
-                                else if let actualEpoch = gateDepartureTimes["actual"] as? Int {
-                                    let date = Date(timeIntervalSince1970: TimeInterval(actualEpoch))
-                                    let formatter = DateFormatter()
-                                    formatter.dateFormat = "dd/MM/yyyy HH:mm"
-                                    formatter.timeZone = TimeZone(identifier: "Australia/Brisbane")
-                                    LogManager.shared.info("        🚪 Gate Departure (OUT): \(formatter.string(from: date))")
-                                }
-                            }
-
-                            // Runway departure time (OFF)
-                            if let takeoffTimes = flight["takeoffTimes"] as? [String: Any] {
-                                if let actual = takeoffTimes["actual"] as? [String: Any] {
-                                    if let localtime = actual["localtime"] as? String {
-                                        LogManager.shared.info("        🛫 Runway Departure (OFF): \(localtime)")
-                                    }
-                                }
-                            }
-
-                            // Runway arrival time (ON)
-                            if let landingTimes = flight["landingTimes"] as? [String: Any] {
-                                if let actual = landingTimes["actual"] as? [String: Any] {
-                                    if let localtime = actual["localtime"] as? String {
-                                        LogManager.shared.info("        🛬 Runway Arrival (ON): \(localtime)")
-                                    }
-                                }
-                            }
-
-                            // Gate arrival time (IN)
-                            if let gateArrivalTimes = flight["gateArrivalTimes"] as? [String: Any] {
-                                LogManager.shared.info("        🔑 gateArrivalTimes keys: \(gateArrivalTimes.keys.joined(separator: ", "))")
-
-                                // Try as dictionary
-                                if let actual = gateArrivalTimes["actual"] as? [String: Any] {
-                                    LogManager.shared.info("           🔑 actual (dict) keys: \(actual.keys.joined(separator: ", "))")
-                                    if let localtime = actual["localtime"] as? String {
-                                        LogManager.shared.info("        🚪 Gate Arrival (IN): \(localtime)")
-                                    }
-                                    if let epoch = actual["epoch"] as? Int {
-                                        let date = Date(timeIntervalSince1970: TimeInterval(epoch))
-                                        let formatter = DateFormatter()
-                                        formatter.dateFormat = "dd/MM/yyyy HH:mm"
-                                        formatter.timeZone = TimeZone(identifier: "Australia/Perth")
-                                        LogManager.shared.info("        🚪 Gate Arrival (IN) from epoch: \(formatter.string(from: date))")
-                                    }
-                                }
-                                // Try as string
-                                else if let actualString = gateArrivalTimes["actual"] as? String {
-                                    LogManager.shared.info("           🔑 actual (string): \(actualString)")
-                                    LogManager.shared.info("        🚪 Gate Arrival (IN): \(actualString)")
-                                }
-                                // Try as number (epoch timestamp)
-                                else if let actualEpoch = gateArrivalTimes["actual"] as? Int {
-                                    let date = Date(timeIntervalSince1970: TimeInterval(actualEpoch))
-                                    let formatter = DateFormatter()
-                                    formatter.dateFormat = "dd/MM/yyyy HH:mm"
-                                    formatter.timeZone = TimeZone(identifier: "Australia/Perth")
-                                    LogManager.shared.info("        🚪 Gate Arrival (IN): \(formatter.string(from: date))")
-                                }
-                            }
-
-                            // Origin and destination
-                            if let origin = flight["origin"] as? [String: Any],
-                               let originCode = origin["icao"] as? String {
-                                LogManager.shared.info("        📍 Origin: \(originCode)")
-                            }
-
-                            if let destination = flight["destination"] as? [String: Any],
-                               let destCode = destination["icao"] as? String {
-                                LogManager.shared.info("        📍 Destination: \(destCode)")
-                            }
-
-                            // Timestamp for matching the correct flight
-                            if let timestamp = flight["timestamp"] as? Int {
-                                let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
-                                let formatter = DateFormatter()
-                                formatter.dateFormat = "dd/MM/yyyy HH:mm"
-                                formatter.timeZone = TimeZone(secondsFromGMT: 0)
-                                LogManager.shared.info("        Flight timestamp (UTC): \(formatter.string(from: date))")
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            LogManager.shared.info("  Failed to parse trackpollBootstrap JSON")
-        }
-    }
-
-    private func analyzeTableData(in html: String) {
-        LogManager.shared.info("\n📋 TABLE DATA STRUCTURES:")
-
-        // Look for tables with specific classes or IDs
-        let tablePattern = #"<table[^>]*class="([^"]*)"[^>]*>(.*?)</table>"#
-        if let regex = try? NSRegularExpression(pattern: tablePattern, options: [.dotMatchesLineSeparators]) {
-            let matches = regex.matches(in: html, range: NSRange(html.startIndex..., in: html))
-            LogManager.shared.info("  Found \(matches.count) tables")
-
-            for (index, match) in matches.prefix(5).enumerated() {
-                if let classRange = Range(match.range(at: 1), in: html) {
-                    let className = String(html[classRange])
-                    LogManager.shared.info("  Table \(index + 1): class=\"\(className)\"")
-                }
-            }
-        }
-
-        // Look for specific data labels
-        let dataLabels = ["Departure", "Arrival", "Scheduled", "Actual", "Gate", "Runway", "Duration"]
-        for label in dataLabels {
-            if html.contains(label) {
-                LogManager.shared.info("  Found label: '\(label)'")
-            }
-        }
-    }
-
-    private func analyzeMetadata(in html: String) {
-        LogManager.shared.info("\n📝 METADATA:")
-
-        // Look for meta tags
-        let metaPattern = #"<meta\s+property="([^"]+)"\s+content="([^"]+)""#
-        if let regex = try? NSRegularExpression(pattern: metaPattern) {
-            let matches = regex.matches(in: html, range: NSRange(html.startIndex..., in: html))
-            LogManager.shared.info("  Found \(matches.count) meta tags")
-
-            for match in matches.prefix(10) {
-                if let propRange = Range(match.range(at: 1), in: html),
-                   let contentRange = Range(match.range(at: 2), in: html) {
-                    let prop = String(html[propRange])
-                    let content = String(html[contentRange])
-                    LogManager.shared.info("  \(prop): \(content)")
-                }
-            }
-        }
-    }
-
     private func extractICAOCode(from text: String) -> String? {
         // Extract ICAO code from text like "Brisbane (BNE / YBBN)" or "Los Angeles Intl (KLAX)"
         // We want the 4-letter code - either after the / or standalone in parentheses
@@ -1085,7 +803,7 @@ class FlightAwareService {
             } else {
                 tsDesc = "nil"
             }
-            LogManager.shared.debug("✈️ FA JSON flight: \(origin)→\(destination) dep=\(formattedDepTime) arr=\(formattedArrTime) ts=\(tsDesc) actual=\(isActual)")
+            LogManager.shared.debug(" FA JSON flight: \(origin)\(destination) dep=\(formattedDepTime) arr=\(formattedArrTime) ts=\(tsDesc) actual=\(isActual)")
 
             allFlights.append(FlightAwareData(
                 origin: origin,

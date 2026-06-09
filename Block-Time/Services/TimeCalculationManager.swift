@@ -22,7 +22,7 @@ struct FlightCalculationContext {
 
 /// Manages all time-related calculations for flight data
 /// Handles block time calculation, night time calculation, and time validation
-class TimeCalculationManager {
+class TimeCalculationManager: @unchecked Sendable {
 
     // MARK: - Dependencies
 
@@ -33,6 +33,14 @@ class TimeCalculationManager {
     init(nightCalcService: NightCalcService = NightCalcService()) {
         self.nightCalcService = nightCalcService
     }
+
+    private nonisolated static let flightDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 
     // MARK: - Context Building
 
@@ -45,7 +53,7 @@ class TimeCalculationManager {
     ///   - blockTime: Flight duration as string (decimal hours or "HH:mm")
     ///   - flightDate: Flight date string in "dd/MM/yyyy" format
     /// - Returns: Context with all parsed values, or nil if required data is missing/invalid
-    func buildCalculationContext(
+    nonisolated func buildCalculationContext(
         fromAirport: String,
         toAirport: String,
         outTime: String,
@@ -64,11 +72,7 @@ class TimeCalculationManager {
             return nil
         }
 
-        // Parse flight date from DD/MM/YYYY format
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-        guard let parsedFlightDate = dateFormatter.date(from: flightDate) else {
+        guard let parsedFlightDate = Self.flightDateFormatter.date(from: flightDate) else {
             return nil
         }
 
@@ -104,7 +108,7 @@ class TimeCalculationManager {
     ///   - timeStr: Time string in "HH:mm" or "HHmm" format
     ///   - date: The date to parse the time on
     /// - Returns: Date object with time set in UTC timezone, or nil if invalid
-    func parseUTCTimeOnDate(_ timeStr: String, on date: Date) -> Date? {
+    nonisolated func parseUTCTimeOnDate(_ timeStr: String, on date: Date) -> Date? {
         let clean = timeStr.replacingOccurrences(of: ":", with: "")
 
         // Handle both 3-digit (e.g., "710" for 07:10) and 4-digit (e.g., "0710") formats
@@ -238,12 +242,7 @@ class TimeCalculationManager {
             return ""
         }
 
-        // Parse the flight date from DD/MM/YYYY format
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-
-        let parsedFlightDate = dateFormatter.date(from: flightDate) ?? Date()
+        let parsedFlightDate = Self.flightDateFormatter.date(from: flightDate) ?? Date()
 
         LogManager.shared.debug("DEBUG: Calling calculateNightTime with from=\(fromAirport), to=\(toAirport), departureUTC=\(departureUTC), flightTimeHours=\(flightTimeHours), flightDate=\(flightDate) -> \(parsedFlightDate)")
 
@@ -273,7 +272,7 @@ class TimeCalculationManager {
     /// - Arrival time calculation
     /// - Parameter context: Pre-built flight calculation context
     /// - Returns: Night time in decimal hours with 2 decimal precision
-    func calculateNightTime(using context: FlightCalculationContext) -> String {
+    nonisolated func calculateNightTime(using context: FlightCalculationContext) -> String {
         // Extract UTC hour/minute using UTC calendar (not local timezone!)
         var utcCalendar = Calendar.current
         utcCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -281,7 +280,7 @@ class TimeCalculationManager {
         let hour = utcCalendar.component(.hour, from: context.departureTime)
         let minute = utcCalendar.component(.minute, from: context.departureTime)
 
-        LogManager.shared.debug("calculateNightTime(using context): departureTime=\(context.departureTime), extracted hour=\(hour), minute=\(minute)")
+        print("[TimeCalc] calculateNightTime: departureTime=\(context.departureTime), hour=\(hour), minute=\(minute)")
 
         let departureUTC = String(format: "%02d%02d", hour, minute)
 
@@ -307,7 +306,7 @@ class TimeCalculationManager {
     /// - Parameter timeString: Time string (e.g., "13:40" or "13.67")
     /// - Returns: Time in decimal hours, or nil if invalid
     /// - Note: Uses Int parsing for HH:mm format to match calculateFlightTime precision (truncates seconds)
-    private func timeStringToHours(_ timeString: String) -> Double? {
+    private nonisolated func timeStringToHours(_ timeString: String) -> Double? {
         let trimmed = timeString.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.contains(":") {
             let components = trimmed.split(separator: ":")
@@ -383,7 +382,7 @@ extension TimeCalculationManager {
             blockTime: blockTime,
             flightDate: flightDate
         ) {
-            LogManager.shared.debug("⚡️ recalculateTimes: Using CACHED context for night time calculation")
+            LogManager.shared.debug(" recalculateTimes: Using CACHED context for night time calculation")
             let nightTime = calculateNightTime(using: context)
             return (blockTime, nightTime)
         } else {

@@ -48,7 +48,9 @@ class LogbookImportService {
             let flightSectors = try parseCSVContent(csvContent)
 
             // Clear existing data before importing
+            databaseService.suspendUndoForBatchImport()
             guard databaseService.clearAllFlights() else {
+                databaseService.resumeUndoAfterBatchImport()
                 return .failure(.databaseClearFailed)
             }
 
@@ -64,6 +66,7 @@ class LogbookImportService {
                 }
             }
 
+            databaseService.resumeUndoAfterBatchImport()
             // Database service observers will automatically post debounced .flightDataChanged notification
 
             return .success(LogbookImportResult(successCount: successCount, failureCount: failureCount))
@@ -94,7 +97,9 @@ class LogbookImportService {
             let flightSectors = try parseTabDelimitedContent(tsvContent)
 
             // Clear existing data before importing
+            databaseService.suspendUndoForBatchImport()
             guard databaseService.clearAllFlights() else {
+                databaseService.resumeUndoAfterBatchImport()
                 return .failure(.databaseClearFailed)
             }
 
@@ -110,6 +115,7 @@ class LogbookImportService {
                 }
             }
 
+            databaseService.resumeUndoAfterBatchImport()
             // Database service observers will automatically post debounced .flightDataChanged notification
 
             return .success(LogbookImportResult(successCount: successCount, failureCount: failureCount))

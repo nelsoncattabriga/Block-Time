@@ -340,7 +340,9 @@ private struct UnifiedFlightPreviewRow: View {
         bidPeriod: "3711",
         base: "BNE",
         category: "CPT-B737",
-        rosterType: .shortHaul
+        rosterType: .shortHaul,
+        periodStartDate: sampleFlights.map(\.date).min(),
+        periodEndDate: sampleFlights.map(\.date).max()
     )
 
     UnifiedRosterPreviewView(

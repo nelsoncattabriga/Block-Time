@@ -23,6 +23,7 @@ class PlannedFlightService {
         let duplicates: Int
         let errors: Int
         let flights: [ImportedFlight]
+        let staleFlights: [FlightEntity]
     }
 
     struct ImportedFlight {
@@ -76,7 +77,7 @@ class PlannedFlightService {
             dateFormatter.dateFormat = "dd/MM/yyyy"
             let dateString = dateFormatter.string(from: parsedFlight.date)
 
-            LogManager.shared.debug("\n✈️  Processing: \(parsedFlight.flightNumber) on \(dateString) (\(parsedFlight.departureAirport)-\(parsedFlight.arrivalAirport))")
+            LogManager.shared.debug("\n  Processing: \(parsedFlight.flightNumber) on \(dateString) (\(parsedFlight.departureAirport)-\(parsedFlight.arrivalAirport))")
 
             // Check if this flight already exists (query for each flight individually)
             let existingFlights = try await findExistingFlights(for: [parsedFlight])
@@ -113,7 +114,7 @@ class PlannedFlightService {
             }
         }
 
-                    LogManager.shared.debug("\n📈 Import Summary:")
+                    LogManager.shared.debug("\n Import Summary:")
                     LogManager.shared.debug("   Imported: \(imported)")
                     LogManager.shared.debug("    Duplicates: \(duplicates)")
                     LogManager.shared.debug("   Errors: \(errors)")
@@ -122,7 +123,8 @@ class PlannedFlightService {
             imported: imported,
             duplicates: duplicates,
             errors: errors,
-            flights: results
+            flights: results,
+            staleFlights: []
         )
     }
 
@@ -304,7 +306,7 @@ class PlannedFlightService {
                existingFlightNum == parsedFlightNum &&
                existing.fromAirport == departureICAO &&
                existing.toAirport == arrivalICAO {
-                            LogManager.shared.debug("      ✓ MATCH FOUND - this is a duplicate!")
+                            LogManager.shared.debug("       MATCH FOUND - this is a duplicate!")
                 return true
             }
         }
@@ -345,7 +347,7 @@ class PlannedFlightService {
             localTimeString: localOutTime,
             airportICAO: departureICAO
         )
-                    LogManager.shared.debug("   ⏰ STD conversion: Local '\(localOutTime)' -> UTC '\(utcOutTime)'")
+                    LogManager.shared.debug("    STD conversion: Local '\(localOutTime)' -> UTC '\(utcOutTime)'")
 
         // For arrival time, we need to calculate the local arrival date first
         // (it might be next day if flight crosses midnight)
@@ -367,7 +369,7 @@ class PlannedFlightService {
             localTimeString: localInTime,
             airportICAO: arrivalICAO
         )
-                    LogManager.shared.debug("   ⏰ STA conversion: Local '\(localInTime)' -> UTC '\(utcInTime)'")
+                    LogManager.shared.debug("    STA conversion: Local '\(localInTime)' -> UTC '\(utcInTime)'")
 
         // Convert departure date from local to UTC
         let utcDateString = airportService.convertFromLocalToUTCDate(
@@ -597,19 +599,150 @@ class PlannedFlightService {
         return flightDate >= today
     }
 
-    /// Check if a flight has been flown (has block time or flight time logged)
+    /// Check if a flight has been flown (has block time or flight time logged).
+    /// Roster-imported placeholder flights store times as "0.0"; treat that as zero alongside "00:00" and "0".
     func isFlown(_ flight: FlightEntity) -> Bool {
-        // A flight is considered "flown" if it has block time or any flight time logged
-        if let blockTime = flight.blockTime, !blockTime.isEmpty, blockTime != "00:00" {
-            return true
+        func hasTime(_ value: String?) -> Bool {
+            guard let v = value, !v.isEmpty else { return false }
+            if let d = Double(v) { return d > 0 }
+            // HH:MM format
+            let parts = v.split(separator: ":").compactMap { Int($0) }
+            return parts.reduce(0, +) > 0
         }
-        if let p1Time = flight.p1Time, !p1Time.isEmpty, p1Time != "00:00" {
-            return true
+        return hasTime(flight.blockTime) || hasTime(flight.p1Time) || hasTime(flight.p2Time)
+    }
+
+    // MARK: - Stale Flight Detection
+
+    /// Find unflown logbook flights inside [periodStart...periodEnd] (inclusive, by day) that are
+    /// NOT present in the new roster. Flown flights are always excluded regardless of key match.
+    /// Roster flights are matched by normalised flight number + ICAO route + same UTC calendar day.
+    func findStaleFlights(
+        periodStart: Date,
+        periodEnd: Date,
+        rosterFlights: [RosterParserService.ParsedFlight]
+    ) async -> [FlightEntity] {
+        let context = databaseService.viewContext
+
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                let airportService = AirportService.shared
+
+                // Build UTC day boundaries for the period.
+                // periodStart/periodEnd are local-timezone Dates (device calendar), but Core Data stores UTC.
+                // Widen by ±1 day so that timezone offsets never push a flight outside the query window.
+                // Key-set matching (normalised flight number + ICAO route + UTC day) provides correctness;
+                // the wider window only determines which DB rows are candidates for the stale check.
+                var utcCal = Calendar(identifier: .gregorian)
+                utcCal.timeZone = TimeZone(secondsFromGMT: 0)!
+
+                guard let startOfPeriod = utcCal.date(byAdding: .day, value: -1, to: utcCal.startOfDay(for: periodStart)),
+                      let endOfPeriod = utcCal.date(byAdding: .day, value: 2, to: utcCal.startOfDay(for: periodEnd)),
+                      let endOfPeriodInclusive = utcCal.date(byAdding: .second, value: -1, to: endOfPeriod) else {
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+                request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                    NSPredicate(format: "date >= %@", startOfPeriod as NSDate),
+                    NSPredicate(format: "date <= %@", endOfPeriodInclusive as NSDate)
+                ])
+                request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: true)]
+
+                let utcDayFormatter = DateFormatter()
+                utcDayFormatter.dateFormat = "dd/MM/yyyy"
+                utcDayFormatter.locale = Locale(identifier: "en_US_POSIX")
+                utcDayFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+                LogManager.shared.debug("[StaleDetect] Window: \(utcDayFormatter.string(from: startOfPeriod)) → \(utcDayFormatter.string(from: endOfPeriodInclusive)) (UTC)")
+                LogManager.shared.debug("[StaleDetect] periodStart(local)=\(periodStart) periodEnd(local)=\(periodEnd)")
+
+                guard let windowFlights = try? context.fetch(request) else {
+                    LogManager.shared.debug("[StaleDetect] Core Data fetch failed")
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                LogManager.shared.debug("[StaleDetect] DB flights in window: \(windowFlights.count)")
+                for f in windowFlights {
+                    let dateStr = f.date.map { utcDayFormatter.string(from: $0) } ?? "nil"
+                    let flown = self.isFlown(f)
+                    LogManager.shared.debug("[StaleDetect]   DB: \(f.flightNumber ?? "?") \(f.fromAirport ?? "?")-\(f.toAirport ?? "?") \(dateStr)(UTC) flown=\(flown) blockTime=\(f.blockTime ?? "nil")")
+                }
+
+                // Build roster key set: "normalisedFlightNum|depICAO|arrICAO|dd/MM/yyyy(UTC)"
+                var rosterKeySet = Set<String>()
+                for rosterFlight in rosterFlights {
+                    let depICAO = airportService.convertToICAO(rosterFlight.departureAirport)
+                    let arrICAO = airportService.convertToICAO(rosterFlight.arrivalAirport)
+
+                    let calendar = Calendar.current
+                    let comps = calendar.dateComponents([.year, .month, .day], from: rosterFlight.date)
+                    guard let day = comps.day, let month = comps.month, let year = comps.year else { continue }
+                    let localDateString = String(format: "%02d/%02d/%04d", day, month, year)
+                    let localOutTime: String = {
+                        let t = rosterFlight.departureTime
+                        guard t.count == 4 else { return t }
+                        return "\(t.prefix(2)):\(t.suffix(2))"
+                    }()
+                    let utcDateString = airportService.convertFromLocalToUTCDate(
+                        localDateString: localDateString,
+                        localTimeString: localOutTime,
+                        airportICAO: depICAO
+                    )
+
+                    let normNum = self.normaliseFlightNumber(rosterFlight.flightNumber)
+                    let key = "\(normNum)|\(depICAO)|\(arrICAO)|\(utcDateString)"
+                    LogManager.shared.debug("[StaleDetect] Roster key: \(key)  (local=\(localDateString) \(localOutTime) dep=\(rosterFlight.departureAirport)→\(depICAO))")
+                    rosterKeySet.insert(key)
+                }
+
+                // Identify stale: in window, not flown, not matched in new roster
+                var stale: [FlightEntity] = []
+                for flight in windowFlights {
+                    guard !self.isFlown(flight) else { continue }
+
+                    guard let flightDate = flight.date else { continue }
+                    let utcDayStr = utcDayFormatter.string(from: flightDate)
+                    let normNum = self.normaliseFlightNumber(flight.flightNumber ?? "")
+                    let depICAO = flight.fromAirport ?? ""
+                    let arrICAO = flight.toAirport ?? ""
+                    let key = "\(normNum)|\(depICAO)|\(arrICAO)|\(utcDayStr)"
+                    let matched = rosterKeySet.contains(key)
+                    LogManager.shared.debug("[StaleDetect]   DB key: \(key) → \(matched ? "MATCHED (keep)" : "NO MATCH (stale)")")
+
+                    if !matched {
+                        stale.append(flight)
+                    }
+                }
+
+                LogManager.shared.debug("[StaleDetect] Result: \(stale.count) stale flights found")
+                continuation.resume(returning: stale)
+            }
         }
-        if let p2Time = flight.p2Time, !p2Time.isEmpty, p2Time != "00:00" {
-            return true
+    }
+
+    /// Delete the given stale flight entities from the logbook. Returns count deleted.
+    @discardableResult
+    func deleteStaleFlights(_ flights: [FlightEntity]) async -> Int {
+        guard !flights.isEmpty else { return 0 }
+
+        let context = databaseService.viewContext
+        let objectIDs = flights.compactMap { $0.objectID }
+
+        return await withCheckedContinuation { continuation in
+            context.perform {
+                var deleted = 0
+                for objectID in objectIDs {
+                    guard let flight = try? context.existingObject(with: objectID) as? FlightEntity else { continue }
+                    context.delete(flight)
+                    deleted += 1
+                }
+                try? context.save()
+                continuation.resume(returning: deleted)
+            }
         }
-        return false
     }
 
     /// Get count of future flights

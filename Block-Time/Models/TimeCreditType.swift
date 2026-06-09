@@ -15,11 +15,11 @@ enum TimeCreditType: String, CaseIterable, Codable {
     var displayName: String {
         switch self {
         case .p1:
-            return "P1 (CMD)"
+            return "P1"
         case .p1us:
             return "ICUS"
         case .p2:
-            return "P2 (CO-PLT)"
+            return "P2"
         }
     }
 

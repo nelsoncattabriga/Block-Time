@@ -94,7 +94,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "frmsLimitsGauge":   return "FRMS Limits"
         case "frmsRollingLine":   return "FRMS Rolling Line"
         case "activityChart":     return "Flying Activity"
-        case "timeByType":        return "Time by Type"
+        case "timeByType":        return "Flying by Type"
         case "pfRatioChart":      return "PF Ratio"
         case "takeoffLanding":    return "Takeoffs & Landings"
         case "approachTypes":     return "Approach Types"
@@ -192,42 +192,82 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
             }
         }
         switch rawValue {
+        // FRMS
         case "frmsFlightTime":    return .orange
-        case "frmsDutyTime":      return .teal
+        case "frmsDutyTime":      return .orange
         case "frmsRestWindow":    return .orange
         case "frmsLimitsGauge":   return .orange
-        case "frmsRollingLine":   return .blue
-        case "activityChart":     return .blue
-        case "timeByType":        return .purple
-        case "pfRatioChart":      return .orange
-        case "takeoffLanding":    return .green
-        case "approachTypes":     return .indigo
-        case "topRoutes":         return .red
-        case "topRegistrations":  return .cyan
-        case "airportStats":      return .teal
-        case "workRateHeatmap":   return .indigo
-        case "careerMilestones":  return .yellow
-        case "customCount":       return .teal
-        case "punctuality":       return .teal
-        case "crewFrequency":     return .purple
+        case "frmsRollingLine":   return .orange
+        // Logged time / stats
         case "totalTime":         return .blue
-        case "picTime":           return .green
-        case "icusTime":          return .orange
-        case "nightTime":         return .indigo
-        case "instrumentTime":    return .teal
-        case "simTime":           return .cyan
-        case "insTime":           return .pink
+        case "picTime":           return .blue
+        case "icusTime":          return .blue
+        case "nightTime":         return .blue
+        case "instrumentTime":    return .blue
+        case "simTime":           return .blue
+        case "insTime":           return .blue
+        // Recency
         case "recentActivity7",
              "recentActivity28",
              "recentActivity30",
              "recentActivity365": return .green
-        case "pfRecency":         return .blue
-        case "aiiiRecency":       return .blue
-        case "takeoffRecency":    return .blue
-        case "landingRecency":    return .blue
-        case "aircraftTypeTime":  return .mint
+        case "pfRecency":         return .green
+        case "aiiiRecency":       return .green
+        case "takeoffRecency":    return .green
+        case "landingRecency":    return .green
+        // Charts / analysis
+        case "activityChart":     return .purple
+        case "pfRatioChart":      return .purple
+        case "workRateHeatmap":   return .purple
+        case "crewFrequency":     return .purple
         case "averageMetric":     return .purple
+        // Routes / airports / fleet
+        case "takeoffLanding":    return .indigo
+        case "approachTypes":     return .indigo
+        case "topRoutes":         return .indigo
+        case "topRegistrations":  return .indigo
+        case "airportStats":      return .indigo
+        case "aircraftTypeTime":  return .indigo
+        case "timeByType":        return .indigo
+        // Other
+        case "punctuality":       return .red
+        case "careerMilestones":  return .yellow
+        case "customCount":       return .teal
         default:                  return .gray
+        }
+    }
+
+    // MARK: - Category
+
+    enum Category: String, CaseIterable {
+        case frms            = "FRMS"
+        case timeStats       = "Time & Stats"
+        case recency         = "Recency & Limits"
+        case routesAirports  = "Routes, Airports & Fleet"
+        case charts          = "Misc Charts"
+        case other           = "Other"
+    }
+
+    var category: Category {
+        if customCounterColumnIndex != nil { return .other }
+        switch rawValue {
+        case "frmsFlightTime", "frmsDutyTime", "frmsRestWindow",
+             "frmsLimitsGauge", "frmsRollingLine":
+            return .frms
+        case "totalTime", "picTime", "icusTime", "nightTime",
+             "instrumentTime", "simTime", "insTime":
+            return .timeStats
+        case "recentActivity7", "recentActivity28", "recentActivity30", "recentActivity365",
+             "pfRecency", "aiiiRecency", "takeoffRecency", "landingRecency":
+            return .recency
+        case "activityChart", "pfRatioChart", "workRateHeatmap",
+             "crewFrequency", "averageMetric":
+            return .charts
+        case "takeoffLanding", "approachTypes", "topRoutes", "topRegistrations",
+             "airportStats", "aircraftTypeTime", "timeByType":
+            return .routesAirports
+        default:
+            return .other
         }
     }
 

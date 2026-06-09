@@ -68,17 +68,25 @@ struct BackupFileInfo: Identifiable, Equatable {
     let flightCount: Int?
 
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        Self.dateFormatter.string(from: date)
     }
 
     var formattedSize: String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: size)
+        Self.sizeFormatter.string(fromByteCount: size)
     }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
+    private static let sizeFormatter: ByteCountFormatter = {
+        let f = ByteCountFormatter()
+        f.countStyle = .file
+        return f
+    }()
 }
 
 // MARK: - Automatic Backup Service
@@ -101,6 +109,20 @@ class AutomaticBackupService: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let settingsKey = "automaticBackupSettings"
     private let fileManager = FileManager.default
+
+    // nonisolated so it can be used from DispatchQueue.global in performBackup
+    private nonisolated static let flightSortFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "dd/MM/yyyy"
+        return f
+    }()
+
+    // Used in createBackupFile, also called from background queue
+    private nonisolated static let backupTimestampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd_HHmm"
+        return f
+    }()
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
 
     // Backup file naming
@@ -264,32 +286,44 @@ class AutomaticBackupService: ObservableObject {
         isBackupInProgress = true
         lastBackupError = nil
 
-        // Capture counter definitions on main thread before going to background
+        // Capture all main-thread data before going to background
         let counterDefinitions = CustomCounterService.shared.definitions
+        let crewContactsSnapshot = CrewContactService.shared.fetchAllAsBackup()
+        let t0 = Date()
+        let flights = FlightDatabaseService.shared.fetchAllFlights()
+        LogManager.shared.info("[Backup] fetchAllFlights: \(String(format: "%.2f", Date().timeIntervalSince(t0)))s, \(flights.count) flights")
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
 
             do {
-                let flights = FlightDatabaseService.shared.fetchAllFlights()
 
                 if flights.isEmpty {
                     throw BackupError.noDataToBackup
                 }
 
-                let flightSortFormatter = DateFormatter()
-                flightSortFormatter.dateFormat = "dd/MM/yyyy"
-                let sortedFlights = flights.sorted { flight1, flight2 in
-                    if let date1 = flightSortFormatter.date(from: flight1.date),
-                       let date2 = flightSortFormatter.date(from: flight2.date) {
-                        return date1 < date2
+                let t1 = Date()
+                let sortedFlights = flights
+                    .map { ($0, Self.flightSortFormatter.date(from: $0.date)) }
+                    .sorted { a, b in
+                        if let d1 = a.1, let d2 = b.1 { return d1 < d2 }
+                        return a.0.date < b.0.date
                     }
-                    return flight1.date < flight2.date
-                }
+                    .map(\.0)
+                LogManager.shared.info("[Backup] sort: \(String(format: "%.2f", Date().timeIntervalSince(t1)))s")
 
-                let csvString = FileImportService.shared.exportToCSV(flights: sortedFlights, definitions: counterDefinitions)
+                let t2 = Date()
+                let csvString = FileImportService.shared.exportToCSV(flights: sortedFlights, definitions: counterDefinitions, crewContacts: crewContactsSnapshot)
+                LogManager.shared.info("[Backup] exportToCSV: \(String(format: "%.2f", Date().timeIntervalSince(t2)))s, \(csvString.count) chars")
+
+                let t3 = Date()
                 let backupURL = try self.createBackupFile(csvString: csvString, flightCount: flights.count)
+                LogManager.shared.info("[Backup] file write: \(String(format: "%.2f", Date().timeIntervalSince(t3)))s")
+                LogManager.shared.info("[Backup] total: \(String(format: "%.2f", Date().timeIntervalSince(t0)))s")
+
+                let t4 = Date()
                 try self.cleanupOldBackups()
+                LogManager.shared.info("[Backup] cleanup: \(String(format: "%.2f", Date().timeIntervalSince(t4)))s")
 
                 DispatchQueue.main.async {
                     self.isBackupInProgress = false
@@ -349,15 +383,12 @@ class AutomaticBackupService: ObservableObject {
     private func createBackupFile(csvString: String, flightCount: Int) throws -> URL {
         let backupDir = try getBackupDirectory()
 
-        // Create filename with timestamp
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd_HHmm"
-        let timestamp = dateFormatter.string(from: Date())
+        let timestamp = Self.backupTimestampFormatter.string(from: Date())
         let filename = "\(backupFilePrefix)\(timestamp)_\(flightCount)flights.\(backupFileExtension)"
 
         let fileURL = backupDir.appendingPathComponent(filename)
 
-        LogManager.shared.info("💾 Writing backup file to: \(fileURL.path)")
+        LogManager.shared.info(" Writing backup file to: \(fileURL.path)")
 
         // Write file
         try csvString.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -452,7 +483,7 @@ class AutomaticBackupService: ObservableObject {
             let backupsToDelete = backups.dropFirst(settings.maxBackupsToKeep)
             for backup in backupsToDelete {
                 try fileManager.removeItem(at: backup.url)
-                LogManager.shared.info("🗑️ Deleted old backup: \(backup.url.lastPathComponent)")
+                LogManager.shared.info(" Deleted old backup: \(backup.url.lastPathComponent)")
             }
         }
     }

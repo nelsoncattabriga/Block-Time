@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 import UniformTypeIdentifiers
 
 /// Unified view for importing rosters - automatically detects SH or LH roster type
@@ -31,11 +32,13 @@ struct UnifiedRosterImportView: View {
 
     enum SheetType: Identifiable {
         case preview(parseResult: UnifiedParseResult, futureFlights: [UnifiedParsedFlight])
-        case result(importResult: PlannedFlightService.ImportResult)
+        case staleReview(staleFlights: [FlightEntity], importResult: PlannedFlightService.ImportResult, rosterBase: String)
+        case result(importResult: PlannedFlightService.ImportResult, staleRemoved: Int = 0)
 
         var id: String {
             switch self {
             case .preview: return "preview"
+            case .staleReview: return "staleReview"
             case .result: return "result"
             }
         }
@@ -205,11 +208,29 @@ struct UnifiedRosterImportView: View {
                         pilotInfo: parseResult,
                         onImport: { selectedFlights in
                             currentSheet = nil
-                            importSelectedFlights(selectedFlights)
+                            importSelectedFlights(selectedFlights, parseResult: parseResult)
                         }
                     )
-                case .result(let importResult):
-                    UnifiedRosterImportResultView(result: importResult) {
+                case .staleReview(let staleFlights, let importResult, let rosterBase):
+                    StaleFlightReviewView(
+                        staleFlights: staleFlights,
+                        rosterBase: rosterBase,
+                        onContinue: { toDelete in
+                            currentSheet = nil
+                            Task {
+                                try? await Task.sleep(for: .seconds(0.6))
+                                let removed = await plannedFlightService.deleteStaleFlights(toDelete)
+                                await MainActor.run {
+                                    currentSheet = .result(importResult: importResult, staleRemoved: removed)
+                                }
+                            }
+                        },
+                        onSkip: {
+                            currentSheet = .result(importResult: importResult)
+                        }
+                    )
+                case .result(let importResult, let staleRemoved):
+                    UnifiedRosterImportResultView(result: importResult, staleRemoved: staleRemoved) {
                         dismiss()
                     }
                 }
@@ -290,10 +311,10 @@ struct UnifiedRosterImportView: View {
         }
     }
 
-    private func importSelectedFlights(_ flights: [UnifiedParsedFlight]) {
+    private func importSelectedFlights(_ flights: [UnifiedParsedFlight], parseResult: UnifiedParseResult) {
         Task {
             // Wait for preview sheet to finish dismissing first
-            try await Task.sleep(nanoseconds: 600_000_000) // 0.6 seconds
+            try? await Task.sleep(for: .seconds(0.6))
 
             do {
                 // Convert unified flights to RosterParserService.ParsedFlight format
@@ -316,11 +337,42 @@ struct UnifiedRosterImportView: View {
 
                 let result = try await plannedFlightService.importFlights(convertedFlights)
 
-                await MainActor.run {
-                    // Database service observers will automatically post debounced .flightDataChanged notification
-
-                    // Show the result sheet with data embedded
-                    currentSheet = .result(importResult: result)
+                // Stale detection: find unflown logbook flights in the bid period that are absent from new roster.
+                // Key set is built from the FULL roster (parseResult.flights), not just the user's selected subset,
+                // so deselected-but-still-rostered flights are not incorrectly flagged as stale.
+                if let periodStart = parseResult.periodStartDate,
+                   let periodEnd = parseResult.periodEndDate {
+                    let allRosterFlights = parseResult.flights.map { flight -> RosterParserService.ParsedFlight in
+                        RosterParserService.ParsedFlight(
+                            date: flight.date,
+                            flightNumber: flight.flightNumber,
+                            departureAirport: flight.departureAirport,
+                            arrivalAirport: flight.arrivalAirport,
+                            departureTime: flight.departureTime,
+                            arrivalTime: flight.arrivalTime,
+                            aircraftType: flight.aircraftType,
+                            role: flight.role,
+                            isPositioning: flight.isPositioning,
+                            bidPeriod: flight.bidPeriod,
+                            dutyCode: flight.dutyCode
+                        )
+                    }
+                    let stale = await plannedFlightService.findStaleFlights(
+                        periodStart: periodStart,
+                        periodEnd: periodEnd,
+                        rosterFlights: allRosterFlights
+                    )
+                    await MainActor.run {
+                        if stale.isEmpty {
+                            currentSheet = .result(importResult: result)
+                        } else {
+                            currentSheet = .staleReview(staleFlights: stale, importResult: result, rosterBase: parseResult.base)
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        currentSheet = .result(importResult: result)
+                    }
                 }
             } catch {
                 await MainActor.run {
@@ -488,6 +540,7 @@ private struct ImportMethodCard<Action: View>: View {
 
 private struct UnifiedRosterImportResultView: View {
     let result: PlannedFlightService.ImportResult
+    let staleRemoved: Int
     let onDone: () -> Void
 
     var body: some View {
@@ -495,7 +548,7 @@ private struct UnifiedRosterImportResultView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     // Success/Warning Icon
-                    if result.imported > 0 && result.errors == 0 {
+                    if result.errors == 0 {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 60))
                             .foregroundColor(.green)
@@ -547,6 +600,15 @@ private struct UnifiedRosterImportResultView: View {
                                 color: .red,
                                 value: "\(result.errors)",
                                 label: result.errors == 1 ? "Error" : "Errors"
+                            )
+                        }
+
+                        if staleRemoved > 0 {
+                            ImportStatCard(
+                                icon: "minus.circle.fill",
+                                color: .red,
+                                value: "\(staleRemoved)",
+                                label: staleRemoved == 1 ? "Flight Removed" : "Flights Removed"
                             )
                         }
                     }
@@ -691,6 +753,178 @@ private struct FlightSummaryRow: View {
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE dd MMM yyyy"
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Stale Flight Review View
+
+private struct StaleFlightReviewView: View {
+    let staleFlights: [FlightEntity]
+    let rosterBase: String
+    let onContinue: (_ toDelete: [FlightEntity]) -> Void
+    let onSkip: () -> Void
+
+    @State private var selectedIDs: Set<UUID> = []
+
+    init(staleFlights: [FlightEntity], rosterBase: String, onContinue: @escaping (_ toDelete: [FlightEntity]) -> Void, onSkip: @escaping () -> Void) {
+        self.staleFlights = staleFlights
+        self.rosterBase = rosterBase
+        self.onContinue = onContinue
+        self.onSkip = onSkip
+        let ids = Set(staleFlights.compactMap(\.id))
+        self._selectedIDs = State(initialValue: ids)
+    }
+
+    private static let baseTimezones: [String: String] = [
+        "BNE": "Australia/Brisbane",
+        "SYD": "Australia/Sydney",
+        "MEL": "Australia/Melbourne",
+        "PER": "Australia/Perth",
+        "ADL": "Australia/Adelaide",
+        "CBR": "Australia/Sydney",
+        "CNS": "Australia/Brisbane",
+        "OOL": "Australia/Brisbane",
+    ]
+
+    private var baseTimezone: TimeZone {
+        if let id = Self.baseTimezones[rosterBase.uppercased()],
+           let tz = TimeZone(identifier: id) { return tz }
+        return TimeZone(secondsFromGMT: 0)!
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Stale flight list
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        // Explanation header
+                        VStack(spacing: 4) {
+                            Text("\(staleFlights.count) Existing \(staleFlights.count == 1 ? "Flight" : "Flights") Not in Revised Roster")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.center)
+
+                            Text("These Flights Will Be Removed From Your Logbook")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 8)
+
+                        ForEach(staleFlights, id: \.id) { flight in
+                            staleFlight(flight)
+                        }
+                    }
+                    .padding()
+                }
+
+                // Bottom action bar
+                VStack(spacing: 0) {
+                    Divider()
+                    HStack(spacing: 12) {
+                        let toDelete = staleFlights.filter { selectedIDs.contains($0.id ?? UUID()) }
+                        Button {
+                            onContinue(toDelete)
+                        } label: {
+                            HStack {
+                                Image(systemName: "trash.fill")
+                                Text(toDelete.isEmpty ? "Continue" : "Remove \(toDelete.count)")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(toDelete.isEmpty ? Color.blue : Color.red)
+                            .foregroundStyle(.white)
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding()
+                }
+                .background(Color(.systemBackground))
+            }
+            .navigationTitle("Review Removals")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Skip") {
+                        onSkip()
+                    }
+                }
+            }
+        }
+    }
+
+    private func staleFlight(_ flight: FlightEntity) -> some View {
+        let flightID = flight.id ?? UUID()
+        let isSelected = selectedIDs.contains(flightID)
+        return Button {
+            if isSelected {
+                selectedIDs.remove(flightID)
+            } else {
+                selectedIDs.insert(flightID)
+            }
+        } label: {
+            HStack(spacing: 16) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? .red : .secondary)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(flight.flightNumber ?? "—")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+
+                        if let date = flight.date {
+                            Text(staleFlightDate(date))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        Text(flight.fromAirport ?? "—")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+
+                        Image(systemName: "arrow.right")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+
+                        Text(flight.toAirport ?? "—")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding()
+            .background(isSelected ? Color.red.opacity(0.06) : Color(.systemGray6))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.red.opacity(0.3) : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func staleFlightDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE dd MMM y"
+        formatter.timeZone = baseTimezone
         return formatter.string(from: date)
     }
 }

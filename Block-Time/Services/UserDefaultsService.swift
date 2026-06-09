@@ -88,6 +88,7 @@ struct AppSettings {
     var defaultCoPilotName: String
     var defaultSOName: String
     var savedSONames: [String]  // Shared list for both SO 1 and SO 2
+    var savedCrewNames: [String]  // Unified crew name list across all roles
     var flightTimePosition: FlightTimePosition
     var foPilotFlyingCredit: TimeCreditType  // What time credit to use when F/O is PF (ICUS or P2)
     var includeLeadingZeroInFlightNumber: Bool
@@ -131,6 +132,7 @@ struct AppSettings {
         defaultCoPilotName: "",
         defaultSOName: "",
         savedSONames: [],
+        savedCrewNames: [],
         flightTimePosition: .captain,
         foPilotFlyingCredit: .p1us,  // Default to ICUS
         includeLeadingZeroInFlightNumber: false,
@@ -212,6 +214,8 @@ class UserDefaultsService: ObservableObject {
         static let logCustomCount = "logCustomCount"
         static let customCountLabel = "customCountLabel"
         static let onboardingCompleted = "onboardingCompleted"
+        static let savedCrewNames = "savedCrewNames"
+        static let crewNamesMigrated = "crewNamesMigrated"
     }
     
     private let userDefaults: UserDefaults
@@ -231,6 +235,7 @@ class UserDefaultsService: ObservableObject {
     
     /// Load all app settings from UserDefaults
     func loadSettings() -> AppSettings {
+        migrateCrewNamesIfNeeded()
         let flightTimePositionString = userDefaults.string(forKey: Keys.flightTimePosition) ?? FlightTimePosition.captain.rawValue
         let flightTimePosition = FlightTimePosition(rawValue: flightTimePositionString) ?? .captain
         let foPilotFlyingCreditString = userDefaults.string(forKey: Keys.foPilotFlyingCredit) ?? TimeCreditType.p1us.rawValue
@@ -249,6 +254,7 @@ class UserDefaultsService: ObservableObject {
             defaultCoPilotName: userDefaults.string(forKey: Keys.defaultCoPilotName) ?? "",
             defaultSOName: userDefaults.string(forKey: Keys.defaultSOName) ?? "",
             savedSONames: loadAndSortCrewNames(forKey: Keys.savedSONames),
+            savedCrewNames: loadAndSortCrewNames(forKey: Keys.savedCrewNames),
             flightTimePosition: flightTimePosition,
             foPilotFlyingCredit: foPilotFlyingCredit,
             includeLeadingZeroInFlightNumber: userDefaults.bool(forKey: Keys.includeLeadingZeroInFlightNumber),
@@ -295,6 +301,7 @@ class UserDefaultsService: ObservableObject {
         userDefaults.set(settings.defaultCoPilotName, forKey: Keys.defaultCoPilotName)
         userDefaults.set(settings.defaultSOName, forKey: Keys.defaultSOName)
         userDefaults.set(settings.savedSONames, forKey: Keys.savedSONames)
+        userDefaults.set(settings.savedCrewNames, forKey: Keys.savedCrewNames)
         userDefaults.set(settings.flightTimePosition.rawValue, forKey: Keys.flightTimePosition)
         userDefaults.set(settings.includeLeadingZeroInFlightNumber, forKey: Keys.includeLeadingZeroInFlightNumber)
         userDefaults.set(settings.includeAirlinePrefixInFlightNumber, forKey: Keys.includeAirlinePrefixInFlightNumber)
@@ -564,84 +571,111 @@ class UserDefaultsService: ObservableObject {
         CloudKitSettingsSyncService.shared.markLocalModification()
     }
     
-    // MARK: - Crew Name Management (unchanged)
-    
+    // MARK: - Unified Crew Name Management
+
+    /// One-time migration: unions the three legacy crew name lists into savedCrewNames.
+    /// Guarded by the crewNamesMigrated flag — runs once per device, never again.
+    private func migrateCrewNamesIfNeeded() {
+        guard !userDefaults.bool(forKey: Keys.crewNamesMigrated) else { return }
+        let captains = userDefaults.stringArray(forKey: Keys.savedCaptainNames) ?? []
+        let coPilots = userDefaults.stringArray(forKey: Keys.savedCoPilotNames) ?? []
+        let sos = userDefaults.stringArray(forKey: Keys.savedSONames) ?? []
+        let unified = sortCrewNamesByFirstName(Array(Set(captains + coPilots + sos)))
+        userDefaults.set(unified, forKey: Keys.savedCrewNames)
+        userDefaults.set(true, forKey: Keys.crewNamesMigrated)
+    }
+
+    /// Add a name to the unified crew list. Returns the updated sorted list.
+    func addCrewName(_ name: String) -> [String] {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCrewNames) }
+        var names = userDefaults.stringArray(forKey: Keys.savedCrewNames) ?? []
+        if !names.contains(trimmedName) {
+            names.append(trimmedName)
+            let sorted = sortCrewNamesByFirstName(names)
+            userDefaults.set(sorted, forKey: Keys.savedCrewNames)
+            return sorted
+        }
+        return loadAndSortCrewNames(forKey: Keys.savedCrewNames)
+    }
+
+    /// Remove a name from the unified crew list. Returns the updated list.
+    func removeCrewName(_ name: String) -> [String] {
+        var names = userDefaults.stringArray(forKey: Keys.savedCrewNames) ?? []
+        names.removeAll { $0 == name }
+        let sorted = sortCrewNamesByFirstName(names)
+        userDefaults.set(sorted, forKey: Keys.savedCrewNames)
+        return sorted
+    }
+
+    // MARK: - Crew Name Management (legacy delegates — keep for backward compat)
+
     func addCaptainName(_ name: String) -> [String] {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCaptainNames) }
-        
-        var names = userDefaults.stringArray(forKey: Keys.savedCaptainNames) ?? []
-        
-        if !names.contains(trimmedName) {
-            names.append(trimmedName)
-            let sortedNames = sortCrewNamesByFirstName(names)
-            userDefaults.set(sortedNames, forKey: Keys.savedCaptainNames)
-            return sortedNames
+        guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCrewNames) }
+        // Keep legacy key updated for CloudKit backward compat
+        var legacy = userDefaults.stringArray(forKey: Keys.savedCaptainNames) ?? []
+        if !legacy.contains(trimmedName) {
+            legacy.append(trimmedName)
+            userDefaults.set(sortCrewNamesByFirstName(legacy), forKey: Keys.savedCaptainNames)
         }
-        
-        return loadAndSortCrewNames(forKey: Keys.savedCaptainNames)
+        return addCrewName(trimmedName)
     }
-    
+
     func addCoPilotName(_ name: String) -> [String] {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCoPilotNames) }
-        
-        var names = userDefaults.stringArray(forKey: Keys.savedCoPilotNames) ?? []
-        
-        if !names.contains(trimmedName) {
-            names.append(trimmedName)
-            let sortedNames = sortCrewNamesByFirstName(names)
-            userDefaults.set(sortedNames, forKey: Keys.savedCoPilotNames)
-            return sortedNames
+        guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCrewNames) }
+        // Keep legacy key updated for CloudKit backward compat
+        var legacy = userDefaults.stringArray(forKey: Keys.savedCoPilotNames) ?? []
+        if !legacy.contains(trimmedName) {
+            legacy.append(trimmedName)
+            userDefaults.set(sortCrewNamesByFirstName(legacy), forKey: Keys.savedCoPilotNames)
         }
-        
-        return loadAndSortCrewNames(forKey: Keys.savedCoPilotNames)
+        return addCrewName(trimmedName)
     }
-    
+
+    func addSOName(_ name: String) -> [String] {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCrewNames) }
+        // Keep legacy key updated for CloudKit backward compat
+        var legacy = userDefaults.stringArray(forKey: Keys.savedSONames) ?? []
+        if !legacy.contains(trimmedName) {
+            legacy.append(trimmedName)
+            userDefaults.set(sortCrewNamesByFirstName(legacy), forKey: Keys.savedSONames)
+        }
+        return addCrewName(trimmedName)
+    }
+
     func removeCaptainName(_ name: String) -> [String] {
-        var names = userDefaults.stringArray(forKey: Keys.savedCaptainNames) ?? []
-        names.removeAll { $0 == name }
-        userDefaults.set(names, forKey: Keys.savedCaptainNames)
-        return names
+        // Keep legacy key updated for CloudKit backward compat
+        var legacy = userDefaults.stringArray(forKey: Keys.savedCaptainNames) ?? []
+        legacy.removeAll { $0 == name }
+        userDefaults.set(legacy, forKey: Keys.savedCaptainNames)
+        return removeCrewName(name)
     }
-    
+
     func removeCoPilotName(_ name: String) -> [String] {
-        var names = userDefaults.stringArray(forKey: Keys.savedCoPilotNames) ?? []
-        names.removeAll { $0 == name }
-        userDefaults.set(names, forKey: Keys.savedCoPilotNames)
-        return names
+        // Keep legacy key updated for CloudKit backward compat
+        var legacy = userDefaults.stringArray(forKey: Keys.savedCoPilotNames) ?? []
+        legacy.removeAll { $0 == name }
+        userDefaults.set(legacy, forKey: Keys.savedCoPilotNames)
+        return removeCrewName(name)
     }
 
     func removeSOName(_ name: String) -> [String] {
-        var names = userDefaults.stringArray(forKey: Keys.savedSONames) ?? []
-        names.removeAll { $0 == name }
-        userDefaults.set(names, forKey: Keys.savedSONames)
-        return names
+        // Keep legacy key updated for CloudKit backward compat
+        var legacy = userDefaults.stringArray(forKey: Keys.savedSONames) ?? []
+        legacy.removeAll { $0 == name }
+        userDefaults.set(legacy, forKey: Keys.savedSONames)
+        return removeCrewName(name)
     }
 
     func clearAllCaptainNames() {
         userDefaults.removeObject(forKey: Keys.savedCaptainNames)
     }
-    
+
     func clearAllCoPilotNames() {
         userDefaults.removeObject(forKey: Keys.savedCoPilotNames)
-    }
-    
-
-    func addSOName(_ name: String) -> [String] {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedSONames) }
-
-        var names = userDefaults.stringArray(forKey: Keys.savedSONames) ?? []
-
-        if !names.contains(trimmedName) {
-            names.append(trimmedName)
-            let sortedNames = sortCrewNamesByFirstName(names)
-            userDefaults.set(sortedNames, forKey: Keys.savedSONames)
-            return sortedNames
-        }
-
-        return loadAndSortCrewNames(forKey: Keys.savedSONames)
     }
 
     // MARK: - Recent Crew Names Management

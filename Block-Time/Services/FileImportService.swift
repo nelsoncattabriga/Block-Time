@@ -85,7 +85,7 @@ class FileImportService {
             create: false
         ) {
             if path.hasPrefix(appDocuments.path) {
-                LogManager.shared.info("📁 File is in app's local Documents directory")
+                LogManager.shared.info(" File is in app's local Documents directory")
                 return true
             }
         }
@@ -96,7 +96,7 @@ class FileImportService {
             return true
         }
 
-        LogManager.shared.info("🔐 File is in external location, will use security-scoped access")
+        LogManager.shared.info(" File is in external location, will use security-scoped access")
         return false
     }
 
@@ -138,12 +138,12 @@ class FileImportService {
     /// Parse CSV content that may contain newlines within quoted fields
     /// This is more robust than splitting by newlines first
     private func parseCSVRows(content: String, delimiter: String) -> [[String]] {
-        LogManager.shared.info("🔍 parseCSVRows started, content length: \(content.count)")
+        LogManager.shared.info(" parseCSVRows started, content length: \(content.count)")
 
         // Strip BOM if present
         var cleanedContent = content
         if cleanedContent.hasPrefix("\u{FEFF}") {
-            LogManager.shared.info("🔍 Stripping UTF-8 BOM")
+            LogManager.shared.info(" Stripping UTF-8 BOM")
             cleanedContent.removeFirst()
         }
 
@@ -192,18 +192,18 @@ class FileImportService {
             rows.append(fields)
         }
 
-        LogManager.shared.info("🔍 parseCSVRows completed: \(rows.count) rows total")
+        LogManager.shared.info(" parseCSVRows completed: \(rows.count) rows total")
         if rows.count > 0 {
-            LogManager.shared.info("🔍 Row 1: \(rows[0].count) fields")
+            LogManager.shared.info(" Row 1: \(rows[0].count) fields")
         }
         if rows.count > 1 {
-            LogManager.shared.info("🔍 Row 2: \(rows[1].count) fields")
+            LogManager.shared.info(" Row 2: \(rows[1].count) fields")
         }
         if rows.count > 2 {
-            LogManager.shared.info("🔍 Row 3: \(rows[2].count) fields")
+            LogManager.shared.info(" Row 3: \(rows[2].count) fields")
         }
         if !rows.isEmpty {
-            LogManager.shared.info("🔍 First row has \(rows[0].count) fields")
+            LogManager.shared.info(" First row has \(rows[0].count) fields")
         }
 
         return rows
@@ -253,9 +253,13 @@ class FileImportService {
         DispatchQueue.global(qos: .userInitiated).async {
             let databaseService = FlightDatabaseService.shared
 
-            // Disable CloudKit sync for large imports to avoid background task timeouts
+            // Disable CloudKit sync and undo registration for large imports.
+            // suspendUndoForBatchImport MUST run first — disableCloudKitSync reconfigures
+            // the store and can trigger viewContext merges that deadlock if auto-merge
+            // and the undo manager are still active when the background fetch runs.
             var cloudKitWasEnabled = false
             DispatchQueue.main.sync {
+                databaseService.suspendUndoForBatchImport()
                 cloudKitWasEnabled = databaseService.disableCloudKitSync()
             }
 
@@ -267,6 +271,12 @@ class FileImportService {
                 // Give Core Data time to process the deletions
                 Thread.sleep(forTimeInterval: 0.5)
             }
+
+            // Give Core Data time to release the store coordinator lock after the
+            // CloudKit store reconfiguration and any preceding delete. The lock is
+            // released well before full CloudKit sync completes, so a short fixed
+            // drain is sufficient and avoids waiting for the entire iCloud export.
+            Thread.sleep(forTimeInterval: 2.0)
 
             // Create column index mapping
             let columnMapping = self.createColumnMapping(
@@ -345,19 +355,17 @@ class FileImportService {
             var importSessionID: UUID? = nil
             var mergeProposals: [MergeProposal] = []
 
-            DispatchQueue.main.sync {
-                let result = databaseService.saveFlightsBatch(flights)
-                successCount = result.successCount
-                let dbFailures = result.failureCount
-                duplicateCount = result.duplicateCount
-                importSessionID = result.sessionID
-                mergeProposals = result.mergeProposals
+            let batchResult = databaseService.saveFlightsBatch(flights)
+            successCount = batchResult.successCount
+            let dbFailures = batchResult.failureCount
+            duplicateCount = batchResult.duplicateCount
+            importSessionID = batchResult.sessionID
+            mergeProposals = batchResult.mergeProposals
 
-                // Track database failures (NOT duplicates) in the import result
-                if dbFailures > 0 {
-                    failureCount += dbFailures
-                    failureReasons["Database save failed (invalid data)", default: 0] += dbFailures
-                }
+            // Track database failures (NOT duplicates) in the import result
+            if dbFailures > 0 {
+                failureCount += dbFailures
+                failureReasons["Database save failed (invalid data)", default: 0] += dbFailures
             }
 
             let result = ImportResult(
@@ -370,12 +378,13 @@ class FileImportService {
                 mergeProposals: mergeProposals
             )
 
-            // Re-enable CloudKit sync if it was previously enabled
-            if cloudKitWasEnabled {
-                DispatchQueue.main.sync {
+            // Re-enable CloudKit sync and undo registration
+            DispatchQueue.main.sync {
+                if cloudKitWasEnabled {
                     databaseService.enableCloudKitSync()
+                    LogManager.shared.info("Import complete. CloudKit will now sync \(successCount) flights in the background.")
                 }
-                LogManager.shared.info("Import complete. CloudKit will now sync \(successCount) flights in the background.")
+                databaseService.resumeUndoAfterBatchImport()
             }
 
             DispatchQueue.main.async {
@@ -460,9 +469,21 @@ class FileImportService {
     // MARK: - Resolve Aircraft Type from Registration + Date
     private func resolveAircraftType(reg: String, date: String, regMappingsByPrefix: [String: RegistrationTypeMapping]) -> String {
         guard reg.count >= 2 else { return "" }
-        let prefix = String(reg.prefix(2)).uppercased()
+
+        // For VH-XXX (exactly 6 chars) or bare XXX (exactly 3 chars), look up the static fleet
+        if (reg.count == 6 && reg.uppercased().hasPrefix("VH-")) || reg.count == 3 {
+            let type = AircraftFleetService.getAircraftType(byRegistration: reg)
+            if !type.isEmpty { return type }
+        }
+
+        // Strip VH- prefix before pattern lookup, since detectRegistrationPatterns stores
+        // patterns against the stripped registration (e.g. "AJ*" not "VH*")
+        let lookupReg = (reg.count == 6 && reg.uppercased().hasPrefix("VH-"))
+            ? String(reg.dropFirst(3))
+            : reg
+        let prefix = String(lookupReg.prefix(2)).uppercased()
         guard let mapping = regMappingsByPrefix[prefix] else { return "" }
-        return mapping.resolve(reg: reg, date: date)
+        return mapping.resolve(reg: lookupReg, date: date)
     }
 
     // Helper struct for mapping info
@@ -837,18 +858,83 @@ class FileImportService {
         mode: ImportMode = .merge,
         skipSecurityScoping: Bool = false,
         definitionsBehavior: DefinitionsBehavior = .mergeIfEmpty,
+        progressHandler: ((String) -> Void)? = nil,
         completion: @escaping (Result<ImportResult, Error>) -> Void
     ) {
         LogManager.shared.info("quickRestoreFromBackup called with mode: \(mode)")
         LogManager.shared.info("File: \(url.lastPathComponent)")
         LogManager.shared.info("skipSecurityScoping: \(skipSecurityScoping)")
 
+        DispatchQueue.global(qos: .userInitiated).async {
+            self._quickRestoreFromBackupWork(
+                url: url,
+                mode: mode,
+                skipSecurityScoping: skipSecurityScoping,
+                definitionsBehavior: definitionsBehavior,
+                progressHandler: progressHandler,
+                completion: completion
+            )
+        }
+    }
+
+    private func _quickRestoreFromBackupWork(
+        url: URL,
+        mode: ImportMode,
+        skipSecurityScoping: Bool,
+        definitionsBehavior: DefinitionsBehavior,
+        progressHandler: ((String) -> Void)?,
+        completion: @escaping (Result<ImportResult, Error>) -> Void
+    ) {
+        func reportProgress(_ message: String) {
+            DispatchQueue.main.async { progressHandler?(message) }
+        }
+
+        // Wait for the file to be available locally (iCloud Drive files may need downloading).
+        // ubiquitousItemDownloadingStatus is nil for non-iCloud files — treat that as local.
+        let resourceKeys: Set<URLResourceKey> = [.ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsDownloadingKey]
+        if let values = try? url.resourceValues(forKeys: resourceKeys),
+           let status = values.ubiquitousItemDownloadingStatus,
+           status != .current {
+            reportProgress("Downloading backup from iCloud...")
+            LogManager.shared.info("File not local (status: \(status.rawValue)) — triggering iCloud download")
+            do {
+                try FileManager.default.startDownloadingUbiquitousItem(at: url)
+            } catch {
+                LogManager.shared.error("Failed to start iCloud download: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion(.failure(error)) }
+                return
+            }
+            // Poll until downloaded, downloading in progress, or timeout (60s)
+            let deadline = Date().addingTimeInterval(60)
+            while Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.5)
+                if let v = try? url.resourceValues(forKeys: resourceKeys) {
+                    if v.ubiquitousItemDownloadingStatus == .current {
+                        LogManager.shared.info("iCloud download complete")
+                        break
+                    }
+                }
+            }
+            // Final check — if still not local after timeout, fail with a clear error
+            if let v = try? url.resourceValues(forKeys: resourceKeys),
+               let finalStatus = v.ubiquitousItemDownloadingStatus,
+               finalStatus != .current {
+                LogManager.shared.error("iCloud download timed out (status: \(finalStatus.rawValue))")
+                DispatchQueue.main.async {
+                    completion(.failure(ImportError.iCloudDownloadTimeout))
+                }
+                return
+            }
+        }
+
+        reportProgress("Reading backup file...")
+
         do {
             // Read raw content to check for #DEFINITIONS: header line
             let needsSecurity = !skipSecurityScoping && !isInAppContainer(url)
             if needsSecurity {
                 guard url.startAccessingSecurityScopedResource() else {
-                    completion(.failure(ImportError.accessDenied))
+                    DispatchQueue.main.async { completion(.failure(ImportError.accessDenied)) }
                     return
                 }
             }
@@ -858,48 +944,64 @@ class FileImportService {
                 rawContent = try String(contentsOf: url, encoding: .utf8)
             } catch {
                 if needsSecurity { url.stopAccessingSecurityScopedResource() }
-                completion(.failure(error))
+                DispatchQueue.main.async { completion(.failure(error)) }
                 return
             }
             if needsSecurity { url.stopAccessingSecurityScopedResource() }
 
-            // Check for #DEFINITIONS: prefix line
-            let lines = rawContent.components(separatedBy: .newlines)
-            if let firstLine = lines.first, firstLine.hasPrefix("#DEFINITIONS:") {
-                // Extract definitions from the first line
-                var extractedDefinitions: [CustomCounterDefinition]? = nil
-                let json = String(firstLine.dropFirst("#DEFINITIONS:".count))
-                if let data = json.data(using: .utf8),
-                   let defs = try? JSONDecoder().decode([CustomCounterDefinition].self, from: data) {
-                    extractedDefinitions = defs
-                    LogManager.shared.info("Extracted \(defs.count) counter definition(s) from backup")
+            // Strip all #-prefix metadata lines (supports #DEFINITIONS: and #CONTACTS: and any future additions)
+            var remainingLines = rawContent.components(separatedBy: .newlines)
+            var extractedDefinitions: [CustomCounterDefinition]? = nil
+            var extractedContacts: [CrewContactBackup]? = nil
+
+            while let first = remainingLines.first, first.hasPrefix("#") {
+                if first.hasPrefix("#DEFINITIONS:") {
+                    let json = String(first.dropFirst("#DEFINITIONS:".count))
+                    if let data = json.data(using: .utf8),
+                       let defs = try? JSONDecoder().decode([CustomCounterDefinition].self, from: data) {
+                        extractedDefinitions = defs
+                        LogManager.shared.info("Extracted \(defs.count) counter definition(s) from backup")
+                    }
+                } else if first.hasPrefix("#CONTACTS:") {
+                    let json = String(first.dropFirst("#CONTACTS:".count))
+                    if let data = json.data(using: .utf8),
+                       let contacts = try? JSONDecoder().decode([CrewContactBackup].self, from: data) {
+                        extractedContacts = contacts
+                        LogManager.shared.info("Extracted \(contacts.count) crew note(s) from backup")
+                    }
                 }
+                remainingLines.removeFirst()
+            }
 
-                // Write content minus the #DEFINITIONS: line to a temp file for parsing
-                let remainder = lines.dropFirst().joined(separator: "\n")
-                let tempURL = FileManager.default.temporaryDirectory
-                    .appendingPathComponent(UUID().uuidString + ".csv")
-                try remainder.write(to: tempURL, atomically: true, encoding: .utf8)
-                defer { try? FileManager.default.removeItem(at: tempURL) }
+            // Write stripped content (no #-prefix lines) to temp file for CSV parsing
+            let remainder = remainingLines.joined(separator: "\n")
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString + ".csv")
+            try remainder.write(to: tempURL, atomically: true, encoding: .utf8)
+            defer { try? FileManager.default.removeItem(at: tempURL) }
 
-                let importData = try parseFile(url: tempURL, forceSecurityScoping: false)
-                LogManager.shared.info("Successfully parsed file: \(importData.rows.count) rows")
-                LogManager.shared.info("   Headers: \(importData.headers.prefix(6).joined(separator: ", "))")
+            let importData = try parseFile(url: tempURL, forceSecurityScoping: false)
+            LogManager.shared.info("Successfully parsed file: \(importData.rows.count) rows")
+            LogManager.shared.info("   Headers: \(importData.headers.prefix(6).joined(separator: ", "))")
 
-                guard isLoggerExportFormat(headers: importData.headers) else {
-                    LogManager.shared.info("File is not in Block-Time export format")
-                    completion(.failure(ImportError.notLoggerFormat))
-                    return
-                }
+            guard isLoggerExportFormat(headers: importData.headers) else {
+                LogManager.shared.info("File is not in Block-Time export format")
+                DispatchQueue.main.async { completion(.failure(ImportError.notLoggerFormat)) }
+                return
+            }
 
-                LogManager.shared.info("Detected Block-Time export format")
-                let mappings = createLoggerFieldMapping(headers: importData.headers)
-                LogManager.shared.info("Created \(mappings.count) field mappings")
-                LogManager.shared.info("Starting import with mode: \(mode)")
+            LogManager.shared.info("Detected Block-Time export format")
+            let mappings = createLoggerFieldMapping(headers: importData.headers)
+            LogManager.shared.info("Created \(mappings.count) field mappings")
+            LogManager.shared.info("Starting import with mode: \(mode)")
 
-                importFlights(from: importData, mapping: mappings, mode: mode) { result in
-                    if case .success = result, let defs = extractedDefinitions {
-                        DispatchQueue.main.async {
+            reportProgress("Importing \(importData.rows.count) flights...")
+
+            importFlights(from: importData, mapping: mappings, mode: mode) { result in
+                if case .success = result {
+                    DispatchQueue.main.async {
+                        // Restore counter definitions (existing logic — unchanged)
+                        if let defs = extractedDefinitions {
                             switch definitionsBehavior {
                             case .replaceAll:
                                 CustomCounterService.shared.replaceAllAndSync(defs)
@@ -911,30 +1013,27 @@ class FileImportService {
                                 break
                             }
                         }
+                        // Restore crew contacts — merge: keep longer notes
+                        if let contacts = extractedContacts {
+                            for contact in contacts {
+                                guard !contact.name.isEmpty else { continue }
+                                if let existing = CrewContactService.shared.fetchContact(name: contact.name) {
+                                    if contact.notes.count > (existing.notes?.count ?? 0) {
+                                        CrewContactService.shared.upsert(name: contact.name, notes: contact.notes)
+                                    }
+                                    // else keep existing — no-op
+                                } else {
+                                    CrewContactService.shared.upsert(name: contact.name, notes: contact.notes)
+                                }
+                            }
+                        }
                     }
-                    completion(result)
                 }
-                return
+                completion(result)
             }
-
-            // No #DEFINITIONS: line — original path (old backup format)
-            let importData = try parseFile(url: url, forceSecurityScoping: !skipSecurityScoping)
-            LogManager.shared.info("Successfully parsed file: \(importData.rows.count) rows")
-            LogManager.shared.info("   Headers: \(importData.headers.prefix(6).joined(separator: ", "))")
-
-            guard isLoggerExportFormat(headers: importData.headers) else {
-                LogManager.shared.info("File is not in Block-Time export format")
-                throw ImportError.notLoggerFormat
-            }
-
-            LogManager.shared.info("Detected Block-Time export format")
-            let mappings = createLoggerFieldMapping(headers: importData.headers)
-            LogManager.shared.info("Created \(mappings.count) field mappings")
-            LogManager.shared.info("Starting import with mode: \(mode)")
-            importFlights(from: importData, mapping: mappings, mode: mode, completion: completion)
 
         } catch {
-            completion(.failure(error))
+            DispatchQueue.main.async { completion(.failure(error)) }
         }
     }
 
@@ -1160,14 +1259,14 @@ class FileImportService {
     private func createLoggerFieldMapping(headers: [String]) -> [FieldMapping] {
         var mappings: [FieldMapping] = []
 
-        LogManager.shared.info("🗺️ Creating Block-Time field mapping from headers:")
+        LogManager.shared.info(" Creating Block-Time field mapping from headers:")
         LogManager.shared.info("   Headers: \(headers)")
 
         for header in headers {
             let headerLower = header.lowercased()
 
             if headerLower == "date" {
-                LogManager.shared.info("   ✓ Mapping 'Date' from column '\(header)'")
+                LogManager.shared.info("    Mapping 'Date' from column '\(header)'")
                 mappings.append(FieldMapping(logbookField: "Date", logbookFieldDescription: "Date", sourceColumn: header, isRequired: true))
             } else if headerLower == "flight number" {
                 mappings.append(FieldMapping(logbookField: "Flight Number", logbookFieldDescription: "Flight Number", sourceColumn: header, isRequired: true))
@@ -1255,7 +1354,7 @@ class FileImportService {
     }
 
     /// Thread-safe overload: caller supplies pre-captured definitions (use when calling from a background thread).
-    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition], useLabelsAsHeaders: Bool = false, writeDefinitionsHeader: Bool = true) -> String {
+    func exportToCSV(flights: [FlightSector], definitions: [CustomCounterDefinition], crewContacts: [CrewContactBackup] = [], useLabelsAsHeaders: Bool = false, writeDefinitionsHeader: Bool = true) -> String {
         let definitions = definitions.sorted { $0.columnIndex < $1.columnIndex }
 
         // Prepend #DEFINITIONS: line if any counters are configured (backup only)
@@ -1265,6 +1364,14 @@ class FileImportService {
            let data = try? JSONEncoder().encode(definitions),
            let json = String(data: data, encoding: .utf8) {
             result += "#DEFINITIONS:\(json)\n"
+        }
+
+        // Append #CONTACTS: line if any crew contacts are recorded
+        if writeDefinitionsHeader,
+           !crewContacts.isEmpty,
+           let data = try? JSONEncoder().encode(crewContacts),
+           let json = String(data: data, encoding: .utf8) {
+            result += "#CONTACTS:\(json)\n"
         }
 
         // Build header row, append Counter1…CounterN
@@ -1907,7 +2014,7 @@ class FileImportService {
             }
 
             if simCount > 0 {
-                LogManager.shared.info("🔧 PilotLog pre-process: moved time_total → sim_time for \(simCount) simulator row(s)")
+                LogManager.shared.info(" PilotLog pre-process: moved time_total  sim_time for \(simCount) simulator row(s)")
             }
             return (outHeaders, outRows)
         }
@@ -1933,6 +2040,7 @@ enum ImportError: LocalizedError {
     case emptyFile
     case invalidFormat
     case notLoggerFormat
+    case iCloudDownloadTimeout
 
     var errorDescription: String? {
         switch self {
@@ -1944,6 +2052,8 @@ enum ImportError: LocalizedError {
             return "The file format is invalid"
         case .notLoggerFormat:
             return "File is not in Block-Time backup format"
+        case .iCloudDownloadTimeout:
+            return "Could not download the backup from iCloud. Check your internet connection and try again."
         }
     }
 }
@@ -1986,7 +2096,7 @@ func resolveIntraImportCollisions(_ sectors: [FlightSector]) -> [FlightSector] {
             // Subsequent occurrence — rehash with collision suffix
             let collisionString = "\(base)-collision-\(count)"
             if let newID = UUID(uuidString: collisionString.md5UUID()) {
-                LogManager.shared.info("Intra-import UUID collision resolved: \(sector.date) \(sector.flightNumber) → collision-\(count)")
+                LogManager.shared.info("Intra-import UUID collision resolved: \(sector.date) \(sector.flightNumber)  collision-\(count)")
                 let updated = FlightSector(
                     id: newID,
                     date: sector.date, flightNumber: sector.flightNumber,

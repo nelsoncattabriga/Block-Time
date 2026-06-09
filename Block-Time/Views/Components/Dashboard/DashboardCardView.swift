@@ -81,7 +81,7 @@ struct DashboardCardView: View {
         case .activityChart:
             FlyingActivityChartCard(data: viewModel.monthlyActivity)
         case .timeByType:
-            TimeByTypeCard(data: viewModel.fleetHours)
+            FlyingByTypeCard(data: viewModel.fleetHours)
         case .pfRatioChart:
             PFRatioCard(data: viewModel.pfRatioByMonth)
         case .takeoffLanding:
@@ -212,7 +212,7 @@ struct SpInsTimeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            CardHeader(title: "Instructor Time", icon: "person.wave.2", iconColor: AppColors.insColor)
+            CardHeader(title: "Instructor Time", icon: "person.wave.2", iconColor: .blue)
 
             VStack(alignment: .leading, spacing: 10) {
                 // Total — large primary value

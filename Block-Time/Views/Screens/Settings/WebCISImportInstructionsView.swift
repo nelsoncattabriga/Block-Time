@@ -32,6 +32,10 @@ struct WebCISImportInstructionsView: View {
                     }
                     .padding(.top)
 
+                    // Notes / callouts
+                    WebCISNotesSection()
+                        .padding(.horizontal)
+
                     // Live import option
                     WebCISLiveImportCard {
                         dismiss()
@@ -107,6 +111,44 @@ private struct WebCISLiveImportCard: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Notes Section
+
+private struct WebCISNotesSection: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            // iOS 26 iPad known issue — iPad only
+            if UIDevice.current.userInterfaceIdiom == .pad {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .font(.subheadline)
+                    .padding(.top, 1)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("iPAD — iOS 26 KNOWN ISSUE")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.orange)
+
+                    Text("The authentication loop may not complete correctly in full-screen mode. Switch to windowed mode before logging in. Alternatively, choose **receive a text message** as your authentication method, or authenticate using another device.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding()
+            .background(Color.orange.opacity(0.08))
+            .clipShape(.rect(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.orange.opacity(0.35), lineWidth: 1)
+            )
+            } // end iPad-only
+
+        }
     }
 }
 

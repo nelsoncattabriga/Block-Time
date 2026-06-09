@@ -55,7 +55,50 @@ struct BulkEditSheet: View {
                                 fieldState: $bulkEditViewModel.flightDate
                             )
                         }
+                        
+                        // Operations Card
+                        SectionCard(title: "Operations", icon: "slider.horizontal.3", color: .orange) {
+                            VStack(spacing: 16) {
+                                // FLT|PAX toggle hidden when all selected flights are SIM (not relevant)
+                                if !selectedFlights.allSatisfy({ $0.simTimeValue > 0 && $0.blockTimeValue < 0.01 }) {
+                                    BulkEditFlightTypeToggle(
+                                        isPositioning: $bulkEditViewModel.isPositioning
+                                    )
+                                }
 
+                                BulkEditPilotRoleSegmentedPicker(
+                                    fieldState: $bulkEditViewModel.isPilotFlying
+                                )
+
+                                BulkEditApproachPicker(
+                                    fieldState: $bulkEditViewModel.selectedApproachType,
+                                    isPilotFlying: bulkEditViewModel.isPilotFlying
+                                )
+
+                                BulkEditBlockTimeRolePicker(
+                                    fieldState: $bulkEditViewModel.blockTimeRole
+                                )
+                            }
+                        }
+                        
+                        // Instructor Card (only when "Log Instructor Time" is enabled in Settings)
+                        if viewModel.showSpInsSelector {
+                            BulkEditInstructorCard(
+                                selectedFlights: selectedFlights,
+                                instructorType: $bulkEditViewModel.instructorType
+                            )
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemBackground))
+                                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(AppColors.insColor.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                        
                         // Aircraft Info Card
                         SectionCard(title: "Aircraft Information", icon: "airplane", color: .blue) {
                         VStack(spacing: 12) {
@@ -66,13 +109,9 @@ struct BulkEditSheet: View {
                                 aircraftTypeFieldState: $bulkEditViewModel.aircraftType
                             )
 
-                            BulkEditTextField(
+                            BulkEditAircraftTypeField(
                                 label: "A/C Type",
-                                fieldState: $bulkEditViewModel.aircraftType,
-                                textCase: .uppercase,
-                                autocapitalization: .characters,
-                                placeholder: "e.g. B738",
-                                showClearButton: true
+                                fieldState: $bulkEditViewModel.aircraftType
                             )
 
                             BulkEditPrefixManager(
@@ -91,39 +130,20 @@ struct BulkEditSheet: View {
                     // Route Card
                     SectionCard(title: "Route", icon: "map", color: .cyan) {
                         VStack(spacing: 12) {
-                            BulkEditTextField(
+                            BulkEditAirportField(
                                 label: viewModel.useIATACodes ? "From (IATA)" : "From (ICAO)",
                                 fieldState: $bulkEditViewModel.fromAirport,
-                                keyboardType: .asciiCapable,
-                                placeholder: viewModel.useIATACodes ? "e.g. SYD" : "e.g. YSSY"
+                                useIATACodes: viewModel.useIATACodes
                             )
 
-                            BulkEditTextField(
+                            BulkEditAirportField(
                                 label: viewModel.useIATACodes ? "To (IATA)" : "To (ICAO)",
                                 fieldState: $bulkEditViewModel.toAirport,
-                                keyboardType: .asciiCapable,
-                                placeholder: viewModel.useIATACodes ? "e.g. MEL" : "e.g. YMML"
+                                useIATACodes: viewModel.useIATACodes
                             )
                         }
                     }
 
-                    // Instructor Card (only when "Log Instructor Time" is enabled in Settings)
-                    if viewModel.showSpInsSelector {
-                        BulkEditInstructorCard(
-                            selectedFlights: selectedFlights,
-                            instructorType: $bulkEditViewModel.instructorType
-                        )
-                        .padding(16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(AppColors.insColor.opacity(0.2), lineWidth: 1)
-                        )
-                    }
 
                     // Crew Card
                     SectionCard(title: "Crew", icon: "person.2.fill", color: .green) {
@@ -131,7 +151,7 @@ struct BulkEditSheet: View {
                             BulkEditCrewField(
                                 label: "Captain",
                                 fieldState: $bulkEditViewModel.captainName,
-                                savedNames: viewModel.savedCaptainNames,
+                                savedNames: viewModel.savedCrewNames,
                                 recentNames: viewModel.recentCaptainNames,
                                 onNameAdded: viewModel.addCaptainName,
                                 onNameRemoved: viewModel.removeCaptainName,
@@ -141,7 +161,7 @@ struct BulkEditSheet: View {
                             BulkEditCrewField(
                                 label: "F/O",
                                 fieldState: $bulkEditViewModel.foName,
-                                savedNames: viewModel.savedCoPilotNames,
+                                savedNames: viewModel.savedCrewNames,
                                 recentNames: viewModel.recentCoPilotNames,
                                 onNameAdded: viewModel.addCoPilotName,
                                 onNameRemoved: viewModel.removeCoPilotName,
@@ -151,7 +171,7 @@ struct BulkEditSheet: View {
                             BulkEditOptionalCrewField(
                                 label: "S/O1",
                                 fieldState: $bulkEditViewModel.so1Name,
-                                savedNames: viewModel.savedSONames,
+                                savedNames: viewModel.savedCrewNames,
                                 recentNames: viewModel.recentSONames,
                                 onNameAdded: viewModel.addSOName,
                                 onNameRemoved: viewModel.removeSOName,
@@ -161,7 +181,7 @@ struct BulkEditSheet: View {
                             BulkEditOptionalCrewField(
                                 label: "S/O2",
                                 fieldState: $bulkEditViewModel.so2Name,
-                                savedNames: viewModel.savedSONames,
+                                savedNames: viewModel.savedCrewNames,
                                 recentNames: viewModel.recentSONames,
                                 onNameAdded: viewModel.addSOName,
                                 onNameRemoved: viewModel.removeSOName,
@@ -170,9 +190,55 @@ struct BulkEditSheet: View {
                         }
                     }
 
+                        // Schedule Card
+                        SectionCard(title: "Scheduled Times", icon: "calendar.badge.clock", color: .indigo) {
+                            VStack(spacing: 12) {
+                                
+                                BulkEditTextField(
+                                    label: "STD",
+                                    fieldState: $bulkEditViewModel.scheduledDeparture,
+                                    keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                    placeholder: "HH:MM",
+                                    isTimeField: true,
+                                    keyboardToolbar: keyboardToolbar
+                                )
+
+                                BulkEditTextField(
+                                    label: "STA",
+                                    fieldState: $bulkEditViewModel.scheduledArrival,
+                                    keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                    placeholder: "HH:MM",
+                                    isTimeField: true,
+                                    keyboardToolbar: keyboardToolbar
+                                )
+                                
+                               
+                            }
+                        }
+
+                        
                     // Times Card
                     SectionCard(title: "Flight Times", icon: "clock.fill", color: .purple) {
                         VStack(spacing: 12) {
+                            
+                            BulkEditTextField(
+                                label: "OUT",
+                                fieldState: $bulkEditViewModel.outTime,
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                placeholder: "HH:MM",
+                                isTimeField: true,
+                                keyboardToolbar: keyboardToolbar
+                            )
+
+                            BulkEditTextField(
+                                label: "IN",
+                                fieldState: $bulkEditViewModel.inTime,
+                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
+                                placeholder: "HH:MM",
+                                isTimeField: true,
+                                keyboardToolbar: keyboardToolbar
+                            )
+                            
                             BulkEditTextField(
                                 label: "BLOCK Time",
                                 fieldState: $bulkEditViewModel.blockTime,
@@ -222,78 +288,14 @@ struct BulkEditSheet: View {
                                 keyboardToolbar: keyboardToolbar
                             )
 
-                            BulkEditTextField(
-                                label: "SP/INS Time",
-                                fieldState: $bulkEditViewModel.spInsTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
-                                keyboardToolbar: keyboardToolbar
-                            )
-                        }
-                    }
-
-                    // Schedule Card
-                    SectionCard(title: "Schedule Times", icon: "calendar.badge.clock", color: .indigo) {
-                        VStack(spacing: 12) {
-                            BulkEditTextField(
-                                label: "OUT",
-                                fieldState: $bulkEditViewModel.outTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
-                                placeholder: "HH:MM",
-                                isTimeField: true,
-                                keyboardToolbar: keyboardToolbar
-                            )
-
-                            BulkEditTextField(
-                                label: "IN",
-                                fieldState: $bulkEditViewModel.inTime,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
-                                placeholder: "HH:MM",
-                                isTimeField: true,
-                                keyboardToolbar: keyboardToolbar
-                            )
-
-                            BulkEditTextField(
-                                label: "STD",
-                                fieldState: $bulkEditViewModel.scheduledDeparture,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
-                                placeholder: "HH:MM",
-                                isTimeField: true,
-                                keyboardToolbar: keyboardToolbar
-                            )
-
-                            BulkEditTextField(
-                                label: "STA",
-                                fieldState: $bulkEditViewModel.scheduledArrival,
-                                keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad,
-                                placeholder: "HH:MM",
-                                isTimeField: true,
-                                keyboardToolbar: keyboardToolbar
-                            )
-                        }
-                    }
-
-                    // Operations Card
-                    SectionCard(title: "Operations", icon: "slider.horizontal.3", color: .orange) {
-                        VStack(spacing: 16) {
-                            // FLT|PAX toggle hidden when all selected flights are SIM (not relevant)
-                            if !selectedFlights.allSatisfy({ $0.simTimeValue > 0 && $0.blockTimeValue < 0.01 }) {
-                                BulkEditFlightTypeToggle(
-                                    isPositioning: $bulkEditViewModel.isPositioning
+                            if viewModel.showSpInsSelector {
+                                BulkEditTextField(
+                                    label: "Instrutor Time",
+                                    fieldState: $bulkEditViewModel.spInsTime,
+                                    keyboardType: UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .decimalPad,
+                                    keyboardToolbar: keyboardToolbar
                                 )
                             }
-
-                            BulkEditPilotRoleSegmentedPicker(
-                                fieldState: $bulkEditViewModel.isPilotFlying
-                            )
-
-                            BulkEditApproachPicker(
-                                fieldState: $bulkEditViewModel.selectedApproachType,
-                                isPilotFlying: bulkEditViewModel.isPilotFlying
-                            )
-
-                            BulkEditBlockTimeRolePicker(
-                                fieldState: $bulkEditViewModel.blockTimeRole
-                            )
                         }
                     }
 
@@ -330,12 +332,6 @@ struct BulkEditSheet: View {
                         }
                     }
 
-                    // Remarks Card
-                    SectionCard(title: "REMARKS", icon: "note.text", color: .gray) {
-                        BulkEditTextEditor(
-                            fieldState: $bulkEditViewModel.remarks
-                        )
-                    }
 
                     // Custom Fields Card (hidden when no definitions are configured)
                     if !customCounterService.definitions.isEmpty {
@@ -377,6 +373,13 @@ struct BulkEditSheet: View {
                             }
                         }
                     }
+                        
+                        // Remarks Card
+                        SectionCard(title: "REMARKS", icon: "note.text", color: .gray) {
+                            BulkEditTextEditor(
+                                fieldState: $bulkEditViewModel.remarks
+                            )
+                        }
                     }
                     .padding()
                 }
@@ -593,4 +596,5 @@ struct SectionCard<Content: View>: View {
         onSave: { _ in }
     )
     .environmentObject(FlightTimeExtractorViewModel())
+    .environment(ThemeService.shared)
 }

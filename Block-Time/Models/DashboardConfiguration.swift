@@ -129,7 +129,8 @@ final class DashboardConfiguration {
            let cards = try? JSONDecoder().decode([DashboardCardID].self, from: data) {
             sidebarCards = cards
         } else {
-            sidebarCards = [.totalTime, .frmsFlightTime, .frmsDutyTime]
+            let isIPad = UIDevice.current.userInterfaceIdiom == .pad
+            sidebarCards = isIPad ? [.careerMilestones] : []
         }
 
         if let data = UserDefaults.standard.data(forKey: detailKey),
@@ -137,11 +138,7 @@ final class DashboardConfiguration {
             detailCards = cards
         } else {
             let isIPad = UIDevice.current.userInterfaceIdiom == .pad
-            let sidebarDefaults: Set<DashboardCardID> = [.totalTime, .frmsFlightTime, .frmsDutyTime]
-            let remaining = DashboardCardID.allStandardCases.filter { !sidebarDefaults.contains($0) }
-            detailCards = isIPad
-                ? remaining
-                : [.totalTime, .frmsFlightTime, .frmsDutyTime] + remaining
+            detailCards = isIPad ? [.activityChart] : [.careerMilestones, .activityChart]
         }
     }
 }

@@ -285,15 +285,10 @@ struct ModernDecimalTimeField: View {
                         }
                         .onChange(of: decimalFieldFocused) { _, isFocused in
                             if isFocused {
-                                // Clear to empty when value is zero so placeholder shows and user can type immediately
+                                // Seed from current value on focus — picks up any auto-calculated result
+                                // that arrived before the user starts typing (e.g. block time after tabbing from IN).
                                 let numericValue = Double(value) ?? 0
-                                if numericValue == 0 {
-                                    editingText = ""
-                                } else if showAsHHMM, !value.contains(":"), let d = Double(value) {
-                                    editingText = FlightSector.decimalToHHMM(d)
-                                } else {
-                                    editingText = formattedDisplayValue()
-                                }
+                                editingText = numericValue == 0 ? "" : formattedDisplayValue()
                                 keyboardToolbar?.fieldDidFocus(clear: {
                                     value = ""
                                     editingText = ""
@@ -308,10 +303,25 @@ struct ModernDecimalTimeField: View {
                             }
                         }
                         .onChange(of: value) { _, _ in
-                            // Sync external writes (e.g. auto-calculated block time) into editingText.
-                            // Always update — even when focused — so recalculation after tabbing
-                            // from OUT/IN lands correctly before the user types anything.
-                            editingText = formattedDisplayValue()
+                            // Sync external writes (e.g. auto-calculated block time) into editingText,
+                            // but skip if the user has started typing partial input. The field is
+                            // considered "dirty" when editingText doesn't round-trip back to value —
+                            // i.e. the user has typed something that hasn't been committed yet.
+                            guard decimalFieldFocused else {
+                                editingText = formattedDisplayValue()
+                                return
+                            }
+                            let isDirty: Bool
+                            if showAsHHMM {
+                                isDirty = !editingText.isEmpty && editingText != formattedDisplayValue()
+                            } else {
+                                let parsedEditing = Double(editingText) ?? 0
+                                let parsedValue = Double(value) ?? 0
+                                isDirty = !editingText.isEmpty && parsedEditing != parsedValue
+                            }
+                            if !isDirty {
+                                editingText = formattedDisplayValue()
+                            }
                         }
                         .onAppear {
                             editingText = formattedDisplayValue()

@@ -77,7 +77,7 @@ class FlightDatabaseService: ObservableObject {
     private var remoteChangeSyncSettleTimer: Timer?
 
     // MARK: - Background state tracking
-    private var isAppInBackground: Bool = false
+    var isAppInBackground: Bool = false
     private var pendingDataChanged: Bool = false
 
     private init() {
@@ -148,6 +148,7 @@ class FlightDatabaseService: ObservableObject {
 
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        container.viewContext.undoManager = UndoManager()
 
         #if DEBUG
         LogManager.shared.debug("CloudKit Schema: Auto-initialization ENABLED (Development)")
@@ -162,11 +163,11 @@ class FlightDatabaseService: ObservableObject {
             }
         }
         #else
-        LogManager.shared.info("CloudKit Schema: Auto-initialization DISABLED (Production)")
-        LogManager.shared.info("IMPORTANT: Schema must be manually deployed to Production via CloudKit Console")
-        LogManager.shared.info("   1. Open CloudKit Console: https://icloud.developer.apple.com/dashboard")
-        LogManager.shared.info("   2. Select 'iCloud.com.thezoolab.blocktime' container")
-        LogManager.shared.info("   3. Deploy Development schema to Production environment")
+        LogManager.shared.debug("CloudKit Schema: Auto-initialization DISABLED (Production)")
+        LogManager.shared.debug("IMPORTANT: Schema must be manually deployed to Production via CloudKit Console")
+        LogManager.shared.debug("   1. Open CloudKit Console: https://icloud.developer.apple.com/dashboard")
+        LogManager.shared.debug("   2. Select 'iCloud.com.thezoolab.blocktime' container")
+        LogManager.shared.debug("   3. Deploy Development schema to Production environment")
         #endif
 
         return container
@@ -174,6 +175,133 @@ class FlightDatabaseService: ObservableObject {
     
     var viewContext: NSManagedObjectContext {
         return persistentContainer.viewContext
+    }
+
+    // MARK: - Undo / Redo
+
+    var canUndo: Bool { viewContext.undoManager?.canUndo ?? false }
+    var canRedo: Bool { viewContext.undoManager?.canRedo ?? false }
+
+    /// Number of grouped, undoable changes currently on the stack.
+    /// NSUndoManager exposes no public count, so we track it ourselves.
+    private(set) var undoableChangeCount: Int = 0
+
+    /// Human-readable labels for each entry on the undo stack, in the same order.
+    private var undoDescriptions: [String] = []
+
+    /// The label for the most recent undoable action, or nil when the stack is empty.
+    var lastUndoDescription: String? { undoDescriptions.last }
+
+    /// "d MMM" formatter used only for undo description short-date strings.
+    private static let shortDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        return f
+    }()
+
+    /// Returns a short "d MMM" string (e.g. "14 May") from a "dd/MM/yyyy" date string, or "" on failure.
+    private func shortDay(from ddMMYYYY: String) -> String {
+        guard let date = dateFormatter.date(from: ddMMYYYY) else { return "" }
+        return FlightDatabaseService.shortDayFormatter.string(from: date)
+    }
+
+    /// Builds a short undo description for a single flight sector.
+    private func undoDescription(verb: String, for sector: FlightSector, includeDate: Bool) -> String {
+        let route = "\(sector.fromAirport)-\(sector.toAirport)"
+        let fltNo = sector.flightNumber.trimmingCharacters(in: .whitespaces)
+        var parts: [String] = [verb, fltNo.isEmpty ? route : fltNo]
+        if includeDate {
+            let day = shortDay(from: sector.date)
+            if !day.isEmpty { parts.append("\(day) UTC") }
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    @discardableResult
+    func undoLastChange() -> Bool {
+        guard let undoManager = viewContext.undoManager, undoManager.canUndo else { return false }
+        var ok = false
+        viewContext.performAndWait {
+            undoManager.undo()
+            do {
+                try viewContext.save()
+                ok = true
+            } catch {
+                LogManager.shared.error("Undo save failed: \(error.localizedDescription)")
+                viewContext.rollback()
+            }
+        }
+        if ok {
+            undoableChangeCount = max(0, undoableChangeCount - 1)
+            if !undoDescriptions.isEmpty { undoDescriptions.removeLast() }
+            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+        }
+        return ok
+    }
+
+    @discardableResult
+    func redoLastChange() -> Bool {
+        guard let undoManager = viewContext.undoManager, undoManager.canRedo else { return false }
+        var ok = false
+        viewContext.performAndWait {
+            undoManager.redo()
+            do {
+                try viewContext.save()
+                ok = true
+            } catch {
+                LogManager.shared.error("Redo save failed: \(error.localizedDescription)")
+                viewContext.rollback()
+            }
+        }
+        if ok {
+            undoableChangeCount += 1
+            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+        }
+        return ok
+    }
+
+    func clearUndoHistory() {
+        viewContext.undoManager?.removeAllActions()
+        undoableChangeCount = 0
+        undoDescriptions.removeAll()
+    }
+
+    // MARK: - Undo Manager Control (batch operations)
+
+    /// Suspend undo registration and auto-merge for bulk imports/restores.
+    /// Disabling automaticallyMergesChangesFromParent prevents the viewContext from
+    /// synchronously processing background-context saves mid-batch, which combined with
+    /// an active NSUndoManager causes a mutual wait between the background performAndWait
+    /// and the main-thread merge.
+    func suspendUndoForBatchImport() {
+        viewContext.automaticallyMergesChangesFromParent = false
+        viewContext.undoManager?.disableUndoRegistration()
+        isBatchImporting = true
+        // Release all in-memory objects so the viewContext holds no SQLite read locks
+        // during the upcoming batch save. Without this, the background context's WAL
+        // checkpoint blocks on the viewContext reader, causing the save to hang.
+        viewContext.reset()
+        LogManager.shared.debug("UndoManager: registration suspended for batch import")
+    }
+
+    /// Resume undo registration and auto-merge after a bulk import/restore.
+    /// Resets viewContext so it re-reads the store fresh (no merge = no undo pollution),
+    /// then re-enables auto-merge and clears the undo stack.
+    func resumeUndoAfterBatchImport() {
+        // Reset the viewContext so it picks up batch-saved data on the next fetch
+        // without going through the undo manager's merge path.
+        viewContext.reset()
+        viewContext.automaticallyMergesChangesFromParent = true
+        viewContext.undoManager?.enableUndoRegistration()
+        viewContext.undoManager?.removeAllActions()
+        undoableChangeCount = 0
+        undoDescriptions.removeAll()
+        isBatchImporting = false
+        LogManager.shared.debug("UndoManager: registration resumed and stack cleared after batch import")
+        // One debounced notification after the batch completes so the UI refreshes once.
+        postDebouncedFlightDataChangedNotification()
     }
 
     // MARK: - CloudKit Sync Control
@@ -192,7 +320,9 @@ class FlightDatabaseService: ObservableObject {
             LogManager.shared.debug("CloudKit: Disabling sync for bulk operation")
             description.cloudKitContainerOptions = nil
 
-            // Save context to ensure all pending changes are persisted locally
+            // Save any pending viewContext changes before disabling CloudKit.
+            // Undo registration is NOT toggled here — callers that need undo protection
+            // manage it themselves (e.g. suspendUndoForBatchImport / clearAllFlights).
             if viewContext.hasChanges {
                 do {
                     try viewContext.save()
@@ -218,7 +348,8 @@ class FlightDatabaseService: ObservableObject {
                 containerIdentifier: "iCloud.com.thezoolab.blocktime"
             )
 
-            // Save context to trigger sync of any changes made while disabled
+            // Save any pending viewContext changes to trigger CloudKit sync.
+            // Undo registration is NOT toggled here — callers manage it themselves.
             if viewContext.hasChanges {
                 do {
                     try viewContext.save()
@@ -232,7 +363,7 @@ class FlightDatabaseService: ObservableObject {
     // MARK: - CRUD Operations
     
     /// Save a new flight sector to the database
-    func saveFlight(_ sector: FlightSector) -> Bool {
+    func saveFlight(_ sector: FlightSector, actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -304,10 +435,16 @@ class FlightDatabaseService: ObservableObject {
             }
 
             do {
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
+                let saveDesc = actionDescription ?? undoDescription(verb: "Added", for: sector, includeDate: true)
+                undoDescriptions.append(saveDesc)
                 success = true
                 LogManager.shared.info("Flight saved successfully: \(sector.flightNumberFormatted) \(sector.fromAirport)-\(sector.toAirport) on \(sector.date)")
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 viewContext.rollback()
                 LogManager.shared.error("Error saving flight: \(error.localizedDescription)")
             }
@@ -317,7 +454,7 @@ class FlightDatabaseService: ObservableObject {
     }
 
     /// Update an existing flight sector
-    func updateFlight(_ sector: FlightSector) -> Bool {
+    func updateFlight(_ sector: FlightSector, actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -374,10 +511,16 @@ class FlightDatabaseService: ObservableObject {
                     flight.setCounter(columnIndex, value: value)
                 }
 
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
+                let updateDesc = actionDescription ?? undoDescription(verb: "Edited", for: sector, includeDate: true)
+                undoDescriptions.append(updateDesc)
                 success = true
 
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 viewContext.rollback()
                 LogManager.shared.error("Database: Error updating flight - \(error.localizedDescription)")
             }
@@ -485,32 +628,11 @@ class FlightDatabaseService: ObservableObject {
         var result: FlightEntity?
 
         viewContext.performAndWait {
-            LogManager.shared.debug("Database: Searching for scheduled flight")
-            LogManager.shared.info("   Search criteria:")
-            LogManager.shared.info("   - Date: \(date)")
-            LogManager.shared.info("   - Flight: \(flightNumber)")
-            LogManager.shared.info("   - Route: \(fromAirport)-\(toAirport)")
+            LogManager.shared.debug("Database: Searching for scheduled flight  \(flightNumber) \(fromAirport)-\(toAirport) on \(date)")
 
             guard let searchDate = dateFormatter.date(from: date) else {
-                LogManager.shared.info("Invalid date format for scheduled flight search: \(date)")
+                LogManager.shared.warning("Invalid date format for scheduled flight search: \(date)")
                 return
-            }
-
-            LogManager.shared.info("   - Parsed UTC Date: \(searchDate)")
-
-            // First, let's fetch ALL flights on this date to see what's in the database
-            let debugRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-            debugRequest.predicate = NSPredicate(format: "date == %@", searchDate as NSDate)
-
-            do {
-                let allFlightsOnDate = try viewContext.fetch(debugRequest)
-                LogManager.shared.info("   📋 Found \(allFlightsOnDate.count) flight(s) on \(date):")
-                for flight in allFlightsOnDate {
-                    let blockVal = flight.blockTime ?? "nil"
-                    LogManager.shared.info("      • \(flight.flightNumber ?? "?") \(flight.fromAirport ?? "?")-\(flight.toAirport ?? "?") blockTime='\(blockVal)'")
-                }
-            } catch {
-                LogManager.shared.error("   Error fetching flights for debug: \(error)")
             }
 
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
@@ -519,8 +641,6 @@ class FlightDatabaseService: ObservableObject {
             // e.g., "QF521" -> "521", "0521" -> "521"
             let numericFlightNumber = flightNumber.replacingOccurrences(of: "^[A-Z]{2}", with: "", options: .regularExpression)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "0"))
-
-            LogManager.shared.info("   - Numeric flight number (for matching): \(numericFlightNumber)")
 
             // Match on: date, route, AND flexible flight number matching
             // A scheduled/future flight is identified by empty OUT/IN times (hasn't been flown yet)
@@ -540,11 +660,10 @@ class FlightDatabaseService: ObservableObject {
                     LogManager.shared.info("Found scheduled flight to replace: \(scheduledFlight.flightNumber ?? "?") -> updating to \(flightNumber)")
                     result = scheduledFlight
                 } else {
-                    LogManager.shared.info("No scheduled flight found matching ALL criteria")
-                    LogManager.shared.info("   Tried matching flight numbers: '\(flightNumber)' OR '\(numericFlightNumber)'")
+                    LogManager.shared.debug("No scheduled flight found: \(flightNumber) OR \(numericFlightNumber) on \(date)")
                 }
             } catch {
-                LogManager.shared.info("Error searching for scheduled flight: \(error.localizedDescription)")
+                LogManager.shared.error("Error searching for scheduled flight: \(error.localizedDescription)")
             }
         }
 
@@ -557,13 +676,10 @@ class FlightDatabaseService: ObservableObject {
         var result: FlightEntity?
 
         viewContext.performAndWait {
-            LogManager.shared.debug("Database: Searching for scheduled flight by date and flight number only")
-            LogManager.shared.info("   Search criteria:")
-            LogManager.shared.info("   - Date: \(date)")
-            LogManager.shared.info("   - Flight: \(flightNumber)")
+            LogManager.shared.debug("Database: Searching for scheduled flight by date+flight  \(flightNumber) on \(date)")
 
             guard let searchDate = dateFormatter.date(from: date) else {
-                LogManager.shared.info("Invalid date format for scheduled flight search: \(date)")
+                LogManager.shared.warning("Invalid date format for scheduled flight search: \(date)")
                 return
             }
 
@@ -583,14 +699,12 @@ class FlightDatabaseService: ObservableObject {
             do {
                 let flights = try viewContext.fetch(request)
                 if flights.count == 1 {
-                    // Exactly one match - safe to use
-                    LogManager.shared.info("✈️ Found unique scheduled flight match: \(flights[0].flightNumber ?? "?")")
+                    LogManager.shared.info(" Found unique scheduled flight match: \(flights[0].flightNumber ?? "?")")
                     result = flights[0]
                 } else if flights.count > 1 {
-                    // Multiple matches - ambiguous, don't use
-                    LogManager.shared.info("⚠️ Found \(flights.count) scheduled flights matching date/flight number - too ambiguous for pre-fill")
+                    LogManager.shared.debug(" \(flights.count) scheduled flights match date/flight number  too ambiguous for pre-fill")
                 } else {
-                    LogManager.shared.info("ℹ️ No scheduled flight found matching date and flight number")
+                    LogManager.shared.debug("No scheduled flight found for \(flightNumber) on \(date)")
                 }
             } catch {
                 LogManager.shared.error("Error searching for scheduled flight: \(error.localizedDescription)")
@@ -606,7 +720,7 @@ class FlightDatabaseService: ObservableObject {
     ///   - scheduledFlight: The scheduled FlightEntity to update
     ///   - actualData: The FlightSector with actual flight data
     /// - Returns: True if update succeeded, false otherwise
-    func updateScheduledFlightWithActualData(_ scheduledFlight: FlightEntity, actualData: FlightSector) -> Bool {
+    func updateScheduledFlightWithActualData(_ scheduledFlight: FlightEntity, actualData: FlightSector, actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -682,23 +796,29 @@ class FlightDatabaseService: ObservableObject {
             if !actualData.scheduledDeparture.isEmpty {
                 scheduledFlight.scheduledDeparture = actualData.scheduledDeparture
             } else if let existingSTD = scheduledFlight.scheduledDeparture, !existingSTD.isEmpty {
-                LogManager.shared.info("ℹ️ Preserving original STD: \(existingSTD)")
+                LogManager.shared.info(" Preserving original STD: \(existingSTD)")
             }
 
             if !actualData.scheduledArrival.isEmpty {
                 scheduledFlight.scheduledArrival = actualData.scheduledArrival
             } else if let existingSTA = scheduledFlight.scheduledArrival, !existingSTA.isEmpty {
-                LogManager.shared.info("ℹ️ Preserving original STA: \(existingSTA)")
+                LogManager.shared.info(" Preserving original STA: \(existingSTA)")
             }
 
             scheduledFlight.modifiedAt = Date()
             // Note: createdAt is preserved from original scheduled flight
 
             do {
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
+                let scheduledDesc = actionDescription ?? undoDescription(verb: "Edited", for: actualData, includeDate: true)
+                undoDescriptions.append(scheduledDesc)
                 LogManager.shared.info("Successfully updated scheduled flight with actual ACARS data")
                 success = true
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 LogManager.shared.error("Error updating scheduled flight: \(error.localizedDescription)")
                 viewContext.rollback()
             }
@@ -795,7 +915,6 @@ class FlightDatabaseService: ObservableObject {
                 request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.date, ascending: false)]
                 request.fetchBatchSize = 100
                 request.returnsObjectsAsFaults = false
- 
 
                 do {
                     let flights = try context.fetch(request)
@@ -980,7 +1099,7 @@ class FlightDatabaseService: ObservableObject {
     }
     
     /// Delete a flight sector
-    func deleteFlight(_ sector: FlightSector) -> Bool {
+    func deleteFlight(_ sector: FlightSector, actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -995,19 +1114,25 @@ class FlightDatabaseService: ObservableObject {
                 }
 
                 viewContext.delete(flight)
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
+                let deleteDesc = actionDescription ?? undoDescription(verb: "Deleted", for: sector, includeDate: true)
+                undoDescriptions.append(deleteDesc)
                 success = true
 
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 LogManager.shared.error("Database: Error deleting flight - \(error.localizedDescription)")
             }
         }
 
         return success
     }
-    
+
     /// Delete multiple flights
-    func deleteFlights(_ sectors: [FlightSector]) -> Bool {
+    func deleteFlights(_ sectors: [FlightSector], actionDescription: String? = nil) -> Bool {
         var success = false
 
         viewContext.performAndWait {
@@ -1018,23 +1143,29 @@ class FlightDatabaseService: ObservableObject {
             do {
                 let flights = try viewContext.fetch(request)
                 flights.forEach { viewContext.delete($0) }
+                viewContext.undoManager?.beginUndoGrouping()
                 try viewContext.save()
+                viewContext.undoManager?.endUndoGrouping()
+                undoableChangeCount += 1
+                let bulkDeleteDesc = actionDescription ?? "Deleted \(sectors.count) \(sectors.count == 1 ? "flight" : "flights")"
+                undoDescriptions.append(bulkDeleteDesc)
                 success = true
             } catch {
+                viewContext.undoManager?.endUndoGrouping()
                 LogManager.shared.error("Database: Error deleting flights - \(error.localizedDescription)")
             }
         }
 
         return success
     }
-    
+
     /// Duplicate multiple flights, assigning each a new UUID and today's createdAt
     @discardableResult
     func duplicateFlights(_ sectors: [FlightSector]) -> Int {
+        viewContext.undoManager?.beginUndoGrouping()
         var savedCount = 0
         for sector in sectors {
-            var copy = sector
-            copy = FlightSector(
+            let copy = FlightSector(
                 id: UUID(),
                 date: sector.date,
                 flightNumber: sector.flightNumber,
@@ -1072,27 +1203,116 @@ class FlightDatabaseService: ObservableObject {
                 scheduledArrival: sector.scheduledArrival,
                 counterEntries: sector.counterEntries
             )
-            if saveFlight(copy) { savedCount += 1 }
+            if saveFlightRaw(copy) { savedCount += 1 }
         }
+        viewContext.undoManager?.endUndoGrouping()
         if savedCount > 0 {
+            let desc = savedCount == 1 ? "Duplicated 1 flight" : "Duplicated \(savedCount) flights"
+            undoDescriptions.append(desc)
+            undoableChangeCount += 1
             NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+        } else {
+            viewContext.undoManager?.undoNestedGroup()
         }
         return savedCount
     }
 
-    /// Delete all flight entries from the database
+    /// Inserts a flight into viewContext without wrapping in its own undo group or touching the description stack.
+    /// Used by duplicateFlights, which manages its own single outer undo group.
+    private func saveFlightRaw(_ sector: FlightSector) -> Bool {
+        var success = false
+        viewContext.performAndWait {
+            let checkRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            checkRequest.predicate = NSPredicate(format: "id == %@", sector.id as CVarArg)
+            checkRequest.fetchLimit = 1
+            do {
+                let existing = try viewContext.fetch(checkRequest)
+                guard existing.isEmpty else { return }
+            } catch {
+                LogManager.shared.error("Error checking for duplicate flight: \(error.localizedDescription)")
+                return
+            }
+            let flight = FlightEntity(context: viewContext)
+            flight.id = sector.id
+            guard let parsedDate = dateFormatter.date(from: sector.date) else { return }
+            flight.date = parsedDate
+            flight.flightNumber = sector.flightNumber
+            flight.aircraftReg = sector.aircraftReg
+            flight.aircraftType = sector.aircraftType
+            flight.fromAirport = sector.fromAirport
+            flight.toAirport = sector.toAirport
+            flight.captainName = sector.captainName
+            flight.foName = sector.foName
+            flight.so1Name = sector.so1Name
+            flight.so2Name = sector.so2Name
+            flight.blockTime = sector.blockTime
+            flight.nightTime = sector.nightTime
+            flight.p1Time = sector.p1Time
+            flight.p1usTime = sector.p1usTime
+            flight.p2Time = sector.p2Time
+            flight.instrumentTime = sector.instrumentTime
+            flight.simTime = sector.simTime
+            flight.spInsTime = sector.spInsTime.isEmpty || sector.spInsTime == "0.00" || sector.spInsTime == "0.0" ? nil : sector.spInsTime
+            flight.isPilotFlying = sector.isPilotFlying
+            flight.isPositioning = sector.isPositioning
+            flight.isAIII = sector.isAIII
+            flight.isRNP = sector.isRNP
+            flight.isILS = sector.isILS
+            flight.isGLS = sector.isGLS
+            flight.isNPA = sector.isNPA
+            flight.safeRemarks = sector.remarks
+            flight.dayTakeoffs = Int16(sector.dayTakeoffs)
+            flight.dayLandings = Int16(sector.dayLandings)
+            flight.nightTakeoffs = Int16(sector.nightTakeoffs)
+            flight.nightLandings = Int16(sector.nightLandings)
+            flight.outTime = sector.outTime
+            flight.inTime = sector.inTime
+            flight.scheduledDeparture = sector.scheduledDeparture
+            flight.scheduledArrival = sector.scheduledArrival
+            flight.createdAt = Date()
+            flight.modifiedAt = Date()
+            for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                flight.setCounter(columnIndex, value: value)
+            }
+            do {
+                try viewContext.save()
+                success = true
+            } catch {
+                viewContext.rollback()
+                LogManager.shared.error("Error duplicating flight: \(error.localizedDescription)")
+            }
+        }
+        return success
+    }
+
+    /// Delete all flight entries from the database.
+    /// Callers that own the undo-suspension lifecycle (e.g. batch import) must call
+    /// suspendUndoForBatchImport() before this and resumeUndoAfterBatchImport() after —
+    /// this function does NOT touch the undo manager to avoid mismatched enable/disable calls.
+    ///
+    /// Uses NSBatchDeleteRequest so that no FlightEntity objects are loaded into viewContext.
+    /// Loading 7000+ objects then saving them leaves the viewContext with an open SQLite read
+    /// transaction, which blocks the WAL checkpoint during the subsequent saveFlightsBatch and
+    /// causes an indefinite hang (NSSQLCore.m:2706). The batch delete operates at the SQL layer
+    /// and bypasses the object graph entirely. viewContext.reset() is called afterward to merge
+    /// the batch result into the in-memory graph and release any residual read lock.
     func clearAllFlights() -> Bool {
         var success = false
 
         viewContext.performAndWait {
-            let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+            let fetchRequest: NSFetchRequest<NSFetchRequestResult> = FlightEntity.fetchRequest()
+            let batchDelete = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+            batchDelete.resultType = .resultTypeCount
 
             do {
-                let flights = try viewContext.fetch(request)
-                flights.forEach { viewContext.delete($0) }
-                try viewContext.save()
+                let result = try viewContext.execute(batchDelete) as? NSBatchDeleteResult
+                let deletedCount = result?.result as? Int ?? 0
+                LogManager.shared.debug("Database: NSBatchDeleteRequest removed \(deletedCount) flights")
 
-                // Post notification to update all views
+                // Reset the context so its in-memory object graph reflects the SQL-level deletion
+                // and the SQLite read transaction is released before the caller proceeds.
+                viewContext.reset()
+
                 LogManager.shared.debug("FlightDatabaseService: Posting .flightDataChanged (clearAllFlights)")
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
 
@@ -1113,41 +1333,25 @@ class FlightDatabaseService: ObservableObject {
         var duplicateCount = 0
         var mergeProposals: [MergeProposal] = []
 
-        viewContext.performAndWait {
+        let context = persistentContainer.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+
+        context.performAndWait {
             LogManager.shared.info("Database: Starting batch save of \(sectors.count) flights")
 
-            // Step 1: Get all IDs from sectors to check for UUID-based duplicates in ONE query
-            let sectorIDs = sectors.map { $0.id }
-            LogManager.shared.info("Checking \(sectorIDs.count) UUIDs for duplicates")
-            LogManager.shared.info("   First few UUIDs to check: \(sectorIDs.prefix(3).map { $0.uuidString })")
+            // DateFormatter is not thread-safe — create a local instance for this background context
+            let localDateFormatter: DateFormatter = {
+                let f = DateFormatter()
+                f.dateFormat = "dd/MM/yyyy"
+                f.locale = Locale(identifier: "en_US_POSIX")
+                f.timeZone = TimeZone(secondsFromGMT: 0)
+                return f
+            }()
 
-            let checkRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-            checkRequest.predicate = NSPredicate(format: "id IN %@", sectorIDs)
-            checkRequest.propertiesToFetch = ["id", "aircraftType", "aircraftReg"]
-
-            // Maps UUID → existing entity so we can patch blank fields on UUID-matched duplicates
+            // Steps 1 + 2: Single fetch of all existing flights to build all duplicate indexes.
+            // Replaces the previous "id IN [N UUIDs]" query which hangs SQLite at large N.
             var existingByID = [UUID: FlightEntity]()
             var existingIDs = Set<UUID>()
-            do {
-                let existingFlights = try viewContext.fetch(checkRequest)
-                for entity in existingFlights {
-                    guard let id = entity.id else { continue }
-                    existingByID[id] = entity
-                    existingIDs.insert(id)
-                }
-                LogManager.shared.info("Found \(existingIDs.count) existing flights by UUID in database")
-                if !existingIDs.isEmpty {
-                    LogManager.shared.info("   First few existing UUIDs: \(existingIDs.prefix(3).map { $0.uuidString })")
-                }
-            } catch {
-                LogManager.shared.error("Error checking for duplicates: \(error.localizedDescription)")
-                duplicateCount = 0
-                failureCount = sectors.count
-                return
-            }
-
-            // Step 2: Build a content-based duplicate check for flights not caught by UUID
-            // This catches flights that are the same but have different UUIDs (e.g., from backup restore)
             var contentBasedDuplicates = Set<String>()
             // Fuzzy map for WebCIS imports (no flight number): keyed on "date|from|to".
             // Reg is intentionally excluded — the user may have entered the wrong reg manually,
@@ -1161,19 +1365,24 @@ class FlightDatabaseService: ObservableObject {
             var simDuplicates = Set<String>()
             do {
                 let allFlightsRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
-                allFlightsRequest.propertiesToFetch = ["date", "flightNumber", "fromAirport", "toAirport", "aircraftReg", "aircraftType", "blockTime", "simTime"]
-                let allFlights = try viewContext.fetch(allFlightsRequest)
+                allFlightsRequest.propertiesToFetch = ["id", "date", "flightNumber", "fromAirport", "toAirport", "aircraftReg", "aircraftType", "simTime"]
+                let allFlights = try context.fetch(allFlightsRequest)
 
                 for flight in allFlights {
+                    // Build UUID duplicate index
+                    if let id = flight.id {
+                        existingByID[id] = flight
+                        existingIDs.insert(id)
+                    }
+
                     guard let date = flight.date,
                           let fromAirport = flight.fromAirport,
                           let toAirport = flight.toAirport
                     else { continue }
                     let aircraftReg = flight.aircraftReg ?? ""
-
                     let flightNumber = flight.flightNumber ?? ""
                     let aircraftType = flight.aircraftType ?? ""
-                    let dateString = dateFormatter.string(from: date)
+                    let dateString = localDateFormatter.string(from: date)
                     let signature = "\(dateString)|\(flightNumber)|\(fromAirport)|\(toAirport)|\(aircraftReg)|\(aircraftType)"
                     contentBasedDuplicates.insert(signature)
 
@@ -1184,7 +1393,7 @@ class FlightDatabaseService: ObservableObject {
                     let normTo   = AirportService.shared.convertToICAO(toAirport)
                     for dayOffset in [-1, 0, 1] {
                         if let offsetDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: date) {
-                            let d = dateFormatter.string(from: offsetDate)
+                            let d = localDateFormatter.string(from: offsetDate)
                             fuzzyDuplicates["\(d)|\(normFrom)|\(normTo)"] = flight.objectID
                         }
                     }
@@ -1196,19 +1405,125 @@ class FlightDatabaseService: ObservableObject {
                     if !simTime.isEmpty, simTime != "0.00", simTime != "0.0", simTime != "0" {
                         for dayOffset in [-1, 0, 1] {
                             if let offsetDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: date) {
-                                let d = dateFormatter.string(from: offsetDate)
+                                let d = localDateFormatter.string(from: offsetDate)
                                 simDuplicates.insert("\(d)|\(simTime)")
                             }
                         }
                     }
                 }
-                LogManager.shared.info("Built content signature map with \(contentBasedDuplicates.count) unique flights, \(fuzzyDuplicates.count) fuzzy entries, \(simDuplicates.count) sim entries")
+                LogManager.shared.info("Found \(existingIDs.count) existing flights by UUID, \(contentBasedDuplicates.count) content signatures, \(fuzzyDuplicates.count) fuzzy entries, \(simDuplicates.count) sim entries")
             } catch {
-                LogManager.shared.error("Error building content-based duplicate check: \(error.localizedDescription)")
-                // Continue without content-based checking if it fails
+                LogManager.shared.error("Error building duplicate indexes: \(error.localizedDescription)")
+                failureCount = sectors.count
+                return
             }
 
-            // Step 3: Create all flight entities without saving
+            // Step 3a (fast path): If the store is empty (all duplicate indexes are empty),
+            // use NSBatchInsertRequest. This operates at the SQL layer — it does NOT create
+            // NSManagedObjects, does NOT trigger KVO, and does NOT grow the WAL the same way
+            // per-object inserts do. In replace mode (after clearAllFlights), the duplicate
+            // indexes are always empty, so this path always fires for restores. This avoids
+            // the CloudKit mirroring delegate read-lock conflict that blocks WAL checkpoint
+            // when per-object saves hit the ~8 MB WAL threshold.
+            if existingIDs.isEmpty && contentBasedDuplicates.isEmpty {
+                LogManager.shared.info("Database: Store is empty — using NSBatchInsertRequest for \(sectors.count) flights")
+                let batchBaseTime = Date()
+                var dictionaries: [[String: Any]] = []
+                dictionaries.reserveCapacity(sectors.count)
+                for (sectorIndex, sector) in sectors.enumerated() {
+                    guard let parsedDate = localDateFormatter.date(from: sector.date) else {
+                        failureCount += 1
+                        continue
+                    }
+                    var dict: [String: Any] = [
+                        "id":                 sector.id as NSUUID,
+                        "date":               parsedDate,
+                        "flightNumber":       sector.flightNumber,
+                        "aircraftReg":        sector.aircraftReg,
+                        "aircraftType":       sector.aircraftType,
+                        "fromAirport":        sector.fromAirport,
+                        "toAirport":          sector.toAirport,
+                        "captainName":        sector.captainName,
+                        "foName":             sector.foName,
+                        "so1Name":            sector.so1Name as Any,
+                        "so2Name":            sector.so2Name as Any,
+                        "blockTime":          sector.blockTime,
+                        "nightTime":          sector.nightTime,
+                        "p1Time":             sector.p1Time,
+                        "p1usTime":           sector.p1usTime,
+                        "p2Time":             sector.p2Time,
+                        "instrumentTime":     sector.instrumentTime,
+                        "simTime":            sector.simTime,
+                        "isPilotFlying":      sector.isPilotFlying,
+                        "isPositioning":      sector.isPositioning,
+                        "isAIII":             sector.isAIII,
+                        "isRNP":              sector.isRNP,
+                        "isILS":              sector.isILS,
+                        "isGLS":              sector.isGLS,
+                        "isNPA":              sector.isNPA,
+                        "remarks":            sector.remarks,
+                        "dayTakeoffs":        Int16(sector.dayTakeoffs),
+                        "dayLandings":        Int16(sector.dayLandings),
+                        "nightTakeoffs":      Int16(sector.nightTakeoffs),
+                        "nightLandings":      Int16(sector.nightLandings),
+                        "outTime":            sector.outTime,
+                        "inTime":             sector.inTime,
+                        "scheduledDeparture": sector.scheduledDeparture,
+                        "scheduledArrival":   sector.scheduledArrival,
+                        "importSessionID":    sessionID as NSUUID,
+                        "importedAt":         Date(),
+                        "createdAt":          batchBaseTime.addingTimeInterval(Double(sectorIndex) * 0.001),
+                        "modifiedAt":         Date(),
+                    ]
+                    // spInsTime: only store non-zero values
+                    let spIns = sector.spInsTime
+                    if !spIns.isEmpty && spIns != "0.00" && spIns != "0.0" {
+                        dict["spInsTime"] = spIns
+                    }
+                    // counter1–counter10: only store non-empty values
+                    for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                        switch columnIndex {
+                        case 1:  dict["counter1"]  = value
+                        case 2:  dict["counter2"]  = value
+                        case 3:  dict["counter3"]  = value
+                        case 4:  dict["counter4"]  = value
+                        case 5:  dict["counter5"]  = value
+                        case 6:  dict["counter6"]  = value
+                        case 7:  dict["counter7"]  = value
+                        case 8:  dict["counter8"]  = value
+                        case 9:  dict["counter9"]  = value
+                        case 10: dict["counter10"] = value
+                        default: break
+                        }
+                    }
+                    dictionaries.append(dict)
+                }
+
+                let batchInsert = NSBatchInsertRequest(entityName: "FlightEntity", objects: dictionaries)
+                batchInsert.resultType = .count
+                do {
+                    let result = try context.execute(batchInsert) as? NSBatchInsertResult
+                    let insertedCount = result?.result as? Int ?? 0
+                    LogManager.shared.info("Database: NSBatchInsertRequest inserted \(insertedCount) flights (failures: \(failureCount))")
+                    successCount = insertedCount
+                } catch {
+                    LogManager.shared.error("Database: NSBatchInsertRequest failed — \(error.localizedDescription)")
+                    failureCount = sectors.count
+                    successCount = 0
+                }
+                LogManager.shared.info("Batch save summary:")
+                LogManager.shared.info("    Success: \(successCount)")
+                LogManager.shared.info("    Duplicates: \(duplicateCount)")
+                LogManager.shared.info("   Failures: \(failureCount)")
+                return
+            }
+
+            // Step 3: Create all flight entities, saving every 500 to keep WAL size small.
+            // Core Data's PostSaveMaintenance triggers wal_checkpoint(TRUNCATE) once the WAL
+            // exceeds ~8 MB. A single save of 7000+ rows blows past that threshold and the
+            // checkpoint blocks on the still-open write transaction, causing a visible hang.
+            // Saving in chunks keeps each WAL segment small so checkpoints complete immediately.
+            let chunkSize = 500
             let batchBaseTime = Date()
             for (sectorIndex, sector) in sectors.enumerated() {
                 // Check UUID-based duplicate first
@@ -1225,7 +1540,7 @@ class FlightDatabaseService: ObservableObject {
                         // Auto-fill blank aircraftType — no conflict, no user review needed
                         if !incomingType.isEmpty && existingType.isEmpty {
                             existing.aircraftType = incomingType
-                            LogManager.shared.info("✏️ Auto-filled blank aircraftType: \(displayDate) \(displayRoute) → \(incomingType)")
+                            LogManager.shared.info(" Auto-filled blank aircraftType: \(displayDate) \(displayRoute)  \(incomingType)")
                         } else if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
@@ -1248,7 +1563,7 @@ class FlightDatabaseService: ObservableObject {
                         }
                     }
                     duplicateCount += 1
-                    LogManager.shared.info("⊘ Skipping duplicate (UUID match): \(sector.date) \(sector.flightNumber) \(sector.aircraftReg) (UUID: \(sector.id))")
+                    LogManager.shared.debug(" Skipping duplicate (UUID match): \(sector.date) \(sector.flightNumber) \(sector.aircraftReg)")
                     continue
                 }
 
@@ -1256,7 +1571,7 @@ class FlightDatabaseService: ObservableObject {
                 let signature = "\(sector.date)|\(sector.flightNumber)|\(sector.fromAirport)|\(sector.toAirport)|\(sector.aircraftReg)|\(sector.aircraftType)"
                 if contentBasedDuplicates.contains(signature) {
                     duplicateCount += 1
-                    LogManager.shared.info("⊘ Skipping duplicate (content match): \(sector.date) \(sector.flightNumber) \(sector.aircraftType)-\(sector.aircraftReg) (different UUID: \(sector.id))")
+                    LogManager.shared.debug(" Skipping duplicate (content match): \(sector.date) \(sector.flightNumber) \(sector.aircraftType)-\(sector.aircraftReg)")
                     continue
                 }
 
@@ -1270,7 +1585,7 @@ class FlightDatabaseService: ObservableObject {
                     let normTo   = AirportService.shared.convertToICAO(sector.toAirport)
                     let fuzzyKey = "\(sector.date)|\(normFrom)|\(normTo)"
                     if let existingObjectID = fuzzyDuplicates[fuzzyKey],
-                       let existing = try? viewContext.existingObject(with: existingObjectID) as? FlightEntity {
+                       let existing = try? context.existingObject(with: existingObjectID) as? FlightEntity {
                         let incomingReg  = sector.aircraftReg.trimmingCharacters(in: .whitespacesAndNewlines)
                         let incomingType = sector.aircraftType.trimmingCharacters(in: .whitespacesAndNewlines)
                         let existingType = (existing.aircraftType ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1290,7 +1605,7 @@ class FlightDatabaseService: ObservableObject {
                         // Auto-fill blank aircraftType — no conflict, no user review needed
                         if !incomingType.isEmpty && existingType.isEmpty {
                             existing.aircraftType = incomingType
-                            LogManager.shared.info("✏️ Auto-filled blank aircraftType (fuzzy): \(displayDate) \(displayRoute) → \(incomingType)")
+                            LogManager.shared.info(" Auto-filled blank aircraftType (fuzzy): \(displayDate) \(displayRoute)  \(incomingType)")
                         } else if !incomingType.isEmpty && incomingType != existingType {
                             mergeProposals.append(MergeProposal(
                                 flightDate: displayDate,
@@ -1302,7 +1617,7 @@ class FlightDatabaseService: ObservableObject {
                             ))
                         }
                         duplicateCount += 1
-                        LogManager.shared.info("⊘ Skipping duplicate (fuzzy match): \(sector.date) \(sector.fromAirport)→\(sector.toAirport) [\(normFrom)→\(normTo)]")
+                        LogManager.shared.debug(" Skipping duplicate (fuzzy match): \(sector.date) \(sector.fromAirport)\(sector.toAirport)")
                         continue
                     }
                 }
@@ -1315,18 +1630,18 @@ class FlightDatabaseService: ObservableObject {
                     let simKey = "\(sector.date)|\(incomingSimTime)"
                     if simDuplicates.contains(simKey) {
                         duplicateCount += 1
-                        LogManager.shared.info("⊘ Skipping duplicate (sim match): \(sector.date) sim=\(incomingSimTime)")
+                        LogManager.shared.debug(" Skipping duplicate (sim match): \(sector.date) sim=\(incomingSimTime)")
                         continue
                     }
                 }
 
                 // Parse and validate date
-                guard let parsedDate = dateFormatter.date(from: sector.date) else {
+                guard let parsedDate = localDateFormatter.date(from: sector.date) else {
                     failureCount += 1
                     continue
                 }
 
-                let flight = FlightEntity(context: viewContext)
+                let flight = FlightEntity(context: context)
                 flight.id = sector.id
                 flight.date = parsedDate
                 flight.flightNumber = sector.flightNumber
@@ -1367,25 +1682,42 @@ class FlightDatabaseService: ObservableObject {
                 flight.createdAt = batchBaseTime.addingTimeInterval(Double(sectorIndex) * 0.001)
                 flight.modifiedAt = Date()
 
+                for (columnIndex, value) in sector.counterEntries where !value.isEmpty {
+                    flight.setCounter(columnIndex, value: value)
+                }
+
                 successCount += 1
+
+                // Flush every chunkSize inserts to keep WAL pages small
+                if successCount % chunkSize == 0, context.hasChanges {
+                    do {
+                        try context.save()
+                    } catch {
+                        context.rollback()
+                        LogManager.shared.error("Database: Chunk save failed at \(successCount) - \(error.localizedDescription)")
+                        failureCount = sectors.count
+                        successCount = 0
+                        return
+                    }
+                }
             }
 
-            // Step 4: Save ALL flights in ONE operation
+            // Step 4: Save any remaining flights not caught by the chunk boundary
             do {
-                if viewContext.hasChanges {
-                    try viewContext.save()
+                if context.hasChanges {
+                    try context.save()
                     LogManager.shared.info("Database: Successfully saved \(successCount) flights")
                 } else {
                     LogManager.shared.debug("Database: No changes to save")
                 }
 
                 LogManager.shared.info("Batch save summary:")
-                LogManager.shared.info("   ✓ Success: \(successCount)")
-                LogManager.shared.info("   ⊘ Duplicates: \(duplicateCount)")
+                LogManager.shared.info("    Success: \(successCount)")
+                LogManager.shared.info("    Duplicates: \(duplicateCount)")
                 LogManager.shared.info("   Failures: \(failureCount)")
 
             } catch {
-                viewContext.rollback()
+                context.rollback()
                 LogManager.shared.error("Database: Batch save failed - \(error.localizedDescription)")
                 failureCount = sectors.count
                 successCount = 0
@@ -1417,7 +1749,7 @@ class FlightDatabaseService: ObservableObject {
                 }
                 entity.modifiedAt = Date()
                 appliedCount += 1
-                LogManager.shared.info("✎ Applied merge: \(proposal.flightDate) \(proposal.route) \(proposal.fieldName): '\(proposal.oldValue)' → '\(proposal.newValue)'")
+                LogManager.shared.info(" Applied merge: \(proposal.flightDate) \(proposal.route) \(proposal.fieldName): '\(proposal.oldValue)'  '\(proposal.newValue)'")
             }
             if viewContext.hasChanges {
                 do {
@@ -1463,19 +1795,24 @@ class FlightDatabaseService: ObservableObject {
     /// Deletes all flights belonging to a specific import session.
     /// - Returns: Number of flights deleted.
     @discardableResult
-    func deleteImportSession(_ sessionID: UUID) -> Int {
+    func deleteImportSession(_ sessionID: UUID, actionDescription: String? = nil) -> Int {
         var deletedCount = 0
         viewContext.performAndWait {
             let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
             request.predicate = NSPredicate(format: "importSessionID == %@", sessionID as CVarArg)
             guard let flights = try? viewContext.fetch(request) else { return }
             deletedCount = flights.count
+            viewContext.undoManager?.beginUndoGrouping()
             for flight in flights {
                 viewContext.delete(flight)
             }
             try? viewContext.save()
+            viewContext.undoManager?.endUndoGrouping()
         }
         if deletedCount > 0 {
+            undoableChangeCount += 1
+            let importDesc = actionDescription ?? "Deleted import batch"
+            undoDescriptions.append(importDesc)
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             }
@@ -1561,7 +1898,7 @@ class FlightDatabaseService: ObservableObject {
                        let currentCreatedAt = flight.createdAt,
                        currentCreatedAt < existingCreatedAt {
                         // Current flight is older, delete the existing one and keep this
-                        LogManager.shared.info("⊘ Duplicate detected - keeping older flight (created: \(currentCreatedAt))")
+                        LogManager.shared.info(" Duplicate detected - keeping older flight (created: \(currentCreatedAt))")
                         LogManager.shared.info("   Flight: \(duplicateDescription)")
                         viewContext.delete(existingFlight)
                         newUUIDMap[newUUID] = flight
@@ -1570,7 +1907,7 @@ class FlightDatabaseService: ObservableObject {
                         updatedCount += 1
                     } else {
                         // Existing flight is older, delete current
-                        LogManager.shared.info("⊘ Duplicate detected - keeping older flight (existing)")
+                        LogManager.shared.info(" Duplicate detected - keeping older flight (existing)")
                         LogManager.shared.info("   Flight: \(duplicateDescription)")
                         viewContext.delete(flight)
                         duplicatesRemoved += 1
@@ -1583,7 +1920,7 @@ class FlightDatabaseService: ObservableObject {
                     updatedCount += 1
 
                     if oldUUID != newUUID {
-                        LogManager.shared.info("✓ Updated UUID for \(dateString) \(flightNumber)")
+                        LogManager.shared.info(" Updated UUID for \(dateString) \(flightNumber)")
                     }
                 }
             }
@@ -1592,13 +1929,13 @@ class FlightDatabaseService: ObservableObject {
             if viewContext.hasChanges {
                 try viewContext.save()
                 LogManager.shared.info("Database: UUID regeneration complete:")
-                LogManager.shared.info("   • Updated: \(updatedCount) flights")
-                LogManager.shared.info("   • Removed duplicates: \(duplicatesRemoved)")
+                LogManager.shared.info("    Updated: \(updatedCount) flights")
+                LogManager.shared.info("    Removed duplicates: \(duplicatesRemoved)")
 
                 if !duplicatesList.isEmpty {
-                    LogManager.shared.info("   📋 Duplicates removed:")
+                    LogManager.shared.info("    Duplicates removed:")
                     for duplicate in duplicatesList {
-                        LogManager.shared.info("      • \(duplicate)")
+                        LogManager.shared.info("       \(duplicate)")
                     }
                 }
 
@@ -1608,7 +1945,7 @@ class FlightDatabaseService: ObservableObject {
                     NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             } else {
-                LogManager.shared.info("ℹ️ No changes needed")
+                LogManager.shared.info(" No changes needed")
             }
 
             return (updatedCount, duplicatesRemoved, duplicatesList)
@@ -1659,12 +1996,12 @@ class FlightDatabaseService: ObservableObject {
                     // Verify both values are identical (expected for this bug)
                     // If different, might be a different issue - log warning and skip
                     if abs(simValue - blockValue) > 0.01 {
-                        LogManager.shared.warning("⚠️ Skipping flight with different block/sim times: \(description)")
+                        LogManager.shared.warning(" Skipping flight with different block/sim times: \(description)")
                         continue
                     }
 
                     // Fix: Set blockTime to 0.0, keep simTime
-                    LogManager.shared.info("Migrating: \(description) → block:0.0 sim:\(simTime)")
+                    LogManager.shared.info("Migrating: \(description)  block:0.0 sim:\(simTime)")
                     flight.blockTime = "0.0"
                     flight.modifiedAt = Date()
 
@@ -1675,7 +2012,7 @@ class FlightDatabaseService: ObservableObject {
                 // Save all changes in one transaction
                 if viewContext.hasChanges {
                     try viewContext.save()
-                    LogManager.shared.info("✓ Successfully migrated \(migratedCount) simulator flights")
+                    LogManager.shared.info(" Successfully migrated \(migratedCount) simulator flights")
                 }
 
             } catch {
@@ -1757,7 +2094,7 @@ class FlightDatabaseService: ObservableObject {
                 viewContext.rollback()
             }
         }
-        LogManager.shared.info("migrateLegacyCustomCounterToColumn1: copied customCount → counter1 on \(migratedCount) flights")
+        LogManager.shared.info("migrateLegacyCustomCounterToColumn1: copied customCount  counter1 on \(migratedCount) flights")
         return migratedCount
     }
 
@@ -1786,7 +2123,7 @@ class FlightDatabaseService: ObservableObject {
             try viewContext.save()
             return (flights.count, "Updated \(flights.count) flight(s) from A321 → A21N.")
         } catch {
-            LogManager.shared.error("A321→A21N migration failed: \(error.localizedDescription)")
+            LogManager.shared.error("A321A21N migration failed: \(error.localizedDescription)")
             return (0, "Migration failed: \(error.localizedDescription)")
         }
     }
@@ -1846,7 +2183,7 @@ class FlightDatabaseService: ObservableObject {
                 let toKeep = sortedFlights.first!
                 let toDelete = sortedFlights.dropFirst()
 
-                                LogManager.shared.debug("   ✓ Keeping flight created at: \(toKeep.createdAt ?? Date()) (UUID: \(toKeep.id?.uuidString ?? "unknown"))")
+                                LogManager.shared.debug("    Keeping flight created at: \(toKeep.createdAt ?? Date()) (UUID: \(toKeep.id?.uuidString ?? "unknown"))")
 
                 for duplicate in toDelete {
                                     LogManager.shared.debug("   Deleting duplicate created at: \(duplicate.createdAt ?? Date()) (UUID: \(duplicate.id?.uuidString ?? "unknown"))")
@@ -2981,7 +3318,7 @@ class FlightDatabaseService: ObservableObject {
 
         // Debug separator
         LogManager.shared.debug("CloudKit: Extraction complete - Found \(individualErrors.count) individual errors")
-                        LogManager.shared.debug("═══════════════════════════════════════════════════════\n")
+                        LogManager.shared.debug("\n")
 
         return DetailedSyncError(
             timestamp: Date(),
@@ -3074,6 +3411,10 @@ class FlightDatabaseService: ObservableObject {
                 if !self.isImportingFromCloudKit {
                     self.isSyncing = false
                     self.lastSyncDate = Date()
+                    // Final reload after CloudKit settles — ensures fields merged in last
+                    // (e.g. isPositioning) are reflected in the UI even if earlier
+                    // debounced notifications fired before the merge completed.
+                    NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             }
         }
@@ -3081,15 +3422,16 @@ class FlightDatabaseService: ObservableObject {
 
     @objc private func handleAppDidEnterBackground() {
         isAppInBackground = true
-        LogManager.shared.debug("FlightDatabaseService: App entered background — notifications suppressed")
+        viewContext.refreshAllObjects()
+        LogManager.shared.debug("FlightDatabaseService: App entered background  notifications suppressed")
     }
 
     @objc private func handleAppDidBecomeActive() {
         isAppInBackground = false
-        LogManager.shared.debug("FlightDatabaseService: App became active — isAppInBackground cleared")
+        LogManager.shared.debug("FlightDatabaseService: App became active  isAppInBackground cleared")
         if pendingDataChanged {
             pendingDataChanged = false
-            LogManager.shared.info("FlightDatabaseService: Posting deferred .flightDataChanged (background→foreground)")
+            LogManager.shared.info("FlightDatabaseService: Posting deferred .flightDataChanged (backgroundforeground)")
             NotificationCenter.default.post(name: .flightDataChanged, object: nil)
             Task { @MainActor in
                 WidgetDataWriter.shared.updateWidgetSnapshot()
@@ -3290,7 +3632,7 @@ class FlightDatabaseService: ObservableObject {
                     NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             } catch {
-                LogManager.shared.error("CloudKit dedup: Failed to save — \(error.localizedDescription)")
+                LogManager.shared.error("CloudKit dedup: Failed to save  \(error.localizedDescription)")
             }
         }
     }
@@ -3370,7 +3712,7 @@ class FlightDatabaseService: ObservableObject {
 
     /// Clear simulated errors and restore normal state
     func clearSimulatedErrors() {
-                        LogManager.shared.debug("🧪 Clearing simulated errors")
+                        LogManager.shared.debug(" Clearing simulated errors")
 
         DispatchQueue.main.async {
             self.lastSyncError = nil
@@ -3386,7 +3728,7 @@ class FlightDatabaseService: ObservableObject {
     /// Skips simulator flights (simTime > 0) and positioning flights (isPositioning = true)
     /// - Returns: Tuple of (successCount, skippedCount, errorCount)
     func recalculateAllBlockTimes() -> (success: Int, skipped: Int, errors: Int) {
-        LogManager.shared.info("🔄 Starting recalculation of all block times")
+        LogManager.shared.info(" Starting recalculation of all block times")
 
         let context = persistentContainer.viewContext
         let fetchRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
@@ -3406,7 +3748,7 @@ class FlightDatabaseService: ObservableObject {
 
         do {
             let flights = try context.fetch(fetchRequest)
-            LogManager.shared.info("📊 Found \(flights.count) regular flights with OUT/IN times to recalculate (excluding SIM and PAX)")
+            LogManager.shared.info(" Found \(flights.count) regular flights with OUT/IN times to recalculate (excluding SIM and PAX)")
 
             let timeCalculationManager = TimeCalculationManager()
 
@@ -3433,12 +3775,12 @@ class FlightDatabaseService: ObservableObject {
 
                     // Log if value changed
                     if oldBlockTime != newBlockTime {
-                        LogManager.shared.debug("✏️ Updated flight \(flight.flightNumber ?? "?"): \(oldBlockTime) → \(newBlockTime)")
+                        LogManager.shared.debug(" Updated flight \(flight.flightNumber ?? "?"): \(oldBlockTime)  \(newBlockTime)")
                     }
 
                     successCount += 1
                 } else {
-                    LogManager.shared.warning("⚠️ Failed to calculate block time for flight \(flight.flightNumber ?? "?")")
+                    LogManager.shared.warning(" Failed to calculate block time for flight \(flight.flightNumber ?? "?")")
                     errorCount += 1
                 }
             }
@@ -3446,17 +3788,69 @@ class FlightDatabaseService: ObservableObject {
             // Save all changes
             if context.hasChanges {
                 try context.save()
-                LogManager.shared.info("✅ Block time recalculation complete: \(successCount) updated, \(skippedCount) skipped, \(errorCount) errors")
+                LogManager.shared.info(" Block time recalculation complete: \(successCount) updated, \(skippedCount) skipped, \(errorCount) errors")
             } else {
-                LogManager.shared.info("ℹ️ No changes needed - all block times already correct")
+                LogManager.shared.info(" No changes needed - all block times already correct")
             }
 
         } catch {
-            LogManager.shared.error("❌ Failed to recalculate block times: \(error.localizedDescription)")
+            LogManager.shared.error(" Failed to recalculate block times: \(error.localizedDescription)")
             errorCount += 1
         }
 
         return (success: successCount, skipped: skippedCount, errors: errorCount)
+    }
+
+    func normaliseAirportCodes() -> (fixed: Int, total: Int) {
+        LogManager.shared.info("Starting airport code normalisation")
+
+        let context = persistentContainer.viewContext
+        let fetchRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(
+            format: "fromAirport != nil AND fromAirport != %@ AND toAirport != nil AND toAirport != %@",
+            "", ""
+        )
+
+        var fixedCount = 0
+        var totalCount = 0
+
+        do {
+            let flights = try context.fetch(fetchRequest)
+            totalCount = flights.count
+
+            for flight in flights {
+                var changed = false
+
+                if let from = flight.fromAirport, !from.isEmpty {
+                    let icao = AirportService.shared.convertToICAO(from)
+                    if icao != from {
+                        flight.fromAirport = icao
+                        changed = true
+                    }
+                }
+
+                if let to = flight.toAirport, !to.isEmpty {
+                    let icao = AirportService.shared.convertToICAO(to)
+                    if icao != to {
+                        flight.toAirport = icao
+                        changed = true
+                    }
+                }
+
+                if changed { fixedCount += 1 }
+            }
+
+            if context.hasChanges {
+                try context.save()
+                LogManager.shared.info("Airport normalisation complete: \(fixedCount) of \(totalCount) flights updated")
+            } else {
+                LogManager.shared.info("Airport normalisation complete: no changes needed")
+            }
+        } catch {
+            LogManager.shared.error("Airport normalisation failed: \(error.localizedDescription)")
+        }
+
+        return (fixed: fixedCount, total: totalCount)
     }
 
     deinit {

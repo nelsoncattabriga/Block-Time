@@ -88,7 +88,7 @@ struct ModernManualEntryDataCard: View {
                             get: { viewModel.captainName },
                             set: { viewModel.updateCaptainName($0) }
                         ),
-                        savedNames: viewModel.savedCaptainNames,
+                        savedNames: viewModel.savedCrewNames,
                         recentNames: viewModel.recentCaptainNames,
                         onNameAdded: viewModel.addCaptainName,
                         onNameRemoved: viewModel.removeCaptainName,
@@ -102,7 +102,7 @@ struct ModernManualEntryDataCard: View {
                             get: { viewModel.coPilotName },
                             set: { viewModel.updateCoPilotName($0) }
                         ),
-                        savedNames: viewModel.savedCoPilotNames,
+                        savedNames: viewModel.savedCrewNames,
                         recentNames: viewModel.recentCoPilotNames,
                         onNameAdded: viewModel.addCoPilotName,
                         onNameRemoved: viewModel.removeCoPilotName,
@@ -118,7 +118,7 @@ struct ModernManualEntryDataCard: View {
                                 get: { viewModel.so1Name },
                                 set: { viewModel.updateSO1Name($0) }
                             ),
-                            savedNames: viewModel.savedSONames,
+                            savedNames: viewModel.savedCrewNames,
                             recentNames: viewModel.recentSONames,
                             onNameAdded: viewModel.addSOName,
                             onNameRemoved: viewModel.removeSOName,
@@ -132,7 +132,7 @@ struct ModernManualEntryDataCard: View {
                                 get: { viewModel.so2Name },
                                 set: { viewModel.updateSO2Name($0) }
                             ),
-                            savedNames: viewModel.savedSONames,
+                            savedNames: viewModel.savedCrewNames,
                             recentNames: viewModel.recentSONames,
                             onNameAdded: viewModel.addSOName,
                             onNameRemoved: viewModel.removeSOName,
