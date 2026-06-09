@@ -193,22 +193,56 @@ struct SH_NextDutyView: View {
     }
 
     private func maxDutySection(displayWindow: DutyTimeWindow) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let isThreePilot = viewModel.lastDuty?.crewComplement == .threePilot
+        return VStack(alignment: .leading, spacing: 12) {
             Text("Max Duty")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.primary)
 
-            HStack(spacing: 12) {
-                dutyColumn(title: "1-4 Sectors", hours: displayWindow.limits.maxDutySectors1to4)
-                Divider().frame(height: 35)
-                dutyColumn(title: "5 Sectors",   hours: displayWindow.limits.maxDutySectors5)
-                Divider().frame(height: 35)
-                dutyColumn(title: "6 Sectors",   hours: displayWindow.limits.maxDutySectors6)
-                Spacer()
+            if isThreePilot {
+                threePilotMaxDutyRow(displayWindow: displayWindow)
+            } else {
+                HStack(spacing: 12) {
+                    dutyColumn(title: "1-4 Sectors", hours: displayWindow.limits.maxDutySectors1to4)
+                    Divider().frame(height: 35)
+                    dutyColumn(title: "5 Sectors",   hours: displayWindow.limits.maxDutySectors5)
+                    Divider().frame(height: 35)
+                    dutyColumn(title: "6 Sectors",   hours: displayWindow.limits.maxDutySectors6)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
         }
+    }
+
+    /// Reads the correct banded 3-pilot limit from the model static functions
+    /// based on the selected sign-on window and rest facility picker.
+    private func threePilotMaxDutyRow(displayWindow: DutyTimeWindow) -> some View {
+        let rest: SH_Planning_FltDuty.ThreePilotRest = threePilotRest == .class2 ? .class2 : .businessSeat
+        let isPlanning = viewModel.selectedLimitType == .planning
+        let maxSectors = isPlanning
+            ? SH_Planning_FltDuty.threePilotMaxSectors
+            : SH_Operational_FltDuty.threePilotMaxSectors
+
+        let dutyHours: Double
+        if let band = SH_Planning_FltDuty.LocalStartTime(rawValue: displayWindow.localStartTime) {
+            if isPlanning {
+                dutyHours = SH_Planning_FltDuty.maxDutyHoursThreePilot(band: band, rest: rest) ?? 14.0
+            } else if let opBand = SH_Operational_FltDuty.LocalStartTime(rawValue: displayWindow.localStartTime) {
+                dutyHours = SH_Operational_FltDuty.maxDutyHoursThreePilot(band: opBand, rest: rest) ?? 16.0
+            } else {
+                dutyHours = 14.0
+            }
+        } else {
+            dutyHours = 14.0
+        }
+
+        return HStack(spacing: 12) {
+            dutyColumn(title: "Max \(maxSectors) Sectors", hours: dutyHours)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Active Restrictions
