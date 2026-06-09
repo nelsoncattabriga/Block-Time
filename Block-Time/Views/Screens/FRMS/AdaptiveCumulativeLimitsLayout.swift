@@ -58,7 +58,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                     buildLimitCard(
                         title: "Duty Time (7 Days)",
                         current: totals.dutyTime7Days,
-                        limit: viewModel.configuration.fleet.maxDutyTime7Days,
+                        limit: viewModel.configuration.effectiveDutyLimit7Days,
                         status: totals.dutyStatus7Days,
                         unit: "hrs",
                         accentColor: .orange
@@ -67,11 +67,11 @@ struct AdaptiveCumulativeLimitsLayout: View {
                     buildLimitCard(
                         title: "Duty Time (14 Days)",
                         current: totals.dutyTime14Days,
-                        limit: viewModel.configuration.fleet.maxDutyTime14DaysInitial ?? viewModel.configuration.fleet.maxDutyTime14Days,
+                        limit: viewModel.configuration.effectiveDutyLimit14DaysInitial ?? viewModel.configuration.effectiveDutyLimit14Days,
                         status: totals.dutyStatus14Days,
                         unit: "hrs",
                         accentColor: .orange,
-                        note: viewModel.configuration.fleet.maxDutyTime14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
+                        note: viewModel.configuration.effectiveDutyLimit14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
                     )
                 }
 
@@ -122,7 +122,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
         buildLimitCard(
             title: "Duty Time (7 Days)",
             current: totals.dutyTime7Days,
-            limit: viewModel.configuration.fleet.maxDutyTime7Days,
+            limit: viewModel.configuration.effectiveDutyLimit7Days,
             status: totals.dutyStatus7Days,
             unit: "hrs",
             accentColor: .orange
@@ -131,11 +131,11 @@ struct AdaptiveCumulativeLimitsLayout: View {
         buildLimitCard(
             title: "Duty Time (14 Days)",
             current: totals.dutyTime14Days,
-            limit: viewModel.configuration.fleet.maxDutyTime14DaysInitial ?? viewModel.configuration.fleet.maxDutyTime14Days,
+            limit: viewModel.configuration.effectiveDutyLimit14DaysInitial ?? viewModel.configuration.effectiveDutyLimit14Days,
             status: totals.dutyStatus14Days,
             unit: "hrs",
             accentColor: .orange,
-            note: viewModel.configuration.fleet.maxDutyTime14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
+            note: viewModel.configuration.effectiveDutyLimit14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
         )
 
         // Consecutive Duties (A320/B737 only) — shown here in compact layout

@@ -338,8 +338,9 @@ struct FRMSCumulativeTotals: Codable, Sendable {
     // FD12.2a - Duty days in rolling 11-day period
     let dutyDaysIn11Days: Int            // Max 9 days in any 11-day period
 
-    // Fleet configuration for limit checking
+    // Fleet and crew base configuration for limit checking
     let fleet: FRMSFleet
+    let homeBase: String
 
     // MARK: - Consecutive Duty Limits (FD12.2 - A320/B737 Only)
 
@@ -423,7 +424,7 @@ struct FRMSCumulativeTotals: Codable, Sendable {
     }
 
     func dutyStatus7Days(for fleet: FRMSFleet) -> FRMSComplianceStatus {
-        let limit = fleet.maxDutyTime7Days
+        let limit = homeBase == "NZ" ? SH_NZ_Planning_FltDuty.cumulativeDutyTime7DaysHours : fleet.maxDutyTime7Days
         if dutyTime7Days > limit {
             return .violation(message: "Exceeded \(Int(limit)) duty hours in 7 days")
         } else if dutyTime7Days > (limit * 0.9) {
@@ -441,8 +442,13 @@ struct FRMSCumulativeTotals: Codable, Sendable {
         if dutyTime14Days > hardLimit {
             return .violation(message: "Exceeded \(Int(hardLimit)) duty hours in 14 days")
         }
-        if let initialLimit = fleet.maxDutyTime14DaysInitial {
-            // SH: warn when approaching or exceeding the 90 hr initial roster limit
+        let initialLimit: Double?
+        if homeBase == "NZ" {
+            initialLimit = SH_NZ_Planning_FltDuty.cumulativeDutyTime14DaysInitialHours
+        } else {
+            initialLimit = fleet.maxDutyTime14DaysInitial
+        }
+        if let initialLimit {
             if dutyTime14Days > initialLimit {
                 return .warning(message: "Exceeds \(Int(initialLimit))-hr initial limit — pilot agreement required")
             } else if dutyTime14Days > initialLimit * 0.9 {
@@ -971,6 +977,27 @@ struct FRMSConfiguration: Codable, Sendable {
             }
         }
     }
+
+    // MARK: - NZ Routing Helpers
+
+    /// True when this configuration applies NZ-based FRMS rules (Chapters 4A/4B).
+    var isNZBased: Bool { homeBase == "NZ" }
+
+    /// 7-day cumulative duty limit for the configured crew base.
+    /// NZ: 55 h (FD48.1a); AU: 60 h (FD12/FD22).
+    var effectiveDutyLimit7Days: Double {
+        isNZBased ? SH_NZ_Planning_FltDuty.cumulativeDutyTime7DaysHours : fleet.maxDutyTime7Days
+    }
+
+    /// Initial 14-day cumulative duty limit for the configured crew base.
+    /// NZ: 95 h (FD48.1b); AU SH: 90 h; AU LH: nil.
+    var effectiveDutyLimit14DaysInitial: Double? {
+        if isNZBased { return SH_NZ_Planning_FltDuty.cumulativeDutyTime14DaysInitialHours }
+        return fleet.maxDutyTime14DaysInitial
+    }
+
+    /// Hard maximum 14-day cumulative duty limit for the configured crew base.
+    var effectiveDutyLimit14Days: Double { fleet.maxDutyTime14Days }
 
     /// Update sign-off time when fleet changes
     mutating func updateSignOffForFleet() {

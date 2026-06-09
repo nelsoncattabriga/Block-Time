@@ -16,6 +16,7 @@ struct FRMSDutyStripCard: View {
 
     private var totals: FRMSCumulativeTotals? { frmsViewModel.cumulativeTotals }
     private var fleet: FRMSFleet { flightStrip.fleet }
+    private var config: FRMSConfiguration { frmsViewModel.configuration }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -35,16 +36,16 @@ struct FRMSDutyStripCard: View {
                     ringGauge(
                         label: "7 Days",
                         hours: totals?.dutyTime7Days ?? 0,
-                        max: fleet.maxDutyTime7Days
+                        max: config.effectiveDutyLimit7Days
                     )
                     Divider().frame(height: 72).padding(.horizontal, 8)
                     VStack(spacing: 4) {
                         ringGauge(
                             label: "14 Days",
                             hours: totals?.dutyTime14Days ?? 0,
-                            max: fleet.maxDutyTime14DaysInitial ?? fleet.maxDutyTime14Days
+                            max: config.effectiveDutyLimit14DaysInitial ?? config.effectiveDutyLimit14Days
                         )
-                        if fleet.maxDutyTime14DaysInitial != nil,
+                        if config.effectiveDutyLimit14DaysInitial != nil,
                            (totals?.dutyTime14Days ?? 0) >= 85 {
                             Text("100 hrs with agreement")
                                 .font(.caption2)

@@ -105,6 +105,7 @@ struct ModernFRMSCard: View {
                         Text("BNE").tag("BNE")
                         Text("ADL").tag("ADL")
                         Text("PER").tag("PER")
+                        Text("NZ").tag("NZ")
                     }
                     .pickerStyle(.menu)
                 }

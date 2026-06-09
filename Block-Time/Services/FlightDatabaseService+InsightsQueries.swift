@@ -504,16 +504,17 @@ extension FlightDatabaseService {
             futureDict: futureFlight
         )
 
+        let dutyLimit7 = config.effectiveDutyLimit7Days
         let duty7 = buildSeries(
             label: "7-Day Duty",
-            limit: fleet.maxDutyTime7Days,
-            warnAt: fleet.maxDutyTime7Days * warnFrac,
+            limit: dutyLimit7,
+            warnAt: dutyLimit7 * warnFrac,
             windowDays: 7,
             actualDict: actualDuty,
             futureDict: futureDuty
         )
 
-        let limit14 = fleet.maxDutyTime14DaysInitial ?? fleet.maxDutyTime14Days
+        let limit14 = config.effectiveDutyLimit14DaysInitial ?? config.effectiveDutyLimit14Days
         let duty14 = buildSeries(
             label: "14-Day Duty",
             limit: limit14,

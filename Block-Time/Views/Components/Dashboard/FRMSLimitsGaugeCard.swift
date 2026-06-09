@@ -78,16 +78,17 @@ struct FRMSLimitsGaugeCard: View {
             accentColor: .blue
         ))
 
+        let dutyLimit7d = config.effectiveDutyLimit7Days
         items.append(FRMSLimitGaugeItem(
             label: "7 Days",
             sublabel: "Duty Time",
             actual: totals?.dutyTime7Days ?? 0,
-            limit: fleet.maxDutyTime7Days,
-            warnAt: warnFraction * fleet.maxDutyTime7Days,
+            limit: dutyLimit7d,
+            warnAt: warnFraction * dutyLimit7d,
             accentColor: .orange
         ))
 
-        let limit14d = fleet.maxDutyTime14DaysInitial ?? fleet.maxDutyTime14Days
+        let limit14d = config.effectiveDutyLimit14DaysInitial ?? config.effectiveDutyLimit14Days
         items.append(FRMSLimitGaugeItem(
             label: "14 Days",
             sublabel: "Duty Time",

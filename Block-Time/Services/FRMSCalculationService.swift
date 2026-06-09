@@ -42,6 +42,11 @@ class FRMSCalculationService {
     /// Get the timezone for the crew's home base
     /// Uses AirportService to look up timezone from airports.dat.txt database
     func getHomeBaseTimeZone() -> TimeZone {
+        // NZ home base uses Auckland timezone
+        if configuration.homeBase == "NZ" {
+            return TimeZone(identifier: "Pacific/Auckland") ?? TimeZone(secondsFromGMT: 12 * 3600)!
+        }
+
         // Convert to ICAO code (handles both IATA and ICAO inputs)
         let icaoCode = AirportService.shared.convertToICAO(configuration.homeBase)
 
@@ -58,6 +63,12 @@ class FRMSCalculationService {
     /// Convert a UTC date to local time at home base
     /// Uses AirportService to get timezone offset including DST handling
     private func convertToLocalTime(_ utcDate: Date) -> Date {
+        if configuration.homeBase == "NZ" {
+            let nzTZ = TimeZone(identifier: "Pacific/Auckland") ?? TimeZone(secondsFromGMT: 12 * 3600)!
+            let offset = nzTZ.secondsFromGMT(for: utcDate) - TimeZone(secondsFromGMT: 0)!.secondsFromGMT(for: utcDate)
+            return utcDate.addingTimeInterval(TimeInterval(offset))
+        }
+
         // Convert to ICAO code (handles both IATA and ICAO inputs)
         let icaoCode = AirportService.shared.convertToICAO(configuration.homeBase)
 
@@ -262,7 +273,8 @@ class FRMSCalculationService {
             consecutiveEarlyStarts: consecutiveEarlyStarts,
             consecutiveLateNights: consecutiveLateNights,
             dutyDaysIn11Days: dutyDaysIn11Days,
-            fleet: configuration.fleet
+            fleet: configuration.fleet,
+            homeBase: configuration.homeBase
         )
     }
 
@@ -439,10 +451,10 @@ class FRMSCalculationService {
             }
         }
 
-        // Apply cumulative limit restrictions (fleet-specific)
+        // Apply cumulative limit restrictions (fleet-specific, NZ-aware)
         let remainingFlightTime28Or30Days = configuration.fleet.maxFlightTime28Days - cumulativeTotals.flightTime28Or30Days
-        let remainingDutyTime7Days = configuration.fleet.maxDutyTime7Days - cumulativeTotals.dutyTime7Days
-        let remainingDutyTime14Days = configuration.fleet.maxDutyTime14Days - cumulativeTotals.dutyTime14Days
+        let remainingDutyTime7Days = configuration.effectiveDutyLimit7Days - cumulativeTotals.dutyTime7Days
+        let remainingDutyTime14Days = configuration.effectiveDutyLimit14Days - cumulativeTotals.dutyTime14Days
 
         // For widebody, also check 7-day flight time limit
         var constraintsForFlight: [Double] = [remainingFlightTime28Or30Days]
@@ -986,12 +998,16 @@ class FRMSCalculationService {
         let homeTimeZone = getHomeBaseTimeZone()
         let localStartTime = SH_Operational_FltDuty.LocalStartTime.classify(signOn: signOn, homeBaseTimeZone: homeTimeZone)
 
-        // Get max duty from planning or operational rules
+        // Get max duty from planning or operational rules (NZ-aware)
         if limitType == .planning {
-            // Convert to planning enum (same time ranges)
             let planningStartTime = SH_Planning_FltDuty.LocalStartTime(rawValue: localStartTime.rawValue) ?? .night
+            // NZ planning table is identical to AU planning table
             return SH_Planning_FltDuty.maxDutyHours(localStartTime: planningStartTime, sectors: sectors)
         } else {
+            if configuration.isNZBased {
+                let nzStartTime = SH_Planning_FltDuty.LocalStartTime(rawValue: localStartTime.rawValue) ?? .night
+                return SH_NZ_Operational_FltDuty.maxDutyHours(localStartTime: nzStartTime, sectors: sectors)
+            }
             return SH_Operational_FltDuty.maxDutyHours(localStartTime: localStartTime, sectors: sectors)
         }
     }
@@ -1419,11 +1435,11 @@ class FRMSCalculationService {
             violations.append("Would exceed 28-day flight time limit")
         }
 
-        if scenario.estimatedDutyHours + cumulativeTotals.dutyTime7Days > configuration.fleet.maxDutyTime7Days {
+        if scenario.estimatedDutyHours + cumulativeTotals.dutyTime7Days > configuration.effectiveDutyLimit7Days {
             violations.append("Would exceed 7-day duty time limit")
         }
 
-        if scenario.estimatedDutyHours + cumulativeTotals.dutyTime14Days > configuration.fleet.maxDutyTime14Days {
+        if scenario.estimatedDutyHours + cumulativeTotals.dutyTime14Days > configuration.effectiveDutyLimit14Days {
             violations.append("Would exceed 14-day duty time limit")
         }
 
@@ -1543,13 +1559,15 @@ class FRMSCalculationService {
             violations.append("Would exceed \(Int(configuration.fleet.maxFlightTime28Days)) hours in \(periodDays) days")
         }
 
-        // Check duty time limits (fleet-specific)
-        if proposedDuty.dutyTime + cumulativeTotals.dutyTime7Days > configuration.fleet.maxDutyTime7Days {
-            violations.append("Would exceed \(Int(configuration.fleet.maxDutyTime7Days)) duty hours in 7 days")
+        // Check duty time limits (NZ-aware)
+        let dutyLimit7d = configuration.effectiveDutyLimit7Days
+        if proposedDuty.dutyTime + cumulativeTotals.dutyTime7Days > dutyLimit7d {
+            violations.append("Would exceed \(Int(dutyLimit7d)) duty hours in 7 days")
         }
 
-        if proposedDuty.dutyTime + cumulativeTotals.dutyTime14Days > configuration.fleet.maxDutyTime14Days {
-            violations.append("Would exceed \(Int(configuration.fleet.maxDutyTime14Days)) duty hours in 14 days")
+        let dutyLimit14d = configuration.effectiveDutyLimit14Days
+        if proposedDuty.dutyTime + cumulativeTotals.dutyTime14Days > dutyLimit14d {
+            violations.append("Would exceed \(Int(dutyLimit14d)) duty hours in 14 days")
         }
 
         // Check rest requirements
