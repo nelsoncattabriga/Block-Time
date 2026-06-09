@@ -309,7 +309,7 @@ class FRMSCalculationService {
                 // Add this day to the set of consecutive days
                 consecutiveDays.insert(dutyLocalDate)
 
-                // Check for early start (sign-on before 0700 LOCAL TIME)
+                // Check for early start (sign-on before 0706 LOCAL TIME)
                 let signOnHour = localCalendar.component(.hour, from: duty.signOn)
                 if signOnHour < 7 {
                     dayHasEarlyStart[dutyLocalDate] = true

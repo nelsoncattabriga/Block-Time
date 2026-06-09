@@ -331,7 +331,7 @@ struct FRMSCumulativeTotals: Codable, Sendable {
 
     // Consecutive Duty Info
     let consecutiveDuties: Int
-    let consecutiveEarlyStarts: Int      // Sign-on before 0700
+    let consecutiveEarlyStarts: Int      // Sign-on before 0706
     let consecutiveLateNights: Int
 
     // FD12.2a - Duty days in rolling 11-day period
