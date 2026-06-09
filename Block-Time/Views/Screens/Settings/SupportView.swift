@@ -24,6 +24,9 @@ struct SupportView: View {
     @State private var showingNormaliseAirportsConfirm = false
     @State private var isNormalisingAirports = false
     @State private var normaliseAirportsResult: String?
+    @State private var showingFixSimTimesConfirm = false
+    @State private var isFixingSimTimes = false
+    @State private var fixSimTimesResult: String?
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
@@ -271,6 +274,49 @@ struct SupportView: View {
                                     .padding(.top, 4)
                             }
 
+                            // Fix SIM Flight Times Button
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                showingFixSimTimesConfirm = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: isFixingSimTimes ? "hourglass" : "waveform.path.ecg")
+                                        .foregroundColor(.orange)
+                                        .frame(width: 20)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Fix SIM Flight Times")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+
+                                        Text("Zero out P1 / P2 / night /instrument for SIMs")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    if isFixingSimTimes {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    }
+                                }
+                                .padding(12)
+                                .background(Color(.systemGray6).opacity(0.5))
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .disabled(isFixingSimTimes)
+
+                            if let result = fixSimTimesResult {
+                                Text(result)
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 4)
+                            }
+
                         }
                         .padding(.top, 8)
                     },
@@ -338,6 +384,14 @@ struct SupportView: View {
                 } message: {
                     Text("This will convert any IATA airport codes (e.g. SYD) stored in your logbook to their ICAO equivalents (e.g. YSSY). Airports not found in the database will be left unchanged. Run a Backup first.")
                 }
+                .alert("Fix SIM Flight Times?", isPresented: $showingFixSimTimesConfirm) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Fix", role: .destructive) {
+                        performFixSimTimes()
+                    }
+                } message: {
+                    Text("This will zero out P1, P2, night, and instrument time on any simulator flights where those fields were incorrectly populated. Safe to run multiple times. Run a Backup first.")
+                }
 
                 Spacer(minLength: 20)
             }
@@ -402,6 +456,26 @@ struct SupportView: View {
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
                     withAnimation { normaliseAirportsResult = nil }
+                }
+            }
+        }
+    }
+
+    private func performFixSimTimes() {
+        isFixingSimTimes = true
+        fixSimTimesResult = nil
+        HapticManager.shared.impact(.medium)
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let count = FlightDatabaseService.shared.migrateSimP1Times()
+
+            DispatchQueue.main.async {
+                isFixingSimTimes = false
+                fixSimTimesResult = count > 0 ? "Fixed \(count) simulator flight\(count == 1 ? "" : "s")" : "No changes needed"
+                HapticManager.shared.notification(.success)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                    withAnimation { fixSimTimesResult = nil }
                 }
             }
         }
@@ -482,6 +556,12 @@ private struct DebugToolsHelpSheet: View {
                             icon: "mappin.and.ellipse",
                             title: "Normalise Airport Codes",
                             body: "Scans every flight in your logbook and converts any IATA airport codes (e.g. SYD) to their ICAO equivalents (e.g. YSSY). Airports not found in the database are left unchanged. Safe to run multiple times."
+                        )
+
+                        infoBlock(
+                            icon: "waveform.path.ecg",
+                            title: "Fix SIM Flight Times",
+                            body: "Zeros out P1, P2, night, and instrument time on simulator flights where those fields were incorrectly populated — typically after importing from another logbook app. Safe to run multiple times."
                         )
                     }
                     .padding(16)
