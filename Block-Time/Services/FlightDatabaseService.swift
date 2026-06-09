@@ -3801,6 +3801,58 @@ class FlightDatabaseService: ObservableObject {
         return (success: successCount, skipped: skippedCount, errors: errorCount)
     }
 
+    func normaliseAirportCodes() -> (fixed: Int, total: Int) {
+        LogManager.shared.info("Starting airport code normalisation")
+
+        let context = persistentContainer.viewContext
+        let fetchRequest: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(
+            format: "fromAirport != nil AND fromAirport != %@ AND toAirport != nil AND toAirport != %@",
+            "", ""
+        )
+
+        var fixedCount = 0
+        var totalCount = 0
+
+        do {
+            let flights = try context.fetch(fetchRequest)
+            totalCount = flights.count
+
+            for flight in flights {
+                var changed = false
+
+                if let from = flight.fromAirport, !from.isEmpty {
+                    let icao = AirportService.shared.convertToICAO(from)
+                    if icao != from {
+                        flight.fromAirport = icao
+                        changed = true
+                    }
+                }
+
+                if let to = flight.toAirport, !to.isEmpty {
+                    let icao = AirportService.shared.convertToICAO(to)
+                    if icao != to {
+                        flight.toAirport = icao
+                        changed = true
+                    }
+                }
+
+                if changed { fixedCount += 1 }
+            }
+
+            if context.hasChanges {
+                try context.save()
+                LogManager.shared.info("Airport normalisation complete: \(fixedCount) of \(totalCount) flights updated")
+            } else {
+                LogManager.shared.info("Airport normalisation complete: no changes needed")
+            }
+        } catch {
+            LogManager.shared.error("Airport normalisation failed: \(error.localizedDescription)")
+        }
+
+        return (fixed: fixedCount, total: totalCount)
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }

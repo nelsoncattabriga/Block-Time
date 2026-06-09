@@ -199,6 +199,21 @@ struct SplashScreenView: View {
                     }
                 }
             }
+
+            // One-time migration: convert any IATA airport codes stored in fromAirport/toAirport to ICAO.
+            let airportNormalisationKey = "airportCodeNormalisationV1Completed"
+            if !UserDefaults.standard.bool(forKey: airportNormalisationKey) {
+                DispatchQueue.global(qos: .utility).async {
+                    let result = FlightDatabaseService.shared.normaliseAirportCodes()
+                    DispatchQueue.main.async {
+                        UserDefaults.standard.set(true, forKey: airportNormalisationKey)
+                        if result.fixed > 0 {
+                            NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+                        }
+                        LogManager.shared.info("Airport normalisation migration: \(result.fixed) of \(result.total) flights updated")
+                    }
+                }
+            }
         }
     }
 }

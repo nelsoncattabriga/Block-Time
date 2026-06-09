@@ -21,6 +21,9 @@ struct SupportView: View {
     @State private var recalculateResult: String?
     @State private var showingResetCrewNamesConfirm = false
     @State private var resetCrewNamesMessage: String?
+    @State private var showingNormaliseAirportsConfirm = false
+    @State private var isNormalisingAirports = false
+    @State private var normaliseAirportsResult: String?
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
@@ -225,6 +228,49 @@ struct SupportView: View {
                                     .padding(.top, 4)
                             }
 
+                            // Normalise Airport Codes Button
+                            Button(action: {
+                                HapticManager.shared.impact(.light)
+                                showingNormaliseAirportsConfirm = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: isNormalisingAirports ? "hourglass" : "mappin.and.ellipse")
+                                        .foregroundColor(.orange)
+                                        .frame(width: 20)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Normalise Airport Codes")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+
+                                        Text("Convert any IATA codes stored in your logbook to ICAO")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    if isNormalisingAirports {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    }
+                                }
+                                .padding(12)
+                                .background(Color(.systemGray6).opacity(0.5))
+                                .cornerRadius(8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .disabled(isNormalisingAirports)
+
+                            if let result = normaliseAirportsResult {
+                                Text(result)
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 4)
+                            }
+
                         }
                         .padding(.top, 8)
                     },
@@ -284,6 +330,14 @@ struct SupportView: View {
                 } message: {
                     Text(resetCrewNamesMessage ?? "")
                 }
+                .alert("Normalise Airport Codes?", isPresented: $showingNormaliseAirportsConfirm) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Normalise", role: .destructive) {
+                        performAirportNormalisation()
+                    }
+                } message: {
+                    Text("This will convert any IATA airport codes (e.g. SYD) stored in your logbook to their ICAO equivalents (e.g. YSSY). Airports not found in the database will be left unchanged. Run a Backup first.")
+                }
 
                 Spacer(minLength: 20)
             }
@@ -333,6 +387,26 @@ struct SupportView: View {
             }
         }
     }
+    private func performAirportNormalisation() {
+        isNormalisingAirports = true
+        normaliseAirportsResult = nil
+        HapticManager.shared.impact(.medium)
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = FlightDatabaseService.shared.normaliseAirportCodes()
+
+            DispatchQueue.main.async {
+                isNormalisingAirports = false
+                normaliseAirportsResult = "Updated \(result.fixed) of \(result.total) flights"
+                HapticManager.shared.notification(.success)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                    withAnimation { normaliseAirportsResult = nil }
+                }
+            }
+        }
+    }
+
     private func resetCrewNamesFromLogbook() {
         let db = FlightDatabaseService.shared
         let uds = UserDefaultsService()
@@ -402,6 +476,12 @@ private struct DebugToolsHelpSheet: View {
                             icon: "arrow.triangle.2.circlepath",
                             title: "Recalculate All Block Times",
                             body: "Recalculates block time from OUT and IN times for every regular flight. Use this if block times look wrong after a CSV import or a data migration. SIM and PAX flights are skipped. This cannot be undone."
+                        )
+
+                        infoBlock(
+                            icon: "mappin.and.ellipse",
+                            title: "Normalise Airport Codes",
+                            body: "Scans every flight in your logbook and converts any IATA airport codes (e.g. SYD) to their ICAO equivalents (e.g. YSSY). Airports not found in the database are left unchanged. Safe to run multiple times."
                         )
                     }
                     .padding(16)
