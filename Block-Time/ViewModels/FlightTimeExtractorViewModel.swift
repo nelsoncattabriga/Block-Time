@@ -1353,12 +1353,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         // Pre-fill airports (especially useful for B787 where ACARS doesn't include them)
         if fromAirport.isEmpty, let scheduledFrom = scheduledFlight.fromAirport, !scheduledFrom.isEmpty {
-            fromAirport = scheduledFrom
+            fromAirport = normalizeAirportCode(scheduledFrom)
             LogManager.shared.debug("   Pre-filled From: \(scheduledFrom)")
         }
 
         if toAirport.isEmpty, let scheduledTo = scheduledFlight.toAirport, !scheduledTo.isEmpty {
-            toAirport = scheduledTo
+            toAirport = normalizeAirportCode(scheduledTo)
             LogManager.shared.debug("   Pre-filled To: \(scheduledTo)")
         }
 

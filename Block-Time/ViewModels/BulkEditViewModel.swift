@@ -713,10 +713,10 @@ class BulkEditViewModel: ObservableObject {
             }
 
             if case .value(let from) = fromAirport {
-                updated.fromAirport = from
+                updated.fromAirport = AirportService.shared.convertToICAO(from)
             }
             if case .value(let to) = toAirport {
-                updated.toAirport = to
+                updated.toAirport = AirportService.shared.convertToICAO(to)
             }
 
             if case .value(let rem) = remarks {
