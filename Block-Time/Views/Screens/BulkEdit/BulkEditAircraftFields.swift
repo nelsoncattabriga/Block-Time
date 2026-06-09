@@ -69,7 +69,6 @@ struct BulkEditAirportField: View {
                             fieldState = .value(newValue)
                         }
                     ),
-                    useIATACodes: useIATACodes,
                     onDismiss: { showingPicker = false }
                 )
             }
@@ -91,115 +90,27 @@ struct BulkEditAirportField: View {
 
 struct BulkEditAirportPickerSheet: View {
     @Binding var selectedAirport: String
-    let useIATACodes: Bool
     let onDismiss: () -> Void
 
-    @State private var logbookAirports: [String] = []
-    @State private var customText: String = ""
-    @FocusState private var isCustomFocused: Bool
-
-    private func displayCode(_ icao: String) -> String {
-        AirportService.shared.getDisplayCode(icao, useIATA: useIATACodes)
-    }
+    @State private var searchText: String = ""
+    @State private var recentAirports: [String] = []
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section(header: Text("Enter Custom Code")) {
-                    HStack {
-                        TextField(useIATACodes ? "e.g. SYD" : "e.g. YSSY", text: $customText)
-                            .textCase(.uppercase)
-                            .textInputAutocapitalization(.characters)
-                            .autocorrectionDisabled()
-                            .focused($isCustomFocused)
-                            .submitLabel(.done)
-                            .onSubmit { applyCustom() }
-                        if !customText.isEmpty {
-                            Button(action: applyCustom) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.blue)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                    }
-                }
-
-                if !logbookAirports.isEmpty {
-                    Section(header: Text("From Logbook")) {
-                        ForEach(logbookAirports, id: \.self) { icao in
-                            Button(action: {
-                                HapticManager.shared.impact(.light)
-                                selectedAirport = icao
-                                onDismiss()
-                            }) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(displayCode(icao))
-                                            .font(.body)
-                                            .foregroundStyle(.primary)
-                                        if useIATACodes {
-                                            Text(icao)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        } else if let iata = AirportService.shared.convertToIATA(icao) {
-                                            Text(iata)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    Spacer()
-                                    if selectedAirport == icao {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(.blue)
-                                    }
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Select Airport")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if !selectedAirport.isEmpty {
-                        Button("Clear") {
-                            HapticManager.shared.impact(.light)
-                            selectedAirport = ""
-                            onDismiss()
-                        }
-                        .foregroundStyle(.red)
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cancel") { onDismiss() }
-                }
-            }
-        }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+        AirportPickerSheet(
+            title: "Select Airport",
+            selectedAirport: $selectedAirport,
+            searchText: $searchText,
+            recentAirports: recentAirports,
+            onDismiss: onDismiss
+        )
         .onAppear {
-            customText = selectedAirport.isEmpty ? "" : displayCode(selectedAirport)
-            Task {
-                let from = FlightDatabaseService.shared.getAllFromAirports()
-                let to = FlightDatabaseService.shared.getAllToAirports()
-                let combined = Array(Set(from + to))
-                    .map { AirportService.shared.convertToICAO($0) }
-                logbookAirports = Array(Set(combined))
-                    .filter { !$0.isEmpty }
-                    .sorted()
-            }
+            let from = FlightDatabaseService.shared.getAllFromAirports()
+            let to = FlightDatabaseService.shared.getAllToAirports()
+            recentAirports = Array(Set(from + to))
+                .map { AirportService.shared.convertToICAO($0) }
+                .filter { !$0.isEmpty }
+                .sorted()
         }
-    }
-
-    private func applyCustom() {
-        let trimmed = customText.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        guard !trimmed.isEmpty else { return }
-        HapticManager.shared.impact(.light)
-        selectedAirport = AirportService.shared.convertToICAO(trimmed)
-        onDismiss()
     }
 }
 
