@@ -946,20 +946,17 @@ class FRMSCalculationService {
         let maxFlight: Double
         let maxSectors: Int
 
-        // Use planning or operational (discretion) limits - these must exist
+        // Use planning or operational (discretion) limits - these must exist.
+        // Rev 5: 2-pilot LH has no planning limit (dutyPeriodLimitPlanned = nil); fall back to discretion.
+        guard let resolvedDuty = dutyLimit.dutyPeriodLimitPlanned ?? dutyLimit.dutyPeriodLimitDiscretion else {
+            LogManager.shared.error("FRMS: No duty limit in LH_Operational_FltDuty for \(crewComplement.description)")
+            fatalError("LH_Operational_FltDuty missing duty limit")
+        }
         if limitType == .planning {
-            guard let planned = dutyLimit.dutyPeriodLimitPlanned else {
-                LogManager.shared.error("FRMS: No planned duty limit in LH_Operational_FltDuty")
-                fatalError("LH_Operational_FltDuty missing planned duty limit")
-            }
-            maxDuty = planned
+            maxDuty = resolvedDuty
         } else {
-            // Operational: use discretion limit if available, otherwise planned limit
-            guard let operational = dutyLimit.dutyPeriodLimitDiscretion ?? dutyLimit.dutyPeriodLimitPlanned else {
-                LogManager.shared.error("FRMS: No operational/planned duty limit in LH_Operational_FltDuty")
-                fatalError("LH_Operational_FltDuty missing operational duty limit")
-            }
-            maxDuty = operational
+            // Operational: prefer discretion limit over planned
+            maxDuty = dutyLimit.dutyPeriodLimitDiscretion ?? resolvedDuty
         }
 
         // Flight time limit
