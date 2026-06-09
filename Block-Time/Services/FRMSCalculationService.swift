@@ -1245,7 +1245,7 @@ class FRMSCalculationService {
         var lateNightStatus: LateNightStatus? = nil
         if cumulativeTotals.consecutiveLateNights > 0 {
             let windowSeconds = TimeInterval(SH_Planning_FltDuty.lnoRollingWindowHours * 3600)
-            let windowStart = (earliestSignOn ?? Date()).addingTimeInterval(-windowSeconds)
+            let windowStart = earliestSignOn.addingTimeInterval(-windowSeconds)
 
             // Count non-reserve LNO and BOC flying duties in the 168-hour window.
             let lnoCount = duties.filter { duty in
