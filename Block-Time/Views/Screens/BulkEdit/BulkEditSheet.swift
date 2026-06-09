@@ -130,18 +130,16 @@ struct BulkEditSheet: View {
                     // Route Card
                     SectionCard(title: "Route", icon: "map", color: .cyan) {
                         VStack(spacing: 12) {
-                            BulkEditTextField(
+                            BulkEditAirportField(
                                 label: viewModel.useIATACodes ? "From (IATA)" : "From (ICAO)",
                                 fieldState: $bulkEditViewModel.fromAirport,
-                                keyboardType: .asciiCapable,
-                                placeholder: viewModel.useIATACodes ? "e.g. SYD" : "e.g. YSSY"
+                                useIATACodes: viewModel.useIATACodes
                             )
 
-                            BulkEditTextField(
+                            BulkEditAirportField(
                                 label: viewModel.useIATACodes ? "To (IATA)" : "To (ICAO)",
                                 fieldState: $bulkEditViewModel.toAirport,
-                                keyboardType: .asciiCapable,
-                                placeholder: viewModel.useIATACodes ? "e.g. MEL" : "e.g. YMML"
+                                useIATACodes: viewModel.useIATACodes
                             )
                         }
                     }
