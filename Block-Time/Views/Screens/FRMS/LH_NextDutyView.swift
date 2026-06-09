@@ -244,9 +244,9 @@ struct LH_NextDutyView: View {
             // Operational: single "All sign-on times" row, show as-is
             return limits
         }
-        // For 4-pilot with 2×Class 1 selected, also show the FD3.4 extension row
+        // For 4-pilot with 2×Class 1 selected, also show the FD10.4 extension row
         if selectedCrewComplement == .fourPilot && selectedRestFacility == .twoClass1 {
-            return limits.filter { $0.restFacility == .twoClass1 || $0.restFacility == .twoClass1FD34 }
+            return limits.filter { $0.restFacility == .twoClass1 || $0.restFacility == .twoClass1FD104 }
         }
         return limits.filter { $0.restFacility == selectedRestFacility }
     }

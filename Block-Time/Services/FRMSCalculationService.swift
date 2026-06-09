@@ -424,8 +424,8 @@ class FRMSCalculationService {
                     restrictions.append("Maximum \(SH_Planning_FltDuty.maxConsecutiveEarlyStarts) consecutive early starts reached")
                 }
 
-                // Consecutive late nights restriction - FD14.1
-                if cumulativeTotals.consecutiveLateNights >= SH_Planning_FltDuty.lateNightMaxConsecutiveNights {
+                // Consecutive LNO restriction — FD14.1: >2 consecutive LNO → 24 h free
+                if cumulativeTotals.consecutiveLateNights > SH_Planning_FltDuty.lnoConsecutiveTriggerCount {
                     restrictions.append("Late night operations limit approaching")
                 }
             }
@@ -611,17 +611,18 @@ class FRMSCalculationService {
             ]
         } else {
             // FD3.1 — One row per sign-on window (5 rows including both 0800-1359 variants).
-            // Pre/post rest: 11 hrs (if FT < 8), 22 hrs otherwise.
+            // Rev 5: flight-time limit removed. Pre/post rest determined by duty period.
             return LH_Planning_FltDuty.twoPilotLimits.map { limit in
                 let isDayPattern = limit.sectorLimit.contains("DAY PATTERN")
+                let prePostRest: Double = limit.dutyPeriodLimit <= 11.0 ? 11.0 : 22.0
                 return SignOnTimeRange(
                     timeRange: limit.signOnWindow.rawValue,
                     maxDutyPeriod: limit.dutyPeriodLimit,
                     maxDutyPeriodOperational: nil,
-                    maxFlightTime: limit.flightTimeLimit,
+                    maxFlightTime: nil,
                     maxFlightTimeOperational: nil,
-                    preRestRequired: limit.flightTimeLimit < 8.5 ? 11.0 : 22.0,
-                    postRestRequired: limit.flightTimeLimit < 8.5 ? 11.0 : 22.0,
+                    preRestRequired: prePostRest,
+                    postRestRequired: prePostRest,
                     notes: isDayPattern ? "Day Pattern Only" : nil,
                     sectorLimit: limit.sectorLimit,
                     restFacility: nil
@@ -677,14 +678,14 @@ class FRMSCalculationService {
                 ),
             ]
         } else {
-            // FD3.1 Planning — Class 2 and Class 1 only.
+            // FD3.1 Planning — Class 2 and Class 1 only. Rev 5: flight-time limit removed.
             return LH_Planning_FltDuty.threePilotLimits.map { limit in
-                let postRest = limit.flightTimeLimit < 9.0 ? 12.0 : 18.0
+                let postRest = limit.dutyPeriodLimit <= 12.0 ? 12.0 : 18.0
                 return SignOnTimeRange(
                     timeRange: limit.restFacility.rawValue,
                     maxDutyPeriod: limit.dutyPeriodLimit,
                     maxDutyPeriodOperational: nil,
-                    maxFlightTime: limit.flightTimeLimit,
+                    maxFlightTime: nil,
                     maxFlightTimeOperational: nil,
                     preRestRequired: 12.0,
                     postRestRequired: postRest,
@@ -754,16 +755,16 @@ class FRMSCalculationService {
                     restFacility: .twoClass1
                 ),
                 SignOnTimeRange(
-                    timeRange: "2 × Class 1 Rest (>18 hrs — FD3.4)",
+                    timeRange: "2 × Class 1 Rest (>18 hrs — FD10.4)",
                     maxDutyPeriod: 21.0,
                     maxDutyPeriodOperational: nil,
-                    maxFlightTime: 14.0,
+                    maxFlightTime: nil,
                     maxFlightTimeOperational: nil,
                     preRestRequired: 22.0,
                     postRestRequired: 27.0,
                     notes: "A380 & B787 only. Relevant Sector disruption limits apply — see below.",
                     sectorLimit: nil,
-                    restFacility: .twoClass1FD34
+                    restFacility: .twoClass1FD104
                 ),
             ]
         } else {
@@ -995,97 +996,45 @@ class FRMSCalculationService {
         }
     }
 
-    /// Get maximum flight time for A320/B737 based on sectors and darkness
-    /// - Parameters:
-    ///   - sectors: Number of sectors scheduled
-    ///   - nightTime: Hours of flight time in darkness
-    ///   - crewComplement: Crew complement
-    ///   - limitType: Planning (FD13.3/13.4) or Operational (FD23.3/23.4) limits
-    /// - Returns: Maximum flight time hours
-    private func getA320B737MaxFlightTime(sectors: Int, nightTime: Double, crewComplement: CrewComplement, limitType: FRMSLimitType) -> Double {
-        // Check if more than 7 hours of flight time in darkness
-        let darknessExceeds7Hours = nightTime > 7.0
-
-        // Get max flight time from planning or operational rules
-        // NOTE: For A320/B737, flight time limits are identical in planning (FD13) and operational (FD23)
-        if crewComplement == .twoPilot {
-            if limitType == .planning {
-                return SH_Planning_FltDuty.maxFlightTimeHours(
-                    sectorsScheduled: sectors,
-                    darknessFlightTimeExceeds7Hours: darknessExceeds7Hours
-                )
-            } else {
-                return SH_Operational_FltDuty.maxFlightTimeHours(
-                    sectorsScheduled: sectors,
-                    darknessFlightTimeExceeds7Hours: darknessExceeds7Hours
-                )
-            }
-        } else {
-            // Augmented crews: Same limit for planning (FD13.4) and operational (FD23.4)
-            return limitType == .planning ?
-                SH_Planning_FltDuty.augmentedFlightTimeLimitHours :
-                SH_Operational_FltDuty.augmentedFlightTimeLimitHours
-        }
-    }
-
     // MARK: - A320/B737 Specific Limits
 
+    /// Base limits for A320/B737. Returns the most-restrictive-band baseline for duty;
+    /// for 3-pilot, the start-time band determines the actual limit (Class2 is band-independent
+    /// for planning/Class2=16h for operational; businessSeat varies — see buildA320B737DutyWindow).
+    /// Rev 5: no flight-time limits for SH (both 2-pilot and 3-pilot).
     private func getBaseLimitsA320B737(crewComplement: CrewComplement,
                                       restFacility: RestFacilityClass,
-                                      limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
+                                      limitType: FRMSLimitType,
+                                      band: SH_Operational_FltDuty.LocalStartTime = .night) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
 
         switch crewComplement {
         case .twoPilot:
-            // A320/B737 2-pilot limits from SH_Planning_FltDuty (FD13) or SH_Operational_FltDuty (FD23)
-            // NOTE: These are baseline values. Actual limits vary by local start time.
-            // Use the most restrictive baseline (night operations) for general calculations
+            // Use night-band (most restrictive) as baseline. Actual limit fetched per band in view.
             if limitType == .operational {
-                // Operational (FD23): Night window baseline (most restrictive)
-                // Max duty: 12h (1-4 sectors), 12h (5 sectors), 11h (6 sectors)
-                // Max flight: 10h (multi-sector), 10.5h (single sector), 9.5h (>7h darkness)
-                return (maxDuty: 12.0, maxFlight: 10.0, maxSectors: 6)
+                return (maxDuty: 12.0, maxFlight: Double.infinity, maxSectors: 6)
             } else {
-                // Planning (FD13): Night window baseline (most restrictive)
-                // Max duty: 10h (1-4 sectors), 10h (5-6 sectors)
-                // Max flight: 10h (multi-sector), 10.5h (single sector), 9.5h (>7h darkness)
-                return (maxDuty: 10.0, maxFlight: 10.0, maxSectors: 6)
+                return (maxDuty: 10.0, maxFlight: Double.infinity, maxSectors: 6)
             }
 
         case .threePilot:
-            // A320/B737 augmented crew (3-pilot) limits depend on rest facility
-            // NOTE: Planning (FD13.1) and Operational (FD23.1) augmented limits are identical
-            // Map RestFacilityClass to AugmentedRestFacility for SH rules
-            let shRestFacility: SH_Operational_FltDuty.AugmentedRestFacility
-            switch restFacility {
-            case .class1:
-                shRestFacility = .separateScreenedSeat  // Class 1 = separate screened seat
-            case .class2, .mixed, .none:
-                shRestFacility = .passengerCompartmentSeat  // Class 2 = passenger compartment seat
+            // Rev 5: start-time-banded. Map RestFacilityClass to ThreePilotRest.
+            let rest: SH_Planning_FltDuty.ThreePilotRest = (restFacility == .class1) ? .class2 : .businessSeat
+            if limitType == .operational {
+                let duty = SH_Operational_FltDuty.maxDutyHoursThreePilot(band: band, rest: rest) ?? 12.5
+                return (maxDuty: duty, maxFlight: Double.infinity, maxSectors: SH_Operational_FltDuty.threePilotMaxSectors)
+            } else {
+                let planningBand = SH_Planning_FltDuty.LocalStartTime(rawValue: band.rawValue) ?? .night
+                let duty = SH_Planning_FltDuty.maxDutyHoursThreePilot(band: planningBand, rest: rest) ?? 12.0
+                return (maxDuty: duty, maxFlight: Double.infinity, maxSectors: SH_Planning_FltDuty.threePilotMaxSectors)
             }
-
-            // Get limits from SH_Operational_FltDuty (same values in SH_Planning_FltDuty)
-            if let augmentedLimit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == shRestFacility }) {
-                // Flight time limit is 10.5h for augmented operations (FD13.4 & FD23.4)
-                return (maxDuty: augmentedLimit.maxDutyHours,
-                       maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours,
-                       maxSectors: augmentedLimit.maxSectors ?? 6)
-            }
-
-            // Fallback to conservative values
-            return (maxDuty: 14.0, maxFlight: 10.5, maxSectors: 6)
 
         case .fourPilot:
-            // A320/B737 4-pilot operations are rare but follow similar augmented rules
-            // NOTE: Planning (FD13.1) and Operational (FD23.1) augmented limits are identical
-            // Use most generous augmented limit (separate screened seat)
-            if let augmentedLimit = SH_Operational_FltDuty.augmentedDutyLimits.first(where: { $0.restFacility == .separateScreenedSeat }) {
-                return (maxDuty: augmentedLimit.maxDutyHours,
-                       maxFlight: SH_Operational_FltDuty.augmentedFlightTimeLimitHours,
-                       maxSectors: augmentedLimit.maxSectors ?? 2)
+            // 4-pilot SH: same as 3-pilot Class 2 best-case (Class 2 / business seat most generous band)
+            if limitType == .operational {
+                return (maxDuty: 16.0, maxFlight: Double.infinity, maxSectors: SH_Operational_FltDuty.threePilotMaxSectors)
+            } else {
+                return (maxDuty: 14.0, maxFlight: Double.infinity, maxSectors: SH_Planning_FltDuty.threePilotMaxSectors)
             }
-
-            // Fallback
-            return (maxDuty: 16.0, maxFlight: 10.5, maxSectors: 2)
         }
     }
 
@@ -1269,37 +1218,31 @@ class FRMSCalculationService {
             )
         }
 
-        // Build late night status
+        // Build late night / BOC status (Rev 5: FD14 rolling 168-hour window).
+        // Reserve duty periods are exempt from LNO/BOC counts (FD14.3/24.3).
         var lateNightStatus: LateNightStatus? = nil
         if cumulativeTotals.consecutiveLateNights > 0 {
-            // Calculate duty hours in 7-night period from duties involving late night operations
-            // Per FD14.3(a) & FD24.3(a): Only count duties that are classified as late night or back of clock
-            let homeTimeZone = getHomeBaseTimeZone()
-            var calendar = Calendar.current
-            calendar.timeZone = homeTimeZone
+            let windowSeconds = TimeInterval(SH_Planning_FltDuty.lnoRollingWindowHours * 3600)
+            let windowStart = (earliestSignOn ?? Date()).addingTimeInterval(-windowSeconds)
 
-            let now = Date()
-            let startOfToday = calendar.startOfDay(for: now)
-            let sevenDaysAgo = calendar.date(byAdding: .day, value: -6, to: startOfToday) ?? startOfToday
-            let endOfToday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
+            // Count non-reserve LNO and BOC flying duties in the 168-hour window.
+            let lnoCount = duties.filter { duty in
+                duty.signOn >= windowStart &&
+                duty.timeClass == .lateNight &&
+                duty.dutyType != .standby
+            }.count
 
-            // Filter duties in last 7 days that involve late night operations
-            let lateNightDutiesIn7Days = duties.filter { duty in
-                // Check if duty is in the 7-day window
-                let dutyDate = duty.date
-                guard dutyDate >= sevenDaysAgo && dutyDate <= endOfToday else { return false }
+            let bocCount = duties.filter { duty in
+                duty.signOn >= windowStart &&
+                duty.timeClass == .backOfClock &&
+                duty.dutyType != .standby
+            }.count
 
-                // Check if duty is classified as late night or back of clock
-                return duty.timeClass == .lateNight || duty.timeClass == .backOfClock
-            }
-
-            // Sum duty hours from late night duties only
-            let dutyHours7Nights = lateNightDutiesIn7Days.reduce(0.0) { $0 + $1.dutyTime }
-
+            // FD14.1: >2 consecutive LNO → 24 h free of duty before any flying duty.
             let recoveryOption: LateNightRecoveryOption
-            if cumulativeTotals.consecutiveLateNights >= SH_Planning_FltDuty.lateNightMaxConsecutiveNights {
+            if cumulativeTotals.consecutiveLateNights > SH_Planning_FltDuty.lnoConsecutiveTriggerCount {
                 recoveryOption = .require24HoursOff
-            } else if cumulativeTotals.consecutiveLateNights >= 2 {
+            } else if cumulativeTotals.consecutiveLateNights > 0 {
                 recoveryOption = .continueOnLateNights
             } else {
                 recoveryOption = .noRestriction
@@ -1307,10 +1250,10 @@ class FRMSCalculationService {
 
             lateNightStatus = LateNightStatus(
                 consecutiveLateNights: cumulativeTotals.consecutiveLateNights,
-                maxConsecutiveLateNights: SH_Planning_FltDuty.lateNightMaxConsecutiveNights,
-                dutyHoursIn7Nights: dutyHours7Nights,
-                maxDutyHoursIn7Nights: SH_Planning_FltDuty.lateNightMaxDutyHoursIn7NightPeriod,
-                canUse5NightException: true, // Would need to track 28-day usage
+                lnoCountIn168h: lnoCount,
+                maxLnoIn168h: SH_Planning_FltDuty.lnoMaxPeriodsIn168h,
+                bocCountIn168h: bocCount,
+                maxBocIn168h: SH_Planning_FltDuty.bocMaxPeriodsIn168h,
                 recoveryOption: recoveryOption
             )
         }

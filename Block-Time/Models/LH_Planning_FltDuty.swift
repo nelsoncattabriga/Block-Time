@@ -34,7 +34,7 @@ enum DeadheadDutyType: String, Codable, CaseIterable {
 struct TwoPilotPlanningLimit: Codable {
     let signOnWindow: SignOnWindow
     let dutyPeriodLimit: Double
-    let flightTimeLimit: Double
+    let flightTimeLimit: Double?  // Rev 5 (FD3.1): flight-time limit removed; nil for all rows
     let sectorLimit: String
 }
 
@@ -42,7 +42,7 @@ struct TwoPilotPlanningLimit: Codable {
 struct ThreePilotPlanningLimit: Codable {
     let restFacility: CrewRestFacility
     let dutyPeriodLimit: Double
-    let flightTimeLimit: Double
+    let flightTimeLimit: Double?  // Rev 5 (FD3.1): flight-time limit removed; nil for all rows
     let sectorLimit: String
 }
 
@@ -76,8 +76,8 @@ struct PlanningRestRequirement: Codable {
 /// All Chapter 1A (FD3) Planning limits for A380/A330/B787.
 enum LH_Planning_FltDuty {
 
-    static let rulesetRevision = 4
-    static let issueDate = "26 June 2023"
+    static let rulesetRevision = 5
+    static let issueDate = "15 June 2026"
     static let applicableFleets = ["A380", "A330", "B787"]
     static let chapter = "1A"
     static let reference = "FD3"
@@ -86,40 +86,41 @@ enum LH_Planning_FltDuty {
     // MARK: - 2 Pilot (Planning) — FD3.1
     // =========================================================================
 
+    // Rev 5 (FD3.1): flight-time limit column removed for 2-pilot. Duty limits unchanged.
     static let twoPilotLimits: [TwoPilotPlanningLimit] = [
         // 0500–0759
         TwoPilotPlanningLimit(
             signOnWindow: .w0500_0759,
             dutyPeriodLimit: 11,
-            flightTimeLimit: 8,
+            flightTimeLimit: nil,
             sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
         ),
         // 0800–1359 (standard)
         TwoPilotPlanningLimit(
             signOnWindow: .w0800_1359,
             dutyPeriodLimit: 11,
-            flightTimeLimit: 8.5,
+            flightTimeLimit: nil,
             sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
         ),
         // 0800–1359 (1 day pattern only)
         TwoPilotPlanningLimit(
             signOnWindow: .w0800_1359,
             dutyPeriodLimit: 12,
-            flightTimeLimit: 9.5,
+            flightTimeLimit: nil,
             sectorLimit: "Day Pattern ONLY, maximum 4 sectors"
         ),
         // 1400–1559
         TwoPilotPlanningLimit(
             signOnWindow: .w1400_1559,
             dutyPeriodLimit: 11,
-            flightTimeLimit: 8.5,
+            flightTimeLimit: nil,
             sectorLimit: "1 Sector if Flight Time > 6 hrs, otherwise 4 Sectors."
         ),
         // 1600–0459
         TwoPilotPlanningLimit(
             signOnWindow: .w1600_0459,
             dutyPeriodLimit: 10,
-            flightTimeLimit: 8,
+            flightTimeLimit: nil,
             sectorLimit: "1 Sector if Flight Time > 6 hrs; 2 Sectors if sign-on 2100–0300 LT; 2 Sectors if Flight Time > 2 hrs, otherwise 3 Sectors"
         ),
     ]
@@ -181,17 +182,18 @@ enum LH_Planning_FltDuty {
     // MARK: - 3 Pilot (Planning) — FD3.1
     // =========================================================================
 
+    // Rev 5 (FD3.1): flight-time limit column removed for 3-pilot. Duty limits unchanged.
     static let threePilotLimits: [ThreePilotPlanningLimit] = [
         ThreePilotPlanningLimit(
             restFacility: .class2,
             dutyPeriodLimit: 12,
-            flightTimeLimit: 8.5,
+            flightTimeLimit: nil,
             sectorLimit: "3 if duty period > 11, otherwise maximum 4"
         ),
         ThreePilotPlanningLimit(
             restFacility: .class1,
             dutyPeriodLimit: 14,
-            flightTimeLimit: 12.5,
+            flightTimeLimit: nil,
             sectorLimit: "3 if duty period > 11, otherwise maximum 4"
         ),
     ]
@@ -459,13 +461,14 @@ enum LH_Planning_FltDuty {
     //         A380 & B787 Only
     // =========================================================================
 
-    /// Named sectors that qualify as Relevant Sectors.
+    /// Named sectors that qualify as Relevant Sectors (FD3.4, Rev 5).
     static let relevantSectors: [String] = [
         "Any planned duty period greater than 18 hours",
         "Sydney to Dallas and vice versa",
         "Melbourne to Dallas and vice versa",
         "Perth to London and vice versa",
         "Auckland to New York and vice versa",
+        "Perth to Paris and vice versa",
     ]
 
     /// FD3.4.1
@@ -477,49 +480,9 @@ enum LH_Planning_FltDuty {
     /// FD3.4.3
     static let relevantSectorHomeTransport = "A pilot who operates a pattern that includes a planned duty greater than 18 hours will be provided with home transport."
 
-    /// FD3.4.4 — Minimum rest prior to operating a Relevant Sector (downline disruption).
-    static let relevantSectorPreDutyRestHours: Double = 22
-
-    /// FD3.4.4(b) — Rest after operating a Relevant Sector (downline disruption).
-    static let relevantSectorPostDutyRest: [RelevantSectorDisruptionRest] = [
-        RelevantSectorDisruptionRest(
-            condition: "Captain OR First Officer",
-            minimumRestHours: 27,
-            note: nil
-        ),
-        RelevantSectorDisruptionRest(
-            condition: "Captain OR First Officer and a duty period > 20 hours",
-            minimumRestHours: 36,
-            note: nil
-        ),
-        RelevantSectorDisruptionRest(
-            condition: "Captain AND First Officer",
-            minimumRestHours: 36,
-            note: nil
-        ),
-        RelevantSectorDisruptionRest(
-            condition: "Duty Period < 18 hours",
-            minimumRestHours: nil,
-            note: "Chapter 1B Flight & Duty Lims Apply (FD10.1)"
-        ),
-        RelevantSectorDisruptionRest(
-            condition: "Duty Period > 18 hours, at crew discretion, where next operating sector has a flight time < 4 hours",
-            minimumRestHours: 24,
-            note: "Min Rest 36 hrs"
-        ),
-    ]
-
-    /// FD3.4.4(c) — Rest after a Relevant Sector inbound to Australia or New Zealand.
-    static let relevantSectorInboundAUNZRest: [InboundAUNZRest] = [
-        InboundAUNZRest(
-            context: .sameTimeZoneDestination,
-            minimumRestHours: 36
-        ),
-        InboundAUNZRest(
-            context: .domesticOrTransTasman,
-            minimumRestHours: 22
-        ),
-    ]
+    // Rev 5: downline-disruption rest limits moved to operational FD10.4.
+    // Use LH_Operational_FltDuty.relevantSectorPreDutyRestHours / relevantSectorPostDutyRest /
+    // relevantSectorInboundAUNZRest as the single source of truth.
 
     // =========================================================================
     // MARK: - Convenience Accessors

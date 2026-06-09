@@ -3,8 +3,9 @@
 //  Block-Time
 //
 //  FRMS (Fatigue Risk Management System) - Short Haul Operational Limits
-//  Source: FRMS Ruleset A320/B737, Revision 4.1, 1 October 2024
+//  Source: FRMS Ruleset A320/B737, Revision 5, 15 June 2026
 //  Chapter 1B: Operations Flight and Duty Limitations (FD21–FD28)
+//  Applies to Australia-based crew. NZ-based crew use SH_NZ_* (Chapter 4A/4B).
 //
 
 import Foundation
@@ -15,16 +16,17 @@ struct SH_Operational_FltDuty {
 
     // MARK: - Types
 
+    // Rev 5 (FD23.1): start-time bands shifted. Hour values unchanged.
     enum LocalStartTime: String, CaseIterable {
-        case early   = "0500–1459"
-        case afternoon = "1500–1959"
-        case night   = "2000–0459"
+        case early   = "0500–1259"
+        case afternoon = "1300–1759"
+        case night   = "1800–0459"
 
         var range: ClosedRange<Int> {
             switch self {
-            case .early:     return 500...1459
-            case .afternoon: return 1500...1959
-            case .night:     return 2000...2459 // wraps to 0459
+            case .early:     return 500...1259
+            case .afternoon: return 1300...1759
+            case .night:     return 1800...2459 // wraps to 0459
             }
         }
 
@@ -49,33 +51,13 @@ struct SH_Operational_FltDuty {
             let minute = calendar.component(.minute, from: signOn)
             let timeAsInt = hour * 100 + minute
 
-            // Check ranges (note: night wraps around midnight)
-            if timeAsInt >= 500 && timeAsInt <= 1459 {
+            // Check ranges (note: night wraps around midnight) — Rev 5 bands
+            if timeAsInt >= 500 && timeAsInt <= 1259 {
                 return .early
-            } else if timeAsInt >= 1500 && timeAsInt <= 1959 {
+            } else if timeAsInt >= 1300 && timeAsInt <= 1759 {
                 return .afternoon
             } else {
-                return .night  // 2000-0459
-            }
-        }
-    }
-
-    enum CrewConfig {
-        case twoPilot
-        case augmented
-    }
-
-    enum AugmentedRestFacility: String {
-        /// Comfortable seat, separate from and screened from flight deck
-        /// and passenger compartment, environmentally conducive to rest
-        case separateScreenedSeat
-        /// Comfortable seat in passenger compartment
-        case passengerCompartmentSeat
-
-        var description: String {
-            switch self {
-            case .separateScreenedSeat: return "Separate Screened Seat"
-            case .passengerCompartmentSeat: return "Passenger Compartment Seat"
+                return .night  // 1800-0459
             }
         }
     }
@@ -90,65 +72,31 @@ struct SH_Operational_FltDuty {
     }
 
     static let twoPilotDutyLimits: [DutyPeriodLimit] = [
-        DutyPeriodLimit(localStartTime: .early,     maxDutySectors1to4: 14, maxDutySectors5: 13, maxDutySectors6: 12),
+        DutyPeriodLimit(localStartTime: .early,      maxDutySectors1to4: 14, maxDutySectors5: 13, maxDutySectors6: 12),
         DutyPeriodLimit(localStartTime: .afternoon,  maxDutySectors1to4: 13, maxDutySectors5: 12, maxDutySectors6: 11),
         DutyPeriodLimit(localStartTime: .night,      maxDutySectors1to4: 12, maxDutySectors5: 12, maxDutySectors6: 11),
     ]
 
-    // MARK: - Maximum Duty Periods – Augmented Crew (FD23.1)
+    // MARK: - Maximum Duty Periods – 3 Pilot Operations (FD23.1, Rev 5)
+    // Start-time-banded Class 2 vs Business Seat table. Max 3 sectors. Min 2 h total rest.
 
-    struct AugmentedDutyLimit {
-        let restFacility: AugmentedRestFacility
-        let maxDutyHours: Double
-        let maxSectors: Int? // nil if no sector restriction stated
+    struct ThreePilotDutyLimit {
+        let band: LocalStartTime
+        let class2: Double       // hours
+        let businessSeat: Double // hours
     }
 
-    static let augmentedDutyLimits: [AugmentedDutyLimit] = [
-        AugmentedDutyLimit(
-            restFacility: .separateScreenedSeat,
-            maxDutyHours: 16,
-            maxSectors: 2 // max 2 sectors if FDP exceeds 14 hours
-        ),
-        AugmentedDutyLimit(
-            restFacility: .passengerCompartmentSeat,
-            maxDutyHours: 14,
-            maxSectors: nil
-        ),
+    static let threePilotDutyLimits: [ThreePilotDutyLimit] = [
+        .init(band: .early,     class2: 16, businessSeat: 14.5),
+        .init(band: .afternoon, class2: 16, businessSeat: 13.5),
+        .init(band: .night,     class2: 16, businessSeat: 12.5),
     ]
 
-    // MARK: - Flight Time Limits – 2 Pilot Operations (FD23.3)
-
-    struct FlightTimeLimit {
-        let condition: String
-        let maxFlightTimeHours: Double
-    }
-
-    static let twoPilotFlightTimeLimits: [FlightTimeLimit] = [
-        FlightTimeLimit(
-            condition: "More than 7 hours of flight time in a duty period conducted in darkness",
-            maxFlightTimeHours: 9.5
-        ),
-        FlightTimeLimit(
-            condition: "More than 1 sector scheduled",
-            maxFlightTimeHours: 10
-        ),
-        FlightTimeLimit(
-            condition: "All other occasions",
-            maxFlightTimeHours: 10.5
-        ),
-    ]
-
-    // MARK: - Flight Time Limits – More Than 2 Pilots (FD23.4)
-
-    static let augmentedFlightTimeLimitHours: Double = 10.5
+    static let threePilotMaxSectors = 3           // FD23.1 operational
+    static let threePilotMinTotalRestHours = 2.0  // FD23.1 table note
 
     // MARK: - Lookup Helpers
 
-    /// Returns the maximum duty period in hours for a 2-pilot operation
-    /// - Parameters:
-    ///   - localStartTime: The local start time classification
-    ///   - sectors: Number of sectors
-    /// - Returns: Maximum duty hours, or nil if sectors exceed limit
     static func maxDutyHours(localStartTime: LocalStartTime, sectors: Int) -> Double? {
         guard let limit = twoPilotDutyLimits.first(where: { $0.localStartTime == localStartTime }) else {
             return nil
@@ -161,41 +109,10 @@ struct SH_Operational_FltDuty {
         }
     }
 
-    /// Returns the applicable flight time limit in hours for a 2-pilot operation
-    /// - Parameters:
-    ///   - sectorsScheduled: Number of sectors scheduled
-    ///   - darknessFlightTimeExceeds7Hours: Whether flight time in darkness exceeds 7 hours
-    /// - Returns: Maximum flight time in hours
-    static func maxFlightTimeHours(sectorsScheduled: Int, darknessFlightTimeExceeds7Hours: Bool) -> Double {
-        if darknessFlightTimeExceeds7Hours {
-            return 9.5
-        } else if sectorsScheduled > 1 {
-            return 10
-        } else {
-            return 10.5
-        }
-    }
-
-    /// Returns the maximum duty period in hours for augmented crew operations
-    /// - Parameters:
-    ///   - restFacility: The type of rest facility available
-    ///   - sectors: Number of sectors (used to check sector restrictions)
-    ///   - dutyHours: Proposed duty hours (used to check sector restrictions)
-    /// - Returns: Maximum duty hours, or nil if not compliant with sector restrictions
-    static func maxDutyHoursAugmented(restFacility: AugmentedRestFacility, sectors: Int, dutyHours: Double) -> Double? {
-        guard let limit = augmentedDutyLimits.first(where: { $0.restFacility == restFacility }) else {
-            return nil
-        }
-
-        // Check sector restrictions for separate screened seat
-        if restFacility == .separateScreenedSeat {
-            // If FDP exceeds 14 hours, max 2 sectors allowed
-            if dutyHours > 14 && sectors > 2 {
-                return nil  // Not compliant
-            }
-        }
-
-        return limit.maxDutyHours
+    /// Returns the max duty for a 3-pilot operation by band and rest type.
+    static func maxDutyHoursThreePilot(band: LocalStartTime, rest: SH_Planning_FltDuty.ThreePilotRest) -> Double? {
+        guard let limit = threePilotDutyLimits.first(where: { $0.band == band }) else { return nil }
+        return rest == .class2 ? limit.class2 : limit.businessSeat
     }
 
     // =========================================================================
@@ -235,29 +152,40 @@ struct SH_Operational_FltDuty {
     static let emergencyProceduresTrainingMaxDutyHours: Double = 15
 
     // =========================================================================
-    // MARK: - Reserve Duty (FD23.5)
+    // MARK: - Reserve Duty (FD23.3–23.5, Rev 5)
     // =========================================================================
 
-    /// Max consecutive reserve duty hours. Pilot must have access to suitable
-    /// sleeping accommodation and be free from all employment duties.
+    /// FD23.3 — max consecutive reserve duty hours.
     static let reserveDutyMaxConsecutiveHours: Double = 12
 
+    /// FD23.4 — max combined reserve + flying duty hours after call-out.
+    /// Exceptions: (a) augmented; (b) split per FD27; (c) 18 h operational necessity.
+    static let reserveCallOutMaxCombinedHours: Double = 16
+    static let reserveCallOutMaxCombinedHoursOpNecessity: Double = 18
+
+    /// FD23.5 — reserve starting in this window does not count toward FD23.4 until contacted.
+    static let reserveNightWindowStartHHMM = 2300
+    static let reserveNightWindowEndHHMM   = 600
+
     // =========================================================================
-    // MARK: - Late Night Operations (FD24)
+    // MARK: - Late Night Operations / Back of Clock (FD24, Rev 5)
     // =========================================================================
 
-    /// FD24.1 — max consecutive nights with late night ops in any 7-night period.
-    static let lateNightMaxConsecutiveNights: Int = 4
-    /// FD24.2 — once per 28 consecutive days: max late night nights in any 7-night period.
-    static let lateNightMaxConsecutiveNightsException: Int = 5
-    static let lateNightExceptionPeriodDays: Int = 28
-    /// FD24.3(a) — max duty hours in a 7-night period when >2 LNO duties are present.
-    static let lateNightMaxDutyHoursIn7NightPeriod: Double = 40
-    /// FD24.3(b) — max duty periods in that 7-night period (except per FD24.2).
-    static let lateNightMaxDutyPeriodsIn7NightPeriod: Int = 4
-    /// FD24.3(c) — min hours free before any non-LNO duty after consecutive late nights.
-    static let lateNightRecoveryMinFreeHours: Double = 24
-    // Note: FD24.4 back-of-clock restriction is not present in operational limits.
+    /// FD24.1 — >2 consecutive LNO flying duties triggers 24 h free of duty.
+    static let lnoConsecutiveTriggerCount = 2
+    static let lnoPostExcessFreeHours: Double = 24
+
+    /// FD24.2 — max LNO flying duty periods in any 168-hour rolling window.
+    static let lnoMaxPeriodsIn168h = 4
+
+    /// FD24.3 — FD24.1 and FD24.2 do NOT apply to reserve duty periods.
+    // (no numeric constant — handled in engine logic)
+
+    /// FD24.4 — max BOC flying duty periods in any 168-hour rolling window (pilot may waive).
+    static let bocMaxPeriodsIn168h = 2
+
+    /// Shared rolling window for both LNO and BOC caps.
+    static let lnoRollingWindowHours = 168
 
     // =========================================================================
     // MARK: - Deadheading Following a Flight Duty (FD25)
@@ -389,5 +317,23 @@ struct SH_Operational_FltDuty {
         DaysFreeRequirement(description: "Min free days in any 84 consecutive days",          minDaysFree: 24, inConsecutiveDays: 84),
         DaysFreeRequirement(description: "Min free days per calendar month",                   minDaysFree: 8,  inConsecutiveDays: 0),
         DaysFreeRequirement(description: "Min free days in any 3 consecutive calendar months", minDaysFree: 26, inConsecutiveDays: 0),
+    ]
+
+    // MARK: - 3-Pilot Post-Pattern Rest (FD28, Rev 5)
+    // tafbMaxHours nil = 124+ bracket. Refer FD24.5.
+
+    struct ThreePilotPatternRest {
+        let tafbMaxHours: Double?   // upper bound of TAFB bracket; nil = 124+
+        let dayReturn: Double?      // min rest day-return; nil = not applicable
+        let multiDay: Double?       // min rest multi-day pattern
+        let formulaIfOver12: Bool   // true = apply 12 + 1.5×(duty-12) instead of flat figure
+        let nextDutyDayMinHours: Double?
+    }
+
+    // ≤52: day 12, multi 12 (or 12+1.5×excess if last duty >12); 52–<124: same formula; 124+: 22.
+    static let threePilotPatternRestOperational: [ThreePilotPatternRest] = [
+        .init(tafbMaxHours: 52,  dayReturn: 12.0, multiDay: 12.0, formulaIfOver12: true,  nextDutyDayMinHours: 9.59),
+        .init(tafbMaxHours: 124, dayReturn: nil,  multiDay: nil,  formulaIfOver12: true,  nextDutyDayMinHours: 9.59),
+        .init(tafbMaxHours: nil, dayReturn: nil,  multiDay: 22.0, formulaIfOver12: false, nextDutyDayMinHours: 9.59),
     ]
 }

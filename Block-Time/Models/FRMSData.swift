@@ -37,22 +37,23 @@ enum FRMSFleet: String, Codable, CaseIterable, Sendable {
     var maxFlightTime28Days: Double {
         switch self {
         case .a320B737: return 100.0
-        case .a380A330B787: return 100.0  // Actually uses 30 days, but limit is still 100
+        case .a380A330B787: return 100.0  // Rev 5 (FD6.2/FD11.4): now a 28-day window (was 30)
         }
     }
 
-    /// Returns the rolling period in days for flight time limits (28 or 30)
+    /// Returns the rolling period in days for flight time limits.
+    /// Rev 5 (FD6.2/FD11.4): LH changed from 30 to 28 days.
     var flightTimePeriodDays: Int {
         switch self {
         case .a320B737: return 28
-        case .a380A330B787: return 30
+        case .a380A330B787: return 28
         }
     }
 
     var maxFlightTime365Days: Double {
         switch self {
         case .a320B737: return 1000.0
-        case .a380A330B787: return 900.0
+        case .a380A330B787: return 1000.0  // Rev 5 (FD11.5): 365-day total raised 900 → 1000
         }
     }
 
@@ -362,10 +363,10 @@ struct FRMSCumulativeTotals: Codable, Sendable {
         return 4
     }
 
-    /// Maximum 4 consecutive late nights (FD14.1 - A320/B737 only)
+    /// Rev 5 FD14.1: >2 consecutive LNO → 24 h free (trigger is 2, not 4).
     var maxConsecutiveLateNights: Int? {
         guard hasConsecutiveDutyLimits else { return nil }
-        return 4
+        return SH_Planning_FltDuty.lnoConsecutiveTriggerCount
     }
 
     /// Maximum 9 duty days in any 11-day period (FD12.2a - A320/B737 only)
@@ -552,7 +553,7 @@ struct SignOnTimeRange: Codable {
     let timeRange: String               // e.g., "0500-0759" or rest facility name for augmented ops
     let maxDutyPeriod: Double           // Hours (planning)
     let maxDutyPeriodOperational: Double? // Hours (operational, if different)
-    let maxFlightTime: Double           // Hours (planning)
+    let maxFlightTime: Double?          // Hours (planning); nil = no limit (Rev 5 SH/LH 2- & 3-pilot)
     let maxFlightTimeOperational: Double? // Hours (operational, if different)
     let preRestRequired: Double         // Hours (minimum/baseline)
     let postRestRequired: Double        // Hours (minimum/baseline)
@@ -567,7 +568,7 @@ struct SignOnTimeRange: Codable {
         return maxDutyPeriod
     }
 
-    func getMaxFlight(for limitType: FRMSLimitType) -> Double {
+    func getMaxFlight(for limitType: FRMSLimitType) -> Double? {
         if limitType == .operational, let operational = maxFlightTimeOperational {
             return operational
         }
@@ -765,13 +766,14 @@ struct BackOfClockRestriction: Codable {
     let appliesTo: String           // "Australia only" or "All operations"
 }
 
-/// Late night operation status and restrictions
+/// Late night / back-of-clock status under Rev 5 (FD14/FD24).
+/// The old 7-night window (40 h, 4 periods) is replaced by 168-hour rolling windows.
 struct LateNightStatus: Codable {
-    let consecutiveLateNights: Int
-    let maxConsecutiveLateNights: Int     // 4 normally, 5 if exception used
-    let dutyHoursIn7Nights: Double
-    let maxDutyHoursIn7Nights: Double     // 40 hours
-    let canUse5NightException: Bool       // Once per 28 days
+    let consecutiveLateNights: Int       // for >2-consecutive-LNO → 24 h free rule
+    let lnoCountIn168h: Int              // LNO flying duties in last 168 h (max 4, FD14.2)
+    let maxLnoIn168h: Int                // = SH_Planning_FltDuty.lnoMaxPeriodsIn168h
+    let bocCountIn168h: Int              // BOC flying duties in last 168 h (max 2 waivable, FD14.4)
+    let maxBocIn168h: Int                // = SH_Planning_FltDuty.bocMaxPeriodsIn168h
     let recoveryOption: LateNightRecoveryOption
 }
 

@@ -23,10 +23,12 @@ enum CrewRestFacility: String, Codable, CaseIterable {
     case seatInPassengerCompartment = "Seat in Passenger Compartment"
     case class2                    = "Class 2 Rest"
     case class1                    = "Class 1 Rest"
+    case oneClass2OneSeat          = "1 × Class 2 Rest & 1 × Seat in Pax"   // Rev 5 (FD10.1): NEW
     case twoClass2                 = "2 × Class 2 Rest"
+    case oneClass1OneSeat          = "1 × Class 1 Rest & 1 × Seat in Pax"   // Rev 5 (FD10.1): NEW
     case oneClass1OneClass2        = "1 × Class 1 & 1 × Class 2 Rest"
     case twoClass1                 = "2 × Class 1 Rest"
-    case twoClass1FD34             = "2 × Class 1 Rest (>18 hrs per FD3.4)"
+    case twoClass1FD104            = "2 × Class 1 Rest (>18 hrs per FD10.4)" // Rev 5: renamed FD3.4→FD10.4
 }
 
 /// Role context for Relevant Sector disruption rest.
@@ -34,6 +36,7 @@ enum RelevantSectorRole: String, Codable {
     case captainOrFO              = "Captain OR First Officer"
     case captainOrFO_DPOver20     = "Captain OR First Officer (DP > 20 hrs)"
     case captainAndFO             = "Captain AND First Officer"
+    case secondOfficer            = "Second Officer(s)"                      // Rev 5 (FD10.4): NEW
     case dpUnder18                = "Duty Period < 18 hrs"
     case dpOver18NextSectorUnder4 = "Duty Period > 18 hrs, next sector FT < 4 hrs"
 }
@@ -101,8 +104,8 @@ struct CrewRestAircraftDefinition {
 /// All Chapter 1B (FD10) Operational limits for A380/A330/B787.
 enum LH_Operational_FltDuty {
 
-    static let rulesetRevision = 4
-    static let issueDate = "26 June 2023"
+    static let rulesetRevision = 5
+    static let issueDate = "15 June 2026"
     static let applicableFleets = ["A380", "A330", "B787"]
     static let chapter = "1B"
     static let reference = "FD10"
@@ -112,31 +115,14 @@ enum LH_Operational_FltDuty {
     // =========================================================================
 
     /// 2 Pilot (Operational) — FD10.1
+    /// Rev 5: single 12 h duty limit; flight-time limit column removed.
     static let twoPilotLimits: [DutyLimit] = [
         DutyLimit(
             crewComplement: .twoPilot,
             restFacility: nil,
-            dutyPeriodLimitPlanned: 11,
+            dutyPeriodLimitPlanned: nil,
             dutyPeriodLimitDiscretion: 12,
-            flightTimeLimit: 9.5,
-            flightTimeLimitNote: nil,
-            requirements: "If more than 7 hours of flight time conducted in darkness"
-        ),
-        DutyLimit(
-            crewComplement: .twoPilot,
-            restFacility: nil,
-            dutyPeriodLimitPlanned: 11,
-            dutyPeriodLimitDiscretion: 12,
-            flightTimeLimit: 10,
-            flightTimeLimitNote: nil,
-            requirements: "If greater than 1 sector is rostered"
-        ),
-        DutyLimit(
-            crewComplement: .twoPilot,
-            restFacility: nil,
-            dutyPeriodLimitPlanned: 11,
-            dutyPeriodLimitDiscretion: 12,
-            flightTimeLimit: 10.5,
+            flightTimeLimit: nil,
             flightTimeLimitNote: nil,
             requirements: nil
         ),
@@ -174,6 +160,9 @@ enum LH_Operational_FltDuty {
     ]
 
     /// 4 Pilot (Operational) — FD10.1
+    /// Rev 5: two new rest-facility rows; column label renamed to "Inflight Management".
+    /// Order per Rev5 p25: Seats-in-Pax 14 | 1×C2+Seat 16 | 2×C2 16 | 1×C1+Seat 18 |
+    ///                     1×C1+1×C2 20 | 2×C1 20 | 2×C1 FD10.4 21.
     static let fourPilotLimits: [DutyLimit] = [
         DutyLimit(
             crewComplement: .fourPilot,
@@ -186,8 +175,26 @@ enum LH_Operational_FltDuty {
         ),
         DutyLimit(
             crewComplement: .fourPilot,
+            restFacility: .oneClass2OneSeat,
+            dutyPeriodLimitPlanned: 16,
+            dutyPeriodLimitDiscretion: nil,
+            flightTimeLimit: nil,
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
+            requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
+        ),
+        DutyLimit(
+            crewComplement: .fourPilot,
             restFacility: .twoClass2,
             dutyPeriodLimitPlanned: 16,
+            dutyPeriodLimitDiscretion: nil,
+            flightTimeLimit: nil,
+            flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
+            requirements: "≤ 2 sectors if duty period was scheduled to exceed 14 hours"
+        ),
+        DutyLimit(
+            crewComplement: .fourPilot,
+            restFacility: .oneClass1OneSeat,
+            dutyPeriodLimitPlanned: 18,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
             flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
@@ -213,12 +220,12 @@ enum LH_Operational_FltDuty {
         ),
         DutyLimit(
             crewComplement: .fourPilot,
-            restFacility: .twoClass1FD34,
+            restFacility: .twoClass1FD104,
             dutyPeriodLimitPlanned: 21,
             dutyPeriodLimitDiscretion: nil,
             flightTimeLimit: nil,
             flightTimeLimitNote: "Max 8 hrs continuous & 14 hrs total on flight deck.",
-            requirements: "A380 & B787 only. >18 hours as per FD3.4"
+            requirements: "A380 & B787 only. >18 hours as per FD10.4"
         ),
     ]
 
@@ -365,7 +372,7 @@ enum LH_Operational_FltDuty {
         RestRequirement(
             crewComplement: .fourPilot,
             direction: .preDuty,
-            dutyPeriodThreshold: "> 18 Hours as per FD3.4",
+            dutyPeriodThreshold: "> 18 Hours as per FD10.4",
             minimumRestHours: nil,
             minimumRestFormula: nil,
             requirements: "Refer to Relevant Sector disruption limits"
@@ -392,7 +399,7 @@ enum LH_Operational_FltDuty {
         RestRequirement(
             crewComplement: .fourPilot,
             direction: .postDuty,
-            dutyPeriodThreshold: "> 18 Hours as per FD3.4",
+            dutyPeriodThreshold: "> 18 Hours as per FD10.4",
             minimumRestHours: nil,
             minimumRestFormula: nil,
             requirements: "Refer to Relevant Sector disruption limits"
@@ -415,19 +422,20 @@ enum LH_Operational_FltDuty {
     //         A380 & B787 Only
     // =========================================================================
 
-    /// Named sectors that qualify as Relevant Sectors.
+    /// Named sectors that qualify as Relevant Sectors (FD10.4, Rev 5).
     static let relevantSectors: [String] = [
         "Any planned duty period > 18 hours",
         "Sydney to Dallas and vice versa",
         "Melbourne to Dallas and vice versa",
         "Perth to London and vice versa",
         "Auckland to New York and vice versa",
+        "Perth to Paris and vice versa",
     ]
 
     /// Minimum rest prior to operating a Relevant Sector (disruption).
     static let relevantSectorPreDutyRestHours: Double = 22
 
-    /// Rest after operating a Relevant Sector (disruption).
+    /// Rest after operating a Relevant Sector (disruption) — FD10.4(b), Rev 5.
     static let relevantSectorPostDutyRest: [RelevantSectorDisruptionRest] = [
         RelevantSectorDisruptionRest(
             condition: "Captain OR First Officer",
@@ -445,14 +453,20 @@ enum LH_Operational_FltDuty {
             note: nil
         ),
         RelevantSectorDisruptionRest(
+            condition: "Second Officer(s)",
+            minimumRestHours: 27,
+            note: nil
+        ),
+        RelevantSectorDisruptionRest(
             condition: "Duty Period < 18 hours",
             minimumRestHours: nil,
             note: "Chapter 1B Flight & Duty Lims Apply (FD10.1)"
         ),
+        // Rev 5: "at crew discretion" replaced by "pilot considers themselves physically and mentally fit"
         RelevantSectorDisruptionRest(
-            condition: "Duty Period > 18 hours, at crew discretion, where next operating sector has a flight time < 4 hours",
+            condition: "Duty Period > 18 hours, where pilot considers themselves physically and mentally fit, and next operating sector has a flight time < 4 hours",
             minimumRestHours: 24,
-            note: "Min Rest 36 hrs"
+            note: "Min Rest 36 hrs before next relevant sector"
         ),
     ]
 
@@ -481,8 +495,9 @@ enum LH_Operational_FltDuty {
     ]
 
     /// Aircraft types deemed to meet Class 2 crew rest requirements.
+    /// Rev 5 (FD10.2.2): broadened from A330-200L to A330-200 ALL.
     static let class2Aircraft: [CrewRestAircraftDefinition] = [
-        CrewRestAircraftDefinition(aircraft: "A330-200L", configuration: "International configuration, dedicated crew rest area at seat 5A"),
+        CrewRestAircraftDefinition(aircraft: "A330-200 ALL", configuration: "dedicated crew rest area at seat 5A"),
     ]
 
     /// Statutory note from FD10.2.2.

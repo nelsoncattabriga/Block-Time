@@ -22,9 +22,9 @@ struct SH_NextDutyView: View {
     // MARK: - Owned State
 
     enum TimeWindowSelection: String, CaseIterable {
-        case early = "0500-1459"
-        case afternoon = "1500-1959"
-        case night = "2000-0459"
+        case early = "0500-1259"
+        case afternoon = "1300-1759"
+        case night = "1800-0459"
     }
     @State private var selectedTimeWindow: TimeWindowSelection = .early
 
@@ -85,24 +85,8 @@ struct SH_NextDutyView: View {
                 Divider()
             }
 
-            if horizontalSizeClass == .compact {
-                // iPhone: Vertical stack
-                VStack(alignment: .leading, spacing: 16) {
-                    maxDutySection(displayWindow: displayWindow)
-                    Divider()
-                    maxFlightTimeSection(displayWindow: displayWindow)
-                }
-            } else {
-                // iPad: Horizontal layout
-                HStack(alignment: .top, spacing: 20) {
-                    maxDutySection(displayWindow: displayWindow)
-
-                    Divider()
-                        .frame(maxHeight: .infinity)
-
-                    maxFlightTimeSection(displayWindow: displayWindow)
-                }
-            }
+            // Rev 5: SH flight-time limits removed (FD13.3/FD23.3 deleted).
+            maxDutySection(displayWindow: displayWindow)
 
             Divider()
             specialRulesSection()
@@ -196,26 +180,6 @@ struct SH_NextDutyView: View {
         }
     }
 
-    private func maxFlightTimeSection(displayWindow: DutyTimeWindow) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Max Flight Time")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundStyle(.primary)
-
-            // Planning (FD13.3) and Operational (FD23.3) have identical flight time conditions
-            HStack(spacing: 12) {
-                dutyColumn(title: "1 Sector",      hours: 10.5, color: AppColors.accentBlue)
-                Divider().frame(height: 35)
-                dutyColumn(title: "2+ Sectors",    hours: 10.0, color: AppColors.accentBlue)
-                Divider().frame(height: 35)
-                dutyColumn(title: "> 7 hrs Night", hours: 9.5,  color: AppColors.accentBlue)
-                Spacer()
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-
     // MARK: - Active Restrictions
 
     private func activeRestrictionsSection(limits: A320B737NextDutyLimits) -> some View {
@@ -265,19 +229,28 @@ struct SH_NextDutyView: View {
 
                     HStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Consecutive Nights")
+                            Text("Consec. LNO")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            Text("\(lateNight.consecutiveLateNights) / \(lateNight.maxConsecutiveLateNights)")
+                            Text("\(lateNight.consecutiveLateNights) (max >\(lateNight.maxLnoIn168h / 2))")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Duty Hours (7 nights)")
+                            Text("LNO / 168 h")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            Text("\(formatHoursMinutes(lateNight.dutyHoursIn7Nights)) / \(formatHoursMinutes(lateNight.maxDutyHoursIn7Nights)) hrs")
+                            Text("\(lateNight.lnoCountIn168h) / \(lateNight.maxLnoIn168h)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("BOC / 168 h")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text("\(lateNight.bocCountIn168h) / \(lateNight.maxBocIn168h)")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
