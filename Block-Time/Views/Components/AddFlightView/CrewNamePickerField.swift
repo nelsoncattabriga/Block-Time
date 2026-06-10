@@ -48,8 +48,6 @@ struct CrewNamePickerField: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(Color(.systemGray6).opacity(0.75))
-                .autocapitalization(.words)
-                .disableAutocorrection(true)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
@@ -114,6 +112,8 @@ struct CrewNamePickerSheet: View {
                 VStack(spacing: 12) {
                     TextField("Search or enter new name...", text: $searchText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
                         .padding(.horizontal)
 
                     // Action buttons for search text

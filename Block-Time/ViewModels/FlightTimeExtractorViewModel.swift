@@ -321,6 +321,25 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
 
+        // Observe iCloud KVS changes for last-used crew/reg from other devices
+        NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: NSUbiquitousKeyValueStore.default,
+            queue: .main
+        ) { [weak self] notification in
+            let changedKeys = (notification.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String]) ?? []
+            let lastUsedKeys: Set<String> = ["lastUsedReg", "lastUsedCaptain", "lastUsedCoPilot", "lastUsedSO1", "lastUsedSO2"]
+            guard changedKeys.contains(where: { lastUsedKeys.contains($0) }) else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let store = NSUbiquitousKeyValueStore.default
+                let reg = store.string(forKey: "lastUsedReg") ?? ""
+                let captain = store.string(forKey: "lastUsedCaptain") ?? ""
+                let coPilot = store.string(forKey: "lastUsedCoPilot") ?? ""
+                self.hasLastUsedCrewOrReg = !reg.isEmpty || !captain.isEmpty || !coPilot.isEmpty
+            }
+        }
+
         // Observe app lifecycle to save/restore draft flight data
         NotificationCenter.default.addObserver(
             forName: UIApplication.willResignActiveNotification,
@@ -1630,6 +1649,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         if databaseService.saveFlight(newFlight, actionDescription: nil) {
                         LogManager.shared.debug("DEBUG: Saved sector with instrumentTime=\(newFlight.instrumentTime)")
+            persistLastUsed()
             statusMessage = "Flight saved to logbook!"
             statusColor = .green
         } else {
@@ -1848,8 +1868,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
                 return false
             }
         } else if !isSimulator && !isPositioning && !(isSpIns && isInstructingInAircraft) {
-            guard !blockTime.isEmpty, (Double(blockTime) ?? 0) > 0 else {
-                statusMessage = "Block time cannot be zero"
+            let hasActualTimes = !outTime.isEmpty && !inTime.isEmpty
+            let hasScheduledTimes = !scheduledDeparture.isEmpty && !scheduledArrival.isEmpty
+            let hasManualBlockTime = !blockTime.isEmpty && blockTime != "0.0"
+            guard hasActualTimes || hasScheduledTimes || hasManualBlockTime else {
+                statusMessage = "Enter OUT/IN times, STD/STA, or a manual block time"
                 statusColor = .red
                 return false
             }
@@ -1914,7 +1937,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
             foName: coPilotName,
             so1Name: so1Name.isEmpty ? nil : so1Name,
             so2Name: so2Name.isEmpty ? nil : so2Name,
-            blockTime: (isSimulator || isSimInstruction) ? "0.0" : blockTime,
+            blockTime: (isSimulator || isSimInstruction) ? "0.0" : ((!outTime.isEmpty && !inTime.isEmpty) ? calculateFlightTime() : (blockTime.isEmpty ? "0.0" : blockTime)),
             nightTime: nightTimeValue,
             p1Time: p1TimeValue,
             p1usTime: p1usTimeValue,
@@ -1945,6 +1968,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let success = databaseService.updateFlight(updatedFlight, actionDescription: nil)
 
         if success {
+            persistLastUsed()
             statusMessage = "Flight updated successfully!"
             statusColor = .green
             HapticManager.shared.notification(.success)
@@ -1970,6 +1994,43 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
 
         return success
+    }
+
+    // MARK: - Last Used Crew & Registration
+
+    private static let icloudStore = NSUbiquitousKeyValueStore.default
+
+    @Published var hasLastUsedCrewOrReg: Bool = {
+        let store = NSUbiquitousKeyValueStore.default
+        let reg = store.string(forKey: "lastUsedReg") ?? ""
+        let captain = store.string(forKey: "lastUsedCaptain") ?? ""
+        let coPilot = store.string(forKey: "lastUsedCoPilot") ?? ""
+        return !reg.isEmpty || !captain.isEmpty || !coPilot.isEmpty
+    }()
+
+    func persistLastUsed() {
+        let store = Self.icloudStore
+        store.set(aircraftReg, forKey: "lastUsedReg")
+        store.set(captainName, forKey: "lastUsedCaptain")
+        store.set(coPilotName, forKey: "lastUsedCoPilot")
+        store.set(so1Name, forKey: "lastUsedSO1")
+        store.set(so2Name, forKey: "lastUsedSO2")
+        store.synchronize()
+        hasLastUsedCrewOrReg = !aircraftReg.isEmpty || !captainName.isEmpty || !coPilotName.isEmpty
+    }
+
+    func applyLastUsed() {
+        let store = Self.icloudStore
+        let reg = store.string(forKey: "lastUsedReg") ?? ""
+        let captain = store.string(forKey: "lastUsedCaptain") ?? ""
+        let coPilot = store.string(forKey: "lastUsedCoPilot") ?? ""
+        let so1 = store.string(forKey: "lastUsedSO1") ?? ""
+        let so2 = store.string(forKey: "lastUsedSO2") ?? ""
+        if !reg.isEmpty { updateAircraftReg(reg) }
+        if captain != defaultCaptainName { captainName = captain }
+        if coPilot != defaultCoPilotName { coPilotName = coPilot }
+        if so1 != defaultSOName { so1Name = so1 }
+        if so2 != defaultSOName { so2Name = so2 }
     }
 
     private func originalTimeCreditType(_ sector: FlightSector) -> TimeCreditType {
@@ -2952,6 +3013,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
             if databaseService.saveFlight(newFlight, actionDescription: nil) {
                             LogManager.shared.debug("DEBUG: Saved sector successfully with instrumentTime=\(newFlight.instrumentTime)")
+                persistLastUsed()
                 statusMessage = "Flight saved to logbook!"
                 statusColor = .green
 
