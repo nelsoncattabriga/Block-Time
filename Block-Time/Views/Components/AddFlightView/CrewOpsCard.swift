@@ -73,6 +73,16 @@ struct ModernManualEntryDataCard: View {
                     .foregroundColor(.primary)
 
                 Spacer()
+
+                Button {
+                    viewModel.applyLastUsed()
+                } label: {
+                    Label("Last Used", systemImage: "repeat")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(Color.blue.opacity(viewModel.hasLastUsedCrewOrReg ? 1 : 0.4))
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(!viewModel.hasLastUsedCrewOrReg)
             }
 
             VStack(spacing: 12) {

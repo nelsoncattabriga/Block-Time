@@ -1630,6 +1630,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         if databaseService.saveFlight(newFlight, actionDescription: nil) {
                         LogManager.shared.debug("DEBUG: Saved sector with instrumentTime=\(newFlight.instrumentTime)")
+            persistLastUsed()
             statusMessage = "Flight saved to logbook!"
             statusColor = .green
         } else {
@@ -1948,6 +1949,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
         let success = databaseService.updateFlight(updatedFlight, actionDescription: nil)
 
         if success {
+            persistLastUsed()
             statusMessage = "Flight updated successfully!"
             statusColor = .green
             HapticManager.shared.notification(.success)
@@ -1973,6 +1975,39 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
 
         return success
+    }
+
+    // MARK: - Last Used Crew & Registration
+
+    @Published var hasLastUsedCrewOrReg: Bool = {
+        let reg = UserDefaults.standard.string(forKey: "lastUsedReg") ?? ""
+        let captain = UserDefaults.standard.string(forKey: "lastUsedCaptain") ?? ""
+        let coPilot = UserDefaults.standard.string(forKey: "lastUsedCoPilot") ?? ""
+        return !reg.isEmpty || !captain.isEmpty || !coPilot.isEmpty
+    }()
+
+    func persistLastUsed() {
+        UserDefaults.standard.set(aircraftReg, forKey: "lastUsedReg")
+        UserDefaults.standard.set(captainName, forKey: "lastUsedCaptain")
+        UserDefaults.standard.set(coPilotName, forKey: "lastUsedCoPilot")
+        UserDefaults.standard.set(so1Name, forKey: "lastUsedSO1")
+        UserDefaults.standard.set(so2Name, forKey: "lastUsedSO2")
+        hasLastUsedCrewOrReg = !aircraftReg.isEmpty || !captainName.isEmpty || !coPilotName.isEmpty
+    }
+
+    func applyLastUsed() {
+        let defaults = UserDefaults.standard
+        if let reg = defaults.string(forKey: "lastUsedReg"), !reg.isEmpty {
+            updateAircraftReg(reg)
+        }
+        let captain = defaults.string(forKey: "lastUsedCaptain") ?? ""
+        let coPilot = defaults.string(forKey: "lastUsedCoPilot") ?? ""
+        let so1 = defaults.string(forKey: "lastUsedSO1") ?? ""
+        let so2 = defaults.string(forKey: "lastUsedSO2") ?? ""
+        if captain != defaultCaptainName { captainName = captain }
+        if coPilot != defaultCoPilotName { coPilotName = coPilot }
+        if so1 != defaultSOName { so1Name = so1 }
+        if so2 != defaultSOName { so2Name = so2 }
     }
 
     private func originalTimeCreditType(_ sector: FlightSector) -> TimeCreditType {
@@ -2955,6 +2990,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
             if databaseService.saveFlight(newFlight, actionDescription: nil) {
                             LogManager.shared.debug("DEBUG: Saved sector successfully with instrumentTime=\(newFlight.instrumentTime)")
+                persistLastUsed()
                 statusMessage = "Flight saved to logbook!"
                 statusColor = .green
 
