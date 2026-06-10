@@ -892,6 +892,7 @@ class FileImportService {
         // Wait for the file to be available locally (iCloud Drive files may need downloading).
         // ubiquitousItemDownloadingStatus is nil for non-iCloud files — treat that as local.
         let resourceKeys: Set<URLResourceKey> = [.ubiquitousItemDownloadingStatusKey, .ubiquitousItemIsDownloadingKey]
+        var url = url
         if let values = try? url.resourceValues(forKeys: resourceKeys),
            let status = values.ubiquitousItemDownloadingStatus,
            status != .current {
@@ -904,18 +905,23 @@ class FileImportService {
                 DispatchQueue.main.async { completion(.failure(error)) }
                 return
             }
-            // Poll until downloaded, downloading in progress, or timeout (60s)
+            // Poll until downloaded or timeout (60s).
+            // Invalidate cached resource values each iteration — Foundation caches them per URL instance.
             let deadline = Date().addingTimeInterval(60)
             while Date() < deadline {
                 Thread.sleep(forTimeInterval: 0.5)
+                url.removeCachedResourceValue(forKey: .ubiquitousItemDownloadingStatusKey)
+                url.removeCachedResourceValue(forKey: .ubiquitousItemIsDownloadingKey)
                 if let v = try? url.resourceValues(forKeys: resourceKeys) {
+                    LogManager.shared.info("iCloud download status: \(v.ubiquitousItemDownloadingStatus?.rawValue ?? "nil"), isDownloading: \(String(describing: v.ubiquitousItemIsDownloading))")
                     if v.ubiquitousItemDownloadingStatus == .current {
                         LogManager.shared.info("iCloud download complete")
                         break
                     }
                 }
             }
-            // Final check — if still not local after timeout, fail with a clear error
+            // Final check — invalidate cache once more before the definitive status read
+            url.removeCachedResourceValue(forKey: .ubiquitousItemDownloadingStatusKey)
             if let v = try? url.resourceValues(forKeys: resourceKeys),
                let finalStatus = v.ubiquitousItemDownloadingStatus,
                finalStatus != .current {
