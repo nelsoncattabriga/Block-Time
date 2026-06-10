@@ -321,6 +321,25 @@ class FlightTimeExtractorViewModel: ObservableObject {
             }
         }
 
+        // Observe iCloud KVS changes for last-used crew/reg from other devices
+        NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: NSUbiquitousKeyValueStore.default,
+            queue: .main
+        ) { [weak self] notification in
+            let changedKeys = (notification.userInfo?[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String]) ?? []
+            let lastUsedKeys: Set<String> = ["lastUsedReg", "lastUsedCaptain", "lastUsedCoPilot", "lastUsedSO1", "lastUsedSO2"]
+            guard changedKeys.contains(where: { lastUsedKeys.contains($0) }) else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let store = NSUbiquitousKeyValueStore.default
+                let reg = store.string(forKey: "lastUsedReg") ?? ""
+                let captain = store.string(forKey: "lastUsedCaptain") ?? ""
+                let coPilot = store.string(forKey: "lastUsedCoPilot") ?? ""
+                self.hasLastUsedCrewOrReg = !reg.isEmpty || !captain.isEmpty || !coPilot.isEmpty
+            }
+        }
+
         // Observe app lifecycle to save/restore draft flight data
         NotificationCenter.default.addObserver(
             forName: UIApplication.willResignActiveNotification,
@@ -1979,31 +1998,35 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
     // MARK: - Last Used Crew & Registration
 
+    private static let icloudStore = NSUbiquitousKeyValueStore.default
+
     @Published var hasLastUsedCrewOrReg: Bool = {
-        let reg = UserDefaults.standard.string(forKey: "lastUsedReg") ?? ""
-        let captain = UserDefaults.standard.string(forKey: "lastUsedCaptain") ?? ""
-        let coPilot = UserDefaults.standard.string(forKey: "lastUsedCoPilot") ?? ""
+        let store = NSUbiquitousKeyValueStore.default
+        let reg = store.string(forKey: "lastUsedReg") ?? ""
+        let captain = store.string(forKey: "lastUsedCaptain") ?? ""
+        let coPilot = store.string(forKey: "lastUsedCoPilot") ?? ""
         return !reg.isEmpty || !captain.isEmpty || !coPilot.isEmpty
     }()
 
     func persistLastUsed() {
-        UserDefaults.standard.set(aircraftReg, forKey: "lastUsedReg")
-        UserDefaults.standard.set(captainName, forKey: "lastUsedCaptain")
-        UserDefaults.standard.set(coPilotName, forKey: "lastUsedCoPilot")
-        UserDefaults.standard.set(so1Name, forKey: "lastUsedSO1")
-        UserDefaults.standard.set(so2Name, forKey: "lastUsedSO2")
+        let store = Self.icloudStore
+        store.set(aircraftReg, forKey: "lastUsedReg")
+        store.set(captainName, forKey: "lastUsedCaptain")
+        store.set(coPilotName, forKey: "lastUsedCoPilot")
+        store.set(so1Name, forKey: "lastUsedSO1")
+        store.set(so2Name, forKey: "lastUsedSO2")
+        store.synchronize()
         hasLastUsedCrewOrReg = !aircraftReg.isEmpty || !captainName.isEmpty || !coPilotName.isEmpty
     }
 
     func applyLastUsed() {
-        let defaults = UserDefaults.standard
-        if let reg = defaults.string(forKey: "lastUsedReg"), !reg.isEmpty {
-            updateAircraftReg(reg)
-        }
-        let captain = defaults.string(forKey: "lastUsedCaptain") ?? ""
-        let coPilot = defaults.string(forKey: "lastUsedCoPilot") ?? ""
-        let so1 = defaults.string(forKey: "lastUsedSO1") ?? ""
-        let so2 = defaults.string(forKey: "lastUsedSO2") ?? ""
+        let store = Self.icloudStore
+        let reg = store.string(forKey: "lastUsedReg") ?? ""
+        let captain = store.string(forKey: "lastUsedCaptain") ?? ""
+        let coPilot = store.string(forKey: "lastUsedCoPilot") ?? ""
+        let so1 = store.string(forKey: "lastUsedSO1") ?? ""
+        let so2 = store.string(forKey: "lastUsedSO2") ?? ""
+        if !reg.isEmpty { updateAircraftReg(reg) }
         if captain != defaultCaptainName { captainName = captain }
         if coPilot != defaultCoPilotName { coPilotName = coPilot }
         if so1 != defaultSOName { so1Name = so1 }
