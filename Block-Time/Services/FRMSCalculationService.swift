@@ -1242,43 +1242,41 @@ class FRMSCalculationService {
 
         // Build late night / BOC status (Rev 5: FD14 rolling 168-hour window).
         // Reserve duty periods are exempt from LNO/BOC counts (FD14.3/24.3).
-        var lateNightStatus: LateNightStatus? = nil
-        if cumulativeTotals.consecutiveLateNights > 0 {
-            let windowSeconds = TimeInterval(SH_Planning_FltDuty.lnoRollingWindowHours * 3600)
-            let windowStart = earliestSignOn.addingTimeInterval(-windowSeconds)
+        // Always compute 168h window counts — FD14.2/14.4 apply regardless of consecutive streak.
+        let windowSeconds = TimeInterval(SH_Planning_FltDuty.lnoRollingWindowHours * 3600)
+        let windowStart = earliestSignOn.addingTimeInterval(-windowSeconds)
 
-            // Count non-reserve LNO and BOC flying duties in the 168-hour window.
-            let lnoCount = duties.filter { duty in
-                duty.signOn >= windowStart &&
-                duty.timeClass == .lateNight &&
-                duty.dutyType != .standby
-            }.count
+        let lnoCount = duties.filter { duty in
+            duty.signOn >= windowStart &&
+            duty.timeClass == .lateNight &&
+            duty.dutyType != .standby
+        }.count
 
-            let bocCount = duties.filter { duty in
-                duty.signOn >= windowStart &&
-                duty.timeClass == .backOfClock &&
-                duty.dutyType != .standby
-            }.count
+        let bocCount = duties.filter { duty in
+            duty.signOn >= windowStart &&
+            duty.timeClass == .backOfClock &&
+            duty.dutyType != .standby
+        }.count
 
-            // FD14.1: >2 consecutive LNO → 24 h free of duty before any flying duty.
-            let recoveryOption: LateNightRecoveryOption
-            if cumulativeTotals.consecutiveLateNights > SH_Planning_FltDuty.lnoConsecutiveTriggerCount {
-                recoveryOption = .require24HoursOff
-            } else if cumulativeTotals.consecutiveLateNights > 0 {
-                recoveryOption = .continueOnLateNights
-            } else {
-                recoveryOption = .noRestriction
-            }
-
-            lateNightStatus = LateNightStatus(
-                consecutiveLateNights: cumulativeTotals.consecutiveLateNights,
-                lnoCountIn168h: lnoCount,
-                maxLnoIn168h: SH_Planning_FltDuty.lnoMaxPeriodsIn168h,
-                bocCountIn168h: bocCount,
-                maxBocIn168h: SH_Planning_FltDuty.bocMaxPeriodsIn168h,
-                recoveryOption: recoveryOption
-            )
+        // FD14.1: >2 consecutive LNO → 24 h free of duty before any flying duty.
+        let recoveryOption: LateNightRecoveryOption
+        if cumulativeTotals.consecutiveLateNights > SH_Planning_FltDuty.lnoConsecutiveTriggerCount {
+            recoveryOption = .require24HoursOff
+        } else if cumulativeTotals.consecutiveLateNights > 0 {
+            recoveryOption = .continueOnLateNights
+        } else {
+            recoveryOption = .noRestriction
         }
+
+        // Populate lateNightStatus whenever there is anything to show.
+        let lateNightStatus: LateNightStatus? = (lnoCount > 0 || bocCount > 0 || cumulativeTotals.consecutiveLateNights > 0) ? LateNightStatus(
+            consecutiveLateNights: cumulativeTotals.consecutiveLateNights,
+            lnoCountIn168h: lnoCount,
+            maxLnoIn168h: SH_Planning_FltDuty.lnoMaxPeriodsIn168h,
+            bocCountIn168h: bocCount,
+            maxBocIn168h: SH_Planning_FltDuty.bocMaxPeriodsIn168h,
+            recoveryOption: recoveryOption
+        ) : nil
 
         // Build consecutive duty status
         let consecutiveDutyStatus = ConsecutiveDutyStatus(
