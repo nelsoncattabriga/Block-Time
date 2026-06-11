@@ -30,7 +30,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
             // iPad layout - 2 column grid
             VStack(spacing: 12) {
                 // Flight Time section
-                sectionHeader("Flight Time")
+                frmsSectionHeader("Flight Time")
                 let periodDays = viewModel.configuration.fleet.flightTimePeriodDays
                 HStack(spacing: 12) {
                     buildLimitCard(
@@ -53,7 +53,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                 }
 
                 // Duty Time section
-                sectionHeader("Duty Time")
+                frmsSectionHeader("Duty Time")
                 HStack(spacing: 12) {
                     buildLimitCard(
                         title: "Duty Time (7 Days)",
@@ -77,7 +77,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
 
                 // Consecutive Duties section (A320/B737 only)
                 if viewModel.configuration.fleet == .a320B737, totals.hasConsecutiveDutyLimits {
-                    sectionHeader("Consecutive Duties")
+                    frmsSectionHeader("Consecutive Duties")
 
                     let lno = viewModel.a320B737NextDutyLimits?.lateNightStatus
                     let lnoCount = lno?.lnoCountIn168h ?? 0
@@ -88,7 +88,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                     if let maxConsec = totals.maxConsecutiveDuties,
                        let maxDuty11 = totals.maxDutyDaysIn11Days {
                         HStack(spacing: 12) {
-                            buildCounterCard(
+                            frmsCounterCard(
                                 title: "Cons. Days",
                                 value: totals.consecutiveDuties,
                                 max: maxConsec,
@@ -96,7 +96,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                                 status: totals.consecutiveDutiesStatus,
                                 accentColor: .teal
                             )
-                            buildCounterCard(
+                            frmsCounterCard(
                                 title: "in 11 Days",
                                 value: totals.dutyDaysIn11Days,
                                 max: maxDuty11,
@@ -107,12 +107,12 @@ struct AdaptiveCumulativeLimitsLayout: View {
                         }
                     }
 
-                    sectionHeader("Late Night Ops")
+                    frmsSectionHeader("Late Night Ops")
 
                     if let maxEarly = totals.maxConsecutiveEarlyStarts,
                        let maxLate = totals.maxConsecutiveLateNights {
                         HStack(spacing: 12) {
-                            buildCounterCard(
+                            frmsCounterCard(
                                 title: "Early Starts",
                                 value: totals.consecutiveEarlyStarts,
                                 max: maxEarly,
@@ -120,7 +120,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                                 status: totals.consecutiveEarlyStartsStatus,
                                 accentColor: .indigo
                             )
-                            buildCounterCard(
+                            frmsCounterCard(
                                 title: "Late Nights",
                                 value: totals.consecutiveLateNights,
                                 max: maxLate,
@@ -132,20 +132,20 @@ struct AdaptiveCumulativeLimitsLayout: View {
                     }
 
                     HStack(spacing: 12) {
-                        buildCounterCard(
+                        frmsCounterCard(
                             title: "LNO Rolling 168 hrs",
                             value: lnoCount,
                             max: lnoMax,
                             unit: "periods",
-                            status: lnoCountStatus(lnoCount, max: lnoMax),
+                            status: frmsLnoCountStatus(lnoCount, max: lnoMax),
                             accentColor: .indigo
                         )
-                        buildCounterCard(
+                        frmsCounterCard(
                             title: "BOC Rolling 168 hrs",
                             value: bocCount,
                             max: bocMax,
                             unit: "periods",
-                            status: bocCountStatus(bocCount, max: bocMax),
+                            status: frmsBocCountStatus(bocCount, max: bocMax),
                             accentColor: .indigo
                         )
                     }
@@ -157,49 +157,91 @@ struct AdaptiveCumulativeLimitsLayout: View {
     @ViewBuilder
     private func createAllCards() -> some View {
         let periodDays = viewModel.configuration.fleet.flightTimePeriodDays
+        let compact = !isInSplitView
 
         // Flight Time section
-        sectionHeader("Flight Time")
+        frmsSectionHeader("Flight Time")
 
-        buildLimitCard(
-            title: "Flight Time (\(periodDays) Days)",
-            current: totals.flightTime28Or30Days,
-            limit: viewModel.configuration.fleet.maxFlightTime28Days,
-            status: totals.status28Days,
-            unit: "hrs",
-            accentColor: .blue
-        )
-
-        buildLimitCard(
-            title: "Flight Time (365 Days)",
-            current: totals.flightTime365Days,
-            limit: viewModel.configuration.fleet.maxFlightTime365Days,
-            status: totals.status365Days,
-            unit: "hrs",
-            accentColor: .blue
-        )
+        if compact {
+            frmsCompactLimitCard(
+                title: "Flight Time (\(periodDays) Days)",
+                valueText: formatValue(totals.flightTime28Or30Days),
+                limit: viewModel.configuration.fleet.maxFlightTime28Days,
+                unit: "hrs",
+                current: totals.flightTime28Or30Days,
+                status: totals.status28Days,
+                accentColor: .blue
+            )
+            frmsCompactLimitCard(
+                title: "Flight Time (365 Days)",
+                valueText: formatValue(totals.flightTime365Days),
+                limit: viewModel.configuration.fleet.maxFlightTime365Days,
+                unit: "hrs",
+                current: totals.flightTime365Days,
+                status: totals.status365Days,
+                accentColor: .blue
+            )
+        } else {
+            buildLimitCard(
+                title: "Flight Time (\(periodDays) Days)",
+                current: totals.flightTime28Or30Days,
+                limit: viewModel.configuration.fleet.maxFlightTime28Days,
+                status: totals.status28Days,
+                unit: "hrs",
+                accentColor: .blue
+            )
+            buildLimitCard(
+                title: "Flight Time (365 Days)",
+                current: totals.flightTime365Days,
+                limit: viewModel.configuration.fleet.maxFlightTime365Days,
+                status: totals.status365Days,
+                unit: "hrs",
+                accentColor: .blue
+            )
+        }
 
         // Duty Time section
-        sectionHeader("Duty Time")
+        frmsSectionHeader("Duty Time")
 
-        buildLimitCard(
-            title: "Duty Time (7 Days)",
-            current: totals.dutyTime7Days,
-            limit: viewModel.configuration.effectiveDutyLimit7Days,
-            status: totals.dutyStatus7Days,
-            unit: "hrs",
-            accentColor: .orange
-        )
-
-        buildLimitCard(
-            title: "Duty Time (14 Days)",
-            current: totals.dutyTime14Days,
-            limit: viewModel.configuration.effectiveDutyLimit14DaysInitial ?? viewModel.configuration.effectiveDutyLimit14Days,
-            status: totals.dutyStatus14Days,
-            unit: "hrs",
-            accentColor: .orange,
-            note: viewModel.configuration.effectiveDutyLimit14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
-        )
+        if compact {
+            frmsCompactLimitCard(
+                title: "Duty Time (7 Days)",
+                valueText: formatValue(totals.dutyTime7Days),
+                limit: viewModel.configuration.effectiveDutyLimit7Days,
+                unit: "hrs",
+                current: totals.dutyTime7Days,
+                status: totals.dutyStatus7Days,
+                accentColor: .orange
+            )
+            frmsCompactLimitCard(
+                title: "Duty Time (14 Days)",
+                valueText: formatValue(totals.dutyTime14Days),
+                limit: viewModel.configuration.effectiveDutyLimit14DaysInitial ?? viewModel.configuration.effectiveDutyLimit14Days,
+                unit: "hrs",
+                current: totals.dutyTime14Days,
+                status: totals.dutyStatus14Days,
+                accentColor: .orange,
+                note: viewModel.configuration.effectiveDutyLimit14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
+            )
+        } else {
+            buildLimitCard(
+                title: "Duty Time (7 Days)",
+                current: totals.dutyTime7Days,
+                limit: viewModel.configuration.effectiveDutyLimit7Days,
+                status: totals.dutyStatus7Days,
+                unit: "hrs",
+                accentColor: .orange
+            )
+            buildLimitCard(
+                title: "Duty Time (14 Days)",
+                current: totals.dutyTime14Days,
+                limit: viewModel.configuration.effectiveDutyLimit14DaysInitial ?? viewModel.configuration.effectiveDutyLimit14Days,
+                status: totals.dutyStatus14Days,
+                unit: "hrs",
+                accentColor: .orange,
+                note: viewModel.configuration.effectiveDutyLimit14DaysInitial != nil ? "100 hrs with pilot agreement" : nil
+            )
+        }
 
         // Consecutive Duties section (A320/B737 only) — shown here in compact
         // layout only when in split-view (iPad portrait). On iPhone it remains
@@ -213,42 +255,25 @@ struct AdaptiveCumulativeLimitsLayout: View {
             let bocCount = lno?.bocCountIn168h ?? 0
             let bocMax = lno?.maxBocIn168h ?? SH_Planning_FltDuty.bocMaxPeriodsIn168h
 
-            sectionHeader("Consecutive Duties")
+            frmsSectionHeader("Consecutive Duties")
 
             if let maxConsec = totals.maxConsecutiveDuties {
-                buildCounterCard(title: "Cons. Days", value: totals.consecutiveDuties, max: maxConsec, unit: "days", status: totals.consecutiveDutiesStatus, accentColor: .teal)
+                frmsCompactCounterCard(title: "Cons. Days", value: totals.consecutiveDuties, max: maxConsec, unit: "days", status: totals.consecutiveDutiesStatus, accentColor: .teal)
             }
             if let maxDuty11 = totals.maxDutyDaysIn11Days {
-                buildCounterCard(title: "in 11 Days", value: totals.dutyDaysIn11Days, max: maxDuty11, unit: "days", status: totals.dutyDaysIn11DaysStatus, accentColor: .teal)
+                frmsCompactCounterCard(title: "in 11 Days", value: totals.dutyDaysIn11Days, max: maxDuty11, unit: "days", status: totals.dutyDaysIn11DaysStatus, accentColor: .teal)
             }
-            sectionHeader("Late Night Ops")
+            frmsSectionHeader("Late Night Ops")
 
             if let maxEarly = totals.maxConsecutiveEarlyStarts {
-                buildCounterCard(title: "Early Starts", value: totals.consecutiveEarlyStarts, max: maxEarly, unit: "duties", status: totals.consecutiveEarlyStartsStatus, accentColor: .indigo)
+                frmsCompactCounterCard(title: "Early Starts", value: totals.consecutiveEarlyStarts, max: maxEarly, unit: "duties", status: totals.consecutiveEarlyStartsStatus, accentColor: .indigo)
             }
             if let maxLate = totals.maxConsecutiveLateNights {
-                buildCounterCard(title: "Late Nights", value: totals.consecutiveLateNights, max: maxLate, unit: "duties", status: totals.consecutiveLateNightsStatus, accentColor: .indigo)
+                frmsCompactCounterCard(title: "Late Nights", value: totals.consecutiveLateNights, max: maxLate, unit: "duties", status: totals.consecutiveLateNightsStatus, accentColor: .indigo)
             }
-            buildCounterCard(title: "LNO / 168 h", value: lnoCount, max: lnoMax, unit: "periods", status: lnoCountStatus(lnoCount, max: lnoMax), accentColor: .indigo)
-            buildCounterCard(title: "BOC / 168 h", value: bocCount, max: bocMax, unit: "periods", status: bocCountStatus(bocCount, max: bocMax), accentColor: .indigo)
+            frmsCompactCounterCard(title: "LNO / 168 h", value: lnoCount, max: lnoMax, unit: "periods", status: frmsLnoCountStatus(lnoCount, max: lnoMax), accentColor: .indigo)
+            frmsCompactCounterCard(title: "BOC / 168 h", value: bocCount, max: bocMax, unit: "periods", status: frmsBocCountStatus(bocCount, max: bocMax), accentColor: .indigo)
         }
-    }
-
-    // MARK: - Section Header Helper
-
-    private func sectionHeader(_ title: String) -> some View {
-        HStack(spacing: 10) {
-            Text(title.uppercased())
-                .iPadScaledFont(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-                .kerning(1.2)
-
-            Rectangle()
-                .fill(.secondary.opacity(0.2))
-                .frame(height: 1)
-        }
-        .padding(.top, 8)
     }
 
     // MARK: - Card Building Functions
@@ -290,7 +315,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                         .foregroundStyle(.tertiary)
                 }
 
-                thickGauge(value: min(current, limit), total: limit, color: progressColor(status))
+                frmsThickGauge(value: min(current, limit), total: limit, color: progressColor(status))
 
                 if let note {
                     Text(note)
@@ -345,100 +370,11 @@ struct AdaptiveCumulativeLimitsLayout: View {
         .appCardStyle()
     }
 
-    private func buildCounterCard(title: String, value: Int, max: Int, unit: String, status: FRMSComplianceStatus, accentColor: Color) -> some View {
-        HStack(spacing: 0) {
-            LinearGradient(
-                colors: [accentColor, accentColor.opacity(0.4)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(width: 4)
+    // MARK: - Helper Methods (delegate to shared FRMSCardStyles)
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(title)
-                        .iPadScaledFont(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Image(systemName: status.icon)
-                        .foregroundStyle(statusColor(status))
-                        .iPadScaledFont(.subheadline)
-                }
-
-                HStack(alignment: .lastTextBaseline, spacing: 5) {
-                    Text("\(value)")
-                        .iPadScaledFont(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(statusColor(status))
-                        .monospacedDigit()
-
-                    Text("/ \(max) \(unit)")
-                        .iPadScaledFont(.footnote)
-                        .foregroundStyle(.tertiary)
-                }
-
-                thickGauge(value: Double(value), total: Double(max), color: progressColor(status))
-
-                Text(" ")
-                    .iPadScaledFont(.caption)
-                    .hidden()
-            }
-            .padding(16)
-            .background(accentColor.opacity(0.04))
-        }
-        .appCardStyle()
-    }
-
-    private func thickGauge(value: Double, total: Double, color: Color) -> some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(.quaternary)
-                    .frame(height: 5)
-
-                Capsule()
-                    .fill(color)
-                    .frame(width: total > 0 ? geo.size.width * CGFloat(min(value / total, 1.0)) : 0, height: 5)
-            }
-        }
-        .frame(height: 5)
-    }
-
-    private func lnoCountStatus(_ count: Int, max: Int) -> FRMSComplianceStatus {
-        if count >= max { return .violation(message: "Maximum LNO periods in 168 hours reached") }
-        if count >= max - 1 { return .warning(message: "Approaching LNO limit") }
-        return .compliant
-    }
-
-    private func bocCountStatus(_ count: Int, max: Int) -> FRMSComplianceStatus {
-        if count >= max { return .violation(message: "Maximum BOC periods in 168 hours reached") }
-        if count >= max - 1 { return .warning(message: "Approaching BOC limit") }
-        return .compliant
-    }
-
-    // MARK: - Helper Methods
-
-    private func statusColor(_ status: FRMSComplianceStatus) -> Color {
-        switch status {
-        case .compliant: return .green
-        case .warning: return .orange
-        case .violation: return .red
-        }
-    }
-
-    private func progressColor(_ status: FRMSComplianceStatus) -> Color {
-        switch status {
-        case .compliant: return .blue
-        case .warning: return .orange
-        case .violation: return .red
-        }
-    }
-
-    private func percentageOfLimit(used: Double, limit: Double) -> Double {
-        guard limit > 0 else { return 0 }
-        return (used / limit) * 100.0
+    private func statusColor(_ status: FRMSComplianceStatus) -> Color { frmsStatusColor(status) }
+    private func progressColor(_ status: FRMSComplianceStatus) -> Color { frmsProgressColor(status) }
+    private func formatValue(_ hours: Double) -> String {
+        appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(hours) : String(format: "%.1f", hours)
     }
 }

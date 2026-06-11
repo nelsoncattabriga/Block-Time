@@ -56,7 +56,7 @@ struct SH_NextDutyView: View {
                     // Consecutive Duties Summary — iPhone only when not in split view.
                     // On iPad (split view), it's shown inside AdaptiveCumulativeLimitsLayout instead.
                     if totals.hasConsecutiveDutyLimits && horizontalSizeClass == .compact && !isInSplitView {
-                        buildConsecutiveInfoCard(totals: totals)
+                        buildConsecutiveInfoCard(totals: totals, lno: limits.lateNightStatus)
                     }
 
                     // Next Duty Limits Title
@@ -673,104 +673,75 @@ struct SH_NextDutyView: View {
 
     // MARK: - Consecutive Duties Card
 
-    private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals) -> some View {
-        let worst = worstConsecutiveStatus(totals: totals)
-        return HStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.teal)
-                .frame(width: 3)
+    private func buildConsecutiveInfoCard(totals: FRMSCumulativeTotals, lno: LateNightStatus?) -> some View {
+        let lnoCount = lno?.lnoCountIn168h ?? 0
+        let lnoMax   = lno?.maxLnoIn168h  ?? SH_Planning_FltDuty.lnoMaxPeriodsIn168h
+        let bocCount = lno?.bocCountIn168h ?? 0
+        let bocMax   = lno?.maxBocIn168h  ?? SH_Planning_FltDuty.bocMaxPeriodsIn168h
 
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Consecutive Duties")
-//                        .font(.headline)
-                        .iPadScaledFont(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
+        return VStack(spacing: 8) {
+            frmsSectionHeader("Consecutive Duties")
 
-                    Spacer()
-
-                    Image(systemName: worst.icon)
-                        .foregroundStyle(statusColor(worst))
-                        .font(.headline)
-                }
-
-                HStack(spacing: 12) {
-                    if let maxConsec = totals.maxConsecutiveDuties {
-                        VStack {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(totals.consecutiveDuties)")
-                                    .font(.headline).fontWeight(.bold)
-                                    .foregroundStyle(statusColor(totals.consecutiveDutiesStatus))
-                                Text("/\(maxConsec)")
-                                    .font(.subheadline).foregroundStyle(.secondary)
-                            }
-                            Text("Cons Days")
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                        }
-                    }
-
-                    if let maxDuty11 = totals.maxDutyDaysIn11Days {
-                        VStack {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(totals.dutyDaysIn11Days)")
-                                    .font(.headline).fontWeight(.bold)
-                                    .foregroundStyle(statusColor(totals.dutyDaysIn11DaysStatus))
-                                Text("/\(maxDuty11)")
-                                    .font(.subheadline).foregroundStyle(.secondary)
-                            }
-                            Text("in 11 Days").font(.subheadline).foregroundStyle(.primary)
-                        }
-                    }
-
-                    if let maxEarly = totals.maxConsecutiveEarlyStarts {
-                        VStack {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(totals.consecutiveEarlyStarts)")
-                                    .font(.headline).fontWeight(.bold)
-                                    .foregroundStyle(statusColor(totals.consecutiveEarlyStartsStatus))
-                                Text("/\(maxEarly)")
-                                    .font(.subheadline).foregroundStyle(.secondary)
-                            }
-                            Text("Early Starts").font(.subheadline).foregroundStyle(.primary)
-                        }
-                    }
-
-                    if let maxLate = totals.maxConsecutiveLateNights {
-                        VStack {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(totals.consecutiveLateNights)")
-                                    .font(.headline).fontWeight(.bold)
-                                    .foregroundStyle(statusColor(totals.consecutiveLateNightsStatus))
-                                Text("/\(maxLate)")
-                                    .font(.subheadline).foregroundStyle(.secondary)
-                            }
-                            Text("Late Nights").font(.subheadline).foregroundStyle(.primary)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity)
+            if let maxConsec = totals.maxConsecutiveDuties {
+                frmsCompactCounterCard(
+                    title: "Cons. Days",
+                    value: totals.consecutiveDuties,
+                    max: maxConsec,
+                    unit: "days",
+                    status: totals.consecutiveDutiesStatus,
+                    accentColor: .teal
+                )
             }
-            .padding(16)
-        }
-        .appCardStyle()
-    }
+            if let maxDuty11 = totals.maxDutyDaysIn11Days {
+                frmsCompactCounterCard(
+                    title: "in 11 Days",
+                    value: totals.dutyDaysIn11Days,
+                    max: maxDuty11,
+                    unit: "days",
+                    status: totals.dutyDaysIn11DaysStatus,
+                    accentColor: .teal
+                )
+            }
 
-    private func worstConsecutiveStatus(totals: FRMSCumulativeTotals) -> FRMSComplianceStatus {
-        let statuses = [
-            totals.consecutiveDutiesStatus,
-            totals.dutyDaysIn11DaysStatus,
-            totals.consecutiveEarlyStartsStatus,
-            totals.consecutiveLateNightsStatus
-        ]
-        if statuses.contains(where: { if case .violation = $0 { return true }; return false }) {
-            return .violation(message: "")
+            frmsSectionHeader("Late Night Ops")
+
+            if let maxEarly = totals.maxConsecutiveEarlyStarts {
+                frmsCompactCounterCard(
+                    title: "Early Starts",
+                    value: totals.consecutiveEarlyStarts,
+                    max: maxEarly,
+                    unit: "duties",
+                    status: totals.consecutiveEarlyStartsStatus,
+                    accentColor: .indigo
+                )
+            }
+            if let maxLate = totals.maxConsecutiveLateNights {
+                frmsCompactCounterCard(
+                    title: "Late Nights",
+                    value: totals.consecutiveLateNights,
+                    max: maxLate,
+                    unit: "duties",
+                    status: totals.consecutiveLateNightsStatus,
+                    accentColor: .indigo
+                )
+            }
+            frmsCompactCounterCard(
+                title: "LNO Rolling 168 hrs",
+                value: lnoCount,
+                max: lnoMax,
+                unit: "periods",
+                status: frmsLnoCountStatus(lnoCount, max: lnoMax),
+                accentColor: .indigo
+            )
+            frmsCompactCounterCard(
+                title: "BOC Rolling 168 hrs",
+                value: bocCount,
+                max: bocMax,
+                unit: "periods",
+                status: frmsBocCountStatus(bocCount, max: bocMax),
+                accentColor: .indigo
+            )
         }
-        if statuses.contains(where: { if case .warning = $0 { return true }; return false }) {
-            return .warning(message: "")
-        }
-        return .compliant
     }
 
     // MARK: - Window Selection Logic
@@ -807,14 +778,6 @@ struct SH_NextDutyView: View {
     }
 
     // MARK: - Helpers
-
-    private func statusColor(_ status: FRMSComplianceStatus) -> Color {
-        switch status {
-        case .compliant: return .green
-        case .warning:   return .orange
-        case .violation: return .red
-        }
-    }
 
     /// Formats decimal hours respecting the Flight Times display setting.
     private func formatTime(_ decimalHours: Double) -> String {
