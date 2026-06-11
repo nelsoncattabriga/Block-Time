@@ -70,14 +70,42 @@ struct LH_NextDutyView: View {
 
                     // Rest facility picker (3/4-pilot only)
                     if !restFacilityPickerOptions.isEmpty {
-                        Picker("Rest Facility", selection: $selectedRestFacility) {
-                            ForEach(restFacilityPickerOptions, id: \.facility) { option in
-                                Text(option.label).tag(option.facility)
+                        crewRestFacilityNoteView
+
+                        HStack {
+                            Text("Rest Facility")
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Menu {
+                                ForEach(restFacilityPickerOptions, id: \.facility) { option in
+                                    Button {
+                                        selectedRestFacility = option.facility
+                                        updateMaxNextDuty()
+                                    } label: {
+                                        if selectedRestFacility == option.facility {
+                                            Label(option.label, systemImage: "checkmark")
+                                        } else {
+                                            Text(option.label)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(restFacilityPickerOptions.first { $0.facility == selectedRestFacility }?.label ?? "")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
                         }
-                        .pickerStyle(.segmented)
-
-                        crewRestFacilityNoteView
                     }
 
                     // Sign-on time picker (2-pilot planning only)
@@ -229,11 +257,11 @@ struct LH_NextDutyView: View {
             if viewModel.selectedLimitType == .operational {
                 return [
                     (.twoClass1, "2× Class 1"),
-                    (.oneClass1OneClass2, "C1+C2"),
-                    (.oneClass1OneSeat, "C1+Seat"),
+                    (.oneClass1OneClass2, "Class 1 + Class 2"),
+                    (.oneClass1OneSeat, "Class 1 + PAX Seat"),
                     (.twoClass2, "2× Class 2"),
-                    (.oneClass2OneSeat, "C2+Seat"),
-                    (.seatInPassengerCompartment, "PAX Seat"),
+                    (.oneClass2OneSeat, "Class 2 + PAX Seat"),
+                    (.seatInPassengerCompartment, "PAX Seat Only"),
                 ]
             } else {
                 return [(.twoClass1, "2× Class 1"), (.oneClass1OneClass2, "Mixed"), (.twoClass2, "2× Class 2")]
