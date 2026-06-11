@@ -2,13 +2,13 @@
 //  DisruptionRestSection.swift
 //  Block-Time
 //
-//  FD10.2.1 Disruption Rest calculator for the FRMS LH tab section.
+//  FD10.3.1 Disruption Rest calculator for the FRMS LH tab section.
 //  Extracted from FRMSView.swift.
 //
 
 import SwiftUI
 
-// MARK: - Disruption Rest — FD10.2.1
+// MARK: - Disruption Rest — FD10.3.1
 
 struct DisruptionRestSection: View {
     @Binding var isExpanded: Bool
@@ -24,19 +24,27 @@ struct DisruptionRestSection: View {
     private var clauseI: Double {
         switch crewComplement {
         case .twoPilot:
-            return previousDutyHours > 11.0 ? 12.0 : 10.0
+            return effectiveDutyHours > 11.0 ? 12.0 : 10.0
         case .threePilot, .fourPilot:
-            return previousDutyHours > 16.0 ? 24.0 : 12.0
+            return 12.0
         }
     }
 
+    private var effectiveDutyHours: Double {
+        // Clamp sentinels: < 12:00 → 11.75, > 16:00 → 16.25; treat as boundary values for calculation
+        if previousDutyHours < 12.0 { return 11.75 }
+        if previousDutyHours > 16.0 { return 16.0 }
+        return previousDutyHours
+    }
+
     private var clauseII: Double? {
-        guard previousDutyHours > 12.0 else { return nil }
-        return 12.0 + 1.5 * (previousDutyHours - 12.0)
+        guard effectiveDutyHours > 12.0 else { return nil }
+        return 12.0 + 1.5 * (effectiveDutyHours - 12.0)
     }
 
     private var clauseIII: Double? {
-        guard nextDutyOver16 else { return nil }
+        let dutyOver16 = previousDutyHours > 16.0 || nextDutyOver16
+        guard dutyOver16 else { return nil }
         switch crewComplement {
         case .twoPilot:   return nil
         case .threePilot: return 24.0
@@ -110,6 +118,8 @@ struct DisruptionRestSection: View {
                     Group {
                         if previousDutyHours < 12.0 {
                             Text("< 12:00")
+                        } else if previousDutyHours > 16.0 {
+                            Text("> 16:00")
                         } else {
                             Text(formatHoursMinutes(previousDutyHours))
                         }
@@ -121,11 +131,12 @@ struct DisruptionRestSection: View {
                         .frame(height: 20)
                         .padding(.horizontal, 8)
                     Button {
-                        // From sentinel → stay at sentinel; from 12:00+ → step down, floor to sentinel
-                        if previousDutyHours >= 12.25 {
+                        if previousDutyHours > 16.0 {
+                            previousDutyHours = 16.0  // ceiling sentinel → 16:00
+                        } else if previousDutyHours >= 12.25 {
                             previousDutyHours -= 0.25
                         } else if previousDutyHours == 12.0 {
-                            previousDutyHours = 11.75  // sentinel
+                            previousDutyHours = 11.75  // floor sentinel
                         }
                     } label: {
                         Image(systemName: "minus")
@@ -137,15 +148,18 @@ struct DisruptionRestSection: View {
                         .frame(height: 20)
                     Button {
                         if previousDutyHours < 12.0 {
-                            previousDutyHours = 12.0  // sentinel → 12:00
-                        } else if previousDutyHours < 24.0 {
+                            previousDutyHours = 12.0  // floor sentinel → 12:00
+                        } else if previousDutyHours < 16.0 {
                             previousDutyHours += 0.25
+                        } else if previousDutyHours == 16.0 {
+                            previousDutyHours = 16.25  // ceiling sentinel
                         }
                     } label: {
                         Image(systemName: "plus")
                             .font(.subheadline)
                             .frame(width: 28, height: 28)
                     }
+                    .disabled(previousDutyHours > 16.0)
                 }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.roundedRectangle(radius: 6))
@@ -217,7 +231,7 @@ struct DisruptionRestSection: View {
         VStack(spacing: 0) {
             clauseRow(
                 label: "Clause (i)",
-                subtitle: "Standard FD10.1",
+                subtitle: "Standard FD10.3.1",
                 value: ci,
                 isBold: ci >= (cii ?? 0) && ci >= (ciii ?? 0)
             )
@@ -225,9 +239,10 @@ struct DisruptionRestSection: View {
             Divider()
 
             if let ciiVal = cii {
+                let dutyForDisplay = min(previousDutyHours, 16.0)
                 clauseRow(
                     label: "Clause (ii)",
-                    subtitle: "12:00 + 1.5×\(formatHoursMinutes(previousDutyHours - 12.0))",
+                    subtitle: "12:00 + 1.5×\(formatHoursMinutes(dutyForDisplay - 12.0))",
                     value: ciiVal,
                     isBold: ciiVal >= ci && ciiVal >= (ciii ?? 0)
                 )
