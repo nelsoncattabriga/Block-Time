@@ -89,7 +89,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                        let maxDuty11 = totals.maxDutyDaysIn11Days {
                         HStack(spacing: 12) {
                             frmsCounterCard(
-                                title: "Cons. Days",
+                                title: "Consecutive Duties",
                                 value: totals.consecutiveDuties,
                                 max: maxConsec,
                                 unit: "days",
@@ -97,7 +97,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                                 accentColor: .teal
                             )
                             frmsCounterCard(
-                                title: "in 11 Days",
+                                title: "Duties in 11 Days",
                                 value: totals.dutyDaysIn11Days,
                                 max: maxDuty11,
                                 unit: "days",
@@ -113,7 +113,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                        let maxLate = totals.maxConsecutiveLateNights {
                         HStack(spacing: 12) {
                             frmsCounterCard(
-                                title: "Early Starts",
+                                title: "Early Starts (Consecutive)",
                                 value: totals.consecutiveEarlyStarts,
                                 max: maxEarly,
                                 unit: "duties",
@@ -121,7 +121,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                                 accentColor: .indigo
                             )
                             frmsCounterCard(
-                                title: "Late Nights",
+                                title: "Late Night Ops (Consecutive)",
                                 value: totals.consecutiveLateNights,
                                 max: maxLate,
                                 unit: "duties",
@@ -133,7 +133,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
 
                     HStack(spacing: 12) {
                         frmsCounterCard(
-                            title: "LNO Rolling 168 hrs",
+                            title: "Late Night Ops (Rolling 168 hrs)",
                             value: lnoCount,
                             max: lnoMax,
                             unit: "periods",
@@ -141,7 +141,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                             accentColor: .indigo
                         )
                         frmsCounterCard(
-                            title: "BOC Rolling 168 hrs",
+                            title: "Back of Clock Ops (Rolling 168 hrs)",
                             value: bocCount,
                             max: bocMax,
                             unit: "periods",

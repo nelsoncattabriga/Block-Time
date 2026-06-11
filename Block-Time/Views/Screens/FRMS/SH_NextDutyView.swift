@@ -684,7 +684,7 @@ struct SH_NextDutyView: View {
 
             if let maxConsec = totals.maxConsecutiveDuties {
                 frmsCompactCounterCard(
-                    title: "Cons. Days",
+                    title: "Consecutive Duties",
                     value: totals.consecutiveDuties,
                     max: maxConsec,
                     unit: "days",
@@ -694,7 +694,7 @@ struct SH_NextDutyView: View {
             }
             if let maxDuty11 = totals.maxDutyDaysIn11Days {
                 frmsCompactCounterCard(
-                    title: "in 11 Days",
+                    title: "Duties in 11 Days",
                     value: totals.dutyDaysIn11Days,
                     max: maxDuty11,
                     unit: "days",
@@ -707,7 +707,7 @@ struct SH_NextDutyView: View {
 
             if let maxEarly = totals.maxConsecutiveEarlyStarts {
                 frmsCompactCounterCard(
-                    title: "Early Starts",
+                    title: "Early Starts (Consecutive)",
                     value: totals.consecutiveEarlyStarts,
                     max: maxEarly,
                     unit: "duties",
@@ -717,7 +717,7 @@ struct SH_NextDutyView: View {
             }
             if let maxLate = totals.maxConsecutiveLateNights {
                 frmsCompactCounterCard(
-                    title: "Late Nights",
+                    title: "Late Night Ops (Consecutive)",
                     value: totals.consecutiveLateNights,
                     max: maxLate,
                     unit: "duties",
@@ -726,7 +726,7 @@ struct SH_NextDutyView: View {
                 )
             }
             frmsCompactCounterCard(
-                title: "LNO Rolling 168 hrs",
+                title: "Late Night Ops (Rolling 168 hrs)",
                 value: lnoCount,
                 max: lnoMax,
                 unit: "periods",
@@ -734,7 +734,7 @@ struct SH_NextDutyView: View {
                 accentColor: .indigo
             )
             frmsCompactCounterCard(
-                title: "BOC Rolling 168 hrs",
+                title: "Back of Clock Ops (Rolling 168 hrs)",
                 value: bocCount,
                 max: bocMax,
                 unit: "periods",
