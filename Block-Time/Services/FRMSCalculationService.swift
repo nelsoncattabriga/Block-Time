@@ -1146,6 +1146,7 @@ class FRMSCalculationService {
         // Calculate earliest sign-on and rest requirements
         var earliestSignOn = Date()
         var restCalculation: RestCalculationBreakdown
+        var bocIsBindingConstraint = false
 
         if let prevDuty = previousDuty {
             let minimumRest = calculateMinimumRestA320B737(afterDuty: prevDuty, limitType: limitType)
@@ -1184,7 +1185,7 @@ class FRMSCalculationService {
                 reducedRestConditions: reducedRestConditions
             )
 
-            // Apply back-of-clock restriction if applicable (FD14.4)
+            // Apply back-of-clock restriction if applicable (FD24.5)
             if prevDuty.timeClass == .backOfClock {
                 let homeTimeZone = getHomeBaseTimeZone()
                 var localCalendar = Calendar.current
@@ -1196,6 +1197,15 @@ class FRMSCalculationService {
 
                 if let tenAM = localCalendar.date(from: components), earliestSignOn < tenAM {
                     earliestSignOn = tenAM
+                    bocIsBindingConstraint = true
+                    let bocRestHours = tenAM.timeIntervalSince(prevDuty.signOff) / 3600
+                    restCalculation = RestCalculationBreakdown(
+                        previousDutyHours: prevDuty.dutyTime,
+                        formula: "FD24.5: Sign-On no earlier than 1000 local",
+                        minimumRestHours: bocRestHours,
+                        reducedRestAvailable: false,
+                        reducedRestConditions: nil
+                    )
                 }
             }
         } else {
@@ -1230,15 +1240,12 @@ class FRMSCalculationService {
             limitType: limitType
         )
 
-        // Check for back-of-clock restriction
-        var backOfClockRestriction: BackOfClockRestriction? = nil
-        if let prevDuty = previousDuty, prevDuty.timeClass == .backOfClock {
-            backOfClockRestriction = BackOfClockRestriction(
-                earliestSignOn: earliestSignOn,
-                reason: "Previous duty included ≥2 hours between 0100-0459",
-                appliesTo: "Australia only"
-            )
-        }
+        // Back-of-clock restriction only shown when it is actually the binding constraint (FD24.5)
+        let backOfClockRestriction: BackOfClockRestriction? = bocIsBindingConstraint ? BackOfClockRestriction(
+            earliestSignOn: earliestSignOn,
+            reason: "Previous duty included ≥2 hours between 0100-0459",
+            appliesTo: "Australia only"
+        ) : nil
 
         // Build late night / BOC status (Rev 5: FD14 rolling 168-hour window).
         // Reserve duty periods are exempt from LNO/BOC counts (FD14.3/24.3).
