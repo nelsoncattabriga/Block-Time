@@ -115,7 +115,7 @@ struct DisruptionRestSection: View {
                         .frame(height: 20)
                         .padding(.horizontal, 8)
                     Button {
-                        if previousDutyHours > 12.0 { previousDutyHours -= 0.25 }
+                        if previousDutyHours > 8.0 { previousDutyHours -= 0.25 }
                     } label: {
                         Image(systemName: "minus")
                             .font(.subheadline)
