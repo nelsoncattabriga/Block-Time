@@ -59,7 +59,7 @@ func frmsCounterCard(
 
             HStack(alignment: .lastTextBaseline, spacing: 5) {
                 Text("\(value)")
-                    .iPadScaledFont(.title2)
+                    .iPadScaledFont(.title3)
                     .fontWeight(.bold)
                     .foregroundStyle(frmsStatusColor(status))
                     .monospacedDigit()

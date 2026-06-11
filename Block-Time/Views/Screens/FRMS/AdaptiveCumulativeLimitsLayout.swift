@@ -305,7 +305,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
 
                 HStack(alignment: .lastTextBaseline, spacing: 5) {
                     Text(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(current) : String(format: "%.1f", current))
-                        .iPadScaledFont(.title2)
+                        .iPadScaledFont(.title3)
                         .fontWeight(.bold)
                         .foregroundStyle(.primary)
                         .monospacedDigit()

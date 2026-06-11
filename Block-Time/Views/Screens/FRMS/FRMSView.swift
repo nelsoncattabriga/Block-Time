@@ -405,55 +405,49 @@ struct FRMSView: View {
                         updateMBTT()
                     }
                 } else {
-                    // iPad: two-column layout — pickers on left, toggle on right
-                    HStack(alignment: .top, spacing: 24) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Trip Length")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                Picker("Days Away", selection: $mbttDaysAwayCategory) {
-                                    Text("1 day").tag("1")
-                                    Text("2-4 days").tag("2-4")
-                                    Text("5-8 days").tag("5-8")
-                                    Text("9-12 days").tag("9-12")
-                                    Text(">12 days").tag(">12")
-                                }
-                                .pickerStyle(.segmented)
-                                .onChange(of: mbttDaysAwayCategory) { _, newValue in
-                                    LogManager.shared.debug("FRMSView: MBTT days away changed to \(newValue)")
-                                    updateMBTT()
-                                }
+                    // iPad: stacked layout — pickers full width, toggle below
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Trip Length")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Picker("Days Away", selection: $mbttDaysAwayCategory) {
+                                Text("1 day").tag("1")
+                                Text("2-4 days").tag("2-4")
+                                Text("5-8 days").tag("5-8")
+                                Text("9-12 days").tag("9-12")
+                                Text(">12 days").tag(">12")
                             }
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Trip Credit Hours")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                Picker("Credited Hours", selection: $mbttCreditedHoursCategory) {
-                                    Text("≤20 hrs").tag("≤20")
-                                    Text(">20 hrs").tag(">20")
-                                    Text(">40 hrs").tag(">40")
-                                    Text(">60 hrs").tag(">60")
-                                }
-                                .pickerStyle(.segmented)
-                                .onChange(of: mbttCreditedHoursCategory) { _, newValue in
-                                    LogManager.shared.debug("FRMSView: MBTT credited hours changed to \(newValue)")
-                                    updateMBTT()
-                                }
-                            }
-                        }
-                        Divider()
-                        VStack(alignment: .leading, spacing: 16) {
-                            Toggle(isOn: $mbttHadDutyOver18Hours) {
-                                Text("Planned duty >18 hrs")
-                                    .font(.subheadline)
-                            }
-                            .onChange(of: mbttHadDutyOver18Hours) { _, newValue in
-                                LogManager.shared.debug("FRMSView: MBTT duty over 18 hours changed to \(newValue)")
+                            .pickerStyle(.segmented)
+                            .onChange(of: mbttDaysAwayCategory) { _, newValue in
+                                LogManager.shared.debug("FRMSView: MBTT days away changed to \(newValue)")
                                 updateMBTT()
                             }
                         }
-                        .frame(maxWidth: 240)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Trip Credit Hours")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Picker("Credited Hours", selection: $mbttCreditedHoursCategory) {
+                                Text("≤20 hrs").tag("≤20")
+                                Text(">20 hrs").tag(">20")
+                                Text(">40 hrs").tag(">40")
+                                Text(">60 hrs").tag(">60")
+                            }
+                            .pickerStyle(.segmented)
+                            .onChange(of: mbttCreditedHoursCategory) { _, newValue in
+                                LogManager.shared.debug("FRMSView: MBTT credited hours changed to \(newValue)")
+                                updateMBTT()
+                            }
+                        }
+                        Toggle(isOn: $mbttHadDutyOver18Hours) {
+                            Text("Planned duty >18 hrs")
+                                .font(.subheadline)
+                        }
+                        .onChange(of: mbttHadDutyOver18Hours) { _, newValue in
+                            LogManager.shared.debug("FRMSView: MBTT duty over 18 hours changed to \(newValue)")
+                            updateMBTT()
+                        }
                     }
                 }
 
