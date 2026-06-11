@@ -89,7 +89,7 @@ struct SH_NextDutyView: View {
             Divider()
 
             // Active Restrictions inline (if any)
-            if (limits.backOfClockRestriction != nil && viewModel.selectedLimitType == .planning) || limits.lateNightStatus != nil || limits.consecutiveDutyStatus.hasActiveRestrictions {
+            if (limits.backOfClockRestriction != nil && viewModel.selectedLimitType == .planning) || (limits.lateNightStatus?.hasActiveRestriction == true) || limits.consecutiveDutyStatus.hasActiveRestrictions {
                 activeRestrictionsSection(limits: limits)
                 Divider()
             }
@@ -270,7 +270,7 @@ struct SH_NextDutyView: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Text("Next Sign-on no earlier than \(formatTime(backOfClock.earliestSignOn))")
+                    Text("Next Sign-On no earlier than \(formatTime(backOfClock.earliestSignOn))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -281,9 +281,9 @@ struct SH_NextDutyView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
-            // Late night status
-            if let lateNight = limits.lateNightStatus {
-                VStack(alignment: .leading, spacing: 6) {
+            // Late night status — only shown when an active restriction applies
+            if let lateNight = limits.lateNightStatus, lateNight.hasActiveRestriction {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Image(systemName: "moon")
                             .foregroundStyle(.blue)
@@ -292,41 +292,28 @@ struct SH_NextDutyView: View {
                             .fontWeight(.medium)
                     }
 
-                    HStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Consec. LNO")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text("\(lateNight.consecutiveLateNights) (max >\(lateNight.maxLnoIn168h / 2))")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                    VStack(alignment: .leading, spacing: 6) {
+                        if lateNight.recoveryOption == .require24HoursOff {
+                            lateNightRestrictionRow(
+                                label: "Consecutive LNO",
+                                value: "\(lateNight.consecutiveLateNights)",
+                                detail: "≥24 hours off required before day duty"
+                            )
                         }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("LNO / 168 h")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text("\(lateNight.lnoCountIn168h) / \(lateNight.maxLnoIn168h)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                        if lateNight.lnoCountIn168h >= lateNight.maxLnoIn168h {
+                            lateNightRestrictionRow(
+                                label: "LNO / 168 h",
+                                value: "\(lateNight.lnoCountIn168h) / \(lateNight.maxLnoIn168h)",
+                                detail: "Maximum LNO duties reached"
+                            )
                         }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("BOC / 168 h")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text("\(lateNight.bocCountIn168h) / \(lateNight.maxBocIn168h)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                        if lateNight.bocCountIn168h >= lateNight.maxBocIn168h {
+                            lateNightRestrictionRow(
+                                label: "BOC / 168 h",
+                                value: "\(lateNight.bocCountIn168h) / \(lateNight.maxBocIn168h)",
+                                detail: "Maximum BOC duties reached"
+                            )
                         }
-                    }
-
-                    if lateNight.recoveryOption != .noRestriction {
-                        Text(lateNight.recoveryOption.rawValue)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 4)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -373,6 +360,24 @@ struct SH_NextDutyView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func lateNightRestrictionRow(label: String, value: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+            }
+            .frame(width: 90, alignment: .leading)
+            Text(detail)
+                .font(.footnote)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     // MARK: - Special Rules Section

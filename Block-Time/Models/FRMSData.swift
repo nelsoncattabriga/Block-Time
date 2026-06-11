@@ -781,6 +781,12 @@ struct LateNightStatus: Codable {
     let bocCountIn168h: Int              // BOC flying duties in last 168 h (max 2 waivable, FD14.4)
     let maxBocIn168h: Int                // = SH_Planning_FltDuty.bocMaxPeriodsIn168h
     let recoveryOption: LateNightRecoveryOption
+
+    var hasActiveRestriction: Bool {
+        recoveryOption == .require24HoursOff ||
+        lnoCountIn168h >= maxLnoIn168h ||
+        bocCountIn168h >= maxBocIn168h
+    }
 }
 
 enum LateNightRecoveryOption: String, Codable {
