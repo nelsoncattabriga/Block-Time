@@ -182,6 +182,7 @@ struct SH_Operational_FltDuty {
     // (no numeric constant — handled in engine logic)
 
     /// FD24.4 — max BOC flying duty periods in any 168-hour rolling window (pilot may waive).
+    /// FD24.5 — back of clock: next duty in Australia sign-on no earlier than 1000 local.
     static let bocMaxPeriodsIn168h = 2
 
     /// Shared rolling window for both LNO and BOC caps.

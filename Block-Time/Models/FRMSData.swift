@@ -364,10 +364,10 @@ struct FRMSCumulativeTotals: Codable, Sendable {
         return 4
     }
 
-    /// Rev 5 FD14.1: >2 consecutive LNO → 24 h free (trigger is 2, not 4).
+    /// Rev 5 FD14.1: >2 consecutive LNO → 24 h free. Card shows max as trigger+1 so display reads "2/3" at caution, "3/3" at violation.
     var maxConsecutiveLateNights: Int? {
         guard hasConsecutiveDutyLimits else { return nil }
-        return SH_Planning_FltDuty.lnoConsecutiveTriggerCount
+        return SH_Planning_FltDuty.lnoConsecutiveTriggerCount + 1
     }
 
     /// Maximum 9 duty days in any 11-day period (FD12.2a - A320/B737 only)
@@ -496,10 +496,11 @@ struct FRMSCumulativeTotals: Codable, Sendable {
         guard let limit = maxConsecutiveLateNights else {
             return .compliant  // No limit for this fleet
         }
+        // limit = triggerCount + 1 (3). Warning at 2 (next LNO triggers rule), violation at 3+ (24h rest required).
         if consecutiveLateNights >= limit {
-            return .violation(message: "Maximum \(limit) consecutive late nights reached")
+            return .violation(message: "\(consecutiveLateNights) consecutive late nights — 24 h free of duty required")
         } else if consecutiveLateNights >= limit - 1 {
-            return .warning(message: "Approaching \(limit) consecutive late night limit")
+            return .warning(message: "\(consecutiveLateNights) consecutive late nights — next LNO triggers 24 h rest")
         }
         return .compliant
     }

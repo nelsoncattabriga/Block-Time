@@ -315,6 +315,10 @@ struct FRMSView: View {
                 .padding(16)
             }
             .appCardStyle()
+
+            if limits.backOfClockRestriction != nil || (limits.lateNightStatus?.hasActiveRestriction == true) || limits.consecutiveDutyStatus.hasActiveRestrictions {
+                activeRestrictionsSection(limits: limits)
+            }
         }
     }
 
@@ -644,6 +648,139 @@ struct FRMSView: View {
 
     private func formatTime(_ date: Date) -> String {
         Self._timeFormatter.string(from: date)
+    }
+
+    // MARK: - Active Restrictions
+
+    private func activeRestrictionsSection(limits: A320B737NextDutyLimits) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Active Restrictions")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if limits.backOfClockRestriction != nil && limits.lateNightStatus?.recoveryOption != .require24HoursOff {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                        Text("Back of Clock Restriction")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    HStack(spacing: 6) {
+                        Text("FD24.5")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Text("Sign-On no earlier than 1000 local")
+                            .font(.footnote)
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            if let lateNight = limits.lateNightStatus, lateNight.hasActiveRestriction {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                        Text("Late Night Operations")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        if lateNight.recoveryOption == .require24HoursOff {
+                            HStack(spacing: 6) {
+                                Text("FD24.1")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                Text("More than 2 LNO duties — 24 hrs rest required")
+                                    .font(.footnote)
+                                    .foregroundStyle(.primary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        if lateNight.lnoCountIn168h >= lateNight.maxLnoIn168h {
+                            lateNightRestrictionRow(
+                                label: "LNO / 168 h",
+                                value: "\(lateNight.lnoCountIn168h) / \(lateNight.maxLnoIn168h)",
+                                detail: "Maximum LNO duties reached"
+                            )
+                        }
+                        if lateNight.bocCountIn168h >= lateNight.maxBocIn168h {
+                            lateNightRestrictionRow(
+                                label: "BOC / 168 h",
+                                value: "\(lateNight.bocCountIn168h) / \(lateNight.maxBocIn168h)",
+                                detail: "Maximum BOC duties reached"
+                            )
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            if limits.consecutiveDutyStatus.hasActiveRestrictions {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                        Text("Consecutive Duty Limits")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    let status = limits.consecutiveDutyStatus
+                    VStack(alignment: .leading, spacing: 4) {
+                        if status.consecutiveDuties >= status.maxConsecutiveDuties {
+                            Text("Max \(status.maxConsecutiveDuties) consecutive duty days reached")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if status.dutyDaysIn11Days >= status.maxDutyDaysIn11Days {
+                            Text("Max \(status.maxDutyDaysIn11Days) duty days in 11-day period reached")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if status.consecutiveEarlyStarts >= status.maxConsecutiveEarlyStarts {
+                            Text("Max \(status.maxConsecutiveEarlyStarts) consecutive early starts reached")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func lateNightRestrictionRow(label: String, value: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.footnote)
+                    .fontWeight(.semibold)
+            }
+            .frame(width: 90, alignment: .leading)
+            Text(detail)
+                .font(.footnote)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private func formatDateTime(_ date: Date) -> String {

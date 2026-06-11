@@ -1262,6 +1262,20 @@ class FRMSCalculationService {
         let recoveryOption: LateNightRecoveryOption
         if cumulativeTotals.consecutiveLateNights > SH_Planning_FltDuty.lnoConsecutiveTriggerCount {
             recoveryOption = .require24HoursOff
+            // Enforce 24 h free of duty — push earliestSignOn forward if needed and update rest display
+            if let prevDuty = previousDuty {
+                let twentyFourHoursAfterSignOff = prevDuty.signOff.addingTimeInterval(24 * 3600)
+                if earliestSignOn < twentyFourHoursAfterSignOff {
+                    earliestSignOn = twentyFourHoursAfterSignOff
+                    restCalculation = RestCalculationBreakdown(
+                        previousDutyHours: prevDuty.dutyTime,
+                        formula: "FD24.1: >2 consecutive LNO",
+                        minimumRestHours: 24,
+                        reducedRestAvailable: false,
+                        reducedRestConditions: nil
+                    )
+                }
+            }
         } else if cumulativeTotals.consecutiveLateNights > 0 {
             recoveryOption = .continueOnLateNights
         } else {
