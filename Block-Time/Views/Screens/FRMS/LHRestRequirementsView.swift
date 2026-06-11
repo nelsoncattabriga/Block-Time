@@ -146,9 +146,13 @@ struct LHRestRequirementsView: View {
         switch (crewComplement, limitType) {
         case (.twoPilot, .operational):
             let threshold = dutyHours <= 11 ? "≤ 11" : "> 11"
-            return LH_Operational_FltDuty.twoPilotPreDutyRest
+            let standard = LH_Operational_FltDuty.twoPilotPreDutyRest
                 .filter { $0.dutyPeriodThreshold == threshold && $0.minimumRestHours != nil }
                 .map { (threshold: $0.dutyPeriodThreshold, minRest: "\(Int($0.minimumRestHours!)) hrs", condition: $0.requirements) }
+            let sevenDay = LH_Operational_FltDuty.twoPilotPreDutyRest
+                .filter { $0.dutyPeriodThreshold == "Within a 7 day period" }
+                .map { (threshold: "—", minRest: "—", condition: $0.requirements) }
+            return standard + sevenDay
 
         case (.twoPilot, .planning):
             let threshold = dutyHours <= 11 ? "≤ 11" : "> 11"
@@ -208,7 +212,10 @@ struct LHRestRequirementsView: View {
                 let excessMin = (dutyHours - 11.0) * 60.0
                 let addHrs = Int(ceil(excessMin / 15.0))
                 let total = 10 + addHrs
-                return [(">11 hrs", "\(total) hrs", "10 + \(addHrs)h (duty exceeded 11h by \(Int(excessMin))m)")]
+                let formulaCondition = LH_Operational_FltDuty.twoPilotPostDutyRest
+                    .first { $0.minimumRestFormula != nil }?.requirements
+                let conditionText = "10 + \(addHrs)h (duty exceeded 11h by \(Int(excessMin))m)" + (formulaCondition.map { ". \($0)" } ?? "")
+                return [(">11 hrs", "\(total) hrs", conditionText)]
             } else {
                 return [(">12 hrs", "24 hrs", nil)]
             }

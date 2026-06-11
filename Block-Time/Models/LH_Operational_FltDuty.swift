@@ -2,7 +2,7 @@
 //  LH_Operational_FltDuty.swift
 //  Block-Time
 //
-//  FRMS Ruleset A380/A330/B787 — Revision 4 — 26 June 2023
+//  FRMS Ruleset A380/A330/B787 — Revision 5 — 15 June 2026
 //  Chapter 1B: Flight and Duty Limitations (Operational) — FD10
 //
 //  Source: Qantas Airways Limited Fatigue Risk Management System Ruleset A380/A330/B787
