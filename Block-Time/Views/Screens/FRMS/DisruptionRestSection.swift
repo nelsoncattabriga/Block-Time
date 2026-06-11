@@ -107,20 +107,28 @@ struct DisruptionRestSection: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 HStack(spacing: 0) {
-                    Text(formatHoursMinutes(previousDutyHours))
-                        .font(.subheadline)
-                        .monospacedDigit()
-                        .frame(minWidth: 44, alignment: .trailing)
+                    Group {
+                        if previousDutyHours <= 12.0 {
+                            Text("< 12:00")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(formatHoursMinutes(previousDutyHours))
+                        }
+                    }
+                    .font(.subheadline)
+                    .monospacedDigit()
+                    .frame(minWidth: 44, alignment: .trailing)
                     Divider()
                         .frame(height: 20)
                         .padding(.horizontal, 8)
                     Button {
-                        if previousDutyHours > 8.0 { previousDutyHours -= 0.25 }
+                        if previousDutyHours > 12.0 { previousDutyHours -= 0.25 }
                     } label: {
                         Image(systemName: "minus")
                             .font(.subheadline)
                             .frame(width: 28, height: 28)
                     }
+                    .disabled(previousDutyHours <= 12.0)
                     Divider()
                         .frame(height: 20)
                     Button {
