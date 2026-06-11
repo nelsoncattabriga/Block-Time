@@ -28,7 +28,7 @@ struct LH_NextDutyView: View {
     @State private var expandDeadheading = false
     @State private var expandRelevantSectors = false
 
-    @State private var disruptionPreviousDutyHours: Double = 12.0
+    @State private var disruptionPreviousDutyHours: Double = 11.75  // sentinel: displays as "< 12:00"
     @State private var disruptionTZDifference: Double = 0.0
     @State private var disruptionNextDutyOver16: Bool = false
 

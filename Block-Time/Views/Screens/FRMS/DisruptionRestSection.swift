@@ -108,31 +108,39 @@ struct DisruptionRestSection: View {
                 Spacer()
                 HStack(spacing: 0) {
                     Group {
-                        if previousDutyHours <= 12.0 {
+                        if previousDutyHours < 12.0 {
                             Text("< 12:00")
-                                .foregroundStyle(.secondary)
                         } else {
                             Text(formatHoursMinutes(previousDutyHours))
                         }
                     }
                     .font(.subheadline)
                     .monospacedDigit()
-                    .frame(minWidth: 44, alignment: .trailing)
+                    .frame(minWidth: 56, alignment: .trailing)
                     Divider()
                         .frame(height: 20)
                         .padding(.horizontal, 8)
                     Button {
-                        if previousDutyHours > 12.0 { previousDutyHours -= 0.25 }
+                        // From sentinel → stay at sentinel; from 12:00+ → step down, floor to sentinel
+                        if previousDutyHours >= 12.25 {
+                            previousDutyHours -= 0.25
+                        } else if previousDutyHours == 12.0 {
+                            previousDutyHours = 11.75  // sentinel
+                        }
                     } label: {
                         Image(systemName: "minus")
                             .font(.subheadline)
                             .frame(width: 28, height: 28)
                     }
-                    .disabled(previousDutyHours <= 12.0)
+                    .disabled(previousDutyHours < 12.0)
                     Divider()
                         .frame(height: 20)
                     Button {
-                        if previousDutyHours < 24.0 { previousDutyHours += 0.25 }
+                        if previousDutyHours < 12.0 {
+                            previousDutyHours = 12.0  // sentinel → 12:00
+                        } else if previousDutyHours < 24.0 {
+                            previousDutyHours += 0.25
+                        }
                     } label: {
                         Image(systemName: "plus")
                             .font(.subheadline)
