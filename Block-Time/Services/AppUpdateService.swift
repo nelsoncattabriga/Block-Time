@@ -46,9 +46,13 @@ enum AppUpdateService {
         // 24h cache check
         if let lastCheck = defaults.object(forKey: lastCheckDateKey) as? Date,
            Date.now.timeIntervalSince(lastCheck) < 86_400 {
-            // Return cached newer version (nil if none was stored — means "up to date")
+            // Return cached newer version only if it's still newer than the installed version
             let cached = defaults.string(forKey: cachedStoreVersionKey)
-            return cached?.isEmpty == false ? cached : nil
+            if let cached, !cached.isEmpty {
+                let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+                return isVersion(cached, newerThan: currentVersion) ? cached : nil
+            }
+            return nil
         }
 
         // Fetch from iTunes
