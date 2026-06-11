@@ -136,7 +136,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                             title: "Late Night Ops (Rolling 168 hrs)",
                             value: lnoCount,
                             max: lnoMax,
-                            unit: "periods",
+                            unit: "duties",
                             status: frmsLnoCountStatus(lnoCount, max: lnoMax),
                             accentColor: .indigo
                         )
@@ -144,7 +144,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                             title: "Back of Clock Ops (Rolling 168 hrs)",
                             value: bocCount,
                             max: bocMax,
-                            unit: "periods",
+                            unit: "duties",
                             status: frmsBocCountStatus(bocCount, max: bocMax),
                             accentColor: .indigo
                         )
