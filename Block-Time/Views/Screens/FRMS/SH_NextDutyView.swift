@@ -89,7 +89,7 @@ struct SH_NextDutyView: View {
             Divider()
 
             // Active Restrictions inline (if any)
-            if (limits.backOfClockRestriction != nil && viewModel.selectedLimitType == .planning) || (limits.lateNightStatus?.hasActiveRestriction == true) || limits.consecutiveDutyStatus.hasActiveRestrictions {
+            if limits.backOfClockRestriction != nil || (limits.lateNightStatus?.hasActiveRestriction == true) || limits.consecutiveDutyStatus.hasActiveRestrictions {
                 activeRestrictionsSection(limits: limits)
                 Divider()
             }
@@ -254,8 +254,8 @@ struct SH_NextDutyView: View {
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Back of clock restriction — FD14.4 (planning only, not in operational chapter)
-            if let backOfClock = limits.backOfClockRestriction, viewModel.selectedLimitType == .planning {
+            // Back of clock restriction — FD14.4/FD24.4 (applies in both planning and operational)
+            if let backOfClock = limits.backOfClockRestriction {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Image(systemName: "exclamationmark.triangle")
