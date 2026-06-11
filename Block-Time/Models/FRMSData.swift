@@ -97,17 +97,21 @@ enum CrewComplement: Int, Codable, Sendable {
 // MARK: - Rest Facility Class (for augmented operations)
 
 enum RestFacilityClass: String, Codable, Sendable {
-    case none           // 2-pilot operations
-    case class2         // Seat in cabin with full screen
-    case class1         // Bunk or berth
-    case mixed          // 1x Class1 + 1x Class2
+    case none               // 2-pilot operations
+    case class2             // Seat in cabin with full screen
+    case class1             // Bunk or berth
+    case mixed              // 1x Class1 + 1x Class2
+    case oneClass2OneSeat   // Rev 5 (FD10.1): 1× Class 2 + 1× Seat in Pax (4-pilot, 16 h)
+    case oneClass1OneSeat   // Rev 5 (FD10.1): 1× Class 1 + 1× Seat in Pax (4-pilot, 18 h)
 
     var description: String {
         switch self {
-        case .class1: return "Class 1 Rest"
-        case .class2: return "Class 2 Rest"
-        case .mixed: return "Mixed (Class 1 & 2)"
-        case .none: return "No Rest Facility"
+        case .class1:          return "Class 1 Rest"
+        case .class2:          return "Class 2 Rest"
+        case .mixed:           return "Mixed (Class 1 & 2)"
+        case .none:            return "No Rest Facility"
+        case .oneClass2OneSeat: return "1× Class 2 & Seat in Pax"
+        case .oneClass1OneSeat: return "1× Class 1 & Seat in Pax"
         }
     }
 }

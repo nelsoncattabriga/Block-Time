@@ -740,6 +740,18 @@ class FRMSCalculationService {
                     restFacility: .seatInPassengerCompartment
                 ),
                 SignOnTimeRange(
+                    timeRange: "1 × Class 2 & 1 × Seat in Pax",
+                    maxDutyPeriod: 16.0,
+                    maxDutyPeriodOperational: nil,
+                    maxFlightTime: 14.0,
+                    maxFlightTimeOperational: nil,
+                    preRestRequired: 12.0,
+                    postRestRequired: 12.0,
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
+                    restFacility: .oneClass2OneSeat
+                ),
+                SignOnTimeRange(
                     timeRange: "2 × Class 2 Rest",
                     maxDutyPeriod: 16.0,
                     maxDutyPeriodOperational: nil,
@@ -750,6 +762,18 @@ class FRMSCalculationService {
                     notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
                     sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
                     restFacility: .twoClass2
+                ),
+                SignOnTimeRange(
+                    timeRange: "1 × Class 1 & 1 × Seat in Pax",
+                    maxDutyPeriod: 18.0,
+                    maxDutyPeriodOperational: nil,
+                    maxFlightTime: 14.0,
+                    maxFlightTimeOperational: nil,
+                    preRestRequired: 12.0,
+                    postRestRequired: 24.0,
+                    notes: "Max 8 hrs continuous & 14 hrs total on flight deck",
+                    sectorLimit: "Max 2 sectors if Scheduled Duty > 14 hrs",
+                    restFacility: .oneClass1OneSeat
                 ),
                 SignOnTimeRange(
                     timeRange: "1 × Class 1 & 1 × Class 2 Rest",
@@ -843,18 +867,22 @@ class FRMSCalculationService {
             lhRestFacility = .class1
         case (.threePilot, .class2):
             lhRestFacility = .class2
-        case (.threePilot, .mixed):
-            lhRestFacility = .class1  // Use class1 as fallback for 3-pilot mixed
+        case (.threePilot, .mixed), (.threePilot, .oneClass2OneSeat), (.threePilot, .oneClass1OneSeat):
+            lhRestFacility = .class1  // Not applicable to 3-pilot; fall back to class1
 
         // 4-pilot operations
         case (.fourPilot, .none):
             lhRestFacility = .seatInPassengerCompartment
         case (.fourPilot, .class1):
-            lhRestFacility = .twoClass1  // 4-pilot with class1 = 2× Class 1 Rest
+            lhRestFacility = .twoClass1
         case (.fourPilot, .class2):
-            lhRestFacility = .twoClass2  // 4-pilot with class2 = 2× Class 2 Rest
+            lhRestFacility = .twoClass2
         case (.fourPilot, .mixed):
-            lhRestFacility = .oneClass1OneClass2  // 1× Class 1 & 1× Class 2 Rest
+            lhRestFacility = .oneClass1OneClass2
+        case (.fourPilot, .oneClass2OneSeat):
+            lhRestFacility = .oneClass2OneSeat
+        case (.fourPilot, .oneClass1OneSeat):
+            lhRestFacility = .oneClass1OneSeat
         }
 
         // Get duty limits based on crew complement

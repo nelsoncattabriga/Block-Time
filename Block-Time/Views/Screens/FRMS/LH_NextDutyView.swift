@@ -162,8 +162,12 @@ struct LH_NextDutyView: View {
         }
         .onChange(of: viewModel.selectedLimitType) { _, newLimitType in
             updateMaxNextDuty()
-            // Seats in Passenger Compartment is operational-only; reset when switching to planning
-            if newLimitType == .planning && selectedRestFacility == .seatInPassengerCompartment {
+            // Operational-only facilities; reset to 2×Class1 when switching to planning
+            if newLimitType == .planning && [
+                CrewRestFacility.seatInPassengerCompartment,
+                .oneClass2OneSeat,
+                .oneClass1OneSeat,
+            ].contains(selectedRestFacility) {
                 selectedRestFacility = .twoClass1
             }
         }
@@ -225,8 +229,10 @@ struct LH_NextDutyView: View {
             if viewModel.selectedLimitType == .operational {
                 return [
                     (.twoClass1, "2× Class 1"),
-                    (.oneClass1OneClass2, "Mixed"),
+                    (.oneClass1OneClass2, "C1+C2"),
+                    (.oneClass1OneSeat, "C1+Seat"),
                     (.twoClass2, "2× Class 2"),
+                    (.oneClass2OneSeat, "C2+Seat"),
                     (.seatInPassengerCompartment, "PAX Seat"),
                 ]
             } else {
@@ -578,7 +584,21 @@ struct LH_NextDutyView: View {
     // MARK: - Max Next Duty Calculation
 
     private func updateMaxNextDuty() {
-        let restFacility: RestFacilityClass = selectedCrewComplement == .twoPilot ? .none : .class1
+        let restFacility: RestFacilityClass
+        if selectedCrewComplement == .twoPilot {
+            restFacility = .none
+        } else {
+            switch selectedRestFacility {
+            case .class1:                    restFacility = .class1
+            case .class2:                    restFacility = .class2
+            case .twoClass1, .twoClass1FD104: restFacility = .class1
+            case .twoClass2:                 restFacility = .class2
+            case .oneClass1OneClass2:        restFacility = .mixed
+            case .oneClass2OneSeat:          restFacility = .oneClass2OneSeat
+            case .oneClass1OneSeat:          restFacility = .oneClass1OneSeat
+            case .seatInPassengerCompartment: restFacility = .none
+            }
+        }
         viewModel.maximumNextDuty = viewModel.calculateMaxNextDuty(
             crewComplement: selectedCrewComplement,
             restFacility: restFacility,
