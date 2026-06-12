@@ -67,6 +67,20 @@ public struct UnifiedParseResult {
     public let rosterType: RosterType
     public let periodStartDate: Date?
     public let periodEndDate: Date?
+
+    public init(flights: [UnifiedParsedFlight], pilotName: String, staffNumber: String,
+                bidPeriod: String, base: String, category: String, rosterType: RosterType,
+                periodStartDate: Date?, periodEndDate: Date?) {
+        self.flights = flights
+        self.pilotName = pilotName
+        self.staffNumber = staffNumber
+        self.bidPeriod = bidPeriod
+        self.base = base
+        self.category = category
+        self.rosterType = rosterType
+        self.periodStartDate = periodStartDate
+        self.periodEndDate = periodEndDate
+    }
 }
 
 // MARK: - Roster Parser Protocol
