@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 // MARK: - Global Validation Function
 /// Global function to validate time strings - use this in CSV import and data entry

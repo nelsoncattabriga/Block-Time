@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreData
+import BlockTimeKit
 
 /// Service to import planned flights from rosters into the main flight database
 class PlannedFlightService {

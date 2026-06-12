@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreData
+import BlockTimeKit
 
 extension FlightEntity {
     /// Safe access to remarks field

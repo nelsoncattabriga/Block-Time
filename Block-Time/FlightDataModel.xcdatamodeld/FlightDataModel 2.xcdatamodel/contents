@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24901" systemVersion="25E253" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
-    <entity name="AircraftEntity" representedClassName="AircraftEntity" syncable="YES" codeGenerationType="class">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24901" systemVersion="25F80" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="AircraftEntity" representedClassName="AircraftEntity" syncable="YES">
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="fullRegistration" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="String"/>
         <attribute name="registration" optional="YES" attributeType="String"/>
         <attribute name="type" optional="YES" attributeType="String"/>
     </entity>
-    <entity name="FlightEntity" representedClassName="FlightEntity" syncable="YES" codeGenerationType="class">
+    <entity name="CrewContactEntity" representedClassName="CrewContactEntity" syncable="YES">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="modifiedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="FlightEntity" representedClassName="FlightEntity" syncable="YES">
         <attribute name="aircraftReg" optional="YES" attributeType="String"/>
         <attribute name="aircraftType" optional="YES" attributeType="String"/>
         <attribute name="blockTime" optional="YES" attributeType="String"/>
@@ -58,12 +65,5 @@
         <attribute name="so2Name" optional="YES" attributeType="String"/>
         <attribute name="spInsTime" optional="YES" attributeType="String"/>
         <attribute name="toAirport" optional="YES" attributeType="String"/>
-    </entity>
-    <entity name="CrewContactEntity" representedClassName="CrewContactEntity" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="name" optional="YES" attributeType="String"/>
-        <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="modifiedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
 </model>

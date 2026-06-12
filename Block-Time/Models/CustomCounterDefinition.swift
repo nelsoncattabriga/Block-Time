@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 enum CounterType: String, Codable, CaseIterable, Identifiable {
     case time     // HH:MM via ModernDecimalTimeField

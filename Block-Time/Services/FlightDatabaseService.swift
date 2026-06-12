@@ -11,6 +11,7 @@ import SwiftUI
 import CloudKit
 import Combine
 import WidgetKit
+import BlockTimeKit
 
 // MARK: - Detailed Sync Error Information
 struct DetailedSyncError: Identifiable {

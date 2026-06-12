@@ -6,6 +6,7 @@
 import Foundation
 import MapKit
 import CoreData
+import BlockTimeKit
 
 @Observable
 @MainActor

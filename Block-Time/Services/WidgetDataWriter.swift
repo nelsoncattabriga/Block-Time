@@ -10,6 +10,7 @@
 import Foundation
 import CoreData
 import WidgetKit
+import BlockTimeKit
 
 @MainActor
 final class WidgetDataWriter {

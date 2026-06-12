@@ -7,6 +7,7 @@
 import Foundation
 import CoreData
 import Combine
+import BlockTimeKit
 
 // MARK: - Aircraft Model
 struct Aircraft: Codable, Identifiable, Hashable {
