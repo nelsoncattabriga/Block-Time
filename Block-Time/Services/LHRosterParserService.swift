@@ -7,6 +7,7 @@
 
 
 import Foundation
+import BlockTimeKit
 
 /// Service to parse Qantas Long Haul crew roster files and extract flight information
 class LHRosterParserService {

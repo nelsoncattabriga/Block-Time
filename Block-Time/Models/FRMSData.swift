@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 // MARK: - FRMS Fleet Type
 

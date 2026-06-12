@@ -25,6 +25,20 @@ public class RosterParserService {
         public let isPositioning: Bool    // True if marked with "P"
         public let bidPeriod: String      // e.g., "3711"
         public let dutyCode: String?      // e.g., "5017A2" (optional)
+
+        public init(date: Date, flightNumber: String, departureAirport: String, arrivalAirport: String, departureTime: String, arrivalTime: String, aircraftType: String, role: String, isPositioning: Bool, bidPeriod: String, dutyCode: String?) {
+            self.date = date
+            self.flightNumber = flightNumber
+            self.departureAirport = departureAirport
+            self.arrivalAirport = arrivalAirport
+            self.departureTime = departureTime
+            self.arrivalTime = arrivalTime
+            self.aircraftType = aircraftType
+            self.role = role
+            self.isPositioning = isPositioning
+            self.bidPeriod = bidPeriod
+            self.dutyCode = dutyCode
+        }
     }
 
     /// Result of parsing a roster file

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 /// Cached context for flight calculations to avoid redundant parsing and lookups
 struct FlightCalculationContext {

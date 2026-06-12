@@ -55,7 +55,7 @@ public struct FlightSector: Identifiable, Codable, Hashable {
         return formatter
     }
 
-    private static var cachedUTCDateFormatter: DateFormatter {
+    static var cachedUTCDateFormatter: DateFormatter {
         let key = "FlightSector.utcDateFormatter"
         if let existing = Thread.current.threadDictionary[key] as? DateFormatter { return existing }
         let formatter = DateFormatter()
@@ -570,6 +570,76 @@ public extension FlightSector {
             isPilotFlying: isPilotFlying,
             isAIII: isAIII,
             remarks: remarks
+        )
+    }
+}
+
+public extension FlightSector {
+    static func from(entity: FlightEntity) -> FlightSector? {
+        guard let id = entity.id,
+              let date = entity.date,
+              let flightNumber = entity.flightNumber,
+              let aircraftReg = entity.aircraftReg,
+              let aircraftType = entity.aircraftType,
+              let fromAirport = entity.fromAirport,
+              let toAirport = entity.toAirport,
+              let captainName = entity.captainName,
+              let foName = entity.foName,
+              let blockTime = entity.blockTime,
+              let nightTime = entity.nightTime,
+              let p1Time = entity.p1Time,
+              let p1usTime = entity.p1usTime,
+              let instrumentTime = entity.instrumentTime,
+              let simTime = entity.simTime else {
+            return nil
+        }
+
+        let dateString = cachedUTCDateFormatter.string(from: date)
+
+        var counterEntries: [Int: String] = [:]
+        for index in 1...10 {
+            if let value = entity.counterValue(at: index), !value.isEmpty {
+                counterEntries[index] = value
+            }
+        }
+
+        return FlightSector(
+            id: id,
+            date: dateString,
+            flightNumber: flightNumber,
+            aircraftReg: aircraftReg,
+            aircraftType: aircraftType,
+            fromAirport: fromAirport,
+            toAirport: toAirport,
+            captainName: captainName,
+            foName: foName,
+            so1Name: entity.so1Name,
+            so2Name: entity.so2Name,
+            blockTime: blockTime,
+            nightTime: nightTime,
+            p1Time: p1Time,
+            p1usTime: p1usTime,
+            p2Time: entity.p2Time ?? "0.0",
+            instrumentTime: instrumentTime,
+            simTime: simTime,
+            spInsTime: entity.spInsTime ?? "",
+            isPilotFlying: entity.isPilotFlying,
+            isPositioning: entity.isPositioning,
+            isAIII: entity.isAIII,
+            isRNP: entity.isRNP,
+            isILS: entity.isILS,
+            isGLS: entity.isGLS,
+            isNPA: entity.isNPA,
+            remarks: entity.remarks ?? "",
+            dayTakeoffs: Int(entity.dayTakeoffs),
+            dayLandings: Int(entity.dayLandings),
+            nightTakeoffs: Int(entity.nightTakeoffs),
+            nightLandings: Int(entity.nightLandings),
+            outTime: entity.outTime ?? "",
+            inTime: entity.inTime ?? "",
+            scheduledDeparture: entity.scheduledDeparture ?? "",
+            scheduledArrival: entity.scheduledArrival ?? "",
+            counterEntries: counterEntries
         )
     }
 }

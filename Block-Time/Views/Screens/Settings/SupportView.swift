@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import BlockTimeKit
 
 struct SupportView: View {
     @Environment(ThemeService.self) private var themeService

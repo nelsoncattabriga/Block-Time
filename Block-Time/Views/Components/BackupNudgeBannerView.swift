@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct BackupNudgeBannerView: View {
     @StateObject private var backupService = AutomaticBackupService.shared

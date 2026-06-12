@@ -3,6 +3,7 @@
 
 import SwiftUI
 import PhotosUI
+import BlockTimeKit
 
 struct AddFlightView: View {
     @Environment(ThemeService.self) private var themeService

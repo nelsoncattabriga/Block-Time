@@ -8,6 +8,7 @@
 //  Source: Qantas Airways Limited Fatigue Risk Management System Ruleset A380/A330/B787
 
 import Foundation
+import BlockTimeKit
 
 // MARK: - Enums
 

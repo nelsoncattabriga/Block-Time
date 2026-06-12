@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 /// Rest type selection for 3-pilot SH duties (FD13.1 / FD23.1).
 /// Persisted in UserDefaults so the last selection is remembered across sessions.

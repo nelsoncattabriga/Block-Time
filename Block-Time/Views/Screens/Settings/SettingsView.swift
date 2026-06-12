@@ -1,5 +1,6 @@
 // Views/Screens/SettingsView.swift - Master-Detail Settings Design
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Settings Category Enum
 enum SettingsCategory: String, CaseIterable, Identifiable {

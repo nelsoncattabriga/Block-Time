@@ -1,4 +1,5 @@
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Modern Action Buttons Card
 struct ModernActionButtonsCard: View {

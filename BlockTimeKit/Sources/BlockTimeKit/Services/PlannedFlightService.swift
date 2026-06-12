@@ -730,7 +730,7 @@ public class PlannedFlightService {
 
     /// Delete the given stale flight entities from the logbook. Returns count deleted.
     @discardableResult
-    func deleteStaleFlights(_ flights: [FlightEntity]) async -> Int {
+    public func deleteStaleFlights(_ flights: [FlightEntity]) async -> Int {
         guard !flights.isEmpty else { return 0 }
 
         let context = databaseService.viewContext

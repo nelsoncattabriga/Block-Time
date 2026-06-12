@@ -1,5 +1,6 @@
 // Views/Screens/Settings/CloudKitSyncCard.swift
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - CloudKit Sync Card
 

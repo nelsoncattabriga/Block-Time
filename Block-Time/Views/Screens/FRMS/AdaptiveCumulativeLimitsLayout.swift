@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct AdaptiveCumulativeLimitsLayout: View {
     var viewModel: FRMSViewModel

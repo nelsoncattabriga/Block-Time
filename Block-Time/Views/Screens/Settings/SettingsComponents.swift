@@ -1,5 +1,6 @@
 // Views/Screens/Settings/SettingsComponents.swift
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Modern Toggle Row
 
