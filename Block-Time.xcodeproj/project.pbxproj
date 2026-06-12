@@ -66,7 +66,6 @@
 		52EFA2B92F7B6AE10027B37B /* Exceptions for "Block-Time" folder in "BlockTimeWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Models/WidgetFlightEntry.swift,
 				Resources/airports.dat.txt,
 			);
 			target = 52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */;
