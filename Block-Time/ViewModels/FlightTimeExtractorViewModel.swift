@@ -101,6 +101,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
     private var originalFlightData: FlightSector?
     private var isLoadingFlight = false
     private var originalIsICUS: Bool = false  // Stored separately since not in FlightSector model
+    /// True while the Add Flight form is on screen and accepting input.
+    /// Used to suppress main-thread crew-name reloads triggered by background
+    /// CloudKit `.flightDataChanged` notifications, which otherwise stack full
+    /// Core Data fetches on the main thread during active typing → UI freeze.
+    private var isAddFlightFormActive = false
 
     // Form fields
     @Published var flightDate = ""
@@ -376,7 +381,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self, !self.isEditingMode else { return }
+                // Skip while the Add Flight form is active (new flight OR editing).
+                // isEditingMode only covers editing an existing flight; a user
+                // ADDING a flight is not in editing mode, so without the
+                // isAddFlightFormActive check a CloudKit sync storm would stack
+                // main-thread crew-name fetches during typing → hard freeze.
+                guard let self, !self.isEditingMode, !self.isAddFlightFormActive else { return }
                 self.crewNamesReloadTask?.cancel()
                 self.crewNamesReloadTask = Task {
                     try? await Task.sleep(for: .milliseconds(500))
@@ -389,6 +399,27 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Call when the Add Flight form leaves the screen. Re-enables background
+    /// crew-name reloads and refreshes the list once, so any names added by
+    /// CloudKit sync while the form was open are picked up.
+    func formDidDisappear() {
+        isAddFlightFormActive = false
+        crewNamesReloadTask?.cancel()
+        crewNamesReloadTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            self.reloadSavedCrewNames()
+        }
+    }
+
+    /// Mark the Add Flight form as on-screen. Called from AddFlightView.onAppear
+    /// (NOT setupInitialData, which also runs at launch from MainTabView). While
+    /// active, background CloudKit `.flightDataChanged` notifications skip the
+    /// main-thread crew-name reload that would otherwise freeze active typing.
+    func formDidAppear() {
+        isAddFlightFormActive = true
     }
 
     func setupInitialData() {

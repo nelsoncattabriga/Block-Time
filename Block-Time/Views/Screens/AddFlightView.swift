@@ -126,11 +126,15 @@ struct AddFlightView: View {
                 }
             }
             .onAppear {
+                viewModel.formDidAppear()
                 viewModel.setupInitialData()
                 if AppState.shared.triggerCamera {
                     AppState.shared.triggerCamera = false
                     viewModel.showCamera()
                 }
+            }
+            .onDisappear {
+                viewModel.formDidDisappear()
             }
         }
     }
