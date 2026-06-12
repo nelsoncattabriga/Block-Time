@@ -329,14 +329,7 @@ class CloudKitSettingsSyncService {
         ubiquitousStore.set(settings.recentAirports, forKey: CloudKeys.recentAirports)
         ubiquitousStore.set(settings.selectedFleetID, forKey: CloudKeys.selectedFleetID)
 
-        // Backup settings — AutomaticBackupService is UIKit-bound, handled in app target only
-        #if canImport(UIKit)
-        let backupSettings = AutomaticBackupService.shared.settings
-        ubiquitousStore.set(backupSettings.isEnabled, forKey: CloudKeys.backupIsEnabled)
-        ubiquitousStore.set(backupSettings.frequency.rawValue, forKey: CloudKeys.backupFrequency)
-        ubiquitousStore.set(backupSettings.location.rawValue, forKey: CloudKeys.backupLocation)
-        ubiquitousStore.set(backupSettings.maxBackupsToKeep, forKey: CloudKeys.backupMaxToKeep)
-        #endif
+        // Backup settings synced by AutomaticBackupService in the app target directly
 
         // FRMS settings
         if let frmsConfigData = UserDefaults.standard.data(forKey: "FRMSConfiguration"),
@@ -599,43 +592,7 @@ class CloudKitSettingsSyncService {
             changedKeys.insert("selectedFleetID")
         }
 
-        // Backup settings — AutomaticBackupService is UIKit-bound, handled in app target only
-        #if canImport(UIKit)
-        let localBackupSettings = AutomaticBackupService.shared.settings
-        var backupSettingsChanged = false
-        var updatedBackupSettings = localBackupSettings
-
-        if let backupEnabled = ubiquitousStore.object(forKey: CloudKeys.backupIsEnabled) as? Bool,
-           backupEnabled != localBackupSettings.isEnabled {
-            updatedBackupSettings.isEnabled = backupEnabled
-            backupSettingsChanged = true
-            changedKeys.insert("backupIsEnabled")
-        }
-        if let backupFrequencyRaw = ubiquitousStore.string(forKey: CloudKeys.backupFrequency),
-           let backupFrequency = BackupFrequency(rawValue: backupFrequencyRaw),
-           backupFrequency != localBackupSettings.frequency {
-            updatedBackupSettings.frequency = backupFrequency
-            backupSettingsChanged = true
-            changedKeys.insert("backupFrequency")
-        }
-        if let backupLocationRaw = ubiquitousStore.string(forKey: CloudKeys.backupLocation),
-           let backupLocation = BackupLocation(rawValue: backupLocationRaw),
-           backupLocation != localBackupSettings.location {
-            updatedBackupSettings.location = backupLocation
-            backupSettingsChanged = true
-            changedKeys.insert("backupLocation")
-        }
-        if let backupMaxToKeep = ubiquitousStore.object(forKey: CloudKeys.backupMaxToKeep) as? Int,
-           backupMaxToKeep != localBackupSettings.maxBackupsToKeep {
-            updatedBackupSettings.maxBackupsToKeep = backupMaxToKeep
-            backupSettingsChanged = true
-            changedKeys.insert("backupMaxToKeep")
-        }
-
-        if backupSettingsChanged {
-            AutomaticBackupService.shared.updateSettings(updatedBackupSettings, syncToCloud: false)
-        }
-        #endif
+        // Backup settings read/applied by AutomaticBackupService in the app target directly
 
         // FRMS settings — use existing local config or a fresh default (e.g. on first install)
         var frmsSettingsChanged = false
