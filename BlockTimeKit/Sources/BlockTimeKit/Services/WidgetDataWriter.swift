@@ -10,12 +10,12 @@
 import Foundation
 import CoreData
 import WidgetKit
-import BlockTimeKit
+
 
 @MainActor
-final class WidgetDataWriter {
+public final class WidgetDataWriter {
 
-    static let shared = WidgetDataWriter()
+    public static let shared = WidgetDataWriter()
     private init() {}
 
 
@@ -23,7 +23,7 @@ final class WidgetDataWriter {
 
     /// Fetches the next 5 future flights, writes snapshot array, and reloads the widget timeline.
     /// Safe to call as often as needed — WidgetCenter coalesces rapid calls.
-    func updateWidgetSnapshot() {
+    public func updateWidgetSnapshot() {
         let context = FlightDatabaseService.shared.viewContext
         let snapshots = buildSnapshots(context: context)
 

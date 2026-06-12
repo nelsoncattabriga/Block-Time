@@ -8,37 +8,37 @@
 import Foundation
 
 /// Service to parse Qantas crew roster files and extract flight information
-class RosterParserService {
+public class RosterParserService {
 
     // MARK: - Data Models
 
     /// Represents a parsed flight from a roster
-    struct ParsedFlight {
-        let date: Date
-        let flightNumber: String
-        let departureAirport: String
-        let arrivalAirport: String
-        let departureTime: String  // HHmm format (e.g., "1239")
-        let arrivalTime: String    // HHmm format (e.g., "1517")
-        let aircraftType: String   // Converted from equipment code (e.g., "B738")
-        let role: String           // "Captain" or "First Officer"
-        let isPositioning: Bool    // True if marked with "P"
-        let bidPeriod: String      // e.g., "3711"
-        let dutyCode: String?      // e.g., "5017A2" (optional)
+    public struct ParsedFlight {
+        public let date: Date
+        public let flightNumber: String
+        public let departureAirport: String
+        public let arrivalAirport: String
+        public let departureTime: String  // HHmm format (e.g., "1239")
+        public let arrivalTime: String    // HHmm format (e.g., "1517")
+        public let aircraftType: String   // Converted from equipment code (e.g., "B738")
+        public let role: String           // "Captain" or "First Officer"
+        public let isPositioning: Bool    // True if marked with "P"
+        public let bidPeriod: String      // e.g., "3711"
+        public let dutyCode: String?      // e.g., "5017A2" (optional)
     }
 
     /// Result of parsing a roster file
-    struct ParseResult {
-        let flights: [ParsedFlight]
-        let pilotName: String
-        let staffNumber: String
-        let bidPeriod: String
-        let base: String
-        let category: String  // e.g., "CPT-B737"
+    public struct ParseResult {
+        public let flights: [ParsedFlight]
+        public let pilotName: String
+        public let staffNumber: String
+        public let bidPeriod: String
+        public let base: String
+        public let category: String  // e.g., "CPT-B737"
         /// First calendar day listed in the bid period summary (not the first flight date).
-        let periodStartDate: Date?
+        public let periodStartDate: Date?
         /// Last calendar day listed in the bid period summary (not the last flight date).
-        let periodEndDate: Date?
+        public let periodEndDate: Date?
     }
 
     // MARK: - Equipment Code Mapping
@@ -62,13 +62,13 @@ class RosterParserService {
     // MARK: - Parsing Methods
 
     /// Parse a roster file and extract flight information
-    static func parseRoster(from fileURL: URL) throws -> ParseResult {
+    public static func parseRoster(from fileURL: URL) throws -> ParseResult {
         let content = try String(contentsOf: fileURL, encoding: .utf8)
         return try parseRoster(from: content)
     }
 
     /// Parse roster content from a string
-    static func parseRoster(from content: String) throws -> ParseResult {
+    public static func parseRoster(from content: String) throws -> ParseResult {
         let lines = content.components(separatedBy: .newlines)
 
         // Extract header information
@@ -376,7 +376,7 @@ class RosterParserService {
     // MARK: - Filtering
 
     /// Filter flights to only include future flights (after today)
-    static func futureFights(from flights: [ParsedFlight]) -> [ParsedFlight] {
+    public static func futureFights(from flights: [ParsedFlight]) -> [ParsedFlight] {
         let today = Calendar.current.startOfDay(for: Date())
         return flights.filter { flight in
             flight.date >= today
@@ -384,7 +384,7 @@ class RosterParserService {
     }
 
     /// Filter out positioning flights if desired
-    static func nonPositioningFlights(from flights: [ParsedFlight]) -> [ParsedFlight] {
+    public static func nonPositioningFlights(from flights: [ParsedFlight]) -> [ParsedFlight] {
         return flights.filter { !$0.isPositioning }
     }
 }

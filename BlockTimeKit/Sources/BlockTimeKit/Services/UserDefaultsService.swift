@@ -45,17 +45,17 @@ enum LogbookDestination: String, CaseIterable {
     }
 }
 
-enum RoundingMode: String, CaseIterable {
+public enum RoundingMode: String, CaseIterable, Sendable {
 
     case standard = "Standard"
     case alternate = "Alternate"
 
-    var displayName: String {
+    public var displayName: String {
         return self.rawValue
     }
 
     /// Apply rounding to a decimal value
-    func apply(to value: Double, decimalPlaces: Int = 1) -> Double {
+    public func apply(to value: Double, decimalPlaces: Int = 1) -> Double {
         let multiplier = pow(10.0, Double(decimalPlaces))
         switch self {
         case .standard:

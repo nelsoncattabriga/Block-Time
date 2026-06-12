@@ -7,36 +7,38 @@
 
 import Foundation
 import CoreData
-import BlockTimeKit
+
 
 /// Service to import planned flights from rosters into the main flight database
-class PlannedFlightService {
+public class PlannedFlightService {
 
     // MARK: - Properties
 
     private let databaseService = FlightDatabaseService.shared
     private let userDefaultsService = UserDefaultsService()
 
+    public init() {}
+
     // MARK: - Import Results
 
-    struct ImportResult {
-        let imported: Int
-        let duplicates: Int
-        let errors: Int
-        let flights: [ImportedFlight]
-        let staleFlights: [FlightEntity]
+    public struct ImportResult {
+        public let imported: Int
+        public let duplicates: Int
+        public let errors: Int
+        public let flights: [ImportedFlight]
+        public let staleFlights: [FlightEntity]
     }
 
-    struct ImportedFlight {
-        let flight: RosterParserService.ParsedFlight
-        let isDuplicate: Bool
-        let error: String?
+    public struct ImportedFlight {
+        public let flight: RosterParserService.ParsedFlight
+        public let isDuplicate: Bool
+        public let error: String?
     }
 
     // MARK: - Import Methods
 
     /// Import future flights from a roster file
-    func importRoster(from fileURL: URL) async throws -> ImportResult {
+    public func importRoster(from fileURL: URL) async throws -> ImportResult {
         // Request access to security-scoped resource
         guard fileURL.startAccessingSecurityScopedResource() else {
             throw NSError(domain: "PlannedFlightService", code: 1,
@@ -59,13 +61,13 @@ class PlannedFlightService {
     }
 
     /// Import a list of parsed flights into the database
-    func importFlights(_ parsedFlights: [RosterParserService.ParsedFlight]) async throws -> ImportResult {
+    public func importFlights(_ parsedFlights: [RosterParserService.ParsedFlight]) async throws -> ImportResult {
         var imported = 0
         var duplicates = 0
         var errors = 0
         var results: [ImportedFlight] = []
 
-        LogManager.shared.debug("Starting import of \(parsedFlights.count) parsed flights")
+        print("Starting import of \(parsedFlights.count) parsed flights")
 
         // Enable batch import mode to debounce notifications during import
         databaseService.startBatchImport()
@@ -78,13 +80,13 @@ class PlannedFlightService {
             dateFormatter.dateFormat = "dd/MM/yyyy"
             let dateString = dateFormatter.string(from: parsedFlight.date)
 
-            LogManager.shared.debug("\n  Processing: \(parsedFlight.flightNumber) on \(dateString) (\(parsedFlight.departureAirport)-\(parsedFlight.arrivalAirport))")
+            print("\n  Processing: \(parsedFlight.flightNumber) on \(dateString) (\(parsedFlight.departureAirport)-\(parsedFlight.arrivalAirport))")
 
             // Check if this flight already exists (query for each flight individually)
             let existingFlights = try await findExistingFlights(for: [parsedFlight])
 
             if isDuplicate(parsedFlight, in: existingFlights) {
-                LogManager.shared.debug("    DUPLICATE - skipping")
+                print("    DUPLICATE - skipping")
                 duplicates += 1
                 results.append(ImportedFlight(
                     flight: parsedFlight,
@@ -97,7 +99,7 @@ class PlannedFlightService {
             // Import the flight
             do {
                 try await createFlight(from: parsedFlight)
-                            LogManager.shared.debug("   IMPORTED successfully")
+                            print("   IMPORTED successfully")
                 imported += 1
                 results.append(ImportedFlight(
                     flight: parsedFlight,
@@ -105,7 +107,7 @@ class PlannedFlightService {
                     error: nil
                 ))
             } catch {
-                    LogManager.shared.debug("   ERROR: \(error.localizedDescription)")
+                    print("   ERROR: \(error.localizedDescription)")
                 errors += 1
                 results.append(ImportedFlight(
                     flight: parsedFlight,
@@ -115,10 +117,10 @@ class PlannedFlightService {
             }
         }
 
-                    LogManager.shared.debug("\n Import Summary:")
-                    LogManager.shared.debug("   Imported: \(imported)")
-                    LogManager.shared.debug("    Duplicates: \(duplicates)")
-                    LogManager.shared.debug("   Errors: \(errors)")
+                    print("\n Import Summary:")
+                    print("   Imported: \(imported)")
+                    print("    Duplicates: \(duplicates)")
+                    print("   Errors: \(errors)")
 
         return ImportResult(
             imported: imported,
@@ -270,9 +272,9 @@ class PlannedFlightService {
             airportICAO: departureICAO
         )
 
-                    LogManager.shared.debug("   Date conversion for duplicate check:")
-                    LogManager.shared.debug("      Local date: \(localDateString) \(localOutTime)")
-                    LogManager.shared.debug("      UTC date string: \(utcDateString)")
+                    print("   Date conversion for duplicate check:")
+                    print("      Local date: \(localDateString) \(localOutTime)")
+                    print("      UTC date string: \(utcDateString)")
 
         let utcDateFormatter = DateFormatter()
         utcDateFormatter.dateFormat = "dd/MM/yyyy"
@@ -289,13 +291,13 @@ class PlannedFlightService {
             debugFormatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
             debugFormatter.timeZone = TimeZone(secondsFromGMT: 0)
 
-                        LogManager.shared.debug("   Comparing with existing flight:")
-                        LogManager.shared.debug("      Parsed UTC date: \(debugFormatter.string(from: utcDate))")
+                        print("   Comparing with existing flight:")
+                        print("      Parsed UTC date: \(debugFormatter.string(from: utcDate))")
             if let existingDate = existing.date {
-                            LogManager.shared.debug("      Existing UTC date: \(debugFormatter.string(from: existingDate))")
+                            print("      Existing UTC date: \(debugFormatter.string(from: existingDate))")
             }
-                        LogManager.shared.debug("      Flight numbers: \(parsedFlight.flightNumber) vs \(existing.flightNumber ?? "nil")")
-                        LogManager.shared.debug("      Routes: \(departureICAO)-\(arrivalICAO) vs \(existing.fromAirport ?? "nil")-\(existing.toAirport ?? "nil")")
+                        print("      Flight numbers: \(parsedFlight.flightNumber) vs \(existing.flightNumber ?? "nil")")
+                        print("      Routes: \(departureICAO)-\(arrivalICAO) vs \(existing.fromAirport ?? "nil")-\(existing.toAirport ?? "nil")")
 
             // Match on UTC date, flight number, and ICAO airport codes
             // Normalise flight numbers: strip airline prefix and all leading zeros so
@@ -307,7 +309,7 @@ class PlannedFlightService {
                existingFlightNum == parsedFlightNum &&
                existing.fromAirport == departureICAO &&
                existing.toAirport == arrivalICAO {
-                            LogManager.shared.debug("       MATCH FOUND - this is a duplicate!")
+                            print("       MATCH FOUND - this is a duplicate!")
                 return true
             }
         }
@@ -348,7 +350,7 @@ class PlannedFlightService {
             localTimeString: localOutTime,
             airportICAO: departureICAO
         )
-                    LogManager.shared.debug("    STD conversion: Local '\(localOutTime)' -> UTC '\(utcOutTime)'")
+                    print("    STD conversion: Local '\(localOutTime)' -> UTC '\(utcOutTime)'")
 
         // For arrival time, we need to calculate the local arrival date first
         // (it might be next day if flight crosses midnight)
@@ -370,7 +372,7 @@ class PlannedFlightService {
             localTimeString: localInTime,
             airportICAO: arrivalICAO
         )
-                    LogManager.shared.debug("    STA conversion: Local '\(localInTime)' -> UTC '\(utcInTime)'")
+                    print("    STA conversion: Local '\(localInTime)' -> UTC '\(utcInTime)'")
 
         // Convert departure date from local to UTC
         let utcDateString = airportService.convertFromLocalToUTCDate(
@@ -387,7 +389,7 @@ class PlannedFlightService {
         utcDateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
         let utcDate = utcDateFormatter.date(from: utcDateString) ?? parsedFlight.date
 
-                    LogManager.shared.debug("   Date conversion: Local '\(localDateString)' -> UTC '\(utcDateString)'")
+                    print("   Date conversion: Local '\(localDateString)' -> UTC '\(utcDateString)'")
 
         // Format flight number with airline prefix if setting is enabled (before entering closure)
         let formattedFlightNumber = formatFlightNumber(parsedFlight.flightNumber)
@@ -579,7 +581,7 @@ class PlannedFlightService {
     // MARK: - Query Methods
 
     /// Get all future flights (flights with date >= today)
-    func getFutureFlights() -> [FlightEntity] {
+    public func getFutureFlights() -> [FlightEntity] {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         let today = Calendar.current.startOfDay(for: Date())
         request.predicate = NSPredicate(format: "date >= %@", today as NSDate)
@@ -588,13 +590,13 @@ class PlannedFlightService {
         do {
             return try databaseService.viewContext.fetch(request)
         } catch {
-                        LogManager.shared.debug("Error fetching future flights: \(error.localizedDescription)")
+                        print("Error fetching future flights: \(error.localizedDescription)")
             return []
         }
     }
 
     /// Check if a flight is in the future
-    func isFutureFlight(_ flight: FlightEntity) -> Bool {
+    public func isFutureFlight(_ flight: FlightEntity) -> Bool {
         guard let flightDate = flight.date else { return false }
         let today = Calendar.current.startOfDay(for: Date())
         return flightDate >= today
@@ -602,7 +604,7 @@ class PlannedFlightService {
 
     /// Check if a flight has been flown (has block time or flight time logged).
     /// Roster-imported placeholder flights store times as "0.0"; treat that as zero alongside "00:00" and "0".
-    func isFlown(_ flight: FlightEntity) -> Bool {
+    public func isFlown(_ flight: FlightEntity) -> Bool {
         func hasTime(_ value: String?) -> Bool {
             guard let v = value, !v.isEmpty else { return false }
             if let d = Double(v) { return d > 0 }
@@ -618,14 +620,14 @@ class PlannedFlightService {
     /// Find unflown logbook flights inside [periodStart...periodEnd] (inclusive, by day) that are
     /// NOT present in the new roster. Flown flights are always excluded regardless of key match.
     /// Roster flights are matched by normalised flight number + ICAO route + same UTC calendar day.
-    func findStaleFlights(
+    public func findStaleFlights(
         periodStart: Date,
         periodEnd: Date,
         rosterFlights: [RosterParserService.ParsedFlight]
     ) async -> [FlightEntity] {
         let context = databaseService.viewContext
 
-        return await withCheckedContinuation { continuation in
+        let staleIDs: [NSManagedObjectID] = await withCheckedContinuation { continuation in
             context.perform {
                 let airportService = AirportService.shared
 
@@ -656,20 +658,20 @@ class PlannedFlightService {
                 utcDayFormatter.locale = Locale(identifier: "en_US_POSIX")
                 utcDayFormatter.timeZone = TimeZone(secondsFromGMT: 0)
 
-                LogManager.shared.debug("[StaleDetect] Window: \(utcDayFormatter.string(from: startOfPeriod)) → \(utcDayFormatter.string(from: endOfPeriodInclusive)) (UTC)")
-                LogManager.shared.debug("[StaleDetect] periodStart(local)=\(periodStart) periodEnd(local)=\(periodEnd)")
+                print("[StaleDetect] Window: \(utcDayFormatter.string(from: startOfPeriod)) → \(utcDayFormatter.string(from: endOfPeriodInclusive)) (UTC)")
+                print("[StaleDetect] periodStart(local)=\(periodStart) periodEnd(local)=\(periodEnd)")
 
                 guard let windowFlights = try? context.fetch(request) else {
-                    LogManager.shared.debug("[StaleDetect] Core Data fetch failed")
+                    print("[StaleDetect] Core Data fetch failed")
                     continuation.resume(returning: [])
                     return
                 }
 
-                LogManager.shared.debug("[StaleDetect] DB flights in window: \(windowFlights.count)")
+                print("[StaleDetect] DB flights in window: \(windowFlights.count)")
                 for f in windowFlights {
                     let dateStr = f.date.map { utcDayFormatter.string(from: $0) } ?? "nil"
                     let flown = self.isFlown(f)
-                    LogManager.shared.debug("[StaleDetect]   DB: \(f.flightNumber ?? "?") \(f.fromAirport ?? "?")-\(f.toAirport ?? "?") \(dateStr)(UTC) flown=\(flown) blockTime=\(f.blockTime ?? "nil")")
+                    print("[StaleDetect]   DB: \(f.flightNumber ?? "?") \(f.fromAirport ?? "?")-\(f.toAirport ?? "?") \(dateStr)(UTC) flown=\(flown) blockTime=\(f.blockTime ?? "nil")")
                 }
 
                 // Build roster key set: "normalisedFlightNum|depICAO|arrICAO|dd/MM/yyyy(UTC)"
@@ -695,7 +697,7 @@ class PlannedFlightService {
 
                     let normNum = self.normaliseFlightNumber(rosterFlight.flightNumber)
                     let key = "\(normNum)|\(depICAO)|\(arrICAO)|\(utcDateString)"
-                    LogManager.shared.debug("[StaleDetect] Roster key: \(key)  (local=\(localDateString) \(localOutTime) dep=\(rosterFlight.departureAirport)→\(depICAO))")
+                    print("[StaleDetect] Roster key: \(key)  (local=\(localDateString) \(localOutTime) dep=\(rosterFlight.departureAirport)→\(depICAO))")
                     rosterKeySet.insert(key)
                 }
 
@@ -711,17 +713,19 @@ class PlannedFlightService {
                     let arrICAO = flight.toAirport ?? ""
                     let key = "\(normNum)|\(depICAO)|\(arrICAO)|\(utcDayStr)"
                     let matched = rosterKeySet.contains(key)
-                    LogManager.shared.debug("[StaleDetect]   DB key: \(key) → \(matched ? "MATCHED (keep)" : "NO MATCH (stale)")")
+                    print("[StaleDetect]   DB key: \(key) → \(matched ? "MATCHED (keep)" : "NO MATCH (stale)")")
 
                     if !matched {
                         stale.append(flight)
                     }
                 }
 
-                LogManager.shared.debug("[StaleDetect] Result: \(stale.count) stale flights found")
-                continuation.resume(returning: stale)
+                print("[StaleDetect] Result: \(stale.count) stale flights found")
+                let staleIDs = stale.map { $0.objectID }
+                continuation.resume(returning: staleIDs)
             }
         }
+        return staleIDs.compactMap { context.object(with: $0) as? FlightEntity }
     }
 
     /// Delete the given stale flight entities from the logbook. Returns count deleted.
@@ -747,7 +751,7 @@ class PlannedFlightService {
     }
 
     /// Get count of future flights
-    func getFutureFlightsCount() -> Int {
+    public func getFutureFlightsCount() -> Int {
         let request: NSFetchRequest<FlightEntity> = FlightEntity.fetchRequest()
         let today = Calendar.current.startOfDay(for: Date())
         request.predicate = NSPredicate(format: "date >= %@", today as NSDate)
@@ -755,7 +759,7 @@ class PlannedFlightService {
         do {
             return try databaseService.viewContext.count(for: request)
         } catch {
-                        LogManager.shared.debug("Error counting future flights: \(error.localizedDescription)")
+                        print("Error counting future flights: \(error.localizedDescription)")
             return 0
         }
     }

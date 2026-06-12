@@ -13,6 +13,9 @@ let package = Package(
             name: "BlockTimeKit",
             resources: [
                 .process("Data/FlightDataModel.xcdatamodeld")
+            ],
+            swiftSettings: [
+                .swiftLanguageMode(.v5)
             ]
         ),
         .testTarget(name: "BlockTimeKitTests", dependencies: ["BlockTimeKit"]),

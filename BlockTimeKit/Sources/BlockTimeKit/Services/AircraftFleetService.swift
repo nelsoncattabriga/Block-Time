@@ -7,17 +7,17 @@
 import Foundation
 import CoreData
 import Combine
-import BlockTimeKit
+
 
 // MARK: - Aircraft Model
-struct Aircraft: Codable, Identifiable, Hashable {
-    let id: String
-    let registration: String
-    let type: String
-    let fullRegistration: String
+public struct Aircraft: Codable, Identifiable, Hashable {
+    public let id: String
+    public let registration: String
+    public let type: String
+    public let fullRegistration: String
     
     /// Standard init for preset fleet aircraft — registration stored without "VH-" prefix.
-    init(registration: String, type: String) {
+    public init(registration: String, type: String) {
         self.id = registration
         self.registration = registration
         self.type = type
@@ -27,7 +27,7 @@ struct Aircraft: Codable, Identifiable, Hashable {
     /// Init for user-entered custom registrations.
     /// - If the input starts with "VH-", stores the short form so the showFullReg toggle works normally.
     /// - Otherwise (e.g. "B738SIM"), stores as-is with no "VH-" prepended.
-    init(customRegistration rawInput: String, type: String) {
+    public init(customRegistration rawInput: String, type: String) {
         let upper = rawInput.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         if upper.hasPrefix("VH-") {
             let short = String(upper.dropFirst(3))
@@ -43,22 +43,22 @@ struct Aircraft: Codable, Identifiable, Hashable {
         self.type = type
     }
 
-    func displayRegistration(showFullReg: Bool) -> String {
+    public func displayRegistration(showFullReg: Bool) -> String {
         return showFullReg ? fullRegistration : registration
     }
 }
 
 // MARK: - Fleet Selection
-struct Fleet: Identifiable, Hashable {
-    let id: String
-    let name: String
-    let types: [String]
-    let prefix: String?
-    let aircraft: [Aircraft]
+public struct Fleet: Identifiable, Hashable {
+    public let id: String
+    public let name: String
+    public let types: [String]
+    public let prefix: String?
+    public let aircraft: [Aircraft]
 
     /// Returns true if the given type code belongs to this fleet —
     /// either via exact match in `types` or prefix match.
-    func typeMatches(_ type: String) -> Bool {
+    public func typeMatches(_ type: String) -> Bool {
         if types.contains(type) { return true }
         if let prefix, type.hasPrefix(prefix) { return true }
         return false
@@ -66,7 +66,7 @@ struct Fleet: Identifiable, Hashable {
 
     /// Init for static fleets — declares the canonical type codes for this family.
     /// Aircraft are filtered from qantasFleet automatically.
-    init(name: String, types: [String], prefix: String? = nil) {
+    public init(name: String, types: [String], prefix: String? = nil) {
         self.id = name
         self.name = name
         self.types = types
@@ -75,7 +75,7 @@ struct Fleet: Identifiable, Hashable {
     }
 
     /// Init for dynamically-built fleets (e.g. custom aircraft). Types are inferred from aircraft.
-    init(name: String, aircraft: [Aircraft], prefix: String? = nil) {
+    public init(name: String, aircraft: [Aircraft], prefix: String? = nil) {
         self.id = name
         self.name = name
         self.types = aircraft.map(\.type)
@@ -86,10 +86,10 @@ struct Fleet: Identifiable, Hashable {
 
 // MARK: - Aircraft Fleet Service
 @MainActor
-class AircraftFleetService: ObservableObject {
+public class AircraftFleetService: ObservableObject {
 
     // MARK: - Singleton
-    static let shared = AircraftFleetService()
+    public static let shared = AircraftFleetService()
 
     private var viewContext: NSManagedObjectContext {
         return FlightDatabaseService.shared.viewContext
@@ -99,7 +99,7 @@ class AircraftFleetService: ObservableObject {
     // Note: Custome aircraft are stored in the core data AircraftEntity and are saved to icloud.
     // Static list just keeps things fast and efficient with no DB lookup required.
     
-    static let qantasFleet: [Aircraft] = [
+    public static let qantasFleet: [Aircraft] = [
         // Boeing 737-800
         Aircraft(registration: "VXA", type: "B738"),
         Aircraft(registration: "VXB", type: "B738"),
@@ -267,7 +267,7 @@ class AircraftFleetService: ObservableObject {
     ]
     
     // MARK: - Fleet Collections
-    static let availableFleets: [Fleet] = [
+    public static let availableFleets: [Fleet] = [
         Fleet(name: "B737", types: ["B731", "B732", "B733", "B734", "B735", "B736", "B737", "B738", "B739", "B37M", "B38M", "B39M", "B3XM"], prefix: "B73"),
         Fleet(name: "A320", types: ["A321", "A21N","A320", "A20N", "A318", "A319", "A19N"], prefix: "A32"),
         Fleet(name: "A330", types: ["A330", "A332", "A333", "A338", "A339"], prefix: "A330"),
@@ -282,35 +282,35 @@ class AircraftFleetService: ObservableObject {
     // MARK: - Convenience Methods
     
     /// Get all aircraft from the fleet
-    static func getAllAircraft() -> [Aircraft] {
+    public static func getAllAircraft() -> [Aircraft] {
         return qantasFleet.sorted { $0.registration < $1.registration }
     }
     
     /// Get aircraft by registration (without VH- prefix)
-    static func getAircraft(byRegistration registration: String) -> Aircraft? {
+    public static func getAircraft(byRegistration registration: String) -> Aircraft? {
         let cleanReg = registration.replacingOccurrences(of: "VH-", with: "")
         return qantasFleet.first { $0.registration == cleanReg }
     }
     
     /// Get aircraft type by registration
-    static func getAircraftType(byRegistration registration: String) -> String {
+    public static func getAircraftType(byRegistration registration: String) -> String {
         return getAircraft(byRegistration: registration)?.type ?? "" // Default fallback
     }
     
     /// Get all unique aircraft types
-    static func getAllAircraftTypes() -> [String] {
+    public static func getAllAircraftTypes() -> [String] {
         return Array(Set(qantasFleet.map { $0.type })).sorted()
     }
     
     /// Get aircraft by type
-    static func getAircraft(byType type: String) -> [Aircraft] {
+    public static func getAircraft(byType type: String) -> [Aircraft] {
         return qantasFleet.filter { $0.type == type }.sorted { $0.registration < $1.registration }
     }
 
     // MARK: - Database Operations
 
     /// Save a custom aircraft to the database
-    func saveAircraft(_ aircraft: Aircraft) -> Bool {
+    public func saveAircraft(_ aircraft: Aircraft) -> Bool {
         let entity = AircraftEntity(context: viewContext)
         entity.id = aircraft.id
         entity.registration = aircraft.registration
@@ -324,13 +324,13 @@ class AircraftFleetService: ObservableObject {
             objectWillChange.send()
             return true
         } catch {
-            LogManager.shared.error("Error saving aircraft: \(error.localizedDescription)")
+            print("Error saving aircraft: \(error.localizedDescription)")
             return false
         }
     }
 
     /// Fetch all custom aircraft from database
-    func fetchCustomAircraft() -> [Aircraft] {
+    public func fetchCustomAircraft() -> [Aircraft] {
         let request: NSFetchRequest<AircraftEntity> = AircraftEntity.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \AircraftEntity.registration, ascending: true)]
 
@@ -348,13 +348,13 @@ class AircraftFleetService: ObservableObject {
                 return Aircraft(customRegistration: reg, type: type)
             }
         } catch {
-            LogManager.shared.error("Error fetching custom aircraft: \(error.localizedDescription)")
+            print("Error fetching custom aircraft: \(error.localizedDescription)")
             return []
         }
     }
 
     /// Delete a custom aircraft from the database
-    func deleteAircraft(_ aircraft: Aircraft) -> Bool {
+    public func deleteAircraft(_ aircraft: Aircraft) -> Bool {
         let request: NSFetchRequest<AircraftEntity> = AircraftEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", aircraft.id)
         request.fetchLimit = 1
@@ -362,23 +362,23 @@ class AircraftFleetService: ObservableObject {
         do {
             let entities = try viewContext.fetch(request)
             guard let entity = entities.first else {
-                LogManager.shared.error("Aircraft not found for deletion: \(aircraft.id)")
+                print("Aircraft not found for deletion: \(aircraft.id)")
                 return false
             }
 
             viewContext.delete(entity)
             try viewContext.save()
-//            LogManager.shared.info("Aircraft deleted successfully: \(aircraft.registration)")
+//            print("Aircraft deleted successfully: \(aircraft.registration)")
             objectWillChange.send()
             return true
         } catch {
-            LogManager.shared.error("Error deleting aircraft: \(error.localizedDescription)")
+            print("Error deleting aircraft: \(error.localizedDescription)")
             return false
         }
     }
 
     /// Check if an aircraft is a custom (deletable) aircraft
-    func isCustomAircraft(_ aircraft: Aircraft) -> Bool {
+    public func isCustomAircraft(_ aircraft: Aircraft) -> Bool {
         let request: NSFetchRequest<AircraftEntity> = AircraftEntity.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", aircraft.id)
         request.fetchLimit = 1
@@ -387,12 +387,12 @@ class AircraftFleetService: ObservableObject {
 
     /// Returns the fleet/family name for a given aircraft type code, or nil if unknown.
     /// e.g. "A332" → "A330", "B744" → "B747", "B772" → nil
-    static func familyName(for type: String) -> String? {
+    public static func familyName(for type: String) -> String? {
         availableFleets.first { $0.typeMatches(type) }?.name
     }
 
     /// Get all aircraft (static + custom)
-    func getAllAircraftCombined() -> [Aircraft] {
+    public func getAllAircraftCombined() -> [Aircraft] {
         let staticAircraft = AircraftFleetService.qantasFleet
         let customAircraft = fetchCustomAircraft()
         let combined = staticAircraft + customAircraft
@@ -400,7 +400,7 @@ class AircraftFleetService: ObservableObject {
     }
 
     /// Get available fleets with custom aircraft included
-    func getAvailableFleetsWithCustom() -> [Fleet] {
+    public func getAvailableFleetsWithCustom() -> [Fleet] {
         let allAircraft = getAllAircraftCombined()
 
         // Get all unique aircraft types

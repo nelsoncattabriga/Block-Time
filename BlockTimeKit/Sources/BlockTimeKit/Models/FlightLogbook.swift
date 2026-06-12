@@ -10,7 +10,7 @@ import Foundation
 // MARK: - Global Validation Function
 /// Global function to validate time strings - use this in CSV import and data entry
 /// Handles numeric values and gracefully converts invalid/boolean-like values to 0.0
-func validateTimeString(_ timeString: String) -> String {
+public func validateTimeString(_ timeString: String) -> String {
     let cleanString = timeString.trimmingCharacters(in: .whitespacesAndNewlines)
 
     // Empty string = 0.0
@@ -30,7 +30,7 @@ func validateTimeString(_ timeString: String) -> String {
 }
 
 // MARK: - Updated Flight Logbook Data Models
-struct FlightSector: Identifiable, Codable, Hashable {
+public struct FlightSector: Identifiable, Codable, Hashable {
     // Thread-local date formatters — DateFormatter is not thread-safe, so each thread
     // gets its own instance via threadDictionary to avoid ICU clone contention.
     private static var cachedDateFormatter: DateFormatter {
@@ -66,44 +66,44 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return formatter
     }
 
-    let id: UUID
-    var date: String
-    var flightNumber: String
-    var aircraftReg: String
-    var aircraftType: String
-    var fromAirport: String
-    var toAirport: String
-    var captainName: String
-    var foName: String
-    var so1Name: String?
-    var so2Name: String?
-    var blockTime: String
-    var nightTime: String
-    var p1Time: String
-    var p1usTime: String
-    var p2Time: String
-    var instrumentTime: String
-    var simTime: String
-    var spInsTime: String
-    var isPilotFlying: Bool
-    var isPositioning: Bool
-    var isAIII: Bool
-    var isRNP: Bool
-    var isILS: Bool
-    var isGLS: Bool
-    var isNPA: Bool
-    var remarks: String
-    var dayTakeoffs: Int
-    var dayLandings: Int
-    var nightTakeoffs: Int
-    var nightLandings: Int
-    var outTime: String
-    var inTime: String
-    var scheduledDeparture: String  // STD - Scheduled Time of Departure (HHMM format)
-    var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
-    var counterEntries: [Int: String] = [:]  // columnIndex → raw value
-    var createdAt: Date?
-    let parsedDate: Date?
+    public let id: UUID
+    public var date: String
+    public var flightNumber: String
+    public var aircraftReg: String
+    public var aircraftType: String
+    public var fromAirport: String
+    public var toAirport: String
+    public var captainName: String
+    public var foName: String
+    public var so1Name: String?
+    public var so2Name: String?
+    public var blockTime: String
+    public var nightTime: String
+    public var p1Time: String
+    public var p1usTime: String
+    public var p2Time: String
+    public var instrumentTime: String
+    public var simTime: String
+    public var spInsTime: String
+    public var isPilotFlying: Bool
+    public var isPositioning: Bool
+    public var isAIII: Bool
+    public var isRNP: Bool
+    public var isILS: Bool
+    public var isGLS: Bool
+    public var isNPA: Bool
+    public var remarks: String
+    public var dayTakeoffs: Int
+    public var dayLandings: Int
+    public var nightTakeoffs: Int
+    public var nightLandings: Int
+    public var outTime: String
+    public var inTime: String
+    public var scheduledDeparture: String  // STD - Scheduled Time of Departure (HHMM format)
+    public var scheduledArrival: String    // STA - Scheduled Time of Arrival (HHMM format)
+    public var counterEntries: [Int: String] = [:]  // columnIndex → raw value
+    public var createdAt: Date?
+    public let parsedDate: Date?
 
     private enum CodingKeys: String, CodingKey {
         case id, date, flightNumber, aircraftReg, aircraftType, fromAirport, toAirport
@@ -124,8 +124,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         // This allows accurate representation of times (e.g., 13:40 = 13.67 hrs)
         return String(format: "%.2f", value)
     }
-    
-    init(id: UUID? = nil, date: String, flightNumber: String, aircraftReg: String, aircraftType: String,
+    public init(id: UUID? = nil, date: String, flightNumber: String, aircraftReg: String, aircraftType: String,
          fromAirport: String, toAirport: String, captainName: String, foName: String,
          so1Name: String? = nil, so2Name: String? = nil, blockTime: String,
          nightTime: String, p1Time: String, p1usTime: String, p2Time: String = "0.0", instrumentTime: String,
@@ -183,7 +182,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         #endif
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         date = try c.decode(String.self, forKey: .date)
@@ -226,7 +225,6 @@ struct FlightSector: Identifiable, Codable, Hashable {
     }
 
     // MARK: - Safe Numeric Conversion Methods
-    
     /// Safely convert string to Double, returning 0.0 for invalid values
     private nonisolated func safeDoubleValue(_ string: String) -> Double {
         let cleanString = string.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -238,36 +236,34 @@ struct FlightSector: Identifiable, Codable, Hashable {
         }
         return max(0.0, value) // Ensure non-negative
     }
-    
     // MARK: - Safe Numeric Accessors
-    
     /// Safe numeric accessors that prevent NaN errors
-    nonisolated var blockTimeValue: Double { safeDoubleValue(blockTime) }
-    nonisolated var nightTimeValue: Double { safeDoubleValue(nightTime) }
-    nonisolated var p1TimeValue: Double { safeDoubleValue(p1Time) }
-    nonisolated var p1usTimeValue: Double { safeDoubleValue(p1usTime) }
-    nonisolated var p2TimeValue: Double { safeDoubleValue(p2Time) }
-    nonisolated var instrumentTimeValue: Double { safeDoubleValue(instrumentTime) }
-    nonisolated var simTimeValue: Double { safeDoubleValue(simTime) }
-    nonisolated var spInsTimeValue: Double { safeDoubleValue(spInsTime) }
+    public nonisolated var blockTimeValue: Double { safeDoubleValue(blockTime) }
+    public nonisolated var nightTimeValue: Double { safeDoubleValue(nightTime) }
+    public nonisolated var p1TimeValue: Double { safeDoubleValue(p1Time) }
+    public nonisolated var p1usTimeValue: Double { safeDoubleValue(p1usTime) }
+    public nonisolated var p2TimeValue: Double { safeDoubleValue(p2Time) }
+    public nonisolated var instrumentTimeValue: Double { safeDoubleValue(instrumentTime) }
+    public nonisolated var simTimeValue: Double { safeDoubleValue(simTime) }
+    public nonisolated var spInsTimeValue: Double { safeDoubleValue(spInsTime) }
 
-    nonisolated var isSpInsOnly: Bool {
+    public nonisolated var isSpInsOnly: Bool {
         spInsTimeValue > 0 && blockTimeValue < 0.01
     }
 
-    nonisolated var isAircraftInstruction: Bool {
+    public nonisolated var isAircraftInstruction: Bool {
         spInsTimeValue > 0 && blockTimeValue > 0
     }
 
     // MARK: - Computed properties for display with validation
-    var formattedDate: String {
+    public var formattedDate: String {
         if let date = Self.cachedDateFormatter.date(from: date) {
             return Self.cachedMonthYearFormatter.string(from: date).uppercased()
         }
         return date
     }
 
-    var dayOfMonth: String {
+    public var dayOfMonth: String {
         let components = date.split(separator: "/")
         return components.first.map(String.init) ?? ""
     }
@@ -275,7 +271,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     /// Get local date based on departure airport timezone
     /// - Parameter useLocalTime: Whether to convert to local time
     /// - Returns: Date string in "dd/MM/yyyy" format
-    func getDisplayDate(useLocalTime: Bool) -> String {
+    public func getDisplayDate(useLocalTime: Bool) -> String {
         guard useLocalTime else {
             return date
         }
@@ -293,7 +289,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     }
 
     /// Get formatted date (MMM yyyy) based on local/UTC setting
-    func getFormattedDate(useLocalTime: Bool) -> String {
+    public func getFormattedDate(useLocalTime: Bool) -> String {
         let displayDate = getDisplayDate(useLocalTime: useLocalTime)
         if let date = Self.cachedDateFormatter.date(from: displayDate) {
             return Self.cachedMonthYearFormatter.string(from: date).uppercased()
@@ -302,7 +298,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     }
 
     /// Get day of month based on local/UTC setting
-    func getDayOfMonth(useLocalTime: Bool) -> String {
+    public func getDayOfMonth(useLocalTime: Bool) -> String {
         let displayDate = getDisplayDate(useLocalTime: useLocalTime)
         let components = displayDate.split(separator: "/")
         return components.first.map(String.init) ?? ""
@@ -311,7 +307,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     /// Get out time in local timezone of departure airport
     /// - Parameter useLocalTime: Whether to convert to local time
     /// - Returns: Time string in "HHMM" format (without colon)
-    func getOutTime(useLocalTime: Bool) -> String {
+    public func getOutTime(useLocalTime: Bool) -> String {
         // Most common case: actual flights with outTime
         if !outTime.isEmpty {
             if useLocalTime {
@@ -344,7 +340,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     /// Get in time in local timezone of arrival airport
     /// - Parameter useLocalTime: Whether to convert to local time
     /// - Returns: Time string in "HHMM" format (without colon)
-    func getInTime(useLocalTime: Bool) -> String {
+    public func getInTime(useLocalTime: Bool) -> String {
         // Most common case: actual flights with inTime
         if !inTime.isEmpty {
             if useLocalTime {
@@ -374,7 +370,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return ""
     }
 
-    func getSTD(useLocalTime: Bool) -> String {
+    public func getSTD(useLocalTime: Bool) -> String {
         guard !scheduledDeparture.isEmpty else { return "" }
         if useLocalTime {
             return AirportService.shared.convertToLocalTime(
@@ -386,7 +382,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return scheduledDeparture.replacingOccurrences(of: ":", with: "")
     }
 
-    func getSTA(useLocalTime: Bool) -> String {
+    public func getSTA(useLocalTime: Bool) -> String {
         guard !scheduledArrival.isEmpty else { return "" }
         if useLocalTime {
             return AirportService.shared.convertToLocalTime(
@@ -398,7 +394,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         return scheduledArrival.replacingOccurrences(of: ":", with: "")
     }
 
-    var blockTimeFormatted: String {
+    public var blockTimeFormatted: String {
         let value = blockTimeValue
         return value > 0 ? String(format: "%.1f hrs", value) : "0.0 hrs"
     }
@@ -408,7 +404,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     /// Convert decimal hours to HH:MM format
     /// - Parameter decimalHours: Time in decimal hours (e.g., 13.67)
     /// - Returns: Time in HH:MM format (e.g., "13:40")
-    static func decimalToHHMM(_ decimalHours: Double) -> String {
+    public static func decimalToHHMM(_ decimalHours: Double) -> String {
         guard decimalHours > 0 else { return "0:00" }
 
         let totalMinutes = Int(round(decimalHours * 60.0))
@@ -421,7 +417,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     /// Convert HH:MM format to decimal hours
     /// - Parameter hhmmString: Time in HH:MM format (e.g., "13:40")
     /// - Returns: Time in decimal hours (e.g., 13.67)
-    nonisolated static func hhmmToDecimal(_ hhmmString: String) -> Double? {
+    public nonisolated static func hhmmToDecimal(_ hhmmString: String) -> Double? {
         let trimmed = hhmmString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
@@ -438,12 +434,12 @@ struct FlightSector: Identifiable, Codable, Hashable {
     }
 
     /// Format time value as HH:MM (convenience instance method)
-    func formatTimeAsHoursMinutes(_ decimalHours: Double) -> String {
+    public func formatTimeAsHoursMinutes(_ decimalHours: Double) -> String {
         return FlightSector.decimalToHHMM(decimalHours)
     }
 
     /// Get formatted block time (either decimal or HH:MM based on setting)
-    func getFormattedBlockTime(asHoursMinutes: Bool, roundingMode: RoundingMode = .standard) -> String {
+    public func getFormattedBlockTime(asHoursMinutes: Bool, roundingMode: RoundingMode = .standard) -> String {
         let value = blockTimeValue
         guard value > 0 else { return asHoursMinutes ? "0:00" : "0.0 hrs" }
 
@@ -456,7 +452,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     }
 
     /// Get formatted night time (either decimal or HH:MM based on setting)
-    func getFormattedNightTime(asHoursMinutes: Bool, roundingMode: RoundingMode = .standard) -> String {
+    public func getFormattedNightTime(asHoursMinutes: Bool, roundingMode: RoundingMode = .standard) -> String {
         let value = nightTimeValue
         guard value > 0 else { return asHoursMinutes ? "0:00" : "0.0 hrs" }
 
@@ -469,7 +465,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     }
 
     /// Get formatted Sp/Ins time (either decimal or HH:MM based on setting)
-    func getFormattedSpInsTime(asHoursMinutes: Bool) -> String {
+    public func getFormattedSpInsTime(asHoursMinutes: Bool) -> String {
         let value = spInsTimeValue
         guard value > 0 else { return asHoursMinutes ? "0:00" : "0.0 hrs" }
 
@@ -481,7 +477,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     }
 
     /// Get formatted sim time (either decimal or HH:MM based on setting)
-    func getFormattedSimTime(asHoursMinutes: Bool) -> String {
+    public func getFormattedSimTime(asHoursMinutes: Bool) -> String {
         let value = simTimeValue
         guard value > 0 else { return asHoursMinutes ? "0:00" : "0.0 hrs" }
 
@@ -498,7 +494,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
     ///   - asHoursMinutes: Whether to display as HH:MM
     ///   - includeUnits: Whether to include "hrs" suffix for decimal format
     /// - Returns: Formatted time string
-    static func formatTime(_ decimalValue: Double, asHoursMinutes: Bool, includeUnits: Bool = false) -> String {
+    public static func formatTime(_ decimalValue: Double, asHoursMinutes: Bool, includeUnits: Bool = false) -> String {
         guard decimalValue > 0 else {
             return asHoursMinutes ? "0:00" : (includeUnits ? "0.0 hrs" : "0.0")
         }
@@ -511,7 +507,7 @@ struct FlightSector: Identifiable, Codable, Hashable {
         }
     }
 
-    var flightNumberFormatted: String {
+    public var flightNumberFormatted: String {
         // For simulator flights, don't modify the flight number (preserve leading zeros, custom formats like SIM06B, etc.)
         if simTimeValue > 0 {
             return flightNumber
@@ -519,10 +515,9 @@ struct FlightSector: Identifiable, Codable, Hashable {
         // For regular flights, remove leading zero if present
         return flightNumber.hasPrefix("0") ? String(flightNumber.dropFirst()) : flightNumber
     }
-    
     /// Get validated formatted times for display
     /// - Parameter roundingMode: Rounding mode to apply to block and night times
-    func safeFormattedTimes(roundingMode: RoundingMode = .standard) -> (block: String, night: String, p1: String, p1us: String, p2: String) {
+    public func safeFormattedTimes(roundingMode: RoundingMode = .standard) -> (block: String, night: String, p1: String, p1us: String, p2: String) {
         let roundedBlock = roundingMode.apply(to: blockTimeValue, decimalPlaces: 1)
         let roundedNight = roundingMode.apply(to: nightTimeValue, decimalPlaces: 1)
 
@@ -537,10 +532,9 @@ struct FlightSector: Identifiable, Codable, Hashable {
 }
 
 // MARK: - Flight Sector Creation
-extension FlightSector {
-    
+public extension FlightSector {
     /// Create a FlightSector from ACARS capture data with validation
-    static func fromACARSCapture(
+    public static func fromACARSCapture(
         date: String,
         flightNumber: String,
         aircraftReg: String,
