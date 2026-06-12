@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import BlockTimeKit
 
 private enum DisplayMode: String, CaseIterable {
     case hours = "Hours"

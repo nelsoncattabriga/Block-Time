@@ -1,4 +1,5 @@
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Modern Time Field
 struct ModernTimeField: View {

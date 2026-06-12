@@ -1,4 +1,5 @@
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Recent Activity Card (configurable days)
 struct RecentActivityCard: View {

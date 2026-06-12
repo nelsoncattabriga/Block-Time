@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 /// Immutable snapshot of the parsed airports.dat data.
 /// Written once on a background thread, then read-only forever.

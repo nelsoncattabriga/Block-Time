@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct FRMSDutyStripCard: View {
     let flightStrip: NDFRMSStripData

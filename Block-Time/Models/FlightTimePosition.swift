@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 enum FlightTimePosition: String, CaseIterable {
     case captain = "Capt"

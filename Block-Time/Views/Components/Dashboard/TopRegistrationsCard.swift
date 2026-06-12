@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 private enum RegPeriod: String, CaseIterable {
     case oneMonth     = "1 Month"

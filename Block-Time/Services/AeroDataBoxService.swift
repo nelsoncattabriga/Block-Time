@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 // MARK: - AeroDataBox Response Models (private to this file)
 

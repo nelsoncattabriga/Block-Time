@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+import BlockTimeKit
 
 struct ImportExportView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel

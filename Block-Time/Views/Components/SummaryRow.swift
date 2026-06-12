@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct SummaryRow: View, Equatable {
     let sector: FlightSector

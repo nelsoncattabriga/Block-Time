@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 private enum PunctualityPeriod: String, CaseIterable {
     case oneMonth     = "1 Month"

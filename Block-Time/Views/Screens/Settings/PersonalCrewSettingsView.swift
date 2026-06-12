@@ -1,5 +1,6 @@
 // Views/Screens/Settings/PersonalCrewSettingsView.swift
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Personal & Crew Settings Detail View
 

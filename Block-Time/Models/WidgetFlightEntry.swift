@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 /// Lightweight snapshot written by the main app and read by the widget extension.
 /// Stored as JSON in the shared App Group UserDefaults.

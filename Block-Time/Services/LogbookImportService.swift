@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 /// Handles all logbook data import/export operations
 /// Supports CSV and tab-delimited formats for importing flight data

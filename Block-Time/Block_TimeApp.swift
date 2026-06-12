@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WidgetKit
+import BlockTimeKit
 
 @main
 struct Block_TimeApp: App {

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import BlockTimeKit
 
 private enum ApproachPeriod: String, CaseIterable {
     case oneMonth     = "1 Month"

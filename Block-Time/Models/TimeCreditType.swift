@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import BlockTimeKit
 
 enum TimeCreditType: String, CaseIterable, Codable {
     case p1 = "P1"

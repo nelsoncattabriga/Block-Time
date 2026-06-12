@@ -8,6 +8,7 @@
 
 import Foundation
 import CommonCrypto
+import BlockTimeKit
 
 enum DefinitionsBehavior {
     case skip

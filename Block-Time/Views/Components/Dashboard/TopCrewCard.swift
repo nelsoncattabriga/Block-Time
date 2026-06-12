@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 private struct MaxWidthKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
