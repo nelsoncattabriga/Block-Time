@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct FlightSegmentSelectionSheet: View {
     let flightSegments: [FlightAwareData]

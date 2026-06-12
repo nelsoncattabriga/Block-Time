@@ -37,6 +37,23 @@ public struct UnifiedParsedFlight {
     public let bidPeriod: String
     public let dutyCode: String?
     public let rosterType: RosterType
+
+    public init(date: Date, flightNumber: String, departureAirport: String, arrivalAirport: String,
+                departureTime: String, arrivalTime: String, aircraftType: String, role: String,
+                isPositioning: Bool, bidPeriod: String, dutyCode: String?, rosterType: RosterType) {
+        self.date = date
+        self.flightNumber = flightNumber
+        self.departureAirport = departureAirport
+        self.arrivalAirport = arrivalAirport
+        self.departureTime = departureTime
+        self.arrivalTime = arrivalTime
+        self.aircraftType = aircraftType
+        self.role = role
+        self.isPositioning = isPositioning
+        self.bidPeriod = bidPeriod
+        self.dutyCode = dutyCode
+        self.rosterType = rosterType
+    }
 }
 
 /// Unified parse result that works for both SH and LH rosters
