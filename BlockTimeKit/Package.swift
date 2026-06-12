@@ -10,7 +10,10 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "BlockTimeKit"
+            name: "BlockTimeKit",
+            resources: [
+                .process("Data/FlightDataModel.xcdatamodeld")
+            ]
         ),
         .testTarget(name: "BlockTimeKitTests", dependencies: ["BlockTimeKit"]),
     ]
