@@ -9,36 +9,54 @@ import Foundation
 
 // MARK: - Flight Data Source
 
-enum FlightDataSource {
+public enum FlightDataSource {
     case flightAware
     case aeroDataBox
 }
 
 // MARK: - Shared Flight Data Model
 
-struct FlightAwareData {
-    let origin: String
-    let destination: String
-    var departureTime: String         // Best available departure time - Format: HH:MM UTC
-    var arrivalTime: String           // Best available arrival time - Format: HH:MM UTC
-    var scheduledDepartureTime: String?  // STD - Format: HH:MM UTC
-    var scheduledArrivalTime: String?    // STA - Format: HH:MM UTC
-    let flightDate: String            // Format: dd/MM/yyyy
+public struct FlightAwareData {
+    public let origin: String
+    public let destination: String
+    public var departureTime: String
+    public var arrivalTime: String
+    public var scheduledDepartureTime: String?
+    public var scheduledArrivalTime: String?
+    public let flightDate: String
 
-    // Source tracking — defaults let existing FlightAwareService creation sites compile unchanged
-    var source: FlightDataSource = .flightAware
-    var departureIsActual: Bool = true      // false = no actual time; STD used as fallback
-    var arrivalIsActual: Bool = true        // false = no actual time; STA used as fallback
+    public var source: FlightDataSource = .flightAware
+    public var departureIsActual: Bool = true
+    public var arrivalIsActual: Bool = true
 
-    // AeroDataBox runway times (wheels off / on) — stored for hybrid merge analysis, not used directly
-    var departureRunwayTime: String? = nil  // HH:MM UTC — AeroDataBox runwayTime departure
-    var arrivalRunwayTime: String? = nil    // HH:MM UTC — AeroDataBox runwayTime arrival
+    public var departureRunwayTime: String? = nil
+    public var arrivalRunwayTime: String? = nil
 
-    // Aircraft registration if provided by the data source
-    var aircraftRegistration: String? = nil
+    public var aircraftRegistration: String? = nil
 
-    var displayDescription: String {
+    public var displayDescription: String {
         "\(origin) → \(destination) • Dep: \(departureTime) • Arr: \(arrivalTime)"
+    }
+
+    public init(origin: String, destination: String, departureTime: String, arrivalTime: String,
+                scheduledDepartureTime: String? = nil, scheduledArrivalTime: String? = nil,
+                flightDate: String, source: FlightDataSource = .flightAware,
+                departureIsActual: Bool = true, arrivalIsActual: Bool = true,
+                departureRunwayTime: String? = nil, arrivalRunwayTime: String? = nil,
+                aircraftRegistration: String? = nil) {
+        self.origin = origin
+        self.destination = destination
+        self.departureTime = departureTime
+        self.arrivalTime = arrivalTime
+        self.scheduledDepartureTime = scheduledDepartureTime
+        self.scheduledArrivalTime = scheduledArrivalTime
+        self.flightDate = flightDate
+        self.source = source
+        self.departureIsActual = departureIsActual
+        self.arrivalIsActual = arrivalIsActual
+        self.departureRunwayTime = departureRunwayTime
+        self.arrivalRunwayTime = arrivalRunwayTime
+        self.aircraftRegistration = aircraftRegistration
     }
 }
 
@@ -66,8 +84,8 @@ enum FlightAwareError: LocalizedError {
 }
 
 @MainActor
-class FlightAwareService {
-    static let shared = FlightAwareService()
+public class FlightAwareService {
+    public static let shared = FlightAwareService()
 
     private init() {}
 
@@ -76,7 +94,7 @@ class FlightAwareService {
     ///   - flightNumber: The flight number in FlightAware format (e.g., "QFA933")
     ///   - date: The flight date in "dd/MM/yyyy" format
     /// - Returns: Array of FlightAwareData containing all matching flights
-    func fetchFlightData(flightNumber: String, date: String) async throws -> [FlightAwareData] {
+    public func fetchFlightData(flightNumber: String, date: String) async throws -> [FlightAwareData] {
         print("FlightAware lookup started: \(flightNumber) on \(date)")
 
         guard let url = URL(string: "https://www.flightaware.com/live/flight/\(flightNumber)/history") else {

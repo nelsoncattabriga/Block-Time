@@ -69,9 +69,9 @@ enum AeroDataBoxError: LocalizedError {
 // MARK: - Service
 
 @MainActor
-final class AeroDataBoxService {
+public final class AeroDataBoxService {
 
-    static let shared = AeroDataBoxService()
+    public static let shared = AeroDataBoxService()
     private init() {}
 
     private let baseURL = "https://aerodatabox.p.rapidapi.com"
@@ -87,7 +87,7 @@ final class AeroDataBoxService {
     /// - Parameters:
     ///   - flightNumber: IATA format, e.g. "QF1" or "QF933"
     ///   - localDepartureDate: Local departure date in app format dd/MM/yyyy
-    func fetchFlightData(flightNumber: String, localDepartureDate: String) async -> [FlightAwareData] {
+    public func fetchFlightData(flightNumber: String, localDepartureDate: String) async -> [FlightAwareData] {
         let cleanNumber = flightNumber.replacingOccurrences(of: " ", with: "")
         print(" AeroDataBox: Starting fetch  flight=\(cleanNumber), localDate=\(localDepartureDate)")
 

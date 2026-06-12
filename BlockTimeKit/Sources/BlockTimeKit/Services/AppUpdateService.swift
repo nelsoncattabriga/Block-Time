@@ -16,7 +16,7 @@
 
 import Foundation
 
-enum AppUpdateService {
+public enum AppUpdateService {
 
     // MARK: - UserDefaults keys
 
@@ -37,7 +37,7 @@ enum AppUpdateService {
     /// - On network error, decode failure, or an empty results array (region-locked lookup),
     ///   returns nil so the app proceeds normally.
     /// - Uses numeric component-wise comparison so "1.10.0" > "1.9.0".
-    static func checkForUpdate() async -> String? {
+    public static func checkForUpdate() async -> String? {
         #if DEBUG
         return nil //"1.99"
         #else

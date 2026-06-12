@@ -8,7 +8,7 @@
 
 import Foundation
 
-class FRMSCalculationService {
+public class FRMSCalculationService {
 
     // MARK: - Properties
 
@@ -33,7 +33,7 @@ class FRMSCalculationService {
 
     // MARK: - Initialization
 
-    init(configuration: FRMSConfiguration) {
+    public init(configuration: FRMSConfiguration) {
         self.configuration = configuration
     }
 
@@ -50,7 +50,7 @@ class FRMSCalculationService {
     ///
     /// Home base is used rather than departure port because the FRMS sign-on time rules
     /// are anchored to the crew member's base (simpler and safer than departure-airport lookup).
-    func getHomeBaseTimeZone() -> TimeZone {
+    public func getHomeBaseTimeZone() -> TimeZone {
         // NZ home base uses Auckland timezone
         if configuration.homeBase == "NZ" {
             return TimeZone(identifier: "Pacific/Auckland") ?? TimeZone(secondsFromGMT: 12 * 3600)!
@@ -99,7 +99,7 @@ class FRMSCalculationService {
     // MARK: - Crew Complement Detection
 
     /// Infer crew complement from filled crew names
-    func inferCrewComplement(captainName: String?,
+    public func inferCrewComplement(captainName: String?,
                             foName: String?,
                             so1Name: String?,
                             so2Name: String?) -> CrewComplement {
@@ -127,7 +127,7 @@ class FRMSCalculationService {
     ///   - fromAirport: Departure airport code (ICAO or IATA)
     ///   - toAirport: Arrival airport code (ICAO or IATA)
     /// - Returns: Sign-on time
-    func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil, isSim: Bool = false) -> Date {
+    public func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil, isSim: Bool = false) -> Date {
         let departureTime: Date = stdTime ?? outTime
 
         // SIM: 45 min before start (source: operational convention — not explicitly in FRMS PDFs)
@@ -153,7 +153,7 @@ class FRMSCalculationService {
     ///   - toAirport: Arrival airport code (used for SH domestic/international split)
     ///   - isSim: Whether this is a simulator duty
     /// - Returns: Sign-off time
-    func calculateSignOff(inTime: Date, toAirport: String? = nil, isSim: Bool = false) -> Date {
+    public func calculateSignOff(inTime: Date, toAirport: String? = nil, isSim: Bool = false) -> Date {
         // SIM: 30 min after end (source: operational convention — not explicitly in FRMS PDFs)
         var minutesAfter = isSim ? 30 : configuration.signOffMinutesAfterIN
 
@@ -175,7 +175,7 @@ class FRMSCalculationService {
     ///   - flights: Individual flight sectors (used for flight time calculations based on flight date)
     ///   - date: The reference date for calculating periods (defaults to now)
     /// - Returns: Cumulative totals including flight times and duty times
-    func calculateCumulativeTotals(duties: [FRMSDuty], flights: [FlightSector]? = nil, asOf date: Date = Date()) -> FRMSCumulativeTotals {
+    public func calculateCumulativeTotals(duties: [FRMSDuty], flights: [FlightSector]? = nil, asOf date: Date = Date()) -> FRMSCumulativeTotals {
 
         // Use home base timezone for user-facing date ranges (consistent with Dashboard and FlightsView)
         let homeTimeZone = getHomeBaseTimeZone()
@@ -379,7 +379,7 @@ class FRMSCalculationService {
     // MARK: - Maximum Next Duty Calculation
 
     /// Calculate maximum allowable next duty based on current state and previous duty
-    func calculateMaximumNextDuty(previousDuty: FRMSDuty?,
+    public func calculateMaximumNextDuty(previousDuty: FRMSDuty?,
                                   cumulativeTotals: FRMSCumulativeTotals,
                                   limitType: FRMSLimitType,
                                   proposedCrewComplement: CrewComplement,
@@ -527,7 +527,7 @@ class FRMSCalculationService {
     ///   - creditedFlightHours: Total credited flight hours for the trip pattern
     ///   - hadPlannedDutyOver18Hours: Whether the trip pattern contained a planned duty >18 hours
     /// - Returns: MBTT requirements or nil if not applicable
-    func calculateMBTT(daysAway: Int, creditedFlightHours: Double, hadPlannedDutyOver18Hours: Bool = false) -> FRMSMinimumBaseTurnaroundTime? {
+    public func calculateMBTT(daysAway: Int, creditedFlightHours: Double, hadPlannedDutyOver18Hours: Bool = false) -> FRMSMinimumBaseTurnaroundTime? {
         // Only applicable to widebody fleet
         guard configuration.fleet == .a380A330B787 else { return nil }
 
@@ -1163,7 +1163,7 @@ class FRMSCalculationService {
     // MARK: - A320/B737 Next Duty Limits Calculation
 
     /// Calculate complete A320/B737 next duty limits with all restrictions
-    func calculateA320B737NextDutyLimits(previousDuty: FRMSDuty?,
+    public func calculateA320B737NextDutyLimits(previousDuty: FRMSDuty?,
                                          cumulativeTotals: FRMSCumulativeTotals,
                                          limitType: FRMSLimitType,
                                          duties: [FRMSDuty] = []) -> A320B737NextDutyLimits? {
@@ -1437,7 +1437,7 @@ class FRMSCalculationService {
     }
 
     /// Check What-If scenario compliance
-    func checkWhatIfScenario(scenario: WhatIfScenario,
+    public func checkWhatIfScenario(scenario: WhatIfScenario,
                              previousDuty: FRMSDuty?,
                              cumulativeTotals: FRMSCumulativeTotals,
                              a320B737Limits: A320B737NextDutyLimits,
@@ -1594,7 +1594,7 @@ class FRMSCalculationService {
     // MARK: - Compliance Check
 
     /// Check if a proposed duty would be compliant
-    func checkCompliance(proposedDuty: FRMSDuty,
+    public func checkCompliance(proposedDuty: FRMSDuty,
                         previousDuty: FRMSDuty?,
                         cumulativeTotals: FRMSCumulativeTotals) -> FRMSComplianceStatus {
 
@@ -1650,7 +1650,7 @@ class FRMSCalculationService {
     ///   - crewPosition: The crew position (captain/FO)
     ///   - isFirstFlightOfDay: Whether this is the first flight of the duty day (affects sign-on time for positioning flights)
     /// - Returns: FRMSDuty object or nil if conversion fails
-    func createDuty(from flightSector: FlightSector,
+    public func createDuty(from flightSector: FlightSector,
                    crewPosition: FlightTimePosition,
                    isFirstFlightOfDay: Bool = false) -> FRMSDuty? {
 

@@ -9,35 +9,33 @@
 import Foundation
 
 /// Service to parse Qantas Long Haul crew roster files and extract flight information
-class LHRosterParserService {
+public class LHRosterParserService {
 
     // MARK: - Data Models
 
-    /// Represents a parsed flight from a roster
-    struct ParsedFlight {
-        let date: Date
-        let flightNumber: String
-        let departureAirport: String
-        let arrivalAirport: String
-        let departureTime: String  // HHmm format in local time (e.g., "1239")
-        let arrivalTime: String    // HHmm format in local time (e.g., "1517")
-        let aircraftType: String   // Extracted from category (e.g., "B787")
-        let role: String           // "Captain", "First Officer", or "Second Officer"
-        let isPositioning: Bool    // True if marked with "PAX"
-        let bidPeriod: String      // e.g., "356"
-        let patternCode: String?   // e.g., "EN04X011" (optional)
+    public struct ParsedFlight {
+        public let date: Date
+        public let flightNumber: String
+        public let departureAirport: String
+        public let arrivalAirport: String
+        public let departureTime: String
+        public let arrivalTime: String
+        public let aircraftType: String
+        public let role: String
+        public let isPositioning: Bool
+        public let bidPeriod: String
+        public let patternCode: String?
     }
 
-    /// Result of parsing a roster file
-    struct ParseResult {
-        let flights: [ParsedFlight]
-        let pilotName: String
-        let staffNumber: String
-        let bidPeriod: String
-        let base: String
-        let category: String  // e.g., "F/O-B787"
-        let periodStartDate: Date?
-        let periodEndDate: Date?
+    public struct ParseResult {
+        public let flights: [ParsedFlight]
+        public let pilotName: String
+        public let staffNumber: String
+        public let bidPeriod: String
+        public let base: String
+        public let category: String
+        public let periodStartDate: Date?
+        public let periodEndDate: Date?
     }
 
     /// Represents a duty entry from the calendar section
@@ -72,13 +70,13 @@ class LHRosterParserService {
     // MARK: - Parsing Methods
 
     /// Parse a roster file and extract flight information
-    static func parseRoster(from fileURL: URL) throws -> ParseResult {
+    public static func parseRoster(from fileURL: URL) throws -> ParseResult {
         let content = try String(contentsOf: fileURL, encoding: .utf8)
         return try parseRoster(from: content)
     }
 
     /// Parse roster content from a string
-    static func parseRoster(from content: String) throws -> ParseResult {
+    public static func parseRoster(from content: String) throws -> ParseResult {
         let lines = content.components(separatedBy: .newlines)
 
         print("Starting LH roster parsing from \(lines.count) lines")
@@ -822,7 +820,7 @@ class LHRosterParserService {
     // MARK: - Filtering
 
     /// Filter flights to only include future flights (after today)
-    static func futureFlights(from flights: [ParsedFlight]) -> [ParsedFlight] {
+    public static func futureFlights(from flights: [ParsedFlight]) -> [ParsedFlight] {
         let today = Calendar.current.startOfDay(for: Date())
         return flights.filter { flight in
             flight.date >= today
@@ -830,7 +828,7 @@ class LHRosterParserService {
     }
 
     /// Filter out positioning flights if desired
-    static func nonPositioningFlights(from flights: [ParsedFlight]) -> [ParsedFlight] {
+    public static func nonPositioningFlights(from flights: [ParsedFlight]) -> [ParsedFlight] {
         return flights.filter { !$0.isPositioning }
     }
 

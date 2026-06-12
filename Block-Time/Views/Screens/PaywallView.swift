@@ -7,6 +7,7 @@
 
 import SwiftUI
 import StoreKit
+import BlockTimeKit
 
 struct PaywallView: View {
     var isDismissible: Bool = false

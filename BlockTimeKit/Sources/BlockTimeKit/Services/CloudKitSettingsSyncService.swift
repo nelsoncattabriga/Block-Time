@@ -11,17 +11,17 @@ import Network
 /// Service for syncing app settings across devices using NSUbiquitousKeyValueStore
 /// This is Apple's recommended approach for syncing small amounts of data like preferences
 @Observable @MainActor
-class CloudKitSettingsSyncService {
+public class CloudKitSettingsSyncService {
 
     // MARK: - Singleton
-    static let shared = CloudKitSettingsSyncService()
+    public static let shared = CloudKitSettingsSyncService()
 
     // MARK: - Published Properties
-    var isSyncing: Bool = false
-    var lastSyncError: Error?
-    var lastSyncDate: Date?
-    var lastChangeDate: Date?
-    var isNetworkAvailable: Bool = true
+    public var isSyncing: Bool = false
+    public var lastSyncError: Error?
+    public var lastSyncDate: Date?
+    public var lastChangeDate: Date?
+    public var isNetworkAvailable: Bool = true
 
     // MARK: - Private Properties
     private let ubiquitousStore = NSUbiquitousKeyValueStore.default
@@ -253,14 +253,14 @@ class CloudKitSettingsSyncService {
     }
 
     /// Mark that settings have been modified locally
-    func markLocalModification() {
+    public func markLocalModification() {
         localModificationDate = Date()
         UserDefaults.standard.set(localModificationDate, forKey: localModificationDateKey)
 //        print(" Local settings modification recorded at \(localModificationDate!)")
     }
 
     /// Upload current settings to iCloud
-    func syncToCloud() {
+    public func syncToCloud() {
         // Check if network and iCloud are available
         guard isNetworkAvailable else {
             print("iCloud sync: Cannot sync - network unavailable")
@@ -378,7 +378,7 @@ class CloudKitSettingsSyncService {
     }
 
     /// Download settings from iCloud
-    func syncFromCloud() {
+    public func syncFromCloud() {
         // Rate limit: Skip if we've synced too recently (prevents excessive syncing)
         let now = Date()
         if let lastTime = lastSyncFromCloudTime,
@@ -697,7 +697,7 @@ class CloudKitSettingsSyncService {
     }
 
     /// Check if iCloud is available
-    func isCloudAvailable() -> Bool {
+    public func isCloudAvailable() -> Bool {
         return FileManager.default.ubiquityIdentityToken != nil
     }
 

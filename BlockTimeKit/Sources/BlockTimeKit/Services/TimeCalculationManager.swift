@@ -9,20 +9,20 @@
 import Foundation
 
 /// Cached context for flight calculations to avoid redundant parsing and lookups
-struct FlightCalculationContext {
-    let fromAirport: String
-    let toAirport: String
-    let fromCoordinates: (latitude: Double, longitude: Double)
-    let toCoordinates: (latitude: Double, longitude: Double)
-    let flightDate: Date
-    let departureTime: Date
-    let arrivalTime: Date
-    let blockTimeHours: Double
+public struct FlightCalculationContext {
+    public let fromAirport: String
+    public let toAirport: String
+    public let fromCoordinates: (latitude: Double, longitude: Double)
+    public let toCoordinates: (latitude: Double, longitude: Double)
+    public let flightDate: Date
+    public let departureTime: Date
+    public let arrivalTime: Date
+    public let blockTimeHours: Double
 }
 
 /// Manages all time-related calculations for flight data
 /// Handles block time calculation, night time calculation, and time validation
-class TimeCalculationManager: @unchecked Sendable {
+public class TimeCalculationManager: @unchecked Sendable {
 
     // MARK: - Dependencies
 
@@ -30,7 +30,7 @@ class TimeCalculationManager: @unchecked Sendable {
 
     // MARK: - Initialization
 
-    init(nightCalcService: NightCalcService = NightCalcService()) {
+    public init(nightCalcService: NightCalcService = NightCalcService()) {
         self.nightCalcService = nightCalcService
     }
 
@@ -161,7 +161,7 @@ class TimeCalculationManager: @unchecked Sendable {
     ///   - outTime: Departure time in "HH:mm" format
     ///   - inTime: Arrival time in "HH:mm" format
     /// - Returns: Flight time in decimal hours with 2 decimal precision (e.g., "4.53"), or "0.0" if invalid
-    func calculateFlightTime(outTime: String, inTime: String) -> String {
+    public func calculateFlightTime(outTime: String, inTime: String) -> String {
         guard !outTime.isEmpty && !inTime.isEmpty else { return "0.0" }
 
         let formatter = DateFormatter()
@@ -193,7 +193,7 @@ class TimeCalculationManager: @unchecked Sendable {
     /// Validate time in HH:mm (24-hour) format
     /// - Parameter timeString: Time string to validate
     /// - Returns: true if valid HH:mm format, false otherwise
-    func isValidTimeHHmm(_ timeString: String) -> Bool {
+    public func isValidTimeHHmm(_ timeString: String) -> Bool {
         let parts = timeString.split(separator: ":")
         guard parts.count == 2, parts[0].count == 2, parts[1].count == 2,
               let h = Int(parts[0]), let m = Int(parts[1]),
@@ -213,7 +213,7 @@ class TimeCalculationManager: @unchecked Sendable {
     ///   - isEditingMode: Whether in editing mode (preserves existing night time if outTime is empty)
     ///   - existingNightTime: Existing night time value (for editing mode)
     /// - Returns: Night time in decimal hours with 2 decimal precision, or empty string if cannot calculate
-    func calculateNightTime(
+    public func calculateNightTime(
         fromAirport: String,
         toAirport: String,
         outTime: String,
@@ -330,7 +330,7 @@ extension TimeCalculationManager {
     ///   - outTime: Departure time
     ///   - inTime: Arrival time
     /// - Returns: Tuple of (blockTime, isValid) where blockTime is the calculated time or empty string if invalid
-    func recalculateBlockTime(outTime: String, inTime: String) -> (blockTime: String, isValid: Bool) {
+    public func recalculateBlockTime(outTime: String, inTime: String) -> (blockTime: String, isValid: Bool) {
         let out = outTime.trimmingCharacters(in: .whitespacesAndNewlines)
         let inT = inTime.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -356,7 +356,7 @@ extension TimeCalculationManager {
     ///   - isEditingMode: Whether in editing mode
     ///   - existingNightTime: Existing night time value
     /// - Returns: Tuple of (blockTime, nightTime) - both as strings
-    func recalculateTimes(
+    public func recalculateTimes(
         outTime: String,
         inTime: String,
         fromAirport: String,

@@ -1,33 +1,28 @@
 import Foundation
 
 // MARK: - Main Interface
-class NightCalcService: @unchecked Sendable {
+public class NightCalcService: @unchecked Sendable {
     private let airportLookup = AirportLookup()
 
+    public init() {}
+
     /// Get airport coordinates by ICAO code
-    nonisolated func getAirportCoordinates(for icao: String) -> (latitude: Double, longitude: Double)? {
+    public nonisolated func getAirportCoordinates(for icao: String) -> (latitude: Double, longitude: Double)? {
         return airportLookup.getCoordinates(for: icao)
     }
 
     /// Parse a UTC time string (HH:MM or HHMM) to a Date
-    func parseUTCTime(_ timeStr: String) -> Date? {
+    public func parseUTCTime(_ timeStr: String) -> Date? {
         return parseUTCString(timeStr)
     }
 
     /// Check if it's night at a specific location and time
-    func isNight(at lat: Double, lon: Double, time: Date) -> Bool {
+    public func isNight(at lat: Double, lon: Double, time: Date) -> Bool {
         return isNightInternal(at: lat, lon: lon, time: time)
     }
 
     /// Calculate night time portion for a flight between airports
-    /// - Parameters:
-    ///   - fromAirport: ICAO code for departure airport (e.g., "KJFK")
-    ///   - toAirport: ICAO code for arrival airport (e.g., "EGLL")
-    ///   - departureUTC: Departure time in UTC format "HHMM" (e.g., "1430")
-    ///   - flightTimeHours: Flight duration in hours (e.g., 8.5)
-    ///   - flightDate: The actual date of the flight (defaults to today if not provided)
-    /// - Returns: Night time in hours, or nil if airports not found
-    nonisolated func calculateNightTime(
+    public nonisolated func calculateNightTime(
         from fromAirport: String,
         to toAirport: String,
         departureUTC: String,

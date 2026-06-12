@@ -7,6 +7,7 @@
 
 import SwiftUI
 import StoreKit
+import BlockTimeKit
 
 struct TrialStatusCard: View {
     @Environment(PurchaseService.self) private var purchaseService

@@ -10,9 +10,9 @@ import StoreKit
 
 @Observable
 @MainActor
-final class PurchaseService {
+public final class PurchaseService {
 
-    static let shared = PurchaseService()
+    public static let shared = PurchaseService()
 
     // MARK: - Constants
 
@@ -23,16 +23,16 @@ final class PurchaseService {
 
     // MARK: - Observable State
 
-    var isPro: Bool = false
-    var isTestFlight: Bool = false
-    var products: [Product] = []
-    var isLoading: Bool = false
-    var purchaseError: String?
-    var showRestoreNotFoundAlert: Bool = false
+    public var isPro: Bool = false
+    public var isTestFlight: Bool = false
+    public var products: [Product] = []
+    public var isLoading: Bool = false
+    public var purchaseError: String?
+    public var showRestoreNotFoundAlert: Bool = false
 
     // MARK: - Trial
 
-    var trialDaysRemaining: Int {
+    public var trialDaysRemaining: Int {
         guard let installDate = UserDefaults.standard.object(forKey: installDateKey) as? Date else {
             return 30
         }
@@ -41,17 +41,17 @@ final class PurchaseService {
         return max(0, Int(remaining / (24 * 60 * 60)))
     }
 
-    var isTrialActive: Bool {
+    public var isTrialActive: Bool {
         trialDaysRemaining > 0
     }
 
     /// True if the user can access all features (Pro purchase, active trial, or TestFlight).
-    var hasAccess: Bool {
+    public var hasAccess: Bool {
         isPro || isTrialActive || isTestFlight
     }
 
     /// True if the user can add new flights (same condition — gated separately from app access).
-    var canAddFlight: Bool {
+    public var canAddFlight: Bool {
         isPro || isTrialActive || isTestFlight
     }
 
@@ -74,7 +74,7 @@ final class PurchaseService {
 
     /// Starts listening for incoming transactions (promo codes, deferred purchases).
     /// Call once at app launch and keep the Task alive for the app's lifetime.
-    func listenForTransactions() async {
+    public func listenForTransactions() async {
         for await result in Transaction.updates {
             if case .verified(let transaction) = result,
                transaction.productID == productID {
@@ -86,7 +86,7 @@ final class PurchaseService {
 
     // MARK: - StoreKit
 
-    func loadProducts() async {
+    public func loadProducts() async {
         isLoading = true
         defer { isLoading = false }
         do {
@@ -96,7 +96,7 @@ final class PurchaseService {
         }
     }
 
-    func purchase() async {
+    public func purchase() async {
         guard let product = products.first else { return }
         isLoading = true
         defer { isLoading = false }
@@ -118,7 +118,7 @@ final class PurchaseService {
         }
     }
 
-    func restorePurchases() async {
+    public func restorePurchases() async {
         isLoading = true
         defer { isLoading = false }
         purchaseError = nil
@@ -146,7 +146,7 @@ final class PurchaseService {
 
     #if DEBUG
     /// Simulates a trial with the given days remaining (0 = expired, 1–30 = active).
-    func resetTrialForTesting(daysRemaining: Int = 0) {
+    public func resetTrialForTesting(daysRemaining: Int = 0) {
         let elapsed = trialDuration - Double(daysRemaining) * 24 * 60 * 60
         // Subtract 30s buffer so Int() truncation doesn't floor to daysRemaining - 1
         let installDate = Date().addingTimeInterval(-elapsed + 30)
@@ -156,14 +156,14 @@ final class PurchaseService {
     }
 
     /// Resets to a fresh install state (full 30-day trial, not Pro).
-    func resetToFreshInstall() {
+    public func resetToFreshInstall() {
         UserDefaults.standard.removeObject(forKey: installDateKey)
         UserDefaults.standard.removeObject(forKey: isProKey)
         isPro = false
     }
 
     /// Grants Pro access without going through a purchase.
-    func grantProForTesting() {
+    public func grantProForTesting() {
         markAsPro()
     }
     #endif

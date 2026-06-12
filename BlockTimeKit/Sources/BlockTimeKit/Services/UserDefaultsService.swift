@@ -8,21 +8,21 @@ import Foundation
 import Combine
 
 
-enum InstructionEnvironment: String, CaseIterable {
+public enum InstructionEnvironment: String, CaseIterable {
     case simulator = "simulator"
     case aircraft = "aircraft"
 }
 
-enum LogbookDestination: String, CaseIterable {
+public enum LogbookDestination: String, CaseIterable {
     case internalLogbook = "Block-Time"
     case logTenPro = "LogTen"
     case both = "Both"
 
-    var userDefaultsKey: String {
+    public var userDefaultsKey: String {
         return "logbookDestination"
     }
 
-    var menuLabel: String {
+    public var menuLabel: String {
         switch self {
         case .internalLogbook:
             return "Block-Time"
@@ -33,7 +33,7 @@ enum LogbookDestination: String, CaseIterable {
         }
     }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .logTenPro:
             return "LogTen only"
@@ -79,51 +79,51 @@ public enum RoundingMode: String, CaseIterable, Sendable {
 
 
 // MARK: - Settings Data Model (Updated)
-struct AppSettings: Sendable {
-    var aircraftReg: String
-    var aircraftType: String
-    var captainName: String
-    var coPilotName: String
-    var defaultCaptainName: String
-    var defaultCoPilotName: String
-    var defaultSOName: String
-    var savedSONames: [String]  // Shared list for both SO 1 and SO 2
-    var savedCrewNames: [String]  // Unified crew name list across all roles
-    var flightTimePosition: FlightTimePosition
-    var foPilotFlyingCredit: TimeCreditType  // What time credit to use when F/O is PF (ICUS or P2)
-    var includeLeadingZeroInFlightNumber: Bool
-    var includeAirlinePrefixInFlightNumber: Bool
-    var airlinePrefix: String
-    var isCustomAirlinePrefix: Bool
-    var showFullAircraftReg: Bool
-    var savedCaptainNames: [String]
-    var savedCoPilotNames: [String]
-    var savePhotosToLibrary: Bool  // NEW SETTING
-    var showSONameFields: Bool  // Show/hide SO 1 and SO 2 fields
-    var showSpInsSelector: Bool // Show/hide the INS toggle for Sp/Ins time logging
-    var defaultInstructionEnvironment: InstructionEnvironment // Default environment for instruction logging
-    var pfAutoInstrumentMinutes: Int
-    var logbookDestination: LogbookDestination
-    var displayFlightsInLocalTime: Bool
-    var useIATACodes: Bool
-    var logApproaches: Bool  // Auto-log approaches toggle
-    var defaultApproachType: String?  // Default approach type when logApproaches is enabled
-    var recentCaptainNames: [String]  // Recently used captain names
-    var recentCoPilotNames: [String]  // Recently used copilot names
-    var recentSONames: [String]  // Recently used SO names
-    var recentAircraftRegs: [String]  // Recently used aircraft registrations
-    var recentAirports: [String]  // Recently used airports
-    var showTimesInHoursMinutes: Bool  // Show flight times in HH:MM format instead of decimal
-    var selectedFleetID: String  // Selected fleet for filtering
-    var decimalRoundingMode: RoundingMode  // Rounding mode for decimal times (block and night)
-    var enterTimesInLocalTime: Bool  // Enter OUT/IN/STD/STA in local airport time instead of UTC
-    var showOutInTimes: Bool  // Show OUT/IN (and STD/STA) times in the flights list
-    var countSimInTotal: Bool  // Include SIM time in Total flight time
-    var logCustomCount: Bool  // Show custom counter field in logbook entry
-    var customCountLabel: String  // User-defined label for the counter (default "PAX")
+public struct AppSettings: Sendable {
+    public var aircraftReg: String
+    public var aircraftType: String
+    public var captainName: String
+    public var coPilotName: String
+    public var defaultCaptainName: String
+    public var defaultCoPilotName: String
+    public var defaultSOName: String
+    public var savedSONames: [String]  // Shared list for both SO 1 and SO 2
+    public var savedCrewNames: [String]  // Unified crew name list across all roles
+    public var flightTimePosition: FlightTimePosition
+    public var foPilotFlyingCredit: TimeCreditType  // What time credit to use when F/O is PF (ICUS or P2)
+    public var includeLeadingZeroInFlightNumber: Bool
+    public var includeAirlinePrefixInFlightNumber: Bool
+    public var airlinePrefix: String
+    public var isCustomAirlinePrefix: Bool
+    public var showFullAircraftReg: Bool
+    public var savedCaptainNames: [String]
+    public var savedCoPilotNames: [String]
+    public var savePhotosToLibrary: Bool  // NEW SETTING
+    public var showSONameFields: Bool  // Show/hide SO 1 and SO 2 fields
+    public var showSpInsSelector: Bool // Show/hide the INS toggle for Sp/Ins time logging
+    public var defaultInstructionEnvironment: InstructionEnvironment // Default environment for instruction logging
+    public var pfAutoInstrumentMinutes: Int
+    public var logbookDestination: LogbookDestination
+    public var displayFlightsInLocalTime: Bool
+    public var useIATACodes: Bool
+    public var logApproaches: Bool  // Auto-log approaches toggle
+    public var defaultApproachType: String?  // Default approach type when logApproaches is enabled
+    public var recentCaptainNames: [String]  // Recently used captain names
+    public var recentCoPilotNames: [String]  // Recently used copilot names
+    public var recentSONames: [String]  // Recently used SO names
+    public var recentAircraftRegs: [String]  // Recently used aircraft registrations
+    public var recentAirports: [String]  // Recently used airports
+    public var showTimesInHoursMinutes: Bool  // Show flight times in HH:MM format instead of decimal
+    public var selectedFleetID: String  // Selected fleet for filtering
+    public var decimalRoundingMode: RoundingMode  // Rounding mode for decimal times (block and night)
+    public var enterTimesInLocalTime: Bool  // Enter OUT/IN/STD/STA in local airport time instead of UTC
+    public var showOutInTimes: Bool  // Show OUT/IN (and STD/STA) times in the flights list
+    public var countSimInTotal: Bool  // Include SIM time in Total flight time
+    public var logCustomCount: Bool  // Show custom counter field in logbook entry
+    public var customCountLabel: String  // User-defined label for the counter (default "PAX")
 
 
-    static let `default` = AppSettings(
+    public static let `default` = AppSettings(
         aircraftReg: "",
         aircraftType: "",
         captainName: "",
@@ -170,7 +170,7 @@ struct AppSettings: Sendable {
 }
 
 // MARK: - UserDefaults Service (Updated)
-class UserDefaultsService: ObservableObject {
+public class UserDefaultsService: ObservableObject {
     
     private enum Keys {
         static let aircraftReg = "aircraftReg"
@@ -221,7 +221,7 @@ class UserDefaultsService: ObservableObject {
     private let userDefaults: UserDefaults
     
     // MARK: - Initialization
-    init(userDefaults: UserDefaults = .standard) {
+    public init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         userDefaults.register(defaults: [
             Keys.displayFlightsInLocalTime: true,
@@ -234,7 +234,7 @@ class UserDefaultsService: ObservableObject {
     // MARK: - Load/Save All Settings
     
     /// Load all app settings from UserDefaults
-    func loadSettings() -> AppSettings {
+    public func loadSettings() -> AppSettings {
         migrateCrewNamesIfNeeded()
         let flightTimePositionString = userDefaults.string(forKey: Keys.flightTimePosition) ?? FlightTimePosition.captain.rawValue
         let flightTimePosition = FlightTimePosition(rawValue: flightTimePositionString) ?? .captain
@@ -292,7 +292,7 @@ class UserDefaultsService: ObservableObject {
 
     
     /// Save all app settings to UserDefaults
-    func saveSettings(_ settings: AppSettings, syncToCloud: Bool = true) {
+    public func saveSettings(_ settings: AppSettings, syncToCloud: Bool = true) {
         userDefaults.set(settings.aircraftReg, forKey: Keys.aircraftReg)
         userDefaults.set(settings.aircraftType, forKey: Keys.aircraftType)
         userDefaults.set(settings.captainName, forKey: Keys.captainName)
@@ -347,210 +347,210 @@ class UserDefaultsService: ObservableObject {
     
     // MARK: - Individual Setting Methods
 
-    func setAircraftReg(_ value: String) {
+    public func setAircraftReg(_ value: String) {
         userDefaults.set(value, forKey: Keys.aircraftReg)
         syncToCloudAfterChange()
     }
 
-    func setAircraftType(_ value: String) {
+    public func setAircraftType(_ value: String) {
         userDefaults.set(value, forKey: Keys.aircraftType)
         syncToCloudAfterChange()
     }
 
-    func setCaptainName(_ value: String) {
+    public func setCaptainName(_ value: String) {
         userDefaults.set(value, forKey: Keys.captainName)
         syncToCloudAfterChange()
     }
 
-    func setCoPilotName(_ value: String) {
+    public func setCoPilotName(_ value: String) {
         userDefaults.set(value, forKey: Keys.coPilotName)
         syncToCloudAfterChange()
     }
 
-    func setDefaultCaptainName(_ value: String) {
+    public func setDefaultCaptainName(_ value: String) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.defaultCaptainName)
         syncToCloudAfterChange()
     }
 
-    func setDefaultCoPilotName(_ value: String) {
+    public func setDefaultCoPilotName(_ value: String) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.defaultCoPilotName)
         syncToCloudAfterChange()
     }
 
-    func setDefaultSOName(_ value: String) {
+    public func setDefaultSOName(_ value: String) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.defaultSOName)
         syncToCloudAfterChange()
     }
 
-    func setFlightTimePosition(_ value: FlightTimePosition) {
+    public func setFlightTimePosition(_ value: FlightTimePosition) {
         markModificationAndSyncToCloud()
         userDefaults.set(value.rawValue, forKey: Keys.flightTimePosition)
         syncToCloudAfterChange()
     }
 
-    func setFOPilotFlyingCredit(_ value: TimeCreditType) {
+    public func setFOPilotFlyingCredit(_ value: TimeCreditType) {
         markModificationAndSyncToCloud()
         userDefaults.set(value.rawValue, forKey: Keys.foPilotFlyingCredit)
         syncToCloudAfterChange()
     }
 
-    func setIncludeLeadingZeroInFlightNumber(_ value: Bool) {
+    public func setIncludeLeadingZeroInFlightNumber(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.includeLeadingZeroInFlightNumber)
         syncToCloudAfterChange()
     }
 
-    func setIncludeAirlinePrefixInFlightNumber(_ value: Bool) {
+    public func setIncludeAirlinePrefixInFlightNumber(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.includeAirlinePrefixInFlightNumber)
         syncToCloudAfterChange()
     }
 
-    func setAirlinePrefix(_ value: String) {
+    public func setAirlinePrefix(_ value: String) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.airlinePrefix)
         syncToCloudAfterChange()
     }
 
-    func setIsCustomAirlinePrefix(_ value: Bool) {
+    public func setIsCustomAirlinePrefix(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.isCustomAirlinePrefix)
         syncToCloudAfterChange()
     }
 
-    func setShowFullAircraftReg(_ value: Bool) {
+    public func setShowFullAircraftReg(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.showFullAircraftReg)
         syncToCloudAfterChange()
     }
 
-    func setSavePhotosToLibrary(_ value: Bool) {
+    public func setSavePhotosToLibrary(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.savePhotosToLibrary)
         syncToCloudAfterChange()
     }
 
-    func setShowSpInsSelector(_ value: Bool) {
+    public func setShowSpInsSelector(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.showSpInsSelector)
         syncToCloudAfterChange()
     }
 
-    func setDefaultInstructionEnvironment(_ value: InstructionEnvironment) {
+    public func setDefaultInstructionEnvironment(_ value: InstructionEnvironment) {
         markModificationAndSyncToCloud()
         userDefaults.set(value.rawValue, forKey: Keys.defaultInstructionEnvironment)
         syncToCloudAfterChange()
     }
 
-    func setShowSONameFields(_ value: Bool) {
+    public func setShowSONameFields(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.showSONameFields)
         syncToCloudAfterChange()
     }
 
-    func setLogCustomCount(_ value: Bool) {
+    public func setLogCustomCount(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.logCustomCount)
         syncToCloudAfterChange()
     }
 
-    func setCustomCountLabel(_ value: String) {
+    public func setCustomCountLabel(_ value: String) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.customCountLabel)
         syncToCloudAfterChange()
     }
 
-    func setLogbookDestination(_ value: LogbookDestination) {
+    public func setLogbookDestination(_ value: LogbookDestination) {
         markModificationAndSyncToCloud()
         userDefaults.set(value.rawValue, forKey: Keys.logbookDestination)
         syncToCloudAfterChange()
     }
 
-    func setPFAutoInstrumentMinutes(_ value: Int) {
+    public func setPFAutoInstrumentMinutes(_ value: Int) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.pfAutoInstrumentMinutes)
         syncToCloudAfterChange()
     }
 
-    func setDisplayFlightsInLocalTime(_ value: Bool) {
+    public func setDisplayFlightsInLocalTime(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.displayFlightsInLocalTime)
         syncToCloudAfterChange()
     }
 
-    func setUseIATACodes(_ value: Bool) {
+    public func setUseIATACodes(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.useIATACodes)
         syncToCloudAfterChange()
     }
 
-    func setShowTimesInHoursMinutes(_ value: Bool) {
+    public func setShowTimesInHoursMinutes(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.showTimesInHoursMinutes)
         syncToCloudAfterChange()
     }
 
-    func setLogApproaches(_ value: Bool) {
+    public func setLogApproaches(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.logApproaches)
         syncToCloudAfterChange()
     }
 
-    func setDefaultApproachType(_ value: String?) {
+    public func setDefaultApproachType(_ value: String?) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.defaultApproachType)
         syncToCloudAfterChange()
     }
 
-    func setSelectedFleetID(_ value: String) {
+    public func setSelectedFleetID(_ value: String) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.selectedFleetID)
         syncToCloudAfterChange()
     }
 
-    func setDecimalRoundingMode(_ value: RoundingMode) {
+    public func setDecimalRoundingMode(_ value: RoundingMode) {
         markModificationAndSyncToCloud()
         userDefaults.set(value.rawValue, forKey: Keys.decimalRoundingMode)
         syncToCloudAfterChange()
     }
 
-    func setEnterTimesInLocalTime(_ value: Bool) {
+    public func setEnterTimesInLocalTime(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.enterTimesInLocalTime)
         syncToCloudAfterChange()
     }
 
-    func setShowOutInTimes(_ value: Bool) {
+    public func setShowOutInTimes(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.showOutInTimes)
         syncToCloudAfterChange()
     }
 
-    func setCountSimInTotal(_ value: Bool) {
+    public func setCountSimInTotal(_ value: Bool) {
         markModificationAndSyncToCloud()
         userDefaults.set(value, forKey: Keys.countSimInTotal)
         syncToCloudAfterChange()
     }
 
-    func setRecentCaptainNames(_ value: [String]) {
+    public func setRecentCaptainNames(_ value: [String]) {
         userDefaults.set(value, forKey: Keys.recentCaptainNames)
         syncToCloudAfterChange()
     }
 
-    func setRecentCoPilotNames(_ value: [String]) {
+    public func setRecentCoPilotNames(_ value: [String]) {
         userDefaults.set(value, forKey: Keys.recentCoPilotNames)
         syncToCloudAfterChange()
     }
 
-    func setRecentSONames(_ value: [String]) {
+    public func setRecentSONames(_ value: [String]) {
         userDefaults.set(value, forKey: Keys.recentSONames)
         syncToCloudAfterChange()
     }
 
-    func setRecentAircraftRegs(_ value: [String]) {
+    public func setRecentAircraftRegs(_ value: [String]) {
         userDefaults.set(value, forKey: Keys.recentAircraftRegs)
         syncToCloudAfterChange()
     }
@@ -587,7 +587,7 @@ class UserDefaultsService: ObservableObject {
     }
 
     /// Add a name to the unified crew list. Returns the updated sorted list.
-    func addCrewName(_ name: String) -> [String] {
+    public func addCrewName(_ name: String) -> [String] {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCrewNames) }
         var names = userDefaults.stringArray(forKey: Keys.savedCrewNames) ?? []
@@ -601,7 +601,7 @@ class UserDefaultsService: ObservableObject {
     }
 
     /// Remove a name from the unified crew list. Returns the updated list.
-    func removeCrewName(_ name: String) -> [String] {
+    public func removeCrewName(_ name: String) -> [String] {
         var names = userDefaults.stringArray(forKey: Keys.savedCrewNames) ?? []
         names.removeAll { $0 == name }
         let sorted = sortCrewNamesByFirstName(names)
@@ -611,7 +611,7 @@ class UserDefaultsService: ObservableObject {
 
     // MARK: - Crew Name Management (legacy delegates — keep for backward compat)
 
-    func addCaptainName(_ name: String) -> [String] {
+    public func addCaptainName(_ name: String) -> [String] {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCrewNames) }
         // Keep legacy key updated for CloudKit backward compat
@@ -623,7 +623,7 @@ class UserDefaultsService: ObservableObject {
         return addCrewName(trimmedName)
     }
 
-    func addCoPilotName(_ name: String) -> [String] {
+    public func addCoPilotName(_ name: String) -> [String] {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCrewNames) }
         // Keep legacy key updated for CloudKit backward compat
@@ -635,7 +635,7 @@ class UserDefaultsService: ObservableObject {
         return addCrewName(trimmedName)
     }
 
-    func addSOName(_ name: String) -> [String] {
+    public func addSOName(_ name: String) -> [String] {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return loadAndSortCrewNames(forKey: Keys.savedCrewNames) }
         // Keep legacy key updated for CloudKit backward compat
@@ -647,7 +647,7 @@ class UserDefaultsService: ObservableObject {
         return addCrewName(trimmedName)
     }
 
-    func removeCaptainName(_ name: String) -> [String] {
+    public func removeCaptainName(_ name: String) -> [String] {
         // Keep legacy key updated for CloudKit backward compat
         var legacy = userDefaults.stringArray(forKey: Keys.savedCaptainNames) ?? []
         legacy.removeAll { $0 == name }
@@ -655,7 +655,7 @@ class UserDefaultsService: ObservableObject {
         return removeCrewName(name)
     }
 
-    func removeCoPilotName(_ name: String) -> [String] {
+    public func removeCoPilotName(_ name: String) -> [String] {
         // Keep legacy key updated for CloudKit backward compat
         var legacy = userDefaults.stringArray(forKey: Keys.savedCoPilotNames) ?? []
         legacy.removeAll { $0 == name }
@@ -663,7 +663,7 @@ class UserDefaultsService: ObservableObject {
         return removeCrewName(name)
     }
 
-    func removeSOName(_ name: String) -> [String] {
+    public func removeSOName(_ name: String) -> [String] {
         // Keep legacy key updated for CloudKit backward compat
         var legacy = userDefaults.stringArray(forKey: Keys.savedSONames) ?? []
         legacy.removeAll { $0 == name }
@@ -671,63 +671,63 @@ class UserDefaultsService: ObservableObject {
         return removeCrewName(name)
     }
 
-    func clearAllCaptainNames() {
+    public func clearAllCaptainNames() {
         userDefaults.removeObject(forKey: Keys.savedCaptainNames)
     }
 
-    func clearAllCoPilotNames() {
+    public func clearAllCoPilotNames() {
         userDefaults.removeObject(forKey: Keys.savedCoPilotNames)
     }
 
     // MARK: - Recent Crew Names Management
 
     /// Track a recently used captain name
-    func trackRecentCaptainName(_ name: String) {
+    public func trackRecentCaptainName(_ name: String) {
         trackRecentName(name, forKey: Keys.recentCaptainNames)
     }
 
     /// Track a recently used copilot name
-    func trackRecentCoPilotName(_ name: String) {
+    public func trackRecentCoPilotName(_ name: String) {
         trackRecentName(name, forKey: Keys.recentCoPilotNames)
     }
 
     /// Track a recently used SO name
-    func trackRecentSOName(_ name: String) {
+    public func trackRecentSOName(_ name: String) {
         trackRecentName(name, forKey: Keys.recentSONames)
     }
 
     /// Get recent captain names
-    func getRecentCaptainNames() -> [String] {
+    public func getRecentCaptainNames() -> [String] {
         return userDefaults.stringArray(forKey: Keys.recentCaptainNames) ?? []
     }
 
     /// Get recent copilot names
-    func getRecentCoPilotNames() -> [String] {
+    public func getRecentCoPilotNames() -> [String] {
         return userDefaults.stringArray(forKey: Keys.recentCoPilotNames) ?? []
     }
 
     /// Get recent SO names
-    func getRecentSONames() -> [String] {
+    public func getRecentSONames() -> [String] {
         return userDefaults.stringArray(forKey: Keys.recentSONames) ?? []
     }
 
     /// Track a recently used aircraft registration
-    func trackRecentAircraftReg(_ reg: String) {
+    public func trackRecentAircraftReg(_ reg: String) {
         trackRecentName(reg, forKey: Keys.recentAircraftRegs)
     }
 
     /// Get recent aircraft registrations
-    func getRecentAircraftRegs() -> [String] {
+    public func getRecentAircraftRegs() -> [String] {
         return userDefaults.stringArray(forKey: Keys.recentAircraftRegs) ?? []
     }
 
     /// Track a recently used airport
-    func trackRecentAirport(_ airport: String) {
+    public func trackRecentAirport(_ airport: String) {
         trackRecentName(airport, forKey: Keys.recentAirports, maxCount: 3)
     }
 
     /// Get recent airports
-    func getRecentAirports() -> [String] {
+    public func getRecentAirports() -> [String] {
         return userDefaults.stringArray(forKey: Keys.recentAirports) ?? []
     }
 
@@ -757,7 +757,7 @@ class UserDefaultsService: ObservableObject {
 
     // MARK: - Utility Methods
     
-    func resetAllSettings() {
+    public func resetAllSettings() {
         let keys = [
             Keys.aircraftReg,
             Keys.captainName,
@@ -780,7 +780,7 @@ class UserDefaultsService: ObservableObject {
         print("All UserDefaults settings have been reset")
     }
     
-    func exportSettings() -> [String: Any] {
+    public func exportSettings() -> [String: Any] {
         let settings = loadSettings()
         return [
             "aircraftReg": settings.aircraftReg,
@@ -818,7 +818,7 @@ class UserDefaultsService: ObservableObject {
 extension UserDefaultsService {
     
     /// Check if this is the first app launch
-    var isFirstLaunch: Bool {
+    public var isFirstLaunch: Bool {
         let hasLaunchedKey = "hasLaunchedBefore"
         let hasLaunched = userDefaults.bool(forKey: hasLaunchedKey)
         
@@ -831,16 +831,16 @@ extension UserDefaultsService {
     }
     
     /// Get app version for migration purposes
-    func getStoredAppVersion() -> String? {
+    public func getStoredAppVersion() -> String? {
         return userDefaults.string(forKey: "appVersion")
     }
     
-    func setStoredAppVersion(_ version: String) {
+    public func setStoredAppVersion(_ version: String) {
         userDefaults.set(version, forKey: "appVersion")
     }
 
     /// Track whether the user has completed onboarding
-    var onboardingCompleted: Bool {
+    public var onboardingCompleted: Bool {
         get { userDefaults.bool(forKey: Keys.onboardingCompleted) }
         set { userDefaults.set(newValue, forKey: Keys.onboardingCompleted) }
     }

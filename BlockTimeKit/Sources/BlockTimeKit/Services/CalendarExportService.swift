@@ -6,9 +6,9 @@
 import Foundation
 
 @MainActor
-final class CalendarExportService {
+public final class CalendarExportService {
 
-    static let shared = CalendarExportService()
+    public static let shared = CalendarExportService()
     private init() {}
 
     // MARK: - Public API
@@ -16,7 +16,7 @@ final class CalendarExportService {
     /// Generates an iCalendar (.ics) string from an array of flights.
     /// Events are grouped by duty day. Mode controls whether all-day, sector, or both
     /// event types are emitted.
-    func generateICS(from flights: [FlightSector], settings: CalendarExportSettings) -> String {
+    public func generateICS(from flights: [FlightSector], settings: CalendarExportSettings) -> String {
         var lines: [String] = []
 
         lines += [
@@ -57,7 +57,7 @@ final class CalendarExportService {
 
     // MARK: - Title Builders (internal for preview access in CalendarFormatSheet)
 
-    func buildSectorTitle(for flight: FlightSector, settings: CalendarExportSettings) -> String {
+    public func buildSectorTitle(for flight: FlightSector, settings: CalendarExportSettings) -> String {
         let enabled = settings.enabledSector()
         var tokens: [String] = []
 
@@ -96,7 +96,7 @@ final class CalendarExportService {
         return tokens.joined(separator: " ").trimmingCharacters(in: .whitespaces)
     }
 
-    func buildDailyTitle(for flights: [FlightSector], settings: CalendarExportSettings) -> String {
+    public func buildDailyTitle(for flights: [FlightSector], settings: CalendarExportSettings) -> String {
         guard !flights.isEmpty else { return "" }
         let enabled = settings.enabledAllDay()
         var tokens: [String] = []

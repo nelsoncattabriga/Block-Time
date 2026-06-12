@@ -8,12 +8,12 @@ import Observation
 
 // MARK: - Export Mode
 
-enum CalendarExportMode: String, CaseIterable {
+public enum CalendarExportMode: String, CaseIterable {
     case allDayOnly
     case sectorsOnly
     case both
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .allDayOnly:  return "All-day only"
         case .sectorsOnly: return "Individual sectors"
@@ -24,15 +24,15 @@ enum CalendarExportMode: String, CaseIterable {
 
 // MARK: - Component Enums
 
-enum AllDayComponent: String, CaseIterable, Identifiable {
+public enum AllDayComponent: String, CaseIterable, Identifiable {
     case firstSTD
     case route
     case lastSTA
     case flightNumbers
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .firstSTD:      return "First STD (0900)"
         case .route:         return "Route (BNE -> SYD)"
@@ -42,7 +42,7 @@ enum AllDayComponent: String, CaseIterable, Identifiable {
     }
 }
 
-enum SectorComponent: String, CaseIterable, Identifiable {
+public enum SectorComponent: String, CaseIterable, Identifiable {
     case std
     case flightNumber
     case from
@@ -50,9 +50,9 @@ enum SectorComponent: String, CaseIterable, Identifiable {
     case sta
     case paxIndicator
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .std:          return "STD (09:00)"
         case .flightNumber: return "Flight number"
@@ -66,33 +66,38 @@ enum SectorComponent: String, CaseIterable, Identifiable {
 
 // MARK: - OrderedComponent
 
-struct OrderedComponent: Codable, Identifiable {
-    var rawValue: String
-    var enabled: Bool
-    var id: String { rawValue }
+public struct OrderedComponent: Codable, Identifiable {
+    public var rawValue: String
+    public var enabled: Bool
+    public var id: String { rawValue }
+
+    public init(rawValue: String, enabled: Bool) {
+        self.rawValue = rawValue
+        self.enabled = enabled
+    }
 }
 
 // MARK: - Settings
 
 @Observable
 @MainActor
-final class CalendarExportSettings {
+public final class CalendarExportSettings {
 
-    static let shared = CalendarExportSettings()
+    public static let shared = CalendarExportSettings()
 
     private static let modeKey              = "CalendarExport.mode"
     private static let allDayComponentsKey  = "CalendarExport.allDayComponents"
     private static let sectorComponentsKey  = "CalendarExport.sectorComponents"
 
-    var mode: CalendarExportMode {
+    public var mode: CalendarExportMode {
         didSet { persist() }
     }
 
-    var allDayComponents: [OrderedComponent] {
+    public var allDayComponents: [OrderedComponent] {
         didSet { persist() }
     }
 
-    var sectorComponents: [OrderedComponent] {
+    public var sectorComponents: [OrderedComponent] {
         didSet { persist() }
     }
 
@@ -132,13 +137,13 @@ final class CalendarExportSettings {
 
     // MARK: - Enabled Helpers
 
-    func enabledAllDay() -> [AllDayComponent] {
+    public func enabledAllDay() -> [AllDayComponent] {
         allDayComponents
             .filter { $0.enabled }
             .compactMap { AllDayComponent(rawValue: $0.rawValue) }
     }
 
-    func enabledSector() -> [SectorComponent] {
+    public func enabledSector() -> [SectorComponent] {
         sectorComponents
             .filter { $0.enabled }
             .compactMap { SectorComponent(rawValue: $0.rawValue) }

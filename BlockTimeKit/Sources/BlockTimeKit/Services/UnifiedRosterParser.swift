@@ -9,11 +9,11 @@ import Foundation
 
 // MARK: - Roster Type
 
-enum RosterType: String {
+public enum RosterType: String {
     case shortHaul = "SH"
     case longHaul = "LH"
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .shortHaul: return "SH"
         case .longHaul: return "LH"
@@ -24,34 +24,32 @@ enum RosterType: String {
 // MARK: - Unified Data Models
 
 /// Unified flight model that works for both SH and LH rosters
-struct UnifiedParsedFlight {
-    let date: Date
-    let flightNumber: String
-    let departureAirport: String
-    let arrivalAirport: String
-    let departureTime: String  // HHmm format (e.g., "1239")
-    let arrivalTime: String    // HHmm format (e.g., "1517")
-    let aircraftType: String   // ICAO code (e.g., "B738", "B787")
-    let role: String           // "Captain", "First Officer", or "Second Officer"
-    let isPositioning: Bool    // True if positioning/PAX flight
-    let bidPeriod: String      // e.g., "3711" (SH) or "356" (LH)
-    let dutyCode: String?      // e.g., "5017A2" (SH) or "EN04X011" (LH)
-    let rosterType: RosterType // Type of roster this came from
+public struct UnifiedParsedFlight {
+    public let date: Date
+    public let flightNumber: String
+    public let departureAirport: String
+    public let arrivalAirport: String
+    public let departureTime: String
+    public let arrivalTime: String
+    public let aircraftType: String
+    public let role: String
+    public let isPositioning: Bool
+    public let bidPeriod: String
+    public let dutyCode: String?
+    public let rosterType: RosterType
 }
 
 /// Unified parse result that works for both SH and LH rosters
-struct UnifiedParseResult {
-    let flights: [UnifiedParsedFlight]
-    let pilotName: String
-    let staffNumber: String
-    let bidPeriod: String
-    let base: String
-    let category: String
-    let rosterType: RosterType
-    /// First calendar day of the bid period, derived from the BP number via epoch formula.
-    let periodStartDate: Date?
-    /// Last calendar day of the bid period, derived from the BP number via epoch formula.
-    let periodEndDate: Date?
+public struct UnifiedParseResult {
+    public let flights: [UnifiedParsedFlight]
+    public let pilotName: String
+    public let staffNumber: String
+    public let bidPeriod: String
+    public let base: String
+    public let category: String
+    public let rosterType: RosterType
+    public let periodStartDate: Date?
+    public let periodEndDate: Date?
 }
 
 // MARK: - Roster Parser Protocol
@@ -71,13 +69,13 @@ protocol RosterParser {
 // MARK: - Unified Roster Service
 
 /// Main service that automatically detects roster type and routes to appropriate parser
-class UnifiedRosterService {
+public class UnifiedRosterService {
 
-    enum RosterDetectionError: Error, LocalizedError {
+    public enum RosterDetectionError: Error, LocalizedError {
         case unknownRosterType
         case emptyContent
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .unknownRosterType:
                 return "Unable to determine roster type. Please ensure you've selected a valid Qantas roster file."
@@ -88,13 +86,13 @@ class UnifiedRosterService {
     }
 
     /// Parse roster from file URL with automatic type detection
-    static func parseRoster(from fileURL: URL) throws -> UnifiedParseResult {
+    public static func parseRoster(from fileURL: URL) throws -> UnifiedParseResult {
         let content = try String(contentsOf: fileURL, encoding: .utf8)
         return try parseRoster(from: content)
     }
 
     /// Parse roster from string with automatic type detection
-    static func parseRoster(from content: String) throws -> UnifiedParseResult {
+    public static func parseRoster(from content: String) throws -> UnifiedParseResult {
         guard !content.isEmpty else {
             throw RosterDetectionError.emptyContent
         }
@@ -116,7 +114,7 @@ class UnifiedRosterService {
     }
 
     /// Detect roster type without parsing
-    static func detectRosterType(from content: String) -> RosterType? {
+    public static func detectRosterType(from content: String) -> RosterType? {
         if SHRosterParser.canParse(content: content) {
             return .shortHaul
         }
