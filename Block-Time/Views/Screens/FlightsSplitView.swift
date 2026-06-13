@@ -57,7 +57,14 @@ struct FlightsSplitView: View {
                 NavigationStack {
                     if isAddingNewFlight {
                         // Show full AddFlightView with ACARS capture
-                        AddFlightView()
+                        AddFlightView(onNextSector: {
+                            // VM already pre-populated by nextSector() — stay on add screen
+                            // Force a view refresh by toggling isAddingNewFlight
+                            isAddingNewFlight = false
+                            Task { @MainActor in
+                                isAddingNewFlight = true
+                            }
+                        })
                             .environmentObject(viewModel)
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbar {

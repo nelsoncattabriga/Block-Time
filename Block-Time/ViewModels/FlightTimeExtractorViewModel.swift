@@ -2312,6 +2312,44 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
     }
 
+    /// Saves the current flight (via updateExistingFlight) and returns a new FlightSector
+    /// template for the next leg — same aircraft/crew, fromAirport = current toAirport, times zeroed.
+    /// Saves the current new flight (via addToInternalLogbook) and returns a template
+    /// FlightSector for the next leg — same aircraft/crew, fromAirport = current toAirport, times zeroed.
+    /// Saves the current flight then resets the VM into add-new mode,
+    /// pre-populated for the next leg. Returns true if the save succeeded.
+    func nextSector() -> Bool {
+        let savedToAirport = AirportService.shared.convertToICAO(toAirport)
+        let savedDate = flightDate
+        let savedAircraftReg = aircraftReg
+        let savedAircraftType = aircraftType
+        let savedCaptain = captainName
+        let savedFO = coPilotName
+        let savedSO1 = so1Name
+        let savedSO2 = so2Name
+        let savedIsPilotFlying = isPilotFlying
+        let savedIsPositioning = isPositioning
+
+        addToInternalLogbook()
+        guard statusColor == .green else { return false }
+
+        resetAllFields()
+
+        // Overwrite with carried-over values
+        flightDate = savedDate
+        aircraftReg = savedAircraftReg
+        aircraftType = savedAircraftType
+        fromAirport = savedToAirport
+        captainName = savedCaptain
+        coPilotName = savedFO
+        so1Name = savedSO1
+        so2Name = savedSO2
+        isPilotFlying = savedIsPilotFlying
+        isPositioning = savedIsPositioning
+
+        return true
+    }
+
     func deleteCurrentFlight() -> Bool {
         guard let sectorID = editingSectorID else { return false }
 

@@ -6,6 +6,7 @@ struct ModernActionButtonsCard: View {
     @Binding var showingDeleteAlert: Bool
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
+    var onNextSector: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(PurchaseService.self) private var purchaseService
@@ -19,13 +20,13 @@ struct ModernActionButtonsCard: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "paperplane.fill")
-                    .foregroundColor(.red)
+                    .foregroundStyle(.red)
                     .font(.title3)
 
                 Text("Actions")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
 
                 Spacer()
             }
@@ -43,7 +44,6 @@ struct ModernActionButtonsCard: View {
                         action: {
                             if viewModel.updateExistingFlight() {
                                 HapticManager.shared.notification(.success)
-                                // Show success notification
                                 successMessage = "Flight Updated"
                                 withAnimation {
                                     showSuccessNotification = true
@@ -103,7 +103,7 @@ struct ModernActionButtonsCard: View {
                     // Add to internal logbook button
                     ModernActionButton(
                         title: "Add to Logbook",
-                        subtitle: nil,
+                        subtitle: "Save and return to Flights",
                         icon: "plus.circle.fill",
                         color: .green,
                         isEnabled: viewModel.canSendToLogTen,
@@ -137,28 +137,29 @@ struct ModernActionButtonsCard: View {
                         }
                     )
 
-                    // Clear button
+                    // Next Sector button
                     ModernActionButton(
-                        title: "Clear All Entries",
-                        subtitle: "Clear form",
-                        icon: "arrow.clockwise",
-                        color: .red,
-                        isEnabled: true,
+                        title: "Save & Add Next Sector",
+                        subtitle: "Save & start next leg",
+                        icon: "arrow.right.circle.fill",
+                        color: .blue,
+                        isEnabled: viewModel.canSendToLogTen,
                         action: {
-                            HapticManager.shared.notification(.warning)
-                            viewModel.resetAllFields()
+                            HapticManager.shared.impact(.medium)
+                            onNextSector?()
                         }
                     )
+
                 }
             }
         }
         .padding(16)
         .background(.thinMaterial)
-        .cornerRadius(12)
+        .clipShape(.rect(cornerRadius: 12))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-        .overlay(
+        .overlay {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-        )
+        }
     }
 }

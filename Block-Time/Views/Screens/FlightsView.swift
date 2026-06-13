@@ -58,6 +58,7 @@ struct FlightsView: View {
     @State private var reloadTask: Task<Void, Never>?
     @State private var cachedTotalHours: Double = 0.0
     @State private var isAddingNewFlight: Bool = false
+    @State private var pendingNextSector: Bool = false
 
     private var bulkDeleteAlertTitle: String {
         let word = selectedFlights.count == 1 ? "Entry" : "Entries"
@@ -398,16 +399,24 @@ struct FlightsView: View {
                     }
             }
             .navigationDestination(isPresented: $isAddingNewFlight) {
-                AddFlightView()
-                    .environmentObject(viewModel)
-                    .onAppear {
-                        viewModel.exitEditingMode() // Ensure we're not in edit mode
-                    }
-                    .onDisappear {
+                AddFlightView(onNextSector: {
+                    pendingNextSector = true
+                })
+                .environmentObject(viewModel)
+                .onAppear {
+                    viewModel.exitEditingMode() // Ensure we're not in edit mode
+                }
+                .onDisappear {
+                    if pendingNextSector {
+                        pendingNextSector = false
+                        // VM already pre-populated by nextSector() — re-open add screen
+                        isAddingNewFlight = true
+                    } else {
                         Task { await loadFlights() }
                         viewModel.resetAllFields()
                         isAddingNewFlight = false
                     }
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

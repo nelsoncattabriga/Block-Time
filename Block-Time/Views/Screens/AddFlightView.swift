@@ -5,6 +5,7 @@ import SwiftUI
 import PhotosUI
 
 struct AddFlightView: View {
+    var onNextSector: (() -> Void)? = nil
     @Environment(ThemeService.self) private var themeService
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -36,10 +37,10 @@ struct AddFlightView: View {
             ScrollViewReader { scrollProxy in
                     ScrollView {
                         if useWideLayout {
-                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture)
+                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture, onNextSector: onNextSector)
                                 .id("top")
                         } else {
-                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture)
+                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture, onNextSector: onNextSector)
                                 .id("top")
                         }
                     }
@@ -157,6 +158,7 @@ private struct CompactLayoutView: View {
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     var hidePhotoCapture: Bool
+    var onNextSector: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
@@ -185,7 +187,19 @@ private struct CompactLayoutView: View {
                 ModernManualEntryDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                 // Action Buttons Card
-                ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                ModernActionButtonsCard(
+                    viewModel: viewModel,
+                    showingDeleteAlert: $showingDeleteAlert,
+                    showSuccessNotification: $showSuccessNotification,
+                    successMessage: $successMessage,
+                    onNextSector: {
+                        if viewModel.nextSector() {
+                            NotificationCenter.default.post(name: .flightAdded, object: nil)
+                            onNextSector?()
+                            if !isInSplitView { dismiss() }
+                        }
+                    }
+                )
 
                 // Bottom spacer
                 Spacer(minLength: 20)
@@ -250,6 +264,7 @@ private struct WideLayoutView: View {
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     var hidePhotoCapture: Bool
+    var onNextSector: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
@@ -283,7 +298,19 @@ private struct WideLayoutView: View {
                         ModernManualEntryDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                         // Action Buttons Card
-                        ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                        ModernActionButtonsCard(
+                            viewModel: viewModel,
+                            showingDeleteAlert: $showingDeleteAlert,
+                            showSuccessNotification: $showSuccessNotification,
+                            successMessage: $successMessage,
+                            onNextSector: {
+                                if viewModel.nextSector() {
+                                    NotificationCenter.default.post(name: .flightAdded, object: nil)
+                                    onNextSector?()
+                                    if !isInSplitView { dismiss() }
+                                }
+                            }
+                        )
                     }
                     .frame(maxWidth: .infinity)
                 }

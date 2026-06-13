@@ -1217,6 +1217,59 @@ class FlightDatabaseService: ObservableObject {
         return savedCount
     }
 
+    /// Saves `sector` and returns a new FlightSector with fromAirport set to sector.toAirport,
+    /// flight number cleared, all times/approaches zeroed, ready for the next leg.
+    func createNextSector(from sector: FlightSector) -> FlightSector? {
+        viewContext.undoManager?.beginUndoGrouping()
+        guard saveFlightRaw(sector) else {
+            viewContext.undoManager?.undoNestedGroup()
+            return nil
+        }
+        undoDescriptions.append("Added next sector")
+        undoableChangeCount += 1
+        NotificationCenter.default.post(name: .flightDataChanged, object: nil)
+        viewContext.undoManager?.endUndoGrouping()
+
+        return FlightSector(
+            id: UUID(),
+            date: sector.date,
+            flightNumber: "",
+            aircraftReg: sector.aircraftReg,
+            aircraftType: sector.aircraftType,
+            fromAirport: sector.toAirport,
+            toAirport: "",
+            captainName: sector.captainName,
+            foName: sector.foName,
+            so1Name: sector.so1Name,
+            so2Name: sector.so2Name,
+            blockTime: "0.0",
+            nightTime: "0.0",
+            p1Time: "0.0",
+            p1usTime: "0.0",
+            p2Time: "0.0",
+            instrumentTime: "0.0",
+            simTime: "0.0",
+            spInsTime: "0.0",
+            isPilotFlying: sector.isPilotFlying,
+            isPositioning: sector.isPositioning,
+            isAIII: false,
+            isRNP: false,
+            isILS: false,
+            isGLS: false,
+            isNPA: false,
+            remarks: "",
+            dayTakeoffs: 0,
+            dayLandings: 0,
+            nightTakeoffs: 0,
+            nightLandings: 0,
+            outTime: "",
+            inTime: "",
+            scheduledDeparture: "",
+            scheduledArrival: "",
+            counterEntries: [:]
+        )
+    }
+
     /// Inserts a flight into viewContext without wrapping in its own undo group or touching the description stack.
     /// Used by duplicateFlights, which manages its own single outer undo group.
     private func saveFlightRaw(_ sector: FlightSector) -> Bool {
