@@ -825,6 +825,7 @@ struct ManageBackupsView: View {
     @State private var selectedExternalFile: URL?
     @State private var selectedRestoreMode: ImportMode = .merge
     @State private var isRestoring = false
+    @State private var restoreStatusMessage = ""
     @State private var showingResultAlert = false
     @State private var isSuccess = false
     @State private var resultMessage = ""
@@ -951,16 +952,22 @@ struct ManageBackupsView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
 
-                        Text("Browse and select a backup file")
+                        Text(isRestoring && !restoreStatusMessage.isEmpty ? restoreStatusMessage : "Browse and select a backup file")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
 
                     Spacer()
 
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(Color.blue.opacity(0.7))
+                    if isRestoring {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(Color.blue.opacity(0.7))
+                    }
                 }
                 .padding(16)
                 .background(Color.blue.opacity(0.12))
@@ -971,6 +978,7 @@ struct ManageBackupsView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(isRestoring)
         }
         .padding(16)
         .background(.thinMaterial)
@@ -1117,13 +1125,18 @@ struct ManageBackupsView: View {
 
     private func executeExternalRestore(url: URL, definitionsBehavior: DefinitionsBehavior) {
         isRestoring = true
+        restoreStatusMessage = "Preparing restore..."
         FileImportService.shared.quickRestoreFromBackup(
             url: url,
             mode: selectedRestoreMode,
             skipSecurityScoping: false,
-            definitionsBehavior: definitionsBehavior
+            definitionsBehavior: definitionsBehavior,
+            progressHandler: { message in
+                restoreStatusMessage = message
+            }
         ) { result in
             isRestoring = false
+            restoreStatusMessage = ""
             switch result {
             case .success(let importResult):
                 var message = "Restore Summary\n\n"
