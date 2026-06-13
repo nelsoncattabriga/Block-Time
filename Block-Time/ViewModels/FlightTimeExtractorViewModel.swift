@@ -446,6 +446,7 @@ class FlightTimeExtractorViewModel: ObservableObject {
 
         // Apply next-sector carry-over if present (takes priority over draft and defaults)
         if pendingNextSectorCarryOver != nil {
+            resetAllFieldsSilently()
             applyNextSectorCarryOver()
             return
         }
@@ -2705,7 +2706,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
     // MARK: - Utility Methods
     
     func resetAllFields() {
-        HapticManager.shared.impact(.light) // Light haptic for reset action
+        HapticManager.shared.impact(.light)
+        resetAllFieldsSilently()
+    }
+
+    private func resetAllFieldsSilently() {
         selectedImage = nil
         selectedPhotoItem = nil
 
