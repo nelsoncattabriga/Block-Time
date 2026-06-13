@@ -311,6 +311,12 @@ class TextRecognitionService: ObservableObject {
 
         LogManager.shared.debug("Recognized text: \(recognizedText)")
 
+        // Pre-process: normalize OCR misreads of the "OUT" label before any parsing.
+        // Vision frequently reads "OUT" as "• UT", "0UT", "UT", etc. due to the bullet/dot
+        // decorating some ACARS screens. A leading-bullet variant on its own line is the
+        // most common case (QFA A321/A330 MCDU screens).
+        recognizedText = normalizeOutLabel(in: recognizedText)
+
         // Pre-process: rejoin split times where OCR breaks "HH\n:MM" across two lines.
         // e.g. "09\n:57" → "09:57", "09\n:4.7" → "09:47"
         recognizedText = rejoinSplitTimes(in: recognizedText)
@@ -573,6 +579,35 @@ class TextRecognitionService: ObservableObject {
             flt: fltTime,
             blk: blkTime
         )
+    }
+
+    /// Normalise OCR misreads of the "OUT" label that appear on their own line.
+    /// Vision frequently reads the leading bullet/dot on MCDU screens as "• UT", "0UT",
+    /// "UT", or "OUI". Replace each whole-line variant with the canonical "OUT" so that
+    /// the columnar, interleaved, and pattern-based parsers all see a clean label.
+    private func normalizeOutLabel(in text: String) -> String {
+        // Patterns that stand alone on a line and are clearly "OUT" misreads:
+        //   "• UT"  – bullet + space + UT  (most common on A321/A330 MCDU)
+        //   "•UT"   – bullet + UT (no space)
+        //   "0UT"   – zero instead of O
+        //   "UT"    – just missing the O entirely
+        //   "OUI"   – I for T
+        let variants = ["• UT", "•UT", "0UT", "UT", "OUI"]
+        var result = text
+        for variant in variants {
+            // Only replace when the OCR token appears as its own whitespace-bounded line.
+            let pattern = try! NSRegularExpression(pattern: "(?m)^\\s*\(NSRegularExpression.escapedPattern(for: variant))\\s*$")
+            let before = result
+            result = pattern.stringByReplacingMatches(
+                in: result,
+                range: NSRange(result.startIndex..., in: result),
+                withTemplate: "OUT"
+            )
+            if result != before {
+                LogManager.shared.debug("  Normalised OUT label: '\(variant)' → 'OUT'")
+            }
+        }
+        return result
     }
 
     /// Rejoin OCR-split times where the hour and minutes land on separate lines.
@@ -1340,6 +1375,7 @@ class TextRecognitionService: ObservableObject {
             "Z": "2",  // Z → 2
             "S": "5",  // S → 5
             "B": "8",  // B → 8
+            "E": "6",  // E → 6 (curved top of 6 reads as E on MCDU fonts)
             "G": "6",  // G → 6
             "D": "0",  // D → 0
         ]
@@ -1385,6 +1421,8 @@ class TextRecognitionService: ObservableObject {
             "s": "5",  // s → 5
             "B": "8",  // B → 8
             "b": "8",  // b → 8
+            "E": "6",  // E → 6 (curved top of 6 reads as E on MCDU fonts)
+            "e": "6",  // e → 6
             "G": "6",  // G → 6
             "g": "6",  // g → 6
             "D": "0",  // D → 0
@@ -1768,6 +1806,7 @@ class TextRecognitionService: ObservableObject {
 
         var recognizedText = results.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
         LogManager.shared.debug("A380 Recognized text: \(recognizedText)")
+        recognizedText = normalizeOutLabel(in: recognizedText)
         recognizedText = rejoinSplitTimes(in: recognizedText)
 
         // --- Times (reuse B737 columnar / pattern-based / interleaved pipeline) ---

@@ -6,6 +6,8 @@ import PhotosUI
 import BlockTimeKit
 
 struct AddFlightView: View {
+    var onNextSector: (() -> Void)? = nil
+    var onNextSectorFromEdit: (() -> Void)? = nil
     @Environment(ThemeService.self) private var themeService
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -14,6 +16,10 @@ struct AddFlightView: View {
     @State private var showSuccessNotification = false
     @State private var successMessage = ""
     @State private var keyboardToolbar = KeyboardToolbarState()
+    /// Container width, read via onGeometryChange (NOT GeometryReader, which
+    /// re-proposes child size every keyboard-animation frame → relayout hang).
+    /// onGeometryChange only fires when the value actually changes.
+    @State private var containerWidth: CGFloat = 0
 
     private var isInSplitView: Bool {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
@@ -21,19 +27,27 @@ struct AddFlightView: View {
 
     var body: some View {
 
-            GeometryReader { geometry in
-                // Use horizontal size class instead of hardcoded width
-                let useWideLayout = (horizontalSizeClass == .regular && geometry.size.width > 700) || geometry.size.width > 900
+            // Wide layout needs the actual CONTAINER width, not just the size
+            // class: on iPad the Add Flight panel can sit in a narrow column
+            // (alongside the Logbook) while horizontalSizeClass is still
+            // .regular — using the size class alone forced two columns into too
+            // little space and overlapped the list. We read width via
+            // onGeometryChange (below) instead of GeometryReader, which avoided
+            // the per-frame relayout that caused the keyboard-show hang.
+            let useWideLayout = (horizontalSizeClass == .regular && containerWidth > 700) || containerWidth > 900
 
-                ScrollViewReader { scrollProxy in
+            ScrollViewReader { scrollProxy in
                     ScrollView {
                         if useWideLayout {
-                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture)
+                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture, onNextSector: onNextSector, onNextSectorFromEdit: onNextSectorFromEdit)
                                 .id("top")
                         } else {
-                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture)
+                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture, onNextSector: onNextSector, onNextSectorFromEdit: onNextSectorFromEdit)
                                 .id("top")
                         }
+                    }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { newWidth in
+                        containerWidth = newWidth
                     }
                     .scrollContentBackground(.hidden)
                     .background(
@@ -67,8 +81,7 @@ struct AddFlightView: View {
                         }
                     }
                 }
-            }
-            .navigationTitle(viewModel.isEditingMode ? "Edit Flight" : "Add Flight")
+                .navigationTitle(viewModel.isEditingMode ? "Edit Flight" : "Add Flight")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
@@ -127,14 +140,18 @@ struct AddFlightView: View {
                 }
             }
             .onAppear {
+                viewModel.formDidAppear()
                 viewModel.setupInitialData()
                 if AppState.shared.triggerCamera {
                     AppState.shared.triggerCamera = false
                     viewModel.showCamera()
                 }
             }
-        }
+            .onDisappear {
+                viewModel.formDidDisappear()
+            }
     }
+}
 
 // MARK: - Modern Compact Layout
 private struct CompactLayoutView: View {
@@ -143,6 +160,8 @@ private struct CompactLayoutView: View {
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     var hidePhotoCapture: Bool
+    var onNextSector: (() -> Void)? = nil
+    var onNextSectorFromEdit: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
@@ -155,7 +174,10 @@ private struct CompactLayoutView: View {
     }
 
     var body: some View {
-            LazyVStack(spacing: 16) {
+            // VStack (not LazyVStack): only ~4 fixed cards. LazyVStack does
+            // incremental measurement passes that re-run under changing size
+            // proposals (keyboard animation) for no benefit at this small count.
+            VStack(spacing: 16) {
                 // Photo Capture Card - show for supported fleets in both add and edit mode
                 if !hidePhotoCapture && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A320" || selectedFleetID == "A380") {
                     ModernPhotoCaptureCard(viewModel: viewModel, fleetType: selectedFleetID)
@@ -168,7 +190,26 @@ private struct CompactLayoutView: View {
                 ModernManualEntryDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                 // Action Buttons Card
-                ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                ModernActionButtonsCard(
+                    viewModel: viewModel,
+                    showingDeleteAlert: $showingDeleteAlert,
+                    showSuccessNotification: $showSuccessNotification,
+                    successMessage: $successMessage,
+                    onNextSector: {
+                        if viewModel.nextSector() {
+                            NotificationCenter.default.post(name: .flightAdded, object: nil)
+                            onNextSector?()
+                            if !isInSplitView { dismiss() }
+                        }
+                    },
+                    onNextSectorFromEdit: {
+                        let saveFirst = viewModel.hasUnsavedChanges
+                        if viewModel.nextSectorFromEdit(saveFirst: saveFirst) {
+                            onNextSectorFromEdit?()
+                            if !isInSplitView { dismiss() }
+                        }
+                    }
+                )
 
                 // Bottom spacer
                 Spacer(minLength: 20)
@@ -233,6 +274,8 @@ private struct WideLayoutView: View {
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     var hidePhotoCapture: Bool
+    var onNextSector: (() -> Void)? = nil
+    var onNextSectorFromEdit: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
@@ -266,7 +309,26 @@ private struct WideLayoutView: View {
                         ModernManualEntryDataCard(viewModel: viewModel, keyboardToolbar: keyboardToolbar)
 
                         // Action Buttons Card
-                        ModernActionButtonsCard(viewModel: viewModel, showingDeleteAlert: $showingDeleteAlert, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage)
+                        ModernActionButtonsCard(
+                            viewModel: viewModel,
+                            showingDeleteAlert: $showingDeleteAlert,
+                            showSuccessNotification: $showSuccessNotification,
+                            successMessage: $successMessage,
+                            onNextSector: {
+                                if viewModel.nextSector() {
+                                    NotificationCenter.default.post(name: .flightAdded, object: nil)
+                                    onNextSector?()
+                                    if !isInSplitView { dismiss() }
+                                }
+                            },
+                            onNextSectorFromEdit: {
+                                let saveFirst = viewModel.hasUnsavedChanges
+                                if viewModel.nextSectorFromEdit(saveFirst: saveFirst) {
+                                    onNextSectorFromEdit?()
+                                    if !isInSplitView { dismiss() }
+                                }
+                            }
+                        )
                     }
                     .frame(maxWidth: .infinity)
                 }

@@ -381,6 +381,32 @@ struct ModernCapturedDataCard: View {
 
                 VStack(spacing: 8) {
 
+                    // Flight Number field with search button
+                    ModernFlightNumberField(
+                        label: (viewModel.isSimulator || (viewModel.isSpIns && !viewModel.isInstructingInAircraft)) ? "SIM #" : "FLIGHT #",
+                        value: Binding(
+                            get: { viewModel.flightNumber },
+                            set: { viewModel.updateFlightNumber($0) }
+                        ),
+                        placeholder: flightNumberPlaceholder,
+                        icon: "airplane.ticket",
+                        isUppercase: true,
+                        keyboardType: (UIDevice.current.userInterfaceIdiom == .pad || viewModel.isSimulator) ? .numbersAndPunctuation : .numbersAndPunctuation,
+                        canSearch: canSearchFlight,
+                        onSearch: {
+                            viewModel.fetchFlightAwareData()
+                        },
+                        onFocus: {
+                            // Auto-insert airline prefix when field is tapped if empty
+                            // But not for simulator flights (allows custom sim flight numbers like SIM06B)
+                            if viewModel.flightNumber.isEmpty &&
+                               viewModel.includeAirlinePrefixInFlightNumber &&
+                               !viewModel.isSimulator && !(viewModel.isSpIns && !viewModel.isInstructingInAircraft) {
+                                viewModel.updateFlightNumber(viewModel.airlinePrefix)
+                            }
+                        }
+                    )
+
                     // FROM / TO airports
                     HStack(spacing: 8) {
                         ModernAirportField(
@@ -423,32 +449,6 @@ struct ModernCapturedDataCard: View {
                         timeString: viewModel.outTime,
                         showLocalDate: viewModel.displayFlightsInLocalTime && !viewModel.enterTimesInLocalTime,
                         useIATACodes: viewModel.useIATACodes
-                    )
-
-                    // Flight Number field with search button
-                    ModernFlightNumberField(
-                        label: (viewModel.isSimulator || (viewModel.isSpIns && !viewModel.isInstructingInAircraft)) ? "SIM #" : "FLIGHT #",
-                        value: Binding(
-                            get: { viewModel.flightNumber },
-                            set: { viewModel.updateFlightNumber($0) }
-                        ),
-                        placeholder: flightNumberPlaceholder,
-                        icon: "airplane.ticket",
-                        isUppercase: true,
-                        keyboardType: (UIDevice.current.userInterfaceIdiom == .pad || viewModel.isSimulator) ? .numbersAndPunctuation : .numbersAndPunctuation,
-                        canSearch: canSearchFlight,
-                        onSearch: {
-                            viewModel.fetchFlightAwareData()
-                        },
-                        onFocus: {
-                            // Auto-insert airline prefix when field is tapped if empty
-                            // But not for simulator flights (allows custom sim flight numbers like SIM06B)
-                            if viewModel.flightNumber.isEmpty &&
-                               viewModel.includeAirlinePrefixInFlightNumber &&
-                               !viewModel.isSimulator && !(viewModel.isSpIns && !viewModel.isInstructingInAircraft) {
-                                viewModel.updateFlightNumber(viewModel.airlinePrefix)
-                            }
-                        }
                     )
                 }
 

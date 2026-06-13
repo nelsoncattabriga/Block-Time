@@ -420,7 +420,8 @@ struct ModernFlightNumberField: View {
                     .focused($textFieldFocused)
                     .onChange(of: value) { _, newValue in
                         if isUppercase {
-                            value = newValue.uppercased()
+                            let upper = newValue.uppercased()
+                            if upper != newValue { value = upper }
                         }
                     }
                     .onChange(of: textFieldFocused) { _, isFocused in
@@ -529,7 +530,8 @@ struct ModernEditableField: View {
                     .focused($textFieldFocused)
                     .onChange(of: value) { _, newValue in
                         if isUppercase {
-                            value = newValue.uppercased()
+                            let upper = newValue.uppercased()
+                            if upper != newValue { value = upper }
                         }
                     }
                     .onChange(of: textFieldFocused) { _, isFocused in

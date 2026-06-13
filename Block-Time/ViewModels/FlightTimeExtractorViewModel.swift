@@ -100,8 +100,29 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var isEditingMode = false
     var editingSectorID: UUID?
     private var originalFlightData: FlightSector?
+    /// Set by nextSectorFromEdit/nextSector before navigation. setupInitialData applies
+    /// these instead of defaults so pre-populated fields survive the onAppear reset cycle.
+    private var pendingNextSectorCarryOver: NextSectorCarryOver?
+
+    struct NextSectorCarryOver {
+        var date: String
+        var aircraftReg: String
+        var aircraftType: String
+        var fromAirport: String
+        var captainName: String
+        var coPilotName: String
+        var so1Name: String
+        var so2Name: String
+        var isPilotFlying: Bool
+        var isPositioning: Bool
+    }
     private var isLoadingFlight = false
     private var originalIsICUS: Bool = false  // Stored separately since not in FlightSector model
+    /// True while the Add Flight form is on screen and accepting input.
+    /// Used to suppress main-thread crew-name reloads triggered by background
+    /// CloudKit `.flightDataChanged` notifications, which otherwise stack full
+    /// Core Data fetches on the main thread during active typing → UI freeze.
+    private var isAddFlightFormActive = false
 
     // Form fields
     @Published var flightDate = ""
@@ -377,7 +398,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self, !self.isEditingMode else { return }
+                // Skip while the Add Flight form is active (new flight OR editing).
+                // isEditingMode only covers editing an existing flight; a user
+                // ADDING a flight is not in editing mode, so without the
+                // isAddFlightFormActive check a CloudKit sync storm would stack
+                // main-thread crew-name fetches during typing → hard freeze.
+                guard let self, !self.isEditingMode, !self.isAddFlightFormActive else { return }
                 self.crewNamesReloadTask?.cancel()
                 self.crewNamesReloadTask = Task {
                     try? await Task.sleep(for: .milliseconds(500))
@@ -392,10 +418,38 @@ class FlightTimeExtractorViewModel: ObservableObject {
         NotificationCenter.default.removeObserver(self)
     }
 
+    /// Call when the Add Flight form leaves the screen. Re-enables background
+    /// crew-name reloads and refreshes the list once, so any names added by
+    /// CloudKit sync while the form was open are picked up.
+    func formDidDisappear() {
+        isAddFlightFormActive = false
+        crewNamesReloadTask?.cancel()
+        crewNamesReloadTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            self.reloadSavedCrewNames()
+        }
+    }
+
+    /// Mark the Add Flight form as on-screen. Called from AddFlightView.onAppear
+    /// (NOT setupInitialData, which also runs at launch from MainTabView). While
+    /// active, background CloudKit `.flightDataChanged` notifications skip the
+    /// main-thread crew-name reload that would otherwise freeze active typing.
+    func formDidAppear() {
+        isAddFlightFormActive = true
+    }
+
     func setupInitialData() {
         if !hasLoadedSettings {
             loadAllSettings()
             hasLoadedSettings = true
+        }
+
+        // Apply next-sector carry-over if present (takes priority over draft and defaults)
+        if pendingNextSectorCarryOver != nil {
+            resetAllFieldsSilently()
+            applyNextSectorCarryOver()
+            return
         }
 
         // Try to restore draft data first (if not in editing mode)
@@ -2282,6 +2336,68 @@ class FlightTimeExtractorViewModel: ObservableObject {
         }
     }
 
+    /// Saves the current flight (via updateExistingFlight) and returns a new FlightSector
+    /// template for the next leg — same aircraft/crew, fromAirport = current toAirport, times zeroed.
+    /// Saves the current new flight (via addToInternalLogbook) and returns a template
+    /// FlightSector for the next leg — same aircraft/crew, fromAirport = current toAirport, times zeroed.
+    /// Saves the current flight then resets the VM into add-new mode,
+    /// pre-populated for the next leg. Returns true if the save succeeded.
+    func nextSector() -> Bool {
+        storeNextSectorCarryOver()
+        addToInternalLogbook()
+        guard statusColor == .green else {
+            pendingNextSectorCarryOver = nil
+            return false
+        }
+        return true
+    }
+
+    /// Optionally saves changes first, then opens a fresh add screen for the next leg.
+    func nextSectorFromEdit(saveFirst: Bool) -> Bool {
+        if saveFirst {
+            guard updateExistingFlight() else { return false }
+        }
+        storeNextSectorCarryOver()
+        exitEditingMode()
+        return true
+    }
+
+    private func storeNextSectorCarryOver() {
+        pendingNextSectorCarryOver = NextSectorCarryOver(
+            date: flightDate,
+            aircraftReg: aircraftReg,
+            aircraftType: aircraftType,
+            fromAirport: AirportService.shared.convertToICAO(toAirport),
+            captainName: captainName,
+            coPilotName: coPilotName,
+            so1Name: so1Name,
+            so2Name: so2Name,
+            isPilotFlying: isPilotFlying,
+            isPositioning: isPositioning
+        )
+    }
+
+    private func prepareNextSectorFields() {
+        storeNextSectorCarryOver()
+        resetAllFields()
+        applyNextSectorCarryOver()
+    }
+
+    private func applyNextSectorCarryOver() {
+        guard let carry = pendingNextSectorCarryOver else { return }
+        pendingNextSectorCarryOver = nil
+        flightDate = carry.date
+        aircraftReg = carry.aircraftReg
+        aircraftType = carry.aircraftType
+        fromAirport = carry.fromAirport
+        captainName = carry.captainName
+        coPilotName = carry.coPilotName
+        so1Name = carry.so1Name
+        so2Name = carry.so2Name
+        isPilotFlying = carry.isPilotFlying
+        isPositioning = carry.isPositioning
+    }
+
     func deleteCurrentFlight() -> Bool {
         guard let sectorID = editingSectorID else { return false }
 
@@ -2591,7 +2707,11 @@ class FlightTimeExtractorViewModel: ObservableObject {
     // MARK: - Utility Methods
     
     func resetAllFields() {
-        HapticManager.shared.impact(.light) // Light haptic for reset action
+        HapticManager.shared.impact(.light)
+        resetAllFieldsSilently()
+    }
+
+    private func resetAllFieldsSilently() {
         selectedImage = nil
         selectedPhotoItem = nil
 

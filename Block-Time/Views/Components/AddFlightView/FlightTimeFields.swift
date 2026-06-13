@@ -105,7 +105,14 @@ struct ModernTimeField: View {
                         .keyboardType(UIDevice.current.userInterfaceIdiom == .pad ? .numbersAndPunctuation : .numberPad)
                         .focused($timeFieldFocused)
                         .onChange(of: value) { _, newValue in
-                            value = applyFormatting(newValue)
+                            // Only write back when formatting actually changes the string.
+                            // For local-time bindings the get/set round-trip can disagree by a
+                            // minute near DST boundaries, and an unconditional write here would
+                            // re-fire onChange forever, pinning the main thread (hard freeze).
+                            let formatted = applyFormatting(newValue)
+                            if formatted != newValue {
+                                value = formatted
+                            }
                         }
                         .onChange(of: timeFieldFocused) { _, isFocused in
                             if isFocused {
