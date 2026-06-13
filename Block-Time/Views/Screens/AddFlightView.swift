@@ -13,6 +13,10 @@ struct AddFlightView: View {
     @State private var showSuccessNotification = false
     @State private var successMessage = ""
     @State private var keyboardToolbar = KeyboardToolbarState()
+    /// Container width, read via onGeometryChange (NOT GeometryReader, which
+    /// re-proposes child size every keyboard-animation frame → relayout hang).
+    /// onGeometryChange only fires when the value actually changes.
+    @State private var containerWidth: CGFloat = 0
 
     private var isInSplitView: Bool {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
@@ -20,11 +24,16 @@ struct AddFlightView: View {
 
     var body: some View {
 
-            GeometryReader { geometry in
-                // Use horizontal size class instead of hardcoded width
-                let useWideLayout = (horizontalSizeClass == .regular && geometry.size.width > 700) || geometry.size.width > 900
+            // Wide layout needs the actual CONTAINER width, not just the size
+            // class: on iPad the Add Flight panel can sit in a narrow column
+            // (alongside the Logbook) while horizontalSizeClass is still
+            // .regular — using the size class alone forced two columns into too
+            // little space and overlapped the list. We read width via
+            // onGeometryChange (below) instead of GeometryReader, which avoided
+            // the per-frame relayout that caused the keyboard-show hang.
+            let useWideLayout = (horizontalSizeClass == .regular && containerWidth > 700) || containerWidth > 900
 
-                ScrollViewReader { scrollProxy in
+            ScrollViewReader { scrollProxy in
                     ScrollView {
                         if useWideLayout {
                             WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture)
@@ -33,6 +42,9 @@ struct AddFlightView: View {
                             CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture)
                                 .id("top")
                         }
+                    }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { newWidth in
+                        containerWidth = newWidth
                     }
                     .scrollContentBackground(.hidden)
                     .background(
@@ -66,8 +78,7 @@ struct AddFlightView: View {
                         }
                     }
                 }
-            }
-            .navigationTitle(viewModel.isEditingMode ? "Edit Flight" : "Add Flight")
+                .navigationTitle(viewModel.isEditingMode ? "Edit Flight" : "Add Flight")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
@@ -126,14 +137,18 @@ struct AddFlightView: View {
                 }
             }
             .onAppear {
+                viewModel.formDidAppear()
                 viewModel.setupInitialData()
                 if AppState.shared.triggerCamera {
                     AppState.shared.triggerCamera = false
                     viewModel.showCamera()
                 }
             }
-        }
+            .onDisappear {
+                viewModel.formDidDisappear()
+            }
     }
+}
 
 // MARK: - Modern Compact Layout
 private struct CompactLayoutView: View {
@@ -154,7 +169,10 @@ private struct CompactLayoutView: View {
     }
 
     var body: some View {
-            LazyVStack(spacing: 16) {
+            // VStack (not LazyVStack): only ~4 fixed cards. LazyVStack does
+            // incremental measurement passes that re-run under changing size
+            // proposals (keyboard animation) for no benefit at this small count.
+            VStack(spacing: 16) {
                 // Photo Capture Card - show for supported fleets in both add and edit mode
                 if !hidePhotoCapture && (selectedFleetID == "B737" || selectedFleetID == "A330" || selectedFleetID == "B787" || selectedFleetID == "A320" || selectedFleetID == "A380") {
                     ModernPhotoCaptureCard(viewModel: viewModel, fleetType: selectedFleetID)
