@@ -78,7 +78,10 @@
       "Read(//dev/**)",
       "Skill(gsd:execute-phase)",
       "Bash(sed -n '1,50p' /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time/Block-Time/Views/Screens/Settings/CloudKitSyncCard.swift)",
-      "Bash(sed -n '1,50p' /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time/Block-Time/Views/Screens/Settings/SettingsComponents.swift)"
+      "Bash(sed -n '1,50p' /Users/nelson/Library/CloudStorage/OneDrive-Personal/Coding/Xcode/Block-Time/Block-Time/Views/Screens/Settings/SettingsComponents.swift)",
+      "Bash(dwarfdump --uuid '/Users/nelson/Library/Developer/Xcode/Archives/2026-06-09/Block-Time 9-6-2026, 2.40 pm.xcarchive/dSYMs/Block-Time.app.dSYM')",
+      "Bash(mdfind \"com_apple_xcode_dsym_uuids == '7E90EE5F-DB2F-3706-A53A-D0CB6A867213'\")",
+      "Read(//Users/nelson/Library/Developer/Xcode/DerivedData/**)"
     ]
   }
 }
