@@ -99,6 +99,22 @@ class FlightTimeExtractorViewModel: ObservableObject {
     @Published var isEditingMode = false
     var editingSectorID: UUID?
     private var originalFlightData: FlightSector?
+    /// Set by nextSectorFromEdit/nextSector before navigation. setupInitialData applies
+    /// these instead of defaults so pre-populated fields survive the onAppear reset cycle.
+    private var pendingNextSectorCarryOver: NextSectorCarryOver?
+
+    struct NextSectorCarryOver {
+        var date: String
+        var aircraftReg: String
+        var aircraftType: String
+        var fromAirport: String
+        var captainName: String
+        var coPilotName: String
+        var so1Name: String
+        var so2Name: String
+        var isPilotFlying: Bool
+        var isPositioning: Bool
+    }
     private var isLoadingFlight = false
     private var originalIsICUS: Bool = false  // Stored separately since not in FlightSector model
     /// True while the Add Flight form is on screen and accepting input.
@@ -426,6 +442,12 @@ class FlightTimeExtractorViewModel: ObservableObject {
         if !hasLoadedSettings {
             loadAllSettings()
             hasLoadedSettings = true
+        }
+
+        // Apply next-sector carry-over if present (takes priority over draft and defaults)
+        if pendingNextSectorCarryOver != nil {
+            applyNextSectorCarryOver()
+            return
         }
 
         // Try to restore draft data first (if not in editing mode)
@@ -2319,35 +2341,59 @@ class FlightTimeExtractorViewModel: ObservableObject {
     /// Saves the current flight then resets the VM into add-new mode,
     /// pre-populated for the next leg. Returns true if the save succeeded.
     func nextSector() -> Bool {
-        let savedToAirport = AirportService.shared.convertToICAO(toAirport)
-        let savedDate = flightDate
-        let savedAircraftReg = aircraftReg
-        let savedAircraftType = aircraftType
-        let savedCaptain = captainName
-        let savedFO = coPilotName
-        let savedSO1 = so1Name
-        let savedSO2 = so2Name
-        let savedIsPilotFlying = isPilotFlying
-        let savedIsPositioning = isPositioning
-
+        storeNextSectorCarryOver()
         addToInternalLogbook()
-        guard statusColor == .green else { return false }
-
-        resetAllFields()
-
-        // Overwrite with carried-over values
-        flightDate = savedDate
-        aircraftReg = savedAircraftReg
-        aircraftType = savedAircraftType
-        fromAirport = savedToAirport
-        captainName = savedCaptain
-        coPilotName = savedFO
-        so1Name = savedSO1
-        so2Name = savedSO2
-        isPilotFlying = savedIsPilotFlying
-        isPositioning = savedIsPositioning
-
+        guard statusColor == .green else {
+            pendingNextSectorCarryOver = nil
+            return false
+        }
         return true
+    }
+
+    /// Optionally saves changes first, then opens a fresh add screen for the next leg.
+    func nextSectorFromEdit(saveFirst: Bool) -> Bool {
+        if saveFirst {
+            guard updateExistingFlight() else { return false }
+        }
+        storeNextSectorCarryOver()
+        exitEditingMode()
+        return true
+    }
+
+    private func storeNextSectorCarryOver() {
+        pendingNextSectorCarryOver = NextSectorCarryOver(
+            date: flightDate,
+            aircraftReg: aircraftReg,
+            aircraftType: aircraftType,
+            fromAirport: AirportService.shared.convertToICAO(toAirport),
+            captainName: captainName,
+            coPilotName: coPilotName,
+            so1Name: so1Name,
+            so2Name: so2Name,
+            isPilotFlying: isPilotFlying,
+            isPositioning: isPositioning
+        )
+    }
+
+    private func prepareNextSectorFields() {
+        storeNextSectorCarryOver()
+        resetAllFields()
+        applyNextSectorCarryOver()
+    }
+
+    private func applyNextSectorCarryOver() {
+        guard let carry = pendingNextSectorCarryOver else { return }
+        pendingNextSectorCarryOver = nil
+        flightDate = carry.date
+        aircraftReg = carry.aircraftReg
+        aircraftType = carry.aircraftType
+        fromAirport = carry.fromAirport
+        captainName = carry.captainName
+        coPilotName = carry.coPilotName
+        so1Name = carry.so1Name
+        so2Name = carry.so2Name
+        isPilotFlying = carry.isPilotFlying
+        isPositioning = carry.isPositioning
     }
 
     func deleteCurrentFlight() -> Bool {

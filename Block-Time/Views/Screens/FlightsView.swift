@@ -389,14 +389,22 @@ struct FlightsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationDestination(item: $selectedFlight) { sector in
-                AddFlightView()
-                    .environmentObject(viewModel)
-                    .onDisappear {
+                AddFlightView(onNextSectorFromEdit: {
+                    pendingNextSector = true
+                })
+                .environmentObject(viewModel)
+                .onDisappear {
+                    if pendingNextSector {
+                        pendingNextSector = false
+                        selectedFlight = nil
+                        isAddingNewFlight = true
+                    } else {
                         if !viewModel.isEditingMode {
                             Task { await loadFlights() }
                         }
                         selectedFlight = nil
                     }
+                }
             }
             .navigationDestination(isPresented: $isAddingNewFlight) {
                 AddFlightView(onNextSector: {

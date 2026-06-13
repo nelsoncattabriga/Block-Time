@@ -6,6 +6,7 @@ import PhotosUI
 
 struct AddFlightView: View {
     var onNextSector: (() -> Void)? = nil
+    var onNextSectorFromEdit: (() -> Void)? = nil
     @Environment(ThemeService.self) private var themeService
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -37,10 +38,10 @@ struct AddFlightView: View {
             ScrollViewReader { scrollProxy in
                     ScrollView {
                         if useWideLayout {
-                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture, onNextSector: onNextSector)
+                            WideLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture, onNextSector: onNextSector, onNextSectorFromEdit: onNextSectorFromEdit)
                                 .id("top")
                         } else {
-                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture, onNextSector: onNextSector)
+                            CompactLayoutView(viewModel: viewModel, keyboardToolbar: keyboardToolbar, showSuccessNotification: $showSuccessNotification, successMessage: $successMessage, hidePhotoCapture: hidePhotoCapture, onNextSector: onNextSector, onNextSectorFromEdit: onNextSectorFromEdit)
                                 .id("top")
                         }
                     }
@@ -159,6 +160,7 @@ private struct CompactLayoutView: View {
     @Binding var successMessage: String
     var hidePhotoCapture: Bool
     var onNextSector: (() -> Void)? = nil
+    var onNextSectorFromEdit: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
@@ -196,6 +198,13 @@ private struct CompactLayoutView: View {
                         if viewModel.nextSector() {
                             NotificationCenter.default.post(name: .flightAdded, object: nil)
                             onNextSector?()
+                            if !isInSplitView { dismiss() }
+                        }
+                    },
+                    onNextSectorFromEdit: {
+                        let saveFirst = viewModel.hasUnsavedChanges
+                        if viewModel.nextSectorFromEdit(saveFirst: saveFirst) {
+                            onNextSectorFromEdit?()
                             if !isInSplitView { dismiss() }
                         }
                     }
@@ -265,6 +274,7 @@ private struct WideLayoutView: View {
     @Binding var successMessage: String
     var hidePhotoCapture: Bool
     var onNextSector: (() -> Void)? = nil
+    var onNextSectorFromEdit: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingDiscardAlert = false
@@ -307,6 +317,13 @@ private struct WideLayoutView: View {
                                 if viewModel.nextSector() {
                                     NotificationCenter.default.post(name: .flightAdded, object: nil)
                                     onNextSector?()
+                                    if !isInSplitView { dismiss() }
+                                }
+                            },
+                            onNextSectorFromEdit: {
+                                let saveFirst = viewModel.hasUnsavedChanges
+                                if viewModel.nextSectorFromEdit(saveFirst: saveFirst) {
+                                    onNextSectorFromEdit?()
                                     if !isInSplitView { dismiss() }
                                 }
                             }

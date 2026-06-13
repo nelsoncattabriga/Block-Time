@@ -7,6 +7,7 @@ struct ModernActionButtonsCard: View {
     @Binding var showSuccessNotification: Bool
     @Binding var successMessage: String
     var onNextSector: (() -> Void)? = nil
+    var onNextSectorFromEdit: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(PurchaseService.self) private var purchaseService
@@ -66,6 +67,19 @@ struct ModernActionButtonsCard: View {
                                     }
                                 }
                             }
+                        }
+                    )
+
+                    // Next Sector button (edit mode)
+                    ModernActionButton(
+                        title: viewModel.hasUnsavedChanges ? "Update & Add Next Sector" : "Add Next Sector",
+                        subtitle: viewModel.hasUnsavedChanges ? "Save changes & start next leg" : "Start next leg",
+                        icon: "arrow.right.circle.fill",
+                        color: .blue,
+                        isEnabled: true,
+                        action: {
+                            HapticManager.shared.impact(.medium)
+                            onNextSectorFromEdit?()
                         }
                     )
 
