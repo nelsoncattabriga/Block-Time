@@ -50,6 +50,20 @@ struct TopCrewCard: View {
     private static let collapsedCount = 5
     private static let expandedCount  = 10
 
+    /// Names that represent the logbook owner and must never appear as crew —
+    /// the literal "self" plus whatever the user set as their Default crew names.
+    static func ownNames() -> Set<String> {
+        let settings = UserDefaultsService().loadSettings()
+        return Set(
+            ["self",
+             settings.defaultCaptainName,
+             settings.defaultCoPilotName,
+             settings.defaultSOName]
+                .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+                .filter { !$0.isEmpty }
+        )
+    }
+
     private var sorted: [CrewFrequency] {
         displayMode == .hours
             ? crew.sorted { $0.hours > $1.hours }
@@ -257,24 +271,29 @@ struct TopCrewCard: View {
         }
 
         var counts: [String: (name: String, hours: Double, n: Int)] = [:]
+        let ownNames = Self.ownNames()
+        // When viewing all roles, merge a person across every seat into one row.
+        // For a specific role filter, keep the role-prefixed key so behaviour is unchanged.
+        let mergeByName = (roleFilter == .all)
 
-        func tally(key: String, name: String, blockTime: Double) {
+        func tally(rolePrefix: String, name: String, blockTime: Double) {
             let trimmed = name.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty, trimmed.lowercased() != "self" else { return }
+            guard !trimmed.isEmpty, !ownNames.contains(trimmed.lowercased()) else { return }
+            let key = mergeByName ? trimmed.lowercased() : "\(rolePrefix)\(trimmed.lowercased())"
             counts[key] = (trimmed, (counts[key]?.hours ?? 0) + blockTime, (counts[key]?.n ?? 0) + 1)
         }
 
         for f in flights {
             let bt = Double(f.blockTime) ?? 0
             if roleFilter == .all || roleFilter == .captain {
-                tally(key: f.captainName, name: f.captainName, blockTime: bt)
+                tally(rolePrefix: "CPT_", name: f.captainName, blockTime: bt)
             }
             if roleFilter == .all || roleFilter == .fo {
-                tally(key: "FO_\(f.foName)", name: f.foName, blockTime: bt)
+                tally(rolePrefix: "FO_", name: f.foName, blockTime: bt)
             }
             if roleFilter == .all || roleFilter == .so {
-                if let n = f.so1Name { tally(key: "SO1_\(n)", name: n, blockTime: bt) }
-                if let n = f.so2Name { tally(key: "SO2_\(n)", name: n, blockTime: bt) }
+                if let n = f.so1Name { tally(rolePrefix: "SO_", name: n, blockTime: bt) }
+                if let n = f.so2Name { tally(rolePrefix: "SO_", name: n, blockTime: bt) }
             }
         }
 
@@ -477,24 +496,27 @@ private struct CrewSheetView: View {
         }
 
         var counts: [String: (name: String, hours: Double, n: Int)] = [:]
+        let ownNames = TopCrewCard.ownNames()
+        let mergeByName = (roleFilter == .all)
 
-        func tally(key: String, name: String, blockTime: Double) {
+        func tally(rolePrefix: String, name: String, blockTime: Double) {
             let trimmed = name.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty, trimmed.lowercased() != "self" else { return }
+            guard !trimmed.isEmpty, !ownNames.contains(trimmed.lowercased()) else { return }
+            let key = mergeByName ? trimmed.lowercased() : "\(rolePrefix)\(trimmed.lowercased())"
             counts[key] = (trimmed, (counts[key]?.hours ?? 0) + blockTime, (counts[key]?.n ?? 0) + 1)
         }
 
         for f in flights {
             let bt = Double(f.blockTime) ?? 0
             if roleFilter == .all || roleFilter == .captain {
-                tally(key: f.captainName, name: f.captainName, blockTime: bt)
+                tally(rolePrefix: "CPT_", name: f.captainName, blockTime: bt)
             }
             if roleFilter == .all || roleFilter == .fo {
-                tally(key: "FO_\(f.foName)", name: f.foName, blockTime: bt)
+                tally(rolePrefix: "FO_", name: f.foName, blockTime: bt)
             }
             if roleFilter == .all || roleFilter == .so {
-                if let n = f.so1Name { tally(key: "SO1_\(n)", name: n, blockTime: bt) }
-                if let n = f.so2Name { tally(key: "SO2_\(n)", name: n, blockTime: bt) }
+                if let n = f.so1Name { tally(rolePrefix: "SO_", name: n, blockTime: bt) }
+                if let n = f.so2Name { tally(rolePrefix: "SO_", name: n, blockTime: bt) }
             }
         }
 
