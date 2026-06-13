@@ -6,6 +6,7 @@
 //  Both open as popovers anchored to their respective row buttons.
 //
 
+import BlockTimeKit
 import SwiftUI
 
 // MARK: - Aircraft Reg Picker Row
@@ -60,12 +61,12 @@ private struct MacAircraftPickerPopover: View {
     let viewModel: MacLogbookViewModel
     let onDismiss: () -> Void
 
-    @ObservedObject private var fleetService = MacAircraftFleetService.shared
+    @ObservedObject private var fleetService = AircraftFleetService.shared
     @AppStorage("selectedFleetID") private var selectedFleetID: String = "B737"
     @State private var searchText = ""
     @State private var showingAddSheet = false
 
-    private var filteredFleets: [MacFleet] {
+    private var filteredFleets: [Fleet] {
         let lower = searchText.lowercased()
         if lower.isEmpty {
             var ordered = fleetService.fleets.filter { $0.id == selectedFleetID }
@@ -78,7 +79,7 @@ private struct MacAircraftPickerPopover: View {
                 $0.fullRegistration.localizedStandardContains(lower) ||
                 $0.type.localizedStandardContains(lower)
             }
-            return matching.isEmpty ? nil : MacFleet(id: fleet.id, name: fleet.name, aircraft: matching)
+            return matching.isEmpty ? nil : Fleet(name: fleet.name, aircraft: matching)
         }
     }
 
@@ -257,7 +258,7 @@ private struct MacAddAircraftSheet: View {
     private func saveAircraft() {
         let trimmedType = newType.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !newReg.isEmpty, !trimmedType.isEmpty else { return }
-        let aircraft = MacAircraft(customRegistration: newReg, type: trimmedType)
+        let aircraft = Aircraft(customRegistration: newReg, type: trimmedType)
         if viewModel.saveAircraft(aircraft) {
             onSave(aircraft.displayRegistration(showFullReg: showFullReg), aircraft.type)
         }

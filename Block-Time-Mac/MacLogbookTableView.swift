@@ -8,6 +8,7 @@
 //
 
 import AppKit
+import BlockTimeKit
 import SwiftUI
 
 // MARK: - Vertically Centred Label

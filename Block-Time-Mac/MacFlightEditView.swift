@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Panel mode
 
@@ -41,7 +42,7 @@ struct MacFlightEditView: View {
     @State private var hasManuallyEditedTakeoffsLandings = false
     @State private var selectedApproachType: String? = nil
 
-    private let timeCalc = MacTimeCalculationManager()
+    private let timeCalc = TimeCalculationManager()
 
     @AppStorage("enterTimesInLocalTime")   private var enterTimesInLocalTime = false
     @AppStorage("showSpInsSelector")       private var showSpInsSelector = false
