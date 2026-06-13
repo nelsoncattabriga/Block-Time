@@ -222,7 +222,7 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
         case "crewFrequency":     return .purple
         case "averageMetric":     return .purple
         // Routes / airports / fleet
-        case "takeoffLanding":    return .indigo
+        case "takeoffLanding":    return .purple
         case "approachTypes":     return .indigo
         case "topRoutes":         return .indigo
         case "topRegistrations":  return .indigo
@@ -261,9 +261,9 @@ struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
              "pfRecency", "aiiiRecency", "takeoffRecency", "landingRecency":
             return .recency
         case "activityChart", "pfRatioChart", "workRateHeatmap",
-             "crewFrequency", "averageMetric":
+             "crewFrequency", "averageMetric", "takeoffLanding":
             return .charts
-        case "takeoffLanding", "approachTypes", "topRoutes", "topRegistrations",
+        case "approachTypes", "topRoutes", "topRegistrations",
              "airportStats", "aircraftTypeTime", "timeByType":
             return .routesAirports
         default:
