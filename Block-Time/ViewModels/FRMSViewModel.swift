@@ -234,7 +234,7 @@ class FRMSViewModel {
             let utcFmt = FRMSViewModel.makeUTCDateFormatter()
 
             if let duty = duties.max(by: { $0.signOn < $1.signOn }) {
-                LogManager.shared.debug("Last recent duty: signOn=\(debugFmt.string(from: duty.signOn)), signOff=\(debugFmt.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
+                print("[FRMS] Last recent duty: signOn=\(debugFmt.string(from: duty.signOn)), signOff=\(debugFmt.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
             }
 
             let completedDuties = duties.filter { $0.hasActualINTime }

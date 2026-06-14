@@ -15,8 +15,10 @@ class FRMSCalculationService: @unchecked Sendable {
 
     private let configuration: FRMSConfiguration
 
-    // Cached date formatters to avoid expensive recreation
-    private static let cachedDateFormatter: DateFormatter = {
+    // nonisolated so these are accessible from nonisolated methods without hopping to MainActor.
+    // DateFormatter is not thread-safe for concurrent mutation, but these are created once and
+    // only read after initialisation, so nonisolated(unsafe) is correct here.
+    private nonisolated(unsafe) static let cachedDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
@@ -24,7 +26,7 @@ class FRMSCalculationService: @unchecked Sendable {
         return formatter
     }()
 
-    private static let cachedTimeFormatter: DateFormatter = {
+    private nonisolated(unsafe) static let cachedTimeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy HHmm"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
@@ -976,7 +978,7 @@ class FRMSCalculationService: @unchecked Sendable {
         // Get duty limit from LH_Operational_FltDuty - must always succeed
         guard let dutyLimit = getLHDutyLimit(crewComplement: crewComplement, restFacility: restFacility, limitType: limitType) else {
             // This should never happen if LH_Operational_FltDuty is complete
-            LogManager.shared.error("FRMS: Failed to find LH duty limit for \(crewComplement.description) with \(restFacility.description)")
+            print("[FRMS ERROR]", "FRMS: Failed to find LH duty limit for \(crewComplement.description) with \(restFacility.description)")
             fatalError("LH_Operational_FltDuty lookup failed - data structure incomplete")
         }
 
@@ -987,7 +989,7 @@ class FRMSCalculationService: @unchecked Sendable {
         // Use planning or operational (discretion) limits - these must exist.
         // Rev 5: 2-pilot LH has no planning limit (dutyPeriodLimitPlanned = nil); fall back to discretion.
         guard let resolvedDuty = dutyLimit.dutyPeriodLimitPlanned ?? dutyLimit.dutyPeriodLimitDiscretion else {
-            LogManager.shared.error("FRMS: No duty limit in LH_Operational_FltDuty for \(crewComplement.description)")
+            print("[FRMS ERROR]", "FRMS: No duty limit in LH_Operational_FltDuty for \(crewComplement.description)")
             fatalError("LH_Operational_FltDuty missing duty limit")
         }
         if limitType == .planning {
@@ -1111,7 +1113,7 @@ class FRMSCalculationService: @unchecked Sendable {
                                                   direction: .postDuty,
                                                   dutyHours: duty.dutyTime) else {
             // This should never happen if LH_Operational_FltDuty is complete
-            LogManager.shared.error("FRMS: Failed to find LH rest requirement for \(duty.crewComplement.description) after \(String(format: "%.1f", duty.dutyTime))h duty")
+            print("[FRMS ERROR]", "FRMS: Failed to find LH rest requirement for \(duty.crewComplement.description) after \(String(format: "%.1f", duty.dutyTime))h duty")
             fatalError("LH_Operational_FltDuty rest lookup failed - data structure incomplete")
         }
 
@@ -1157,7 +1159,7 @@ class FRMSCalculationService: @unchecked Sendable {
         }
 
         // Default to 12 hours for any unhandled cases (standard minimum rest)
-        LogManager.shared.warning("FRMS: Using default 12h rest for unhandled case: \(restReq.dutyPeriodThreshold)")
+        print("[FRMS WARN]", "FRMS: Using default 12h rest for unhandled case: \(restReq.dutyPeriodThreshold)")
         return 12.0
     }
 
@@ -1659,7 +1661,7 @@ class FRMSCalculationService: @unchecked Sendable {
         guard Self.cachedDateFormatter.date(from: flightSector.date) != nil else {
             // Only log if in recent years (2023-2025)
             if flightSector.date.contains("2023") || flightSector.date.contains("2024") || flightSector.date.contains("2025") {
-                LogManager.shared.warning("FRMS: Skipping flight on \(flightSector.date) - invalid date format")
+                print("[FRMS WARN]", "FRMS: Skipping flight on \(flightSector.date) - invalid date format")
             }
             return nil
         }
@@ -1692,7 +1694,7 @@ class FRMSCalculationService: @unchecked Sendable {
                   var inDate = Self.cachedTimeFormatter.date(from: "\(flightSector.date) \(inTimeStr)") else {
                 // Only log if in recent years (2023-2025)
                 if flightSector.date.contains("2023") || flightSector.date.contains("2024") || flightSector.date.contains("2025") {
-                    LogManager.shared.warning("FRMS: Skipping flight on \(flightSector.date) - can't parse OUT(\(flightSector.outTime))/IN(\(flightSector.inTime)) times")
+                    print("[FRMS WARN]", "FRMS: Skipping flight on \(flightSector.date) - can't parse OUT(\(flightSector.outTime))/IN(\(flightSector.inTime)) times")
                 }
                 return nil
             }
