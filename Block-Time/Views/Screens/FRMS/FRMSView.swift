@@ -70,37 +70,41 @@ struct FRMSView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Tab strip — iPhone only, full-screen path only. Sits on the gradient.
-                if horizontalSizeClass == .compact && selectedSection == nil {
-                    frmsTabStrip
-                }
+            ZStack {
+                themeService.getGradient()
+                    .ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        if let section = selectedSection {
-                            // iPad split view — show the selected section only
-                            sectionContent(for: section)
-                        } else if horizontalSizeClass == .compact {
-                            // iPhone — show only the active tab section
-                            iPhoneSectionContent
-                        } else {
-                            // iPad portrait — all sections, unchanged layout
-                            allSectionsContent
-                        }
+                VStack(spacing: 0) {
+                    // Tab strip — iPhone only, full-screen path only. Sits on the gradient.
+                    if horizontalSizeClass == .compact && selectedSection == nil {
+                        frmsTabStrip
                     }
-                    .padding()
-                    .frame(maxWidth: selectedSection == nil && horizontalSizeClass == .regular ? 800 : .infinity)
-                    .frame(maxWidth: .infinity)
+
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            if let section = selectedSection {
+                                // iPad split view — show the selected section only
+                                sectionContent(for: section)
+                            } else if horizontalSizeClass == .compact {
+                                // iPhone — show only the active tab section
+                                iPhoneSectionContent
+                            } else {
+                                // iPad portrait — all sections, unchanged layout
+                                allSectionsContent
+                            }
+                        }
+                        .padding()
+                        .frame(maxWidth: selectedSection == nil && horizontalSizeClass == .regular ? 800 : .infinity)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .scrollContentBackground(.hidden)
+                    .refreshable {
+                        LogManager.shared.debug("FRMSView: Pull-to-refresh triggered")
+                        await viewModel.refreshFlightData(crewPosition: flightTimePosition, ignoresCooldown: true)
+                        updateMBTT()
+                    }
+                    .opacity(viewModel.isLoading ? 0.3 : 1.0)
                 }
-                .scrollContentBackground(.hidden)
-                .background(themeService.getGradient().ignoresSafeArea())
-                .refreshable {
-                    LogManager.shared.debug("FRMSView: Pull-to-refresh triggered")
-                    await viewModel.refreshFlightData(crewPosition: flightTimePosition, ignoresCooldown: true)
-                    updateMBTT()
-                }
-                .opacity(viewModel.isLoading ? 0.3 : 1.0)
             }
             .navigationTitle(selectedSection?.rawValue ?? "FRMS")
             .navigationBarTitleDisplayMode(.inline)
