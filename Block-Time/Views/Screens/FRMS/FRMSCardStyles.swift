@@ -47,7 +47,7 @@ func frmsCounterCard(
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
-                    .iPadScaledFont(.subheadline)
+                    .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
 
@@ -55,26 +55,22 @@ func frmsCounterCard(
 
                 Image(systemName: status.icon)
                     .foregroundStyle(frmsStatusColor(status))
-                    .iPadScaledFont(.subheadline)
+                    .font(.subheadline)
             }
 
             HStack(alignment: .lastTextBaseline, spacing: 5) {
                 Text("\(value)")
-                    .iPadScaledFont(.title3)
+                    .font(.title3)
                     .fontWeight(.bold)
                     .foregroundStyle(frmsStatusColor(status))
                     .monospacedDigit()
 
                 Text("/ \(max) \(unit)")
-                    .iPadScaledFont(.footnote)
+                    .font(.footnote)
                     .foregroundStyle(.tertiary)
             }
 
             frmsThickGauge(value: Double(value), total: Double(max), color: frmsProgressColor(status))
-
-            Text(" ")
-                .iPadScaledFont(.caption)
-                .hidden()
         }
         .padding(16)
         .background(accentColor.opacity(0.04))

@@ -295,7 +295,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(title)
-                        .iPadScaledFont(.subheadline)
+                        .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
 
@@ -304,19 +304,19 @@ struct AdaptiveCumulativeLimitsLayout: View {
                     HStack(spacing: 4) {
                         Image(systemName: status.icon)
                             .foregroundStyle(statusColor(status))
-                            .iPadScaledFont(.subheadline)
+                            .font(.subheadline)
                     }
                 }
 
                 HStack(alignment: .lastTextBaseline, spacing: 5) {
                     Text(appViewModel.showTimesInHoursMinutes ? formatHoursMinutes(current) : String(format: "%.1f", current))
-                        .iPadScaledFont(.title3)
+                        .font(.title3)
                         .fontWeight(.bold)
                         .foregroundStyle(.primary)
                         .monospacedDigit()
 
                     Text("/ \(Int(limit)) \(unit)")
-                        .iPadScaledFont(.footnote)
+                        .font(.footnote)
                         .foregroundStyle(.tertiary)
                 }
 
@@ -324,14 +324,12 @@ struct AdaptiveCumulativeLimitsLayout: View {
 
                 if let note {
                     Text(note)
-                        .iPadScaledFont(.caption)
+                        .font(.caption)
                         .foregroundStyle(accentColor.opacity(0.7))
                         .fontWeight(.medium)
-                } else {
-                    Text(" ")
-                        .iPadScaledFont(.caption)
-                        .hidden()
                 }
+
+                Spacer(minLength: 0)
             }
             .padding(16)
             .background(accentColor.opacity(0.04))
@@ -345,7 +343,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Days Off (\(periodDays) Days)")
-                    .iPadScaledFont(.headline)
+                    .iPadScaledFont(.headline, phoneFont: .headline)
                     .fontWeight(.bold)
                     .foregroundColor(.secondary)
 
@@ -353,17 +351,17 @@ struct AdaptiveCumulativeLimitsLayout: View {
 
                 Image(systemName: daysOff >= required ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                     .foregroundStyle(statusColor)
-                    .iPadScaledFont(.headline)
+                    .iPadScaledFont(.headline, phoneFont: .headline)
             }
 
             HStack(alignment: .lastTextBaseline, spacing: 4) {
                 Text("\(daysOff)")
-                    .iPadScaledFont(.subheadline)
+                    .iPadScaledFont(.subheadline, phoneFont: .subheadline)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
 
                 Text("/ \(required) days")
-                    .iPadScaledFont(.caption)
+                    .iPadScaledFont(.caption, phoneFont: .caption)
                     .foregroundColor(.secondary)
             }
 
