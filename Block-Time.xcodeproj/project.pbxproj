@@ -58,6 +58,13 @@
 			);
 			target = 522DB4ED2F26FA7E00739A34 /* Block-Time */;
 		};
+		5279F1E52FDE35A400D227C8 /* Exceptions for "Block-Time" folder in "Block-Time-Mac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/airports.dat.txt,
+			);
+			target = 52MAC0052F90AE260010B0C1 /* Block-Time-Mac */;
+		};
 		52EFA2AF2F7B69EC0027B37B /* Exceptions for "BlockTimeWidget" folder in "BlockTimeWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -80,6 +87,7 @@
 			exceptions = (
 				522DB4FF2F26FA7F00739A35 /* Exceptions for "Block-Time" folder in "Block-Time" target */,
 				52EFA2B92F7B6AE10027B37B /* Exceptions for "Block-Time" folder in "BlockTimeWidgetExtension" target */,
+				5279F1E52FDE35A400D227C8 /* Exceptions for "Block-Time" folder in "Block-Time-Mac" target */,
 			);
 			path = "Block-Time";
 			sourceTree = "<group>";
