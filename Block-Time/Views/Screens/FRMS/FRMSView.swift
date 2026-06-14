@@ -342,7 +342,7 @@ struct FRMSView: View {
             }
         }
         .padding(.horizontal, 8)
-        .background(.ultraThinMaterial)
+        .padding(.bottom, 4)
     }
 
     /// Content for the selected sidebar section (iPad split-view path).
