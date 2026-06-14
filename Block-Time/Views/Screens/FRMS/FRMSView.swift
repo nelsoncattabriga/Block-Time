@@ -97,6 +97,7 @@ struct FRMSView: View {
                         .frame(maxWidth: selectedSection == nil && horizontalSizeClass == .regular ? 800 : .infinity)
                         .frame(maxWidth: .infinity)
                     }
+                    .scrollContentBackground(.hidden)
                     .refreshable {
                         LogManager.shared.debug("FRMSView: Pull-to-refresh triggered")
                         await viewModel.refreshFlightData(crewPosition: flightTimePosition, ignoresCooldown: true)
