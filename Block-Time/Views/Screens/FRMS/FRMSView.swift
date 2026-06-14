@@ -334,7 +334,7 @@ struct FRMSView: View {
                     .padding(.vertical, 10)
                     .background(
                         isActive
-                            ? Color(.systemBackground).opacity(0.85)
+                            ? Color.white.opacity(0.2)
                             : Color.clear
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 10))
