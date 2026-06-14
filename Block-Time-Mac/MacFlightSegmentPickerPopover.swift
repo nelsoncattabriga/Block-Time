@@ -3,6 +3,7 @@
 //  Block-Time-Mac
 //
 
+import BlockTimeKit
 import SwiftUI
 
 struct MacFlightSegmentPickerPopover: View {

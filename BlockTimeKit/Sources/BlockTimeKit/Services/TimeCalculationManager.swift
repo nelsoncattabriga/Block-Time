@@ -53,7 +53,7 @@ public class TimeCalculationManager: @unchecked Sendable {
     ///   - blockTime: Flight duration as string (decimal hours or "HH:mm")
     ///   - flightDate: Flight date string in "dd/MM/yyyy" format
     /// - Returns: Context with all parsed values, or nil if required data is missing/invalid
-    nonisolated func buildCalculationContext(
+    public nonisolated func buildCalculationContext(
         fromAirport: String,
         toAirport: String,
         outTime: String,
@@ -272,7 +272,7 @@ public class TimeCalculationManager: @unchecked Sendable {
     /// - Arrival time calculation
     /// - Parameter context: Pre-built flight calculation context
     /// - Returns: Night time in decimal hours with 2 decimal precision
-    nonisolated func calculateNightTime(using context: FlightCalculationContext) -> String {
+    public nonisolated func calculateNightTime(using context: FlightCalculationContext) -> String {
         // Extract UTC hour/minute using UTC calendar (not local timezone!)
         var utcCalendar = Calendar.current
         utcCalendar.timeZone = TimeZone(secondsFromGMT: 0)!

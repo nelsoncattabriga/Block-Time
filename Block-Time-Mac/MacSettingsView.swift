@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Tab identifiers
 
@@ -118,7 +119,7 @@ struct MacCrewSettingsView: View {
 // MARK: - Custom Fields
 
 private struct MacCustomFieldsSettingsView: View {
-    @ObservedObject private var service = MacCustomFieldService.shared
+    @State private var service = CustomCounterService.shared
     @State private var showingAdd = false
     @State private var editing: CustomCounterDefinition? = nil
 

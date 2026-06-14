@@ -43,6 +43,7 @@ struct MacFlightEditView: View {
     @State private var selectedApproachType: String? = nil
 
     private let timeCalc = TimeCalculationManager()
+    private let nightCalc = NightCalcService()
 
     @AppStorage("enterTimesInLocalTime")   private var enterTimesInLocalTime = false
     @AppStorage("showSpInsSelector")       private var showSpInsSelector = false
@@ -56,7 +57,7 @@ struct MacFlightEditView: View {
     @AppStorage("defaultApproachType")     private var defaultApproachType: String = ""
     @AppStorage("useIATACodes")            private var useIATACodes: Bool = true
 
-    @ObservedObject private var crewService = MacCrewNameService.shared
+    private let crewService = UserDefaultsService()
 
     private var isEditing: Bool {
         if case .edit = mode { return true }
@@ -506,30 +507,30 @@ struct MacFlightEditView: View {
             MacCrewNamePickerRow(
                 label: "CAPTAIN",
                 name: $draft.captainName,
-                savedNames: crewService.captainNames,
-                onSave: { crewService.addCaptainName($0) }
+                savedNames: crewService.loadSettings().savedCaptainNames,
+                onSave: { _ = crewService.addCaptainName($0) }
             )
             Divider()
             MacCrewNamePickerRow(
                 label: "F/O",
                 name: $draft.foName,
-                savedNames: crewService.coPilotNames,
-                onSave: { crewService.addCoPilotName($0) }
+                savedNames: crewService.loadSettings().savedCoPilotNames,
+                onSave: { _ = crewService.addCoPilotName($0) }
             )
             if showSONameFields {
                 Divider()
                 MacCrewNamePickerRow(
                     label: "S/O 1",
                     name: $draft.so1Name,
-                    savedNames: crewService.soNames,
-                    onSave: { crewService.addSOName($0) }
+                    savedNames: crewService.loadSettings().savedSONames,
+                    onSave: { _ = crewService.addSOName($0) }
                 )
                 Divider()
                 MacCrewNamePickerRow(
                     label: "S/O 2",
                     name: $draft.so2Name,
-                    savedNames: crewService.soNames,
-                    onSave: { crewService.addSOName($0) }
+                    savedNames: crewService.loadSettings().savedSONames,
+                    onSave: { _ = crewService.addSOName($0) }
                 )
             }
         }
@@ -551,7 +552,7 @@ struct MacFlightEditView: View {
 
     @ViewBuilder
     private var customFieldsSection: some View {
-        let defs = MacCustomFieldService.shared.definitions.sorted { $0.columnIndex < $1.columnIndex }
+        let defs = CustomCounterService.shared.definitions.sorted { $0.columnIndex < $1.columnIndex }
         if !defs.isEmpty {
             MacFormCard {
                 ForEach(Array(defs.enumerated()), id: \.element.id) { idx, def in
@@ -613,22 +614,34 @@ struct MacFlightEditView: View {
         let inT = draft.inTime.trimmingCharacters(in: .whitespacesAndNewlines)
         guard timeCalc.isValidTimeHHmm(out), timeCalc.isValidTimeHHmm(inT) else { return }
 
-        let blockTime = timeCalc.calculateFlightTime(outTime: out, inTime: inT)
-        draft.blockTime = MacFlightRow.formatTime(MacFlightRow.parseTime(blockTime), hhmm: timesInHHMM, rounding: decimalRounding)
+        let blockTimeStr = timeCalc.calculateFlightTime(outTime: out, inTime: inT)
+        draft.blockTime = MacFlightRow.formatTime(MacFlightRow.parseTime(blockTimeStr), hhmm: timesInHHMM, rounding: decimalRounding)
 
         if let context = timeCalc.buildCalculationContext(
-            fromAirport: draft.fromAirport, toAirport: draft.toAirport,
-            outTime: out, blockTime: blockTime, flightDate: draft.date
+            fromAirport: draft.fromAirport,
+            toAirport: draft.toAirport,
+            outTime: out,
+            blockTime: blockTimeStr,
+            flightDate: draft.date
         ) {
             let night = timeCalc.calculateNightTime(using: context)
             draft.nightTime = MacFlightRow.formatTime(MacFlightRow.parseTime(night), hhmm: timesInHHMM, rounding: decimalRounding)
 
             if draft.isPilotFlying && !hasManuallyEditedTakeoffsLandings {
-                let (dayTO, nightTO, dayLdg, nightLdg) = timeCalc.calculateTakeoffsLandings(using: context)
-                draft.dayTakeoffs   = dayTO
-                draft.nightTakeoffs = nightTO
-                draft.dayLandings   = dayLdg
-                draft.nightLandings = nightLdg
+                let isDepartureNight = nightCalc.isNight(
+                    at: context.fromCoordinates.latitude,
+                    lon: context.fromCoordinates.longitude,
+                    time: context.departureTime
+                )
+                let isArrivalNight = nightCalc.isNight(
+                    at: context.toCoordinates.latitude,
+                    lon: context.toCoordinates.longitude,
+                    time: context.arrivalTime
+                )
+                draft.dayTakeoffs   = isDepartureNight ? 0 : 1
+                draft.nightTakeoffs = isDepartureNight ? 1 : 0
+                draft.dayLandings   = isArrivalNight   ? 0 : 1
+                draft.nightLandings = isArrivalNight   ? 1 : 0
             }
         }
     }

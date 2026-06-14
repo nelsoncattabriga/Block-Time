@@ -181,7 +181,7 @@ struct LogbookColumn: Identifiable {
         ]
 
         // Inject one typed column per custom-field definition, sorted by columnIndex.
-        let defs = MainActor.assumeIsolated { MacCustomFieldService.shared.definitions }
+        let defs = MainActor.assumeIsolated { CustomCounterService.shared.definitions }
             .sorted { $0.columnIndex < $1.columnIndex }
         for def in defs {
             let idx = def.columnIndex

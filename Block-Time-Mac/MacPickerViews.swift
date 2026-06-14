@@ -61,19 +61,19 @@ private struct MacAircraftPickerPopover: View {
     let viewModel: MacLogbookViewModel
     let onDismiss: () -> Void
 
-    @ObservedObject private var fleetService = AircraftFleetService.shared
     @AppStorage("selectedFleetID") private var selectedFleetID: String = "B737"
     @State private var searchText = ""
     @State private var showingAddSheet = false
+    @State private var allFleets: [Fleet] = []
 
     private var filteredFleets: [Fleet] {
         let lower = searchText.lowercased()
         if lower.isEmpty {
-            var ordered = fleetService.fleets.filter { $0.id == selectedFleetID }
-            ordered += fleetService.fleets.filter { $0.id != selectedFleetID }
+            var ordered = allFleets.filter { $0.id == selectedFleetID }
+            ordered += allFleets.filter { $0.id != selectedFleetID }
             return ordered
         }
-        return fleetService.fleets.compactMap { fleet in
+        return allFleets.compactMap { fleet in
             let matching = fleet.aircraft.filter {
                 $0.registration.localizedStandardContains(lower) ||
                 $0.fullRegistration.localizedStandardContains(lower) ||
@@ -164,9 +164,10 @@ private struct MacAircraftPickerPopover: View {
                                 }
                                 .buttonStyle(.plain)
 
-                                if aircraft.isCustom {
+                                if AircraftFleetService.shared.isCustomAircraft(aircraft) {
                                     Button {
                                         _ = viewModel.deleteAircraft(aircraft)
+                                        allFleets = AircraftFleetService.shared.getAvailableFleetsWithCustom()
                                         if isSelected {
                                             selectedReg = ""
                                             selectedType = ""
@@ -187,11 +188,13 @@ private struct MacAircraftPickerPopover: View {
             .listStyle(.inset)
         }
         .frame(width: 280, height: 440)
+        .onAppear { allFleets = AircraftFleetService.shared.getAvailableFleetsWithCustom() }
         .sheet(isPresented: $showingAddSheet) {
             MacAddAircraftSheet(
                 showFullReg: showFullReg,
                 viewModel: viewModel,
                 onSave: { display, type in
+                    allFleets = AircraftFleetService.shared.getAvailableFleetsWithCustom()
                     selectedReg = display
                     selectedType = type
                     onDismiss()
