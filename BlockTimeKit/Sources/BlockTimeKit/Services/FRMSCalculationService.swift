@@ -33,7 +33,7 @@ public class FRMSCalculationService: @unchecked Sendable {
 
     // MARK: - Initialization
 
-    public init(configuration: FRMSConfiguration) {
+    public nonisolated init(configuration: FRMSConfiguration) {
         self.configuration = configuration
     }
 
@@ -50,7 +50,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///
     /// Home base is used rather than departure port because the FRMS sign-on time rules
     /// are anchored to the crew member's base (simpler and safer than departure-airport lookup).
-    public func getHomeBaseTimeZone() -> TimeZone {
+    public nonisolated func getHomeBaseTimeZone() -> TimeZone {
         // NZ home base uses Auckland timezone
         if configuration.homeBase == "NZ" {
             return TimeZone(identifier: "Pacific/Auckland") ?? TimeZone(secondsFromGMT: 12 * 3600)!
@@ -71,7 +71,7 @@ public class FRMSCalculationService: @unchecked Sendable {
 
     /// Convert a UTC date to local time at home base
     /// Uses AirportService to get timezone offset including DST handling
-    private func convertToLocalTime(_ utcDate: Date) -> Date {
+    private nonisolated func convertToLocalTime(_ utcDate: Date) -> Date {
         if configuration.homeBase == "NZ" {
             let nzTZ = TimeZone(identifier: "Pacific/Auckland") ?? TimeZone(secondsFromGMT: 12 * 3600)!
             let offset = nzTZ.secondsFromGMT(for: utcDate) - TimeZone(secondsFromGMT: 0)!.secondsFromGMT(for: utcDate)
@@ -99,7 +99,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     // MARK: - Crew Complement Detection
 
     /// Infer crew complement from filled crew names
-    public func inferCrewComplement(captainName: String?,
+    public nonisolated func inferCrewComplement(captainName: String?,
                             foName: String?,
                             so1Name: String?,
                             so2Name: String?) -> CrewComplement {
@@ -127,7 +127,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - fromAirport: Departure airport code (ICAO or IATA)
     ///   - toAirport: Arrival airport code (ICAO or IATA)
     /// - Returns: Sign-on time
-    public func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil, isSim: Bool = false) -> Date {
+    public nonisolated func calculateSignOn(stdTime: Date?, outTime: Date, isFirstFlightOfDay: Bool = false, isPositioning: Bool = false, fromAirport: String? = nil, toAirport: String? = nil, isSim: Bool = false) -> Date {
         let departureTime: Date = stdTime ?? outTime
 
         // SIM: 45 min before start (source: operational convention — not explicitly in FRMS PDFs)
@@ -153,7 +153,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - toAirport: Arrival airport code (used for SH domestic/international split)
     ///   - isSim: Whether this is a simulator duty
     /// - Returns: Sign-off time
-    public func calculateSignOff(inTime: Date, toAirport: String? = nil, isSim: Bool = false) -> Date {
+    public nonisolated func calculateSignOff(inTime: Date, toAirport: String? = nil, isSim: Bool = false) -> Date {
         // SIM: 30 min after end (source: operational convention — not explicitly in FRMS PDFs)
         var minutesAfter = isSim ? 30 : configuration.signOffMinutesAfterIN
 
@@ -175,7 +175,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - flights: Individual flight sectors (used for flight time calculations based on flight date)
     ///   - date: The reference date for calculating periods (defaults to now)
     /// - Returns: Cumulative totals including flight times and duty times
-    public func calculateCumulativeTotals(duties: [FRMSDuty], flights: [FlightSector]? = nil, asOf date: Date = Date()) -> FRMSCumulativeTotals {
+    public nonisolated func calculateCumulativeTotals(duties: [FRMSDuty], flights: [FlightSector]? = nil, asOf date: Date = Date()) -> FRMSCumulativeTotals {
 
         // Use home base timezone for user-facing date ranges (consistent with Dashboard and FlightsView)
         let homeTimeZone = getHomeBaseTimeZone()
@@ -289,7 +289,7 @@ public class FRMSCalculationService: @unchecked Sendable {
 
     // MARK: - Consecutive Info Helper
 
-    private func calculateConsecutiveInfo(duties: [FRMSDuty], asOf date: Date) -> (consecutive: Int, earlyStarts: Int, lateNights: Int) {
+    private nonisolated func calculateConsecutiveInfo(duties: [FRMSDuty], asOf date: Date) -> (consecutive: Int, earlyStarts: Int, lateNights: Int) {
         guard !duties.isEmpty else { return (0, 0, 0) }
 
         // Get home base timezone - use LOCAL dates for consecutive duty counting
@@ -379,7 +379,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     // MARK: - Maximum Next Duty Calculation
 
     /// Calculate maximum allowable next duty based on current state and previous duty
-    public func calculateMaximumNextDuty(previousDuty: FRMSDuty?,
+    public nonisolated func calculateMaximumNextDuty(previousDuty: FRMSDuty?,
                                   cumulativeTotals: FRMSCumulativeTotals,
                                   limitType: FRMSLimitType,
                                   proposedCrewComplement: CrewComplement,
@@ -527,7 +527,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - creditedFlightHours: Total credited flight hours for the trip pattern
     ///   - hadPlannedDutyOver18Hours: Whether the trip pattern contained a planned duty >18 hours
     /// - Returns: MBTT requirements or nil if not applicable
-    public func calculateMBTT(daysAway: Int, creditedFlightHours: Double, hadPlannedDutyOver18Hours: Bool = false) -> FRMSMinimumBaseTurnaroundTime? {
+    public nonisolated func calculateMBTT(daysAway: Int, creditedFlightHours: Double, hadPlannedDutyOver18Hours: Bool = false) -> FRMSMinimumBaseTurnaroundTime? {
         // Only applicable to widebody fleet
         guard configuration.fleet == .a380A330B787 else { return nil }
 
@@ -591,7 +591,7 @@ public class FRMSCalculationService: @unchecked Sendable {
 
     // MARK: - Base Limits Lookup
 
-    private func getBaseLimits(crewComplement: CrewComplement,
+    private nonisolated func getBaseLimits(crewComplement: CrewComplement,
                               restFacility: RestFacilityClass,
                               limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
 
@@ -609,7 +609,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     /// Get all sign-on time based limits for 2-pilot A380/A330/B787 operations.
     /// Operational (FD10): ALL sign-on times, single row.
     /// Planning (FD3): One row per sign-on window from LH_Planning_FltDuty.
-    private func getSignOnBasedLimits2PilotA380A330B787(limitType: FRMSLimitType) -> [SignOnTimeRange] {
+    private nonisolated func getSignOnBasedLimits2PilotA380A330B787(limitType: FRMSLimitType) -> [SignOnTimeRange] {
 
         if limitType == .operational {
             // FD10.1 — ALL sign-on times, duty 11/12 hrs.
@@ -656,7 +656,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     /// Returns ALL rest facility options so the view can display the complete table.
     /// Operational (FD10): Seat in Pax, Class 2, Class 1.
     /// Planning (FD3): Class 2, Class 1.
-    private func getSignOnBasedLimits3PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
+    private nonisolated func getSignOnBasedLimits3PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
 
         if limitType == .operational {
             // FD10.1 — Pre-duty rest: 10 or 12 hrs. Post-duty rest: 12 (≤16 hrs), 24 (>16 hrs).
@@ -722,7 +722,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     /// Returns ALL rest facility options so the view can display the complete table.
     /// Operational (FD10): Seat in Pax, 2×Class 2, Mixed, 2×Class 1, 2×Class 1 FD3.4.
     /// Planning (FD3): 2×Class 2, Mixed (1×C1+1×C2), 2×Class 1.
-    private func getSignOnBasedLimits4PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
+    private nonisolated func getSignOnBasedLimits4PilotA380A330B787(restFacility: RestFacilityClass, limitType: FRMSLimitType) -> [SignOnTimeRange] {
 
         if limitType == .operational {
             // FD10.1 — Pre-duty rest: 10 or 12 hrs. Post-duty rest: 12 (≤16), 24 (>16).
@@ -841,7 +841,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - restFacility: Rest facility class
     ///   - limitType: Planning or operational limits
     /// - Returns: Duty limit or nil if not found
-    private func getLHDutyLimit(crewComplement: CrewComplement,
+    private nonisolated func getLHDutyLimit(crewComplement: CrewComplement,
                                 restFacility: RestFacilityClass,
                                 limitType: FRMSLimitType) -> DutyLimit? {
 
@@ -915,7 +915,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - direction: Pre-duty or post-duty
     ///   - dutyHours: Duty hours to determine applicable threshold
     /// - Returns: Rest requirement or nil if not found
-    private func getLHRestRequirement(crewComplement: CrewComplement,
+    private nonisolated func getLHRestRequirement(crewComplement: CrewComplement,
                                       direction: RestDirection,
                                       dutyHours: Double) -> RestRequirement? {
 
@@ -968,7 +968,7 @@ public class FRMSCalculationService: @unchecked Sendable {
 
     // MARK: - A380/A330/B787 Specific Limits
 
-    private func getBaseLimitsA380A330B787(crewComplement: CrewComplement,
+    private nonisolated func getBaseLimitsA380A330B787(crewComplement: CrewComplement,
                                           restFacility: RestFacilityClass,
                                           limitType: FRMSLimitType) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
 
@@ -1022,7 +1022,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - crewComplement: Crew complement
     ///   - limitType: Planning (FD13.1) or Operational (FD23.1) limits
     /// - Returns: Maximum duty hours or nil if not applicable
-    private func getA320B737MaxDutyHours(signOn: Date, sectors: Int, crewComplement: CrewComplement, limitType: FRMSLimitType) -> Double? {
+    private nonisolated func getA320B737MaxDutyHours(signOn: Date, sectors: Int, crewComplement: CrewComplement, limitType: FRMSLimitType) -> Double? {
         guard crewComplement == .twoPilot else {
             return nil  // Use base limits for augmented crews
         }
@@ -1052,7 +1052,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     /// for 3-pilot, the start-time band determines the actual limit (Class2 is band-independent
     /// for planning/Class2=16h for operational; businessSeat varies — see buildA320B737DutyWindow).
     /// Rev 5: no flight-time limits for SH (both 2-pilot and 3-pilot).
-    private func getBaseLimitsA320B737(crewComplement: CrewComplement,
+    private nonisolated func getBaseLimitsA320B737(crewComplement: CrewComplement,
                                       restFacility: RestFacilityClass,
                                       limitType: FRMSLimitType,
                                       band: SH_Operational_FltDuty.LocalStartTime = .night) -> (maxDuty: Double, maxFlight: Double, maxSectors: Int) {
@@ -1090,7 +1090,7 @@ public class FRMSCalculationService: @unchecked Sendable {
 
     // MARK: - Minimum Rest Calculation
 
-    private func calculateMinimumRest(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
+    private nonisolated func calculateMinimumRest(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
 
         // Fleet-specific rest requirements
         switch configuration.fleet {
@@ -1103,7 +1103,7 @@ public class FRMSCalculationService: @unchecked Sendable {
 
     // MARK: - A380/A330/B787 Minimum Rest
 
-    private func calculateMinimumRestA380A330B787(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
+    private nonisolated func calculateMinimumRestA380A330B787(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
 
         // Get rest requirement from LH_Operational_FltDuty - must always succeed
         guard let restReq = getLHRestRequirement(crewComplement: duty.crewComplement,
@@ -1163,7 +1163,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     // MARK: - A320/B737 Next Duty Limits Calculation
 
     /// Calculate complete A320/B737 next duty limits with all restrictions
-    public func calculateA320B737NextDutyLimits(previousDuty: FRMSDuty?,
+    public nonisolated func calculateA320B737NextDutyLimits(previousDuty: FRMSDuty?,
                                          cumulativeTotals: FRMSCumulativeTotals,
                                          limitType: FRMSLimitType,
                                          duties: [FRMSDuty] = []) -> A320B737NextDutyLimits? {
@@ -1387,7 +1387,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     }
 
     /// Build special scenarios for A320/B737
-    private func buildA320B737SpecialScenarios() -> SpecialScenarios {
+    private nonisolated func buildA320B737SpecialScenarios() -> SpecialScenarios {
         // Simulator restrictions (FD7)
         let simulatorRestrictions = SimulatorRestrictions(
             dayBeforeRestriction: "Sign-off ≤2000 day before simulator (Australia)",
@@ -1437,7 +1437,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     }
 
     /// Check What-If scenario compliance
-    public func checkWhatIfScenario(scenario: WhatIfScenario,
+    public nonisolated func checkWhatIfScenario(scenario: WhatIfScenario,
                              previousDuty: FRMSDuty?,
                              cumulativeTotals: FRMSCumulativeTotals,
                              a320B737Limits: A320B737NextDutyLimits,
@@ -1532,7 +1532,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - earliestSignOn: Earliest sign-on time to determine availability
     ///   - limitType: Planning or Operational limits
     /// - Returns: DutyTimeWindow with limits calculated from FD23 (operational) or FD13 (planning) rules
-    private func buildA320B737DutyWindow(localStartTime: SH_Operational_FltDuty.LocalStartTime,
+    private nonisolated func buildA320B737DutyWindow(localStartTime: SH_Operational_FltDuty.LocalStartTime,
                                          earliestSignOn: Date,
                                          limitType: FRMSLimitType) -> DutyTimeWindow {
 
@@ -1567,7 +1567,7 @@ public class FRMSCalculationService: @unchecked Sendable {
 
     // MARK: - A320/B737 Minimum Rest
 
-    private func calculateMinimumRestA320B737(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
+    private nonisolated func calculateMinimumRestA320B737(afterDuty duty: FRMSDuty, limitType: FRMSLimitType) -> Double {
 
         // Base rest calculation
         var minimumRest: Double
@@ -1594,7 +1594,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     // MARK: - Compliance Check
 
     /// Check if a proposed duty would be compliant
-    public func checkCompliance(proposedDuty: FRMSDuty,
+    public nonisolated func checkCompliance(proposedDuty: FRMSDuty,
                         previousDuty: FRMSDuty?,
                         cumulativeTotals: FRMSCumulativeTotals) -> FRMSComplianceStatus {
 
@@ -1650,7 +1650,7 @@ public class FRMSCalculationService: @unchecked Sendable {
     ///   - crewPosition: The crew position (captain/FO)
     ///   - isFirstFlightOfDay: Whether this is the first flight of the duty day (affects sign-on time for positioning flights)
     /// - Returns: FRMSDuty object or nil if conversion fails
-    public func createDuty(from flightSector: FlightSector,
+    public nonisolated func createDuty(from flightSector: FlightSector,
                    crewPosition: FlightTimePosition,
                    isFirstFlightOfDay: Bool = false) -> FRMSDuty? {
 
