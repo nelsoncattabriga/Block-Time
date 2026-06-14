@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct ExportLogbookView: View {
     @Environment(\.dismiss) private var dismiss

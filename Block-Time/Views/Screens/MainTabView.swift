@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 // Navigation destination types for type-safe navigation
 enum FlightDestination: Hashable {

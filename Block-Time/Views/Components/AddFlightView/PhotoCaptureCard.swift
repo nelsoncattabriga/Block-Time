@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import BlockTimeKit
 
 // MARK: - Modern Photo Capture Card
 struct ModernPhotoCaptureCard: View {

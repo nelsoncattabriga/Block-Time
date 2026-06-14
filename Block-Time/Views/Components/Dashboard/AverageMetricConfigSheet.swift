@@ -1,4 +1,5 @@
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Average Metric Config Sheet
 struct AverageMetricConfigSheet: View {

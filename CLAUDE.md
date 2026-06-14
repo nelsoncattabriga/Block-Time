@@ -10,6 +10,7 @@ When something fails repeatedly, when Nelson has to re-explain, add a one-line b
 - Previews using `ThemeService` child views must inject `.environment(ThemeService.shared)` or crash with SIGTRAP.
 - For simple single-file changes, edit inline. Use GSD for complex/multi-file tasks — ask first.
 - Always check for paired iPad/iPhone view files (e.g. `*SplitView` + base view) and apply changes to both.
+- Never drop features when fixing compiler errors — ask if the public API is missing, then expose it.
 
 ## Coding Standards
 

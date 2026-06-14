@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct LogbookSpreadsheetView: View {
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel

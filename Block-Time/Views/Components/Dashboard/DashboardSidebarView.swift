@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct DashboardSidebarView: View {
     let config: DashboardConfiguration

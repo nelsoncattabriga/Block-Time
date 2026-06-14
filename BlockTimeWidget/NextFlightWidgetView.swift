@@ -10,6 +10,7 @@
 
 import WidgetKit
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Design tokens
 

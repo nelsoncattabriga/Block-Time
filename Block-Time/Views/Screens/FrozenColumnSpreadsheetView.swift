@@ -5,6 +5,7 @@
 
 import SwiftUI
 import UIKit
+import BlockTimeKit
 
 // MARK: - SwiftUI wrapper
 

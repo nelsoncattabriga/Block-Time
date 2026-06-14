@@ -3,6 +3,7 @@
 
 import SwiftUI
 import PhotosUI
+import BlockTimeKit
 
 struct AddFlightView: View {
     var onNextSector: (() -> Void)? = nil

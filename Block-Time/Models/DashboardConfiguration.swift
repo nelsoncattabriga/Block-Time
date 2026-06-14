@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 @Observable
 final class DashboardConfiguration {

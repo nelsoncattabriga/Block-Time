@@ -8,6 +8,7 @@
 import Foundation
 @preconcurrency import CoreData
 import Observation
+import BlockTimeKit
 
 // MARK: - CrewContactBackup
 

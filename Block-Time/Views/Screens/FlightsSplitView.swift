@@ -8,6 +8,7 @@
 
 import SwiftUI
 import CoreData
+import BlockTimeKit
 
 struct FlightsSplitView: View {
     @EnvironmentObject var viewModel: FlightTimeExtractorViewModel

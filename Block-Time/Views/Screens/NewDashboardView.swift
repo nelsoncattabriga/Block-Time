@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct NewDashboardView: View {
     var frmsViewModel: FRMSViewModel

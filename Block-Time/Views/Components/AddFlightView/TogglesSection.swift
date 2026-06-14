@@ -1,4 +1,5 @@
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Modern Toggles Section
 struct ModernTogglesSection: View {

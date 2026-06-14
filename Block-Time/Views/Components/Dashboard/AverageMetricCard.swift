@@ -1,4 +1,5 @@
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Average Metric Card
 struct AverageMetricCard: View {

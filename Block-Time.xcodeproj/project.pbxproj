@@ -7,10 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		523B555B2FDBE31300A3FD3B /* BlockTimeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 523B555A2FDBE31300A3FD3B /* BlockTimeKit */; };
+		52D74F022FDC0CF4002226A0 /* BlockTimeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 52D74F012FDC0CF4002226A0 /* BlockTimeKit */; };
 		52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52E6FD222F51217D008DD58E /* StoreKit.framework */; };
 		52EFA29A2F7B69EB0027B37B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52EFA2992F7B69EB0027B37B /* WidgetKit.framework */; };
 		52EFA29C2F7B69EB0027B37B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52EFA29B2F7B69EB0027B37B /* SwiftUI.framework */; };
 		52EFA2AB2F7B69EC0027B37B /* BlockTimeWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		52MAC0012F90AE260010B0C1 /* BlockTimeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 52MAC0002F90AE260010B0C1 /* BlockTimeKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -44,6 +47,7 @@
 		52EFA2992F7B69EB0027B37B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		52EFA29B2F7B69EB0027B37B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		52EFA2B72F7B6A3E0027B37B /* BlockTimeWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlockTimeWidgetExtension.entitlements; sourceTree = "<group>"; };
+		52MAC0022F90AE260010B0C1 /* Block-Time-Mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Block-Time-Mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -53,6 +57,13 @@
 				Info.plist,
 			);
 			target = 522DB4ED2F26FA7E00739A34 /* Block-Time */;
+		};
+		5279F1E52FDE35A400D227C8 /* Exceptions for "Block-Time" folder in "Block-Time-Mac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/airports.dat.txt,
+			);
+			target = 52MAC0052F90AE260010B0C1 /* Block-Time-Mac */;
 		};
 		52EFA2AF2F7B69EC0027B37B /* Exceptions for "BlockTimeWidget" folder in "BlockTimeWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -64,7 +75,6 @@
 		52EFA2B92F7B6AE10027B37B /* Exceptions for "Block-Time" folder in "BlockTimeWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Models/WidgetFlightEntry.swift,
 				Resources/airports.dat.txt,
 			);
 			target = 52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */;
@@ -77,6 +87,7 @@
 			exceptions = (
 				522DB4FF2F26FA7F00739A35 /* Exceptions for "Block-Time" folder in "Block-Time" target */,
 				52EFA2B92F7B6AE10027B37B /* Exceptions for "Block-Time" folder in "BlockTimeWidgetExtension" target */,
+				5279F1E52FDE35A400D227C8 /* Exceptions for "Block-Time" folder in "Block-Time-Mac" target */,
 			);
 			path = "Block-Time";
 			sourceTree = "<group>";
@@ -89,6 +100,11 @@
 			path = BlockTimeWidget;
 			sourceTree = "<group>";
 		};
+		52MAC0032F90AE260010B0C1 /* Block-Time-Mac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Block-Time-Mac";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +112,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				523B555B2FDBE31300A3FD3B /* BlockTimeKit in Frameworks */,
 				52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -104,8 +121,17 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				52D74F022FDC0CF4002226A0 /* BlockTimeKit in Frameworks */,
 				52EFA29C2F7B69EB0027B37B /* SwiftUI.framework in Frameworks */,
 				52EFA29A2F7B69EB0027B37B /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52MAC0042F90AE260010B0C1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				52MAC0012F90AE260010B0C1 /* BlockTimeKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,6 +143,7 @@
 			children = (
 				52EFA2B72F7B6A3E0027B37B /* BlockTimeWidgetExtension.entitlements */,
 				522DB4F02F26FA7E00739A34 /* Block-Time */,
+				52MAC0032F90AE260010B0C1 /* Block-Time-Mac */,
 				52EFA29D2F7B69EB0027B37B /* BlockTimeWidget */,
 				52E6FD212F51217D008DD58E /* Frameworks */,
 				522DB4EF2F26FA7E00739A34 /* Products */,
@@ -128,6 +155,7 @@
 			children = (
 				522DB4EE2F26FA7E00739A34 /* Block-Time.app */,
 				52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */,
+				52MAC0022F90AE260010B0C1 /* Block-Time-Mac.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -164,6 +192,7 @@
 			);
 			name = "Block-Time";
 			packageProductDependencies = (
+				523B555A2FDBE31300A3FD3B /* BlockTimeKit */,
 			);
 			productName = "Block-Time";
 			productReference = 522DB4EE2F26FA7E00739A34 /* Block-Time.app */;
@@ -186,10 +215,34 @@
 			);
 			name = BlockTimeWidgetExtension;
 			packageProductDependencies = (
+				52D74F012FDC0CF4002226A0 /* BlockTimeKit */,
 			);
 			productName = BlockTimeWidgetExtension;
 			productReference = 52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		52MAC0052F90AE260010B0C1 /* Block-Time-Mac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 52MAC0062F90AE260010B0C1 /* Build configuration list for PBXNativeTarget "Block-Time-Mac" */;
+			buildPhases = (
+				52MAC0072F90AE260010B0C1 /* Sources */,
+				52MAC0042F90AE260010B0C1 /* Frameworks */,
+				52MAC0082F90AE260010B0C1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				52MAC0032F90AE260010B0C1 /* Block-Time-Mac */,
+			);
+			name = "Block-Time-Mac";
+			packageProductDependencies = (
+				52MAC0002F90AE260010B0C1 /* BlockTimeKit */,
+			);
+			productName = "Block-Time-Mac";
+			productReference = 52MAC0022F90AE260010B0C1 /* Block-Time-Mac.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -207,6 +260,9 @@
 					52EFA2972F7B69EB0027B37B = {
 						CreatedOnToolsVersion = 26.4;
 					};
+					52MAC0052F90AE260010B0C1 = {
+						CreatedOnToolsVersion = 26.4;
+					};
 				};
 			};
 			buildConfigurationList = 522DB4E92F26FA7E00739A34 /* Build configuration list for PBXProject "Block-Time" */;
@@ -218,6 +274,9 @@
 			);
 			mainGroup = 522DB4E52F26FA7E00739A34;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				523B55592FDBE31300A3FD3B /* XCLocalSwiftPackageReference "BlockTimeKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 522DB4EF2F26FA7E00739A34 /* Products */;
 			projectDirPath = "";
@@ -225,6 +284,7 @@
 			targets = (
 				522DB4ED2F26FA7E00739A34 /* Block-Time */,
 				52EFA2972F7B69EB0027B37B /* BlockTimeWidgetExtension */,
+				52MAC0052F90AE260010B0C1 /* Block-Time-Mac */,
 			);
 		};
 /* End PBXProject section */
@@ -244,6 +304,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		52MAC0082F90AE260010B0C1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -255,6 +322,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		52EFA2942F7B69EB0027B37B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		52MAC0072F90AE260010B0C1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -549,6 +623,82 @@
 			};
 			name = Release;
 		};
+		52MAC0092F90AE260010B0C1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Block-Time-Mac/Block-Time-Mac.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Block-Time";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thezoolab.blocktime.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		52MAC00A2F90AE260010B0C1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Block-Time-Mac/Block-Time-Mac.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = CVCM5GMG54;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Block-Time";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thezoolab.blocktime.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -579,7 +729,40 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		52MAC0062F90AE260010B0C1 /* Build configuration list for PBXNativeTarget "Block-Time-Mac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				52MAC0092F90AE260010B0C1 /* Debug */,
+				52MAC00A2F90AE260010B0C1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		523B55592FDBE31300A3FD3B /* XCLocalSwiftPackageReference "BlockTimeKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = BlockTimeKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		523B555A2FDBE31300A3FD3B /* BlockTimeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BlockTimeKit;
+		};
+		52D74F012FDC0CF4002226A0 /* BlockTimeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 523B55592FDBE31300A3FD3B /* XCLocalSwiftPackageReference "BlockTimeKit" */;
+			productName = BlockTimeKit;
+		};
+		52MAC0002F90AE260010B0C1 /* BlockTimeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 523B55592FDBE31300A3FD3B /* XCLocalSwiftPackageReference "BlockTimeKit" */;
+			productName = BlockTimeKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 522DB4E62F26FA7E00739A34 /* Project object */;
 }

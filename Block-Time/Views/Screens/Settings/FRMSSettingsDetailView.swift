@@ -1,5 +1,6 @@
 // Views/Screens/Settings/FRMSSettingsDetailView.swift
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - FRMS Settings Detail View
 

@@ -5,6 +5,7 @@
 
 import SwiftUI
 import CoreData
+import BlockTimeKit
 
 struct MapSectorSheet: View {
     let airport: FlightMapViewModel.AirportPin

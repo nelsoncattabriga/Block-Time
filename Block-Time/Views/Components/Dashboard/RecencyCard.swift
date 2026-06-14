@@ -1,4 +1,5 @@
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Enhanced Recency Card (supports both PF and AIII)
 struct RecencyCard: View {

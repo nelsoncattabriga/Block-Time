@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 // MARK: - Pre-processed row (all display values computed once — never recomputed)
 

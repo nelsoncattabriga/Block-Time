@@ -5,6 +5,7 @@
 //  Created by Nelson on 8/9/2025.
 //
 import SwiftUI
+import BlockTimeKit
 
 struct SplashScreenView: View {
     @Environment(ThemeService.self) private var themeService

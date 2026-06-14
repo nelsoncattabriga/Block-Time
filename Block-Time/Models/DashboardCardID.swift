@@ -11,6 +11,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct DashboardCardID: RawRepresentable, Codable, Hashable, Identifiable {
     let rawValue: String

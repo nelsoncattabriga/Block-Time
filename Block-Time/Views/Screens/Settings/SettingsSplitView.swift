@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct SettingsSplitView: View {
     @ObservedObject var viewModel: FlightTimeExtractorViewModel

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import BlockTimeKit
 
 // MARK: - Wrapper for iPad to inject filter view model
 struct FlightsViewWithFilter: View {

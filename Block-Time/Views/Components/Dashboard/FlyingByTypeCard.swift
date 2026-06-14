@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import BlockTimeKit
 
 private enum FleetDisplayMode: String, CaseIterable {
     case hours = "Hours"

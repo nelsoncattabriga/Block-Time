@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct DashboardCardView: View {
     let cardID: DashboardCardID

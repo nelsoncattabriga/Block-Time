@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import BlockTimeKit
 
 struct DashboardEditSheet: View {
     @Bindable var config: DashboardConfiguration
