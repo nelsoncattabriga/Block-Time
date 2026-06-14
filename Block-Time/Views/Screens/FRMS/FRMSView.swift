@@ -50,12 +50,14 @@ struct FRMSView: View {
     private enum FRMSScrollAnchor: String, CaseIterable {
         case cumulativeLimits = "Limits"
         case nextDuty         = "Next Duty"
+        case mbt              = "MBT"
         case recentDuties     = "Recent Duties"
 
         var icon: String {
             switch self {
             case .cumulativeLimits: return "chart.bar.fill"
             case .nextDuty:         return "clock.badge.checkmark"
+            case .mbt:              return "house.fill"
             case .recentDuties:     return "list.bullet.clipboard.fill"
             }
         }
@@ -64,6 +66,7 @@ struct FRMSView: View {
             switch self {
             case .cumulativeLimits: return .blue
             case .nextDuty:         return .orange
+            case .mbt:              return .purple
             case .recentDuties:     return .green
             }
         }
@@ -150,6 +153,11 @@ struct FRMSView: View {
             .onChange(of: viewModel.configuration.homeBase) { _, _ in
                 homeBaseTimeZone = FRMSCalculationService(configuration: viewModel.configuration).getHomeBaseTimeZone()
             }
+            .onChange(of: viewModel.configuration.fleet) { _, newFleet in
+                if newFleet == .a320B737 && activePhoneSection == .mbt {
+                    activePhoneSection = .cumulativeLimits
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .flightDataChanged)) { _ in
                 // ViewModel observes .flightDataChanged directly and refreshes its own data.
                 // Only update MBTT here (view-local state not owned by the ViewModel).
@@ -190,6 +198,9 @@ struct FRMSView: View {
             } else {
                 LH_NextDutyView(viewModel: viewModel)
             }
+
+        case .mbt:
+            minimumBaseTurnaroundSection
 
         case .recentDuties:
             recentDutiesSection
@@ -319,8 +330,10 @@ struct FRMSView: View {
     // MARK: - iPhone Tab Strip
 
     private var frmsTabStrip: some View {
-        HStack(spacing: 0) {
-            ForEach(FRMSScrollAnchor.allCases, id: \.self) { anchor in
+        let isLH = viewModel.configuration.fleet == .a380A330B787
+        let tabs = FRMSScrollAnchor.allCases.filter { $0 != .mbt || isLH }
+        return HStack(spacing: 0) {
+            ForEach(tabs, id: \.self) { anchor in
                 let isActive = activePhoneSection == anchor
                 Button {
                     HapticManager.shared.impact(.light)
