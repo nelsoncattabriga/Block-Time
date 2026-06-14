@@ -3650,11 +3650,7 @@ public class FlightDatabaseService: ObservableObject, @unchecked Sendable {
             let duplicatedUUIDs = Set(uuidCounts.filter { $0.value > 1 }.keys)
 
             guard !duplicatedUUIDs.isEmpty else {
-<<<<<<< HEAD:Block-Time/Services/FlightDatabaseService.swift
                 LogManager.shared.debug("CloudKit dedup: No duplicate flights found")
-=======
-                print("CloudKit dedup: No duplicate flights found")
->>>>>>> mac-companion-rebuild:BlockTimeKit/Sources/BlockTimeKit/Data/FlightDatabaseService.swift
                 return
             }
 
@@ -3677,11 +3673,7 @@ public class FlightDatabaseService: ObservableObject, @unchecked Sendable {
             // Abort — do NOT save — so deletions never propagate to CloudKit.
             let threshold = max(10, totalCount / 10)
             guard deletedCount <= threshold else {
-<<<<<<< HEAD:Block-Time/Services/FlightDatabaseService.swift
                 LogManager.shared.error("CloudKit dedup: ABORTED — would delete \(deletedCount) of \(totalCount) records (exceeds 10% safety threshold). This looks like a first-launch sync, not a real dedup event.")
-=======
-                print("CloudKit dedup: ABORTED — would delete \(deletedCount) of \(totalCount) records (exceeds 10% safety threshold). This looks like a first-launch sync, not a real dedup event.")
->>>>>>> mac-companion-rebuild:BlockTimeKit/Sources/BlockTimeKit/Data/FlightDatabaseService.swift
                 return
             }
 
@@ -3696,11 +3688,7 @@ public class FlightDatabaseService: ObservableObject, @unchecked Sendable {
                     NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             } catch {
-<<<<<<< HEAD:Block-Time/Services/FlightDatabaseService.swift
                 LogManager.shared.error("CloudKit dedup: Failed to save \(error.localizedDescription)")
-=======
-                print("CloudKit dedup: Failed to save \(error.localizedDescription)")
->>>>>>> mac-companion-rebuild:BlockTimeKit/Sources/BlockTimeKit/Data/FlightDatabaseService.swift
             }
         }
     }
