@@ -332,11 +332,7 @@ struct FRMSView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(
-                        isActive
-                            ? Color.white.opacity(0.2)
-                            : Color.clear
-                    )
+                    .background(isActive ? AnyShapeStyle(.thickMaterial) : AnyShapeStyle(.clear))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 4)
