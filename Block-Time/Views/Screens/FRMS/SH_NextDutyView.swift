@@ -60,10 +60,7 @@ struct SH_NextDutyView: View {
                         buildConsecutiveInfoCard(totals: totals, lno: limits.lateNightStatus)
                     }
 
-                    // Next Duty Limits Title
-                    Text("Next Duty Limits")
-                        .font(.title3)
-                        .fontWeight(.semibold)
+                    frmsSectionHeader("Next Duty Limits")
 
                     // Max Duty Card (with controls inside)
                     maxDutyCard(limits: limits)

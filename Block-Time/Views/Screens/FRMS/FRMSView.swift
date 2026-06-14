@@ -48,7 +48,7 @@ struct FRMSView: View {
 
     // iPhone section tabs
     private enum FRMSScrollAnchor: String, CaseIterable {
-        case cumulativeLimits = "Cumulative Limits"
+        case cumulativeLimits = "Limits"
         case nextDuty         = "Next Duty"
         case recentDuties     = "Recent Duties"
 
@@ -305,7 +305,7 @@ struct FRMSView: View {
                                 .foregroundStyle(AppColors.accentBlue)
                             Text("Recent Duties")
                         }
-                        .font(.title3)
+                        .font(.subheadline)
                         .fontWeight(.semibold)
                     }
                 )
@@ -341,8 +341,8 @@ struct FRMSView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(isActive ? AnyShapeStyle(.thickMaterial) : AnyShapeStyle(.clear))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .background(isActive ? AnyShapeStyle(Color(.tertiarySystemFill)) : AnyShapeStyle(.clear))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                     .padding(.horizontal, 4)
                     .padding(.vertical, 4)
                 }
@@ -350,7 +350,10 @@ struct FRMSView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.bottom, 4)
+        .padding(.vertical, 4)
+        .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
     /// Content for the selected sidebar section (iPad split-view path).
@@ -395,9 +398,7 @@ struct FRMSView: View {
 
     private func minimumRestSection(limits: A320B737NextDutyLimits) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Minimum Rest & Sign-On")
-                .font(.title3)
-                .fontWeight(.semibold)
+            frmsSectionHeader("Minimum Rest")
 
             HStack(spacing: 0) {
                 Rectangle()
@@ -449,10 +450,6 @@ struct FRMSView: View {
 
     private var cumulativeLimitsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Cumulative Limits")
-                .font(.title3)
-                .fontWeight(.semibold)
-
             if let totals = viewModel.cumulativeTotals {
                 AdaptiveCumulativeLimitsLayout(
                     viewModel: viewModel,
@@ -675,13 +672,8 @@ struct FRMSView: View {
 
     private var recentDutiesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                if isShortHaul {
-                    Text("Recent Duties (\(viewModel.configuration.homeBase))")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                }
-                Spacer()
+            HStack(alignment: .center) {
+                frmsSectionHeader("Recent Duties")
                 Menu {
                     Button("This BP") { selectedMode = .thisBP }
                     Button("Last BP") { selectedMode = .lastBP }
@@ -701,9 +693,10 @@ struct FRMSView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text(pickerLabel)
-                            .font(.subheadline)
+                            .iPadScaledFont(.subheadline, phoneFont: .subheadline)
+                            .fontWeight(.semibold)
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption)
+                            .iPadScaledFont(.subheadline, phoneFont: .footnote)
                     }
                     .foregroundStyle(AppColors.accentBlue)
                 }

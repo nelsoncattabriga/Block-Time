@@ -14,7 +14,7 @@ import BlockTimeKit
 func frmsSectionHeader(_ title: String) -> some View {
     HStack(spacing: 10) {
         Text(title.uppercased())
-            .iPadScaledFont(.caption)
+            .iPadScaledFont(.caption, phoneFont: .footnote)
             .fontWeight(.semibold)
             .foregroundStyle(.secondary)
             .kerning(1.2)
