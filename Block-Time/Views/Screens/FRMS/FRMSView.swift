@@ -51,7 +51,7 @@ struct FRMSView: View {
         case cumulativeLimits = "Limits"
         case nextDuty         = "Next Duty"
         case mbt              = "MBT"
-        case recentDuties     = "Duties"
+        case recentDuties     = "Duty List"
 
         var icon: String {
             switch self {
@@ -314,7 +314,7 @@ struct FRMSView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "calendar")
                                 .foregroundStyle(AppColors.accentBlue)
-                            Text("Duties")
+                            Text("Duty List")
                         }
                         .font(.subheadline)
                         .fontWeight(.semibold)
