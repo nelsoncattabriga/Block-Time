@@ -94,6 +94,7 @@ struct FRMSView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .scrollContentBackground(.hidden)
+                .background(Color.clear)
                 .refreshable {
                     LogManager.shared.debug("FRMSView: Pull-to-refresh triggered")
                     await viewModel.refreshFlightData(crewPosition: flightTimePosition, ignoresCooldown: true)
@@ -101,7 +102,7 @@ struct FRMSView: View {
                 }
                 .opacity(viewModel.isLoading ? 0.3 : 1.0)
             }
-            .background(themeService.getGradient().ignoresSafeArea())
+            .background(themeService.getGradient().ignoresSafeArea(.all))
             .navigationTitle(selectedSection?.rawValue ?? "FRMS")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
