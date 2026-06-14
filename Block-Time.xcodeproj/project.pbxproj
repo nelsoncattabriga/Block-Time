@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5230FA562FDE55B80077872C /* BT_AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 5230FA522FDE542F0077872C /* BT_AppIcon.icon */; };
 		523B555B2FDBE31300A3FD3B /* BlockTimeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 523B555A2FDBE31300A3FD3B /* BlockTimeKit */; };
 		52D74F022FDC0CF4002226A0 /* BlockTimeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 52D74F012FDC0CF4002226A0 /* BlockTimeKit */; };
 		52E6FD232F51217D008DD58E /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 52E6FD222F51217D008DD58E /* StoreKit.framework */; };
@@ -42,6 +43,7 @@
 
 /* Begin PBXFileReference section */
 		522DB4EE2F26FA7E00739A34 /* Block-Time.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Block-Time.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5230FA522FDE542F0077872C /* BT_AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = BT_AppIcon.icon; sourceTree = "<group>"; };
 		52E6FD222F51217D008DD58E /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		52EFA2982F7B69EB0027B37B /* BlockTimeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlockTimeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		52EFA2992F7B69EB0027B37B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -61,6 +63,7 @@
 		5279F1E52FDE35A400D227C8 /* Exceptions for "Block-Time" folder in "Block-Time-Mac" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Assets.xcassets,
 				Resources/airports.dat.txt,
 			);
 			target = 52MAC0052F90AE260010B0C1 /* Block-Time-Mac */;
@@ -147,6 +150,7 @@
 				52EFA29D2F7B69EB0027B37B /* BlockTimeWidget */,
 				52E6FD212F51217D008DD58E /* Frameworks */,
 				522DB4EF2F26FA7E00739A34 /* Products */,
+				5230FA522FDE542F0077872C /* BT_AppIcon.icon */,
 			);
 			sourceTree = "<group>";
 		};
@@ -308,6 +312,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5230FA562FDE55B80077872C /* BT_AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -626,7 +631,7 @@
 		52MAC0092F90AE260010B0C1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = BT_AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Block-Time-Mac/Block-Time-Mac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
@@ -664,7 +669,7 @@
 		52MAC00A2F90AE260010B0C1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = BT_AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Block-Time-Mac/Block-Time-Mac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
