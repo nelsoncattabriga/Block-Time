@@ -3624,6 +3624,11 @@ public class FlightDatabaseService: ObservableObject, @unchecked Sendable {
     /// Remove duplicate FlightEntity rows that share the same `id` UUID.
     /// Keeps the record with the earliest `createdAt`; deletes the rest.
     /// Safe to call on a background thread — uses a private context.
+    ///
+    /// Safety: aborts without saving if the number of records to delete exceeds 10% of
+    /// the total record count. A genuine change-token re-import creates at most one extra
+    /// copy of each record; deleting the majority of the database means something else has
+    /// gone wrong (e.g. first-launch sync on a new peer) and we must not propagate that.
     private func deduplicateFlightsByUUID() {
         let context = persistentContainer.newBackgroundContext()
         context.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
@@ -3632,23 +3637,48 @@ public class FlightDatabaseService: ObservableObject, @unchecked Sendable {
             request.sortDescriptors = [NSSortDescriptor(keyPath: \FlightEntity.createdAt, ascending: true)]
             guard let allFlights = try? context.fetch(request) else { return }
 
-            var seen: [UUID: FlightEntity] = [:]
-            var deletedCount = 0
+            let totalCount = allFlights.count
+
+            // Build a frequency map first so we only delete records that are
+            // genuinely duplicated — not just "seen before" due to sort instability.
+            var uuidCounts: [UUID: Int] = [:]
             for flight in allFlights {
                 guard let uuid = flight.id else { continue }
+                uuidCounts[uuid, default: 0] += 1
+            }
+
+            let duplicatedUUIDs = Set(uuidCounts.filter { $0.value > 1 }.keys)
+
+            guard !duplicatedUUIDs.isEmpty else {
+                print("CloudKit dedup: No duplicate flights found")
+                return
+            }
+
+            // For each duplicated UUID keep the earliest-createdAt record, delete the rest.
+            var seen: [UUID: FlightEntity] = [:]
+            var toDelete: [FlightEntity] = []
+            for flight in allFlights {
+                guard let uuid = flight.id, duplicatedUUIDs.contains(uuid) else { continue }
                 if seen[uuid] != nil {
-                    // Keep whichever has the earlier createdAt (already sorted ascending,
-                    // so the first-seen is already the older one — delete the current duplicate).
-                    context.delete(flight)
-                    deletedCount += 1
+                    toDelete.append(flight)
                 } else {
                     seen[uuid] = flight
                 }
             }
 
-            guard deletedCount > 0 else {
-                print("CloudKit dedup: No duplicate flights found")
+            let deletedCount = toDelete.count
+
+            // Safety threshold: if we're about to delete more than 10% of the database,
+            // something is catastrophically wrong (e.g. initial sync on empty store).
+            // Abort — do NOT save — so deletions never propagate to CloudKit.
+            let threshold = max(10, totalCount / 10)
+            guard deletedCount <= threshold else {
+                print("CloudKit dedup: ABORTED — would delete \(deletedCount) of \(totalCount) records (exceeds 10% safety threshold). This looks like a first-launch sync, not a real dedup event.")
                 return
+            }
+
+            for flight in toDelete {
+                context.delete(flight)
             }
 
             do {
@@ -3658,7 +3688,7 @@ public class FlightDatabaseService: ObservableObject, @unchecked Sendable {
                     NotificationCenter.default.post(name: .flightDataChanged, object: nil)
                 }
             } catch {
-                print("CloudKit dedup: Failed to save  \(error.localizedDescription)")
+                print("CloudKit dedup: Failed to save \(error.localizedDescription)")
             }
         }
     }
