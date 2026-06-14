@@ -15,8 +15,8 @@ Full rationale and file-level findings: `../research/MAC-COMPANION-ASSESSMENT.md
 ## Phases
 
 - **Phase 0 — Extract `BlockTimeKit` shared core.** ✅ Done. Data layer + logic live in the package (48 files); iOS app builds against it. Plan: `PHASE-0-SHARED-CORE.md`.
-- **Phase 1 — Rebase Mac UI onto the core.** ← active. Cherry-pick the Mac UI from `Mac_Companion_Build`; delete every `Mac*` duplicate service and the duplicate Core Data stack; point the Mac target at `BlockTimeKit`. Removes ~4,800 lines, fixes sync risk. Plan: `PHASE-1-REBASE-MAC-UI.md`.
-- **Phase 2 — Spreadsheet editing.** Make the `NSTableView` columns editable (cell-by-cell entry) validating through the shared service; wire bulk edit reusing the iOS `BulkEditSheet` logic. Keep the detail-panel entry path too.
+- **Phase 1 — Rebase Mac UI onto the core.** ✅ Done. Mac UI on the shared core; `Mac*` duplicate services and the duplicate Core Data stack gone; build + tests pass. Plan: `PHASE-1-REBASE-MAC-UI.md`.
+- **Phase 2 — Spreadsheet editing.** ← active. Make the `NSTableView` columns editable (cell-by-cell entry) validating through the shared service; wire bulk edit by extracting `applyChanges` into the core and calling `updateFlightsBulk`. Keep the detail-panel entry path too. Plan: `PHASE-2-SPREADSHEET-EDITING.md`.
 - **Phase 3 — Import.** Mac import window reusing `FileImportService` / `UnifiedRosterParser` / `LogbookImportService` from the core.
 - **Phase 4 — Sync verification + ship.** Prove Mac↔iOS round-trip on one shared stack; notarize / App Store.
 
