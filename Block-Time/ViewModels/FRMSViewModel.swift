@@ -266,14 +266,14 @@ class FRMSViewModel {
 
             let homeTimeZone = service.getHomeBaseTimeZone()
             let recentDutiesByDay = FRMSViewModel.groupDutiesByLocalDateStatic(
-                duties: Array(completedDuties.prefix(30)),
+                duties: dutiesLast365,
                 homeTimeZone: homeTimeZone
             )
 
             return FRMSCalculationResult(
                 dutiesLast365: dutiesLast365,
                 flightsLast365: flightsLast365,
-                recentDuties: Array(completedDuties.prefix(30)),
+                recentDuties: dutiesLast365,
                 recentDutiesByDay: recentDutiesByDay,
                 lastDuty: lastDuty,
                 cumulativeTotals: cumulativeTotals,

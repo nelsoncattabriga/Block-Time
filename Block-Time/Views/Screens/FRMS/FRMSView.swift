@@ -38,6 +38,14 @@ struct FRMSView: View {
     @State private var expandMinimumBaseTurnaround = false
     @State private var expandRecentDuties = false
 
+    // Recent Duties period filter
+    enum RecentDutiesMode: String {
+        case thisBP, lastBP, specificBP
+        case days7, days14, days28, days365
+    }
+    @AppStorage("frmsRecentDutiesMode") private var selectedMode: RecentDutiesMode = .thisBP
+    @AppStorage("frmsRecentDutiesSelectedBP") private var selectedBP: String = ""
+
     // iPhone section tabs
     private enum FRMSScrollAnchor: String, CaseIterable {
         case cumulativeLimits = "Cumulative Limits"
@@ -597,27 +605,119 @@ struct FRMSView: View {
 
     // MARK: - Recent Duties Section
 
+    private var isShortHaul: Bool { viewModel.configuration.fleet == .a320B737 }
+
+    // All unique BP numbers present in the last 365 days of data, newest first.
+    private var availableBPs: [(bp: String, startDate: Date, endDate: Date)] {
+        var seen = Set<String>()
+        var results: [(bp: String, startDate: Date, endDate: Date)] = []
+        for summary in viewModel.recentDutiesByDay {
+            guard let period = BPCalculator.rosterPeriod(containing: summary.date, isShortHaul: isShortHaul),
+                  !seen.contains(period.bp) else { continue }
+            seen.insert(period.bp)
+            results.append(period)
+        }
+        return results.sorted { $0.startDate > $1.startDate }
+    }
+
+    private var activeBPRange: (start: Date, end: Date)? {
+        let now = Date()
+        let cal = Calendar.current
+        switch selectedMode {
+        case .thisBP:
+            return BPCalculator.rosterPeriod(containing: now, isShortHaul: isShortHaul)
+                .map { ($0.startDate, $0.endDate) }
+        case .lastBP:
+            let offset = isShortHaul ? -28 : -56
+            let prev = cal.date(byAdding: .day, value: offset, to: now)!
+            return BPCalculator.rosterPeriod(containing: prev, isShortHaul: isShortHaul)
+                .map { ($0.startDate, $0.endDate) }
+        case .specificBP:
+            return availableBPs.first { $0.bp == selectedBP }.map { ($0.startDate, $0.endDate) }
+        case .days7:
+            return (cal.date(byAdding: .day, value: -7, to: now)!, now)
+        case .days14:
+            return (cal.date(byAdding: .day, value: -14, to: now)!, now)
+        case .days28:
+            return (cal.date(byAdding: .day, value: -28, to: now)!, now)
+        case .days365:
+            return (cal.date(byAdding: .day, value: -365, to: now)!, now)
+        }
+    }
+
+    private var filteredRecentDuties: [DailyDutySummary] {
+        guard let range = activeBPRange else { return [] }
+        return viewModel.recentDutiesByDay.filter { $0.date >= range.start && $0.date <= range.end }
+    }
+
+    private var pickerLabel: String {
+        switch selectedMode {
+        case .thisBP:
+            if let bp = BPCalculator.rosterPeriod(containing: Date(), isShortHaul: isShortHaul) {
+                return "BP \(bp.bp)"
+            }
+            return "This BP"
+        case .lastBP:
+            let offset = isShortHaul ? -28 : -56
+            let prev = Calendar.current.date(byAdding: .day, value: offset, to: Date())!
+            if let bp = BPCalculator.rosterPeriod(containing: prev, isShortHaul: isShortHaul) {
+                return "BP \(bp.bp)"
+            }
+            return "Last BP"
+        case .specificBP:
+            return selectedBP.isEmpty ? "Select BP" : "BP \(selectedBP)"
+        case .days7:   return "Last 7 Days"
+        case .days14:  return "Last 14 Days"
+        case .days28:  return "Last 28 Days"
+        case .days365: return "Last 365 Days"
+        }
+    }
+
     private var recentDutiesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Title only shown for SH fleet (LH has it in DisclosureGroup)
-            if viewModel.configuration.fleet == .a320B737 {
-                Text("Recent Duties (\(viewModel.configuration.homeBase))")
-                    .font(.title3)
-                    .fontWeight(.semibold)
+            HStack(alignment: .firstTextBaseline) {
+                if isShortHaul {
+                    Text("Recent Duties (\(viewModel.configuration.homeBase))")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                }
+                Spacer()
+                Menu {
+                    Button("This BP") { selectedMode = .thisBP }
+                    Button("Last BP") { selectedMode = .lastBP }
+                    Menu("Select BP") {
+                        ForEach(availableBPs, id: \.bp) { period in
+                            Button("BP \(period.bp)") {
+                                selectedBP = period.bp
+                                selectedMode = .specificBP
+                            }
+                        }
+                    }
+                    Divider()
+                    Button("Last 7 Days")   { selectedMode = .days7 }
+                    Button("Last 14 Days")  { selectedMode = .days14 }
+                    Button("Last 28 Days")  { selectedMode = .days28 }
+                    Button("Last 365 Days") { selectedMode = .days365 }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(pickerLabel)
+                            .font(.subheadline)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(AppColors.accentBlue)
+                }
+                .accessibilityLabel("Recent duties period")
             }
 
-//            Text("Home Base: \(viewModel.configuration.homeBase)")
-//                .font(.subheadline)
-//                .fontWeight(.semibold)
-
-            if !viewModel.recentDutiesByDay.isEmpty {
+            if !filteredRecentDuties.isEmpty {
                 VStack(spacing: 8) {
-                    ForEach(viewModel.recentDutiesByDay.prefix(7)) { dailySummary in
+                    ForEach(filteredRecentDuties) { dailySummary in
                         dailyDutyRow(dailySummary: dailySummary)
                     }
                 }
             } else {
-                Text("No recent duties")
+                Text("No duties in this period")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
