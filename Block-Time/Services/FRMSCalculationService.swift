@@ -15,10 +15,7 @@ class FRMSCalculationService: @unchecked Sendable {
 
     private let configuration: FRMSConfiguration
 
-    // nonisolated so these are accessible from nonisolated methods without hopping to MainActor.
-    // DateFormatter is not thread-safe for concurrent mutation, but these are created once and
-    // only read after initialisation, so nonisolated(unsafe) is correct here.
-    private nonisolated(unsafe) static let cachedDateFormatter: DateFormatter = {
+    private nonisolated static let cachedDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
@@ -26,7 +23,7 @@ class FRMSCalculationService: @unchecked Sendable {
         return formatter
     }()
 
-    private nonisolated(unsafe) static let cachedTimeFormatter: DateFormatter = {
+    private nonisolated static let cachedTimeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy HHmm"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
