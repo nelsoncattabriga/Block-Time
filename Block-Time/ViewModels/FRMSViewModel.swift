@@ -182,103 +182,134 @@ class FRMSViewModel {
         return FlightDatabaseService.shared.fetchFlights(from: startDateString, to: endDateString)
     }
 
-    /// Shared core logic: process fetched flights, calculate all FRMS outputs, and publish to @Observable properties.
-    private func applyFlightData(flights: [FlightSector], crewPosition: FlightTimePosition, label: String) async {
-        let service = self.calculationService
-        let config = self.configuration
-        let today = Date()
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -365, to: today) ?? today
-
-        let duties = self.groupFlightsIntoDuties(flights: flights, crewPosition: crewPosition, calculationService: service)
-
-//        // Debug: last 5 duties (most recent first)
-//        for duty in duties.sorted(by: { $0.signOn > $1.signOn }).prefix(1) {
-//            LogManager.shared.debug("Last Recent duty: signOn=\(Self.debugTimeFormatter.string(from: duty.signOn)), signOff=\(Self.debugTimeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
-//        }
-
-        // Debug: show last recent duty
-        if let duty = duties.max(by: { $0.signOn < $1.signOn }) {
-              LogManager.shared.debug("Last recent duty: signOn=\(Self.debugTimeFormatter.string(from: duty.signOn)), signOff=\(Self.debugTimeFormatter.string(from: duty.signOff)),sectors=\(duty.sectors), flight=\(String(format: "%.1f",duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
-          }
-        
-        
-        
-        // Filter to only completed duties (last flight has an actual IN time)
-        let completedDuties = duties.filter { $0.hasActualINTime }
-
-        // Duty grouping can shift dates slightly across timezone boundaries; re-clip to 365 days
-        let dutiesLast365 = completedDuties.filter { $0.date >= cutoffDate }
-
-        // Filter flights to 365 days — parse each date once using the shared UTC formatter
-        let flightsLast365 = flights.filter {
-            guard let flightDate = Self.utcDateFormatter.date(from: $0.date) else { return false }
-            return flightDate >= cutoffDate
-        }
-
-        let cumulativeTotals = service.calculateCumulativeTotals(duties: dutiesLast365, flights: flightsLast365)
-
-        let lastDuty = completedDuties.max(by: { $0.signOff < $1.signOff })
-
-        let maximumNextDuty = service.calculateMaximumNextDuty(
-            previousDuty: lastDuty,
-            cumulativeTotals: cumulativeTotals,
-            limitType: selectedLimitType,
-            proposedCrewComplement: .twoPilot,
-            proposedRestFacility: .none
-        )
-
+    // Result bundle from background calculation — keeps the detached closure self-contained.
+    private struct FRMSCalculationResult {
+        let dutiesLast365: [FRMSDuty]
+        let flightsLast365: [FlightSector]
+        let recentDuties: [FRMSDuty]
+        let recentDutiesByDay: [DailyDutySummary]
+        let lastDuty: FRMSDuty?
+        let cumulativeTotals: FRMSCumulativeTotals
+        let maximumNextDuty: FRMSMaximumNextDuty
         let a320Limits: A320B737NextDutyLimits?
-        if config.fleet == .a320B737 {
-            a320Limits = service.calculateA320B737NextDutyLimits(
+    }
+
+    /// Shared core logic: process fetched flights, calculate all FRMS outputs, and publish to @Observable properties.
+    /// Heavy computation runs on a background thread via Task.detached; only the final property assignments
+    /// touch the main actor.
+    private func applyFlightData(flights: [FlightSector], crewPosition: FlightTimePosition, label: String) async {
+        // Capture value-type snapshots before leaving the main actor.
+        let config = self.configuration
+        let limitType = self.selectedLimitType
+
+        let result = await Task.detached(priority: .userInitiated) {
+            // Each detached call gets its own service instance — FRMSCalculationService is a class
+            // and not Sendable, so we never share one across actors.
+            let service = FRMSCalculationService(configuration: config)
+            let today = Date()
+            let cutoffDate = Calendar.current.date(byAdding: .day, value: -365, to: today) ?? today
+
+            let duties = FRMSViewModel.groupFlightsIntoDutiesStatic(
+                flights: flights,
+                crewPosition: crewPosition,
+                calculationService: service
+            )
+
+            if let duty = duties.max(by: { $0.signOn < $1.signOn }) {
+                LogManager.shared.debug("Last recent duty: signOn=\(FRMSViewModel.debugTimeFormatter.string(from: duty.signOn)), signOff=\(FRMSViewModel.debugTimeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
+            }
+
+            let completedDuties = duties.filter { $0.hasActualINTime }
+            let dutiesLast365 = completedDuties.filter { $0.date >= cutoffDate }
+            let flightsLast365 = flights.filter {
+                guard let flightDate = FRMSViewModel.utcDateFormatter.date(from: $0.date) else { return false }
+                return flightDate >= cutoffDate
+            }
+
+            let cumulativeTotals = service.calculateCumulativeTotals(duties: dutiesLast365, flights: flightsLast365)
+            let lastDuty = completedDuties.max(by: { $0.signOff < $1.signOff })
+
+            let maximumNextDuty = service.calculateMaximumNextDuty(
                 previousDuty: lastDuty,
                 cumulativeTotals: cumulativeTotals,
-                limitType: selectedLimitType,
-                duties: duties
+                limitType: limitType,
+                proposedCrewComplement: .twoPilot,
+                proposedRestFacility: .none
             )
-        } else {
-            a320Limits = nil
-        }
 
-        let recentDutiesByDay = self.groupDutiesByLocalDate(duties: Array(completedDuties.prefix(30)))
+            let a320Limits: A320B737NextDutyLimits? = config.fleet == .a320B737
+                ? service.calculateA320B737NextDutyLimits(
+                    previousDuty: lastDuty,
+                    cumulativeTotals: cumulativeTotals,
+                    limitType: limitType,
+                    duties: duties
+                  )
+                : nil
 
-        self.dutiesLast365Days = dutiesLast365
-        self.flightsLast365Days = flightsLast365
-        self.recentDuties = Array(completedDuties.prefix(30))
-        self.lastDuty = lastDuty
-        self.recentDutiesByDay = recentDutiesByDay
-        self.cumulativeTotals = cumulativeTotals
-        self.maximumNextDuty = maximumNextDuty
-        self.a320B737NextDutyLimits = a320Limits
+            let homeTimeZone = service.getHomeBaseTimeZone()
+            let recentDutiesByDay = FRMSViewModel.groupDutiesByLocalDateStatic(
+                duties: Array(completedDuties.prefix(30)),
+                homeTimeZone: homeTimeZone
+            )
+
+            return FRMSCalculationResult(
+                dutiesLast365: dutiesLast365,
+                flightsLast365: flightsLast365,
+                recentDuties: Array(completedDuties.prefix(30)),
+                recentDutiesByDay: recentDutiesByDay,
+                lastDuty: lastDuty,
+                cumulativeTotals: cumulativeTotals,
+                maximumNextDuty: maximumNextDuty,
+                a320Limits: a320Limits
+            )
+        }.value
+
+        // Back on MainActor — assign results to @Observable properties.
+        self.dutiesLast365Days = result.dutiesLast365
+        self.flightsLast365Days = result.flightsLast365
+        self.recentDuties = result.recentDuties
+        self.lastDuty = result.lastDuty
+        self.recentDutiesByDay = result.recentDutiesByDay
+        self.cumulativeTotals = result.cumulativeTotals
+        self.maximumNextDuty = result.maximumNextDuty
+        self.a320B737NextDutyLimits = result.a320Limits
         self.hasLoadedData = true
         self.isLoading = false
         self.lastRefreshDate = Date()
         LogManager.shared.debug("FRMSViewModel: \(label) completed")
     }
 
-    /// Refresh all calculations with current data
+    /// Refresh all calculations with current data (e.g. after configuration or limit type change).
+    /// Offloads CPU work to a background thread; assigns results back on MainActor.
     private func refreshCalculations() {
         LogManager.shared.debug("FRMSViewModel: refreshCalculations called")
+        guard !dutiesLast365Days.isEmpty else { return }
 
-        // Update calculation service with new configuration
         calculationService = FRMSCalculationService(configuration: configuration)
 
-        // Recalculate with last 365 days of duties and flights if we have them
-        if !dutiesLast365Days.isEmpty {
-            // Recalculate cumulative totals with new configuration using last 365 days
-            // Pass individual flights for flight time calculations
-            self.cumulativeTotals = calculationService.calculateCumulativeTotals(duties: dutiesLast365Days, flights: flightsLast365Days)
+        let config = self.configuration
+        let limitType = self.selectedLimitType
+        let duties365 = self.dutiesLast365Days
+        let flights365 = self.flightsLast365Days
+        let previousDuty = self.lastDuty
 
-            // Recalculate A320/B737 specific limits if applicable
-            if let totals = cumulativeTotals {
-                if configuration.fleet == .a320B737 {
-                    self.a320B737NextDutyLimits = calculationService.calculateA320B737NextDutyLimits(
-                        previousDuty: lastDuty,
+        Task {
+            let (totals, a320Limits) = await Task.detached(priority: .userInitiated) {
+                let service = FRMSCalculationService(configuration: config)
+                let totals = service.calculateCumulativeTotals(duties: duties365, flights: flights365)
+                let a320Limits: A320B737NextDutyLimits? = config.fleet == .a320B737
+                    ? service.calculateA320B737NextDutyLimits(
+                        previousDuty: previousDuty,
                         cumulativeTotals: totals,
-                        limitType: selectedLimitType,
-                        duties: dutiesLast365Days
-                    )
-                }
-            }
+                        limitType: limitType,
+                        duties: duties365
+                      )
+                    : nil
+                return (totals, a320Limits)
+            }.value
+
+            self.cumulativeTotals = totals
+            self.a320B737NextDutyLimits = a320Limits
             LogManager.shared.debug("FRMSViewModel: refreshCalculations completed")
         }
     }
@@ -387,33 +418,37 @@ class FRMSViewModel {
 
     // MARK: - Duty Grouping
 
-    /// Group duties by local date at home base
+    /// Group duties by local date at home base (instance wrapper — delegates to static).
     private func groupDutiesByLocalDate(duties: [FRMSDuty]) -> [DailyDutySummary] {
-        // Get home base timezone for proper local date grouping
-        let homeTimeZone = calculationService.getHomeBaseTimeZone()
+        Self.groupDutiesByLocalDateStatic(duties: duties, homeTimeZone: calculationService.getHomeBaseTimeZone())
+    }
+
+    private static func groupDutiesByLocalDateStatic(duties: [FRMSDuty], homeTimeZone: TimeZone) -> [DailyDutySummary] {
         var localCalendar = Calendar.current
         localCalendar.timeZone = homeTimeZone
-
-        // Group duties by the LOCAL calendar day of their sign-on time
-        // This ensures duties are grouped by the actual local date, not UTC date
         let grouped = Dictionary(grouping: duties) { duty -> Date in
-            // Convert sign-on time to local calendar day (start of day in home base timezone)
-            return localCalendar.startOfDay(for: duty.signOn)
+            localCalendar.startOfDay(for: duty.signOn)
         }
-
-        // Convert to DailyDutySummary and sort by date (newest first)
-        let summaries = grouped.map { date, dutiesForDay in
+        return grouped.map { date, dutiesForDay in
             DailyDutySummary(date: date, duties: dutiesForDay)
         }.sorted { $0.date > $1.date }
-
-        return summaries
     }
 
     // MARK: - Flight Grouping into Duties
 
+    /// Static entry point for grouping — callable from Task.detached without capturing self.
+    private static func groupFlightsIntoDutiesStatic(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
+        groupFlightsIntoDutiesImpl(flights: flights, crewPosition: crewPosition, calculationService: calculationService)
+    }
+
+    /// Instance wrapper — kept for any existing callers.
+    private func groupFlightsIntoDuties(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
+        Self.groupFlightsIntoDutiesImpl(flights: flights, crewPosition: crewPosition, calculationService: calculationService)
+    }
+
     /// Group individual FlightSectors into consolidated duty periods
     /// Multiple sectors that occur within the same duty period are combined into a single FRMSDuty
-    private func groupFlightsIntoDuties(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
+    private static func groupFlightsIntoDutiesImpl(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
         // First, convert each flight to a temporary duty structure so we have proper DateTimes
         // This allows us to sort chronologically regardless of UTC date boundaries
         var individualFlightDuties: [(flight: FlightSector, duty: FRMSDuty)] = []
@@ -499,7 +534,7 @@ class FRMSViewModel {
     }
 
     /// Create a single consolidated FRMSDuty from multiple flight sectors
-    private func createConsolidatedDuty(from flightDuties: [(flight: FlightSector, duty: FRMSDuty)], calculationService: FRMSCalculationService) -> FRMSDuty? {
+    private static func createConsolidatedDuty(from flightDuties: [(flight: FlightSector, duty: FRMSDuty)], calculationService: FRMSCalculationService) -> FRMSDuty? {
         guard !flightDuties.isEmpty else { return nil }
 
         // For single flight, return the duty but ensure date is based on sign-on time in home base timezone
