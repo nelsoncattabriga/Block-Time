@@ -94,7 +94,7 @@ struct AdaptiveCumulativeLimitsLayout: View {
                        let maxDuty11 = totals.maxDutyDaysIn11Days {
                         HStack(spacing: 12) {
                             frmsCounterCard(
-                                title: "Consecutive Duties",
+                                title: "Consecutive Days",
                                 value: totals.consecutiveDuties,
                                 max: maxConsec,
                                 unit: "days",
@@ -263,21 +263,21 @@ struct AdaptiveCumulativeLimitsLayout: View {
             frmsSectionHeader("Consecutive Duties")
 
             if let maxConsec = totals.maxConsecutiveDuties {
-                frmsCompactCounterCard(title: "Cons. Days", value: totals.consecutiveDuties, max: maxConsec, unit: "days", status: totals.consecutiveDutiesStatus, accentColor: .teal)
+                frmsCompactCounterCard(title: "Consecutive Days", value: totals.consecutiveDuties, max: maxConsec, unit: "days", status: totals.consecutiveDutiesStatus, accentColor: .teal)
             }
             if let maxDuty11 = totals.maxDutyDaysIn11Days {
-                frmsCompactCounterCard(title: "in 11 Days", value: totals.dutyDaysIn11Days, max: maxDuty11, unit: "days", status: totals.dutyDaysIn11DaysStatus, accentColor: .teal)
+                frmsCompactCounterCard(title: "Duties in 11 Days", value: totals.dutyDaysIn11Days, max: maxDuty11, unit: "days", status: totals.dutyDaysIn11DaysStatus, accentColor: .teal)
             }
             frmsSectionHeader("Late Night Ops")
 
             if let maxEarly = totals.maxConsecutiveEarlyStarts {
-                frmsCompactCounterCard(title: "Early Starts", value: totals.consecutiveEarlyStarts, max: maxEarly, unit: "duties", status: totals.consecutiveEarlyStartsStatus, accentColor: .indigo)
+                frmsCompactCounterCard(title: "Early Starts (Consecutive)", value: totals.consecutiveEarlyStarts, max: maxEarly, unit: "duties", status: totals.consecutiveEarlyStartsStatus, accentColor: .indigo)
             }
             if let maxLate = totals.maxConsecutiveLateNights {
-                frmsCompactCounterCard(title: "Late Nights", value: totals.consecutiveLateNights, max: maxLate, unit: "duties", status: totals.consecutiveLateNightsStatus, accentColor: .indigo)
+                frmsCompactCounterCard(title: "Late Night Ops (Consecutive)", value: totals.consecutiveLateNights, max: maxLate, unit: "duties", status: totals.consecutiveLateNightsStatus, accentColor: .indigo)
             }
-            frmsCompactCounterCard(title: "LNO / 168 h", value: lnoCount, max: lnoMax, unit: "periods", status: frmsLnoCountStatus(lnoCount, max: lnoMax), accentColor: .indigo)
-            frmsCompactCounterCard(title: "BOC / 168 h", value: bocCount, max: bocMax, unit: "periods", status: frmsBocCountStatus(bocCount, max: bocMax), accentColor: .indigo)
+            frmsCompactCounterCard(title: "Late Night Ops (Rolling 168 hrs)", value: lnoCount, max: lnoMax, unit: "duties", status: frmsLnoCountStatus(lnoCount, max: lnoMax), accentColor: .indigo)
+            frmsCompactCounterCard(title: "Back of Clock Ops (Rolling 168 hrs)", value: bocCount, max: bocMax, unit: "duties", status: frmsBocCountStatus(bocCount, max: bocMax), accentColor: .indigo)
         }
     }
 
