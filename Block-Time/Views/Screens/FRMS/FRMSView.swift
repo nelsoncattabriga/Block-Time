@@ -680,7 +680,7 @@ struct FRMSView: View {
     private var recentDutiesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center) {
-                frmsSectionHeader("Duties")
+                frmsSectionHeader("\(filteredRecentDuties.count) Duties")
                 Menu {
                     Button("This BP") { selectedMode = .thisBP }
                     Button("Last BP") { selectedMode = .lastBP }
