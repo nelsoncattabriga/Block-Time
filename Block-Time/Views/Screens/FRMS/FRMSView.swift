@@ -51,7 +51,7 @@ struct FRMSView: View {
         case cumulativeLimits = "Limits"
         case nextDuty         = "Next Duty"
         case mbt              = "MBT"
-        case recentDuties     = "Recent Duties"
+        case recentDuties     = "Duties"
 
         var icon: String {
             switch self {
@@ -314,7 +314,7 @@ struct FRMSView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "calendar")
                                 .foregroundStyle(AppColors.accentBlue)
-                            Text("Recent Duties")
+                            Text("Duties")
                         }
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -353,20 +353,20 @@ struct FRMSView: View {
                             .minimumScaleFactor(0.8)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 7)
                     .background(isActive ? AnyShapeStyle(Color(.tertiarySystemFill)) : AnyShapeStyle(.clear))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 4)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 2)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 34))
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
     }
 
     /// Content for the selected sidebar section (iPad split-view path).
@@ -680,7 +680,7 @@ struct FRMSView: View {
     private var recentDutiesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center) {
-                frmsSectionHeader("Recent Duties")
+                frmsSectionHeader("Duties")
                 Menu {
                     Button("This BP") { selectedMode = .thisBP }
                     Button("Last BP") { selectedMode = .lastBP }
