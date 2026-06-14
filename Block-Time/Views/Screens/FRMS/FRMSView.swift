@@ -38,6 +38,30 @@ struct FRMSView: View {
     @State private var expandMinimumBaseTurnaround = false
     @State private var expandRecentDuties = false
 
+    // iPhone section tabs
+    private enum FRMSScrollAnchor: String, CaseIterable {
+        case cumulativeLimits = "Cumulative Limits"
+        case nextDuty         = "Next Duty"
+        case recentDuties     = "Recent Duties"
+
+        var icon: String {
+            switch self {
+            case .cumulativeLimits: return "chart.bar.fill"
+            case .nextDuty:         return "clock.badge.checkmark"
+            case .recentDuties:     return "list.bullet.clipboard.fill"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .cumulativeLimits: return .blue
+            case .nextDuty:         return .orange
+            case .recentDuties:     return .green
+            }
+        }
+    }
+    @State private var activePhoneSection: FRMSScrollAnchor = .cumulativeLimits
+
     // LH limits reference sheet
     @State private var showLimitsReference = false
 
@@ -50,14 +74,22 @@ struct FRMSView: View {
                 themeService.getGradient()
                     .ignoresSafeArea()
 
-                ZStack {
+                VStack(spacing: 0) {
+                    // Tab strip — iPhone only, full-screen path only. Sits on the gradient.
+                    if horizontalSizeClass == .compact && selectedSection == nil {
+                        frmsTabStrip
+                    }
+
                     ScrollView {
                         VStack(spacing: 20) {
                             if let section = selectedSection {
-                                // iPad split view — show the selected section only (no DisclosureGroups)
+                                // iPad split view — show the selected section only
                                 sectionContent(for: section)
+                            } else if horizontalSizeClass == .compact {
+                                // iPhone — show only the active tab section
+                                iPhoneSectionContent
                             } else {
-                                // iPhone (or iPad portrait) — all sections, unchanged layout
+                                // iPad portrait — all sections, unchanged layout
                                 allSectionsContent
                             }
                         }
@@ -75,7 +107,7 @@ struct FRMSView: View {
             }
             .navigationTitle(selectedSection?.rawValue ?? "FRMS")
             .navigationBarTitleDisplayMode(.inline)
-            .background(Color(.systemGroupedBackground))
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -119,11 +151,66 @@ struct FRMSView: View {
 
     // MARK: - Split View Section Content
 
-    /// All sections rendered sequentially — used on iPhone and iPad portrait (selectedSection == nil).
-    /// This is the exact layout that existed before split-view was introduced.
+    // MARK: - iPhone Section Content (pill-selected)
+
+    @ViewBuilder
+    private var iPhoneSectionContent: some View {
+        switch activePhoneSection {
+        case .cumulativeLimits:
+            // Pass isInSplitView: true so AdaptiveCumulativeLimitsLayout
+            // also renders Consecutive Duties and Late Night Ops cards here.
+            iPhoneCumulativeLimitsSection
+
+        case .nextDuty:
+            // Minimum Rest at top, then Next Duty limits.
+            // isInSplitView: true on SH_NextDutyView suppresses the
+            // Consecutive Duties card (it now lives in Cumulative Limits).
+            if viewModel.configuration.fleet == .a320B737,
+               let limits = viewModel.a320B737NextDutyLimits {
+                minimumRestSection(limits: limits)
+            }
+            if viewModel.configuration.fleet == .a380A330B787 {
+                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                    Text("Planning").tag(FRMSLimitType.planning)
+                    Text("Operational").tag(FRMSLimitType.operational)
+                }
+                .pickerStyle(.segmented)
+            }
+            if viewModel.configuration.fleet == .a320B737 {
+                SH_NextDutyView(viewModel: viewModel, isInSplitView: true)
+            } else {
+                LH_NextDutyView(viewModel: viewModel)
+            }
+
+        case .recentDuties:
+            recentDutiesSection
+        }
+    }
+
+    private var iPhoneCumulativeLimitsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if let totals = viewModel.cumulativeTotals {
+                AdaptiveCumulativeLimitsLayout(
+                    viewModel: viewModel,
+                    totals: totals,
+                    isInSplitView: false,
+                    showConsecutiveDutiesInCompact: true
+                )
+            } else {
+                Text("No flight data available")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            }
+        }
+    }
+
+    // MARK: - iPad All-Sections Content
+
+    /// All sections rendered sequentially — iPad portrait only (selectedSection == nil, regular size class).
     @ViewBuilder
     private var allSectionsContent: some View {
-        // Minimum Rest / Earliest Sign-On Section (A320/B737 only)
+        // Minimum Rest above Cumulative Limits (legacy position)
         if viewModel.configuration.fleet == .a320B737,
            let limits = viewModel.a320B737NextDutyLimits {
             minimumRestSection(limits: limits)
@@ -139,14 +226,6 @@ struct FRMSView: View {
                     isExpanded: $expandNextDutyLimits,
                     content: {
                         VStack(spacing: 16) {
-                            // iPhone: Show toggle at top when expanded
-                            if horizontalSizeClass == .compact {
-                                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
-                                    Text("Planning").tag(FRMSLimitType.planning)
-                                    Text("Operational").tag(FRMSLimitType.operational)
-                                }
-                                .pickerStyle(.segmented)
-                            }
                             maximumNextDutySection
                         }
                         .padding(.top, 8)
@@ -163,16 +242,13 @@ struct FRMSView: View {
 
                             Spacer()
 
-                            // iPad: Show toggle in header
-                            if horizontalSizeClass != .compact {
-                                Picker("Limit Type", selection: $viewModel.selectedLimitType) {
-                                    Text("Planning").tag(FRMSLimitType.planning)
-                                    Text("Operational").tag(FRMSLimitType.operational)
-                                }
-                                .pickerStyle(.segmented)
-                                .frame(width: 220)
-                                .padding(.trailing, 16)
+                            Picker("Limit Type", selection: $viewModel.selectedLimitType) {
+                                Text("Planning").tag(FRMSLimitType.planning)
+                                Text("Operational").tag(FRMSLimitType.operational)
                             }
+                            .pickerStyle(.segmented)
+                            .frame(width: 220)
+                            .padding(.trailing, 16)
                         }
                     }
                 )
@@ -229,6 +305,47 @@ struct FRMSView: View {
         } else {
             recentDutiesSection
         }
+    }
+
+    // MARK: - iPhone Tab Strip
+
+    private var frmsTabStrip: some View {
+        HStack(spacing: 0) {
+            ForEach(FRMSScrollAnchor.allCases, id: \.self) { anchor in
+                let isActive = activePhoneSection == anchor
+                Button {
+                    HapticManager.shared.impact(.light)
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        activePhoneSection = anchor
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: anchor.icon)
+                            .font(.system(size: 18, weight: isActive ? .semibold : .regular))
+                            .foregroundStyle(isActive ? anchor.color : .secondary)
+                        Text(anchor.rawValue)
+                            .font(.caption)
+                            .fontWeight(isActive ? .semibold : .regular)
+                            .foregroundStyle(isActive ? .primary : .secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        isActive
+                            ? Color(.systemBackground).opacity(0.85)
+                            : Color.clear
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .background(.ultraThinMaterial)
     }
 
     /// Content for the selected sidebar section (iPad split-view path).
@@ -789,3 +906,4 @@ struct FRMSView: View {
         return Self._dateTimeFormatter.string(from: date)
     }
 }
+

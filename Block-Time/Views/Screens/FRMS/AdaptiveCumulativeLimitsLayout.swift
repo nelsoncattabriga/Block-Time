@@ -17,6 +17,10 @@ struct AdaptiveCumulativeLimitsLayout: View {
     /// Consecutive Duties in the compact (portrait) layout path, while
     /// keeping it out of the iPhone path (which shows it in Next Duty).
     var isInSplitView: Bool = false
+    /// When true, forces Consecutive Duties + Late Night Ops cards to render
+    /// in the compact (iPhone) layout regardless of isInSplitView. Used by
+    /// the iPhone tab strip Cumulative Limits section.
+    var showConsecutiveDutiesInCompact: Bool = false
 
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @EnvironmentObject var appViewModel: FlightTimeExtractorViewModel
@@ -245,9 +249,9 @@ struct AdaptiveCumulativeLimitsLayout: View {
         }
 
         // Consecutive Duties section (A320/B737 only) — shown here in compact
-        // layout only when in split-view (iPad portrait). On iPhone it remains
-        // in the Next Duty section via a320B737NextDutyContent.
-        if isInSplitView,
+        // layout when in split-view (iPad portrait) OR when explicitly requested
+        // (iPhone tab strip Cumulative Limits section).
+        if (isInSplitView || showConsecutiveDutiesInCompact),
            viewModel.configuration.fleet == .a320B737,
            totals.hasConsecutiveDutyLimits {
             let lno = viewModel.a320B737NextDutyLimits?.lateNightStatus
