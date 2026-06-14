@@ -259,22 +259,6 @@ struct SH_NextDutyView: View {
 
             VStack(spacing: 8) {
                 DisclosureGroup(
-                    isExpanded: accordionBinding(for: .splitDuty),
-                    content: {
-                        splitDutyContent(isPlanning: isPlanning)
-                            .padding(.top, 8)
-                    },
-                    label: {
-                        Text("Split Duty")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                    }
-                )
-                .padding()
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                DisclosureGroup(
                     isExpanded: accordionBinding(for: .reserve),
                     content: {
                         reserveDutyContent(isPlanning: isPlanning)
@@ -298,6 +282,22 @@ struct SH_NextDutyView: View {
                     },
                     label: {
                         Text("Deadheading")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                )
+                .padding()
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                DisclosureGroup(
+                    isExpanded: accordionBinding(for: .splitDuty),
+                    content: {
+                        splitDutyContent(isPlanning: isPlanning)
+                            .padding(.top, 8)
+                    },
+                    label: {
+                        Text("Split Duty")
                             .font(.subheadline)
                             .fontWeight(.medium)
                     }
@@ -352,11 +352,23 @@ struct SH_NextDutyView: View {
         let maxHrs = isPlanning
             ? SH_Planning_FltDuty.reserveDutyMaxConsecutiveHours
             : SH_Operational_FltDuty.reserveDutyMaxConsecutiveHours
-        let clause = isPlanning ? "FD13.5" : "FD23.5"
+        let reserveClause  = isPlanning ? "FD13.3" : "FD23.3"
+        let calloutClause  = isPlanning ? "FD13.4" : "FD23.4"
+        let windowClause   = isPlanning ? "FD13.5" : "FD23.5"
         return VStack(alignment: .leading, spacing: 6) {
-            bulletPoint(text: "Max \(Int(maxHrs)) consecutive hrs (\(clause))")
-            bulletPoint(text: "Must have suitable sleeping accommodation")
-            bulletPoint(text: "Free from all duties associated with employment")
+            bulletPoint(text: "Max \(Int(maxHrs)) consecutive hrs; free from all employment duties (\(reserveClause))")
+
+            Text("If called out (\(calloutClause))")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+            bulletPoint(text: "Max combined reserve + duty: 16 hrs")
+            bulletPoint(text: "Exceptions: augmented crew or split duty")
+            if !isPlanning {
+                bulletPoint(text: "Max 18 hrs if operationally necessary + pilot self-assesses fit")
+            }
+
+            bulletPoint(text: "Reserve starting 2300–0600: time before company contact excluded from 16-hr count (\(windowClause))")
         }
     }
 
