@@ -16,7 +16,7 @@ import BlockTimeKit
 enum FRMSSection: String, Hashable, CaseIterable {
     case cumulativeLimits   = "Cumulative Limits"
     case nextDuty           = "Next Duty Limits"
-    case minBaseTurnaround  = "Min. Base Turnaround"   // A380/A330/B787 only
+    case minBaseTurnaround  = "Min Base Turnaround"   // A380/A330/B787 only
     case recentDuties       = "Recent Duties"
 
     var icon: String {
