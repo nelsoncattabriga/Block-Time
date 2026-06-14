@@ -8,7 +8,7 @@
 
 import Foundation
 
-public class FRMSCalculationService {
+public class FRMSCalculationService: @unchecked Sendable {
 
     // MARK: - Properties
 

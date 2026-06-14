@@ -48,7 +48,8 @@ class FRMSViewModel {
     private var lastRefreshDate: Date?  // Cooldown — prevents redundant recalculations from rapid CloudKit events
     private let refreshCooldown: TimeInterval = 10  // seconds
 
-    // Cached UTC date formatter — reused across load/refresh calls (fixed timezone, safe to share)
+    // Cached UTC date formatter — main-actor only (DateFormatter is not thread-safe).
+    // Background code uses makeUTCDateFormatter() to get its own instance.
     private static let utcDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
@@ -56,13 +57,27 @@ class FRMSViewModel {
         return formatter
     }()
 
-    // Cached debug time formatter — only used for log output
     private static let debugTimeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM HHmm"
         formatter.timeZone = TimeZone.current
         return formatter
     }()
+
+    // Thread-safe factory — called from nonisolated/background contexts.
+    private nonisolated static func makeUTCDateFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter
+    }
+
+    private nonisolated static func makeDebugTimeFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM HHmm"
+        formatter.timeZone = TimeZone.current
+        return formatter
+    }
 
     // MARK: - Initialization
 
@@ -215,14 +230,17 @@ class FRMSViewModel {
                 calculationService: service
             )
 
+            let debugFmt = FRMSViewModel.makeDebugTimeFormatter()
+            let utcFmt = FRMSViewModel.makeUTCDateFormatter()
+
             if let duty = duties.max(by: { $0.signOn < $1.signOn }) {
-                LogManager.shared.debug("Last recent duty: signOn=\(FRMSViewModel.debugTimeFormatter.string(from: duty.signOn)), signOff=\(FRMSViewModel.debugTimeFormatter.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
+                LogManager.shared.debug("Last recent duty: signOn=\(debugFmt.string(from: duty.signOn)), signOff=\(debugFmt.string(from: duty.signOff)), sectors=\(duty.sectors), flight=\(String(format: "%.1f", duty.flightTime))h, duty=\(String(format: "%.1f", duty.dutyTime))h")
             }
 
             let completedDuties = duties.filter { $0.hasActualINTime }
             let dutiesLast365 = completedDuties.filter { $0.date >= cutoffDate }
             let flightsLast365 = flights.filter {
-                guard let flightDate = FRMSViewModel.utcDateFormatter.date(from: $0.date) else { return false }
+                guard let flightDate = utcFmt.date(from: $0.date) else { return false }
                 return flightDate >= cutoffDate
             }
 
@@ -423,7 +441,7 @@ class FRMSViewModel {
         Self.groupDutiesByLocalDateStatic(duties: duties, homeTimeZone: calculationService.getHomeBaseTimeZone())
     }
 
-    private static func groupDutiesByLocalDateStatic(duties: [FRMSDuty], homeTimeZone: TimeZone) -> [DailyDutySummary] {
+    private nonisolated static func groupDutiesByLocalDateStatic(duties: [FRMSDuty], homeTimeZone: TimeZone) -> [DailyDutySummary] {
         var localCalendar = Calendar.current
         localCalendar.timeZone = homeTimeZone
         let grouped = Dictionary(grouping: duties) { duty -> Date in
@@ -437,7 +455,7 @@ class FRMSViewModel {
     // MARK: - Flight Grouping into Duties
 
     /// Static entry point for grouping — callable from Task.detached without capturing self.
-    private static func groupFlightsIntoDutiesStatic(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
+    private nonisolated static func groupFlightsIntoDutiesStatic(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
         groupFlightsIntoDutiesImpl(flights: flights, crewPosition: crewPosition, calculationService: calculationService)
     }
 
@@ -448,7 +466,7 @@ class FRMSViewModel {
 
     /// Group individual FlightSectors into consolidated duty periods
     /// Multiple sectors that occur within the same duty period are combined into a single FRMSDuty
-    private static func groupFlightsIntoDutiesImpl(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
+    private nonisolated static func groupFlightsIntoDutiesImpl(flights: [FlightSector], crewPosition: FlightTimePosition, calculationService: FRMSCalculationService) -> [FRMSDuty] {
         // First, convert each flight to a temporary duty structure so we have proper DateTimes
         // This allows us to sort chronologically regardless of UTC date boundaries
         var individualFlightDuties: [(flight: FlightSector, duty: FRMSDuty)] = []
@@ -534,7 +552,7 @@ class FRMSViewModel {
     }
 
     /// Create a single consolidated FRMSDuty from multiple flight sectors
-    private static func createConsolidatedDuty(from flightDuties: [(flight: FlightSector, duty: FRMSDuty)], calculationService: FRMSCalculationService) -> FRMSDuty? {
+    private nonisolated static func createConsolidatedDuty(from flightDuties: [(flight: FlightSector, duty: FRMSDuty)], calculationService: FRMSCalculationService) -> FRMSDuty? {
         guard !flightDuties.isEmpty else { return nil }
 
         // For single flight, return the duty but ensure date is based on sign-on time in home base timezone
